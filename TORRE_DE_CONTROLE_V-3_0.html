@@ -25458,12 +25458,21 @@ function nuvemEstado(estado, detalhe){
   const el = $('#nuvemEstado'); if (!el) return;
   const c = nuvemCfg();
   const quando = c.ultima ? new Date(c.ultima).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : null;
+  /* O estado "parado" era mudo demais: dizia "Aguardando" tanto para quem
+     configurou e ainda não sincronizou quanto para quem não preencheu nada.
+     Quem não sabe se salvou fica sem resposta justamente onde deveria achá-la. */
+  const falta = [];
+  if (!c.repo) falta.push('repositório');
+  if (!c.token) falta.push('chave');
   const mapa = {
     enviando: {z:'', t:'Sincronizando…'},
     ok:       {z:'jade',  t: quando ? `Sincronizado às ${quando.split(' ')[1]}` : 'Sincronizado'},
     conflito: {z:'ouro',  t:'Duas versões: escolha qual fica'},
     erro:     {z:'brasa', t: detalhe ? `Falhou: ${detalhe}` : 'Falhou'},
-    parado:   {z:'',      t: c.ligado ? 'Aguardando' : 'Desligada'}
+    parado:   {z: falta.length ? 'ouro' : (c.ligado ? '' : ''),
+               t: falta.length ? `Falta preencher: ${falta.join(' e ')}`
+                 : !c.ligado ? 'Configurada, mas desligada'
+                 : quando ? `Última vez às ${quando}` : 'Configurada, nunca sincronizou'}
   };
   const m = mapa[estado] || mapa.parado;
   el.innerHTML = `<span class="etq ${m.z}">${esc(m.t)}</span>`;
@@ -25932,8 +25941,14 @@ function ligarEventos(){
       salvar();
       nuvemEstado('parado');
     };
+    /* `input` além de `change`: o `change` só dispara quando o campo perde o foco,
+       e ninguém sai do último campo antes de fechar a aba. Quem digitasse o token
+       e recarregasse perdia justamente ele — o campo aparecia vazio na volta e a
+       sincronização não ligava, sem nada explicando por quê. */
     ['#nvLigado','#nvRepo','#nvCaminho','#nvToken','#nvAuto'].forEach(sel => {
-      const el = $(sel); if (el) el.onchange = guardar;
+      const el = $(sel); if (!el) return;
+      el.onchange = guardar;
+      el.oninput = guardar;
     });
 
     $('#btNvAgora').onclick = () => { guardar(); nuvemSincronizar(true); };
