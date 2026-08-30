@@ -6607,6 +6607,8 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
               <button class="bt primario" id="btNvAgora"><svg><use href="#i-atualizar"/></svg>Sincronizar agora</button>
             </div>
 
+            <div id="nuvemErro"></div>
+
             <div class="nota" style="margin-top:14px"><svg><use href="#i-info"/></svg>
               <div>A cópia baixada em arquivo continua valendo e não depende de internet nem de conta.
               A nuvem serve para os dois aparelhos verem o mesmo, não para substituir o backup local.</div>
@@ -25302,9 +25304,26 @@ const nuvemCabecalho = () => ({
   'X-GitHub-Api-Version': '2022-11-28'
 });
 
-/* Base64 que aguenta acento: `btoa` sozinho quebra com "ó" e "ã", e o banco tem
-   nome de programa, observação e destino cheios deles. */
-const paraBase64 = txt => btoa(String.fromCharCode(...new TextEncoder().encode(txt)));
+/* Base64 que aguenta acento E tamanho.
+
+   O acento: `btoa` sozinho quebra com "ó" e "ã", e o banco tem nome de programa,
+   observação e destino cheios deles — daí a passagem por `TextEncoder`.
+
+   O tamanho: espalhar os bytes como argumentos — `fromCharCode(...bytes)` — vira
+   uma chamada com um argumento por byte. Com um banco de verdade são mais de
+   cem mil argumentos, e o navegador estoura a pilha antes de terminar. O erro
+   aparece como "Maximum call stack size exceeded", que não diz nada sobre o
+   tamanho e por isso engana. Em blocos de oito mil, cada chamada é pequena e o
+   arquivo pode crescer à vontade. */
+const paraBase64 = txt => {
+  const bytes = new TextEncoder().encode(txt);
+  const PEDACO = 8192;
+  let bruto = '';
+  for (let i = 0; i < bytes.length; i += PEDACO){
+    bruto += String.fromCharCode.apply(null, bytes.subarray(i, i + PEDACO));
+  }
+  return btoa(bruto);
+};
 const deBase64 = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, '')), c => c.charCodeAt(0)));
 
 /* Retrato do banco, para comparar duas versões sem abrir cada registro. */
@@ -25320,8 +25339,15 @@ function retratoBanco(db){
 
 async function nuvemLer(){
   const r = await fetch(nuvemUrl() + '?ref=HEAD&t=' + Date.now(), {headers:nuvemCabecalho()});
-  if (r.status === 404) return {vazio:true, sha:null, dados:null};
-  if (!r.ok) throw new Error(`GitHub respondeu ${r.status}`);
+  /* 404 na leitura pode ser duas coisas: o arquivo ainda não existe, que é
+     normal na primeira vez, ou o repositório inteiro fora de alcance. Só dá para
+     distinguir perguntando pelo repositório. */
+  if (r.status === 404){
+    const rr = await fetch(`https://api.github.com/repos/${nuvemCfg().repo}`, {headers:nuvemCabecalho()});
+    if (!rr.ok) throw new Error(nuvemExplicar(404));
+    return {vazio:true, sha:null, dados:null};
+  }
+  if (!r.ok) throw new Error(nuvemExplicar(r.status));
   const j = await r.json();
   return {vazio:false, sha:j.sha, dados:JSON.parse(deBase64(j.content))};
 }
@@ -25330,6 +25356,25 @@ async function nuvemLer(){
    recusa com 409 quando o sha não é o mais recente — é assim que o conflito é
    detectado, e não por comparação de datas, que dois relógios desalinhados
    estragam. */
+/* Traduz o número seco da resposta para o que a pessoa precisa fazer. "GitHub
+   respondeu 404" não diz nada a quem não conhece a API; e o 404 aqui tem um
+   significado que engana, porque o GitHub o usa tanto para "não existe" quanto
+   para "existe mas você não tem acesso" — ele não revela repositório privado a
+   quem não pode vê-lo. */
+function nuvemExplicar(status){
+  const c = nuvemCfg();
+  if (status === 404) return `o repositório "${c.repo}" não foi encontrado. `
+    + 'Confira se o nome está certo e se a chave dá acesso a ele: em Permissions, '
+    + 'o item Contents precisa estar em Read and write.';
+  if (status === 401) return 'a chave não foi aceita. Ela pode ter sido revogada, '
+    + 'vencido, ou vindo com espaço na cópia.';
+  if (status === 403) return 'o GitHub recusou o acesso. Em geral é a chave sem a '
+    + 'permissão Contents em Read and write.';
+  if (status === 409 || status === 422) return 'houve conflito de versão.';
+  if (status >= 500) return 'o GitHub está com problema no momento. Tente daqui a pouco.';
+  return `o GitHub respondeu ${status}.`;
+}
+
 async function nuvemGravar(sha){
   const c = nuvemCfg();
   const corpo = {
@@ -25339,7 +25384,7 @@ async function nuvemGravar(sha){
   if (sha) corpo.sha = sha;
   const r = await fetch(nuvemUrl(), {method:'PUT', headers:nuvemCabecalho(), body:JSON.stringify(corpo)});
   if (r.status === 409 || r.status === 422) return {conflito:true};
-  if (!r.ok) throw new Error(`GitHub respondeu ${r.status}`);
+  if (!r.ok) throw new Error(nuvemExplicar(r.status));
   const j = await r.json();
   return {conflito:false, sha:(j.content || {}).sha};
 }
@@ -25468,7 +25513,7 @@ function nuvemEstado(estado, detalhe){
     enviando: {z:'', t:'Sincronizando…'},
     ok:       {z:'jade',  t: quando ? `Sincronizado às ${quando.split(' ')[1]}` : 'Sincronizado'},
     conflito: {z:'ouro',  t:'Duas versões: escolha qual fica'},
-    erro:     {z:'brasa', t: detalhe ? `Falhou: ${detalhe}` : 'Falhou'},
+    erro:     {z:'brasa', t:'Não deu para sincronizar'},
     parado:   {z: falta.length ? 'ouro' : (c.ligado ? '' : ''),
                t: falta.length ? `Falta preencher: ${falta.join(' e ')}`
                  : !c.ligado ? 'Configurada, mas desligada'
@@ -25476,6 +25521,17 @@ function nuvemEstado(estado, detalhe){
   };
   const m = mapa[estado] || mapa.parado;
   el.innerHTML = `<span class="etq ${m.z}">${esc(m.t)}</span>`;
+
+  /* A explicação vai por extenso abaixo dos campos, e não dentro da etiqueta:
+     "o repositório não foi encontrado, confira o nome e a permissão" não cabe
+     num selo de canto, e é justamente a frase que resolve o problema. */
+  const cx = $('#nuvemErro');
+  if (cx){
+    cx.innerHTML = (estado === 'erro' && detalhe)
+      ? `<div class="nota brasa"><svg><use href="#i-alerta"/></svg>
+          <div><b>Não deu para sincronizar:</b> ${esc(detalhe)}</div></div>`
+      : '';
+  }
 }
 
 /* Gatilho automático: ao trocar de vista e a cada cinco minutos, quando houver
