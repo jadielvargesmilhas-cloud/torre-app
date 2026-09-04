@@ -686,6 +686,38 @@ html[data-theme="papel"] .destaque-suave{ text-shadow:none; }
 .bt.p{ height:calc(29px * var(--esc)); padding:0 calc(10px * var(--esc)); font-size:calc(13.5px * var(--esc)); border-radius:7px; }
 .bt.p svg{ width:13px;height:13px; }
 .bt.icone{ width:36px; padding:0; }
+
+/* ── botão de tema: amostra do destino ───────────────────────────────────────
+   O botão não usa as cores da tela em que está — usa as do tema para onde leva.
+   No claro fica escuro com a lua clara; no escuro fica claro com o sol escuro.
+   Assim ele não é só um ícone que informa: é um pedaço do outro tema, e o que se
+   vê é literalmente o que se ganha ao clicar.
+
+   As cores são fixas, e não tokens: `--breu` e `--giz` viram o oposto quando o
+   tema troca, e o botão acompanharia a tela em vez de contrariá-la — que é
+   justamente o efeito que se quer aqui. */
+#btTema, #btTemaTopo{
+  background:#0F1116; border-color:#2A2D36; color:#ECEAE4;
+}
+/* Um passo para dentro, nas duas pontas. O preto absoluto e o branco puro
+   brigavam com a tela em vez de conversar com ela: no claro o botão virava um
+   furo, no escuro uma lâmpada. Estes dois tons são os mesmos que o sistema já
+   usa nas superfícies elevadas de cada tema — continuam contrastando com o
+   fundo, mas pertencem à mesma família. */
+:root[data-theme="papel"] #btTema,
+:root[data-theme="papel"] #btTemaTopo{
+  background:#252932; border-color:#3A3E49; color:#E4E1D9;
+}
+:root[data-theme="breu"] #btTema,
+:root[data-theme="breu"] #btTemaTopo{
+  background:#DCD8CE; border-color:#C3BEB2; color:#2A2D36;
+}
+/* O realce vai para o lado do destino: no claro clareia, no escuro escurece um
+   pouco. Assim o toque reforça para onde o botão leva. */
+:root[data-theme="breu"] #btTema:hover,
+:root[data-theme="breu"] #btTemaTopo:hover{ background:#EDEAE2; border-color:#D2CDC1; }
+:root[data-theme="papel"] #btTema:hover,
+:root[data-theme="papel"] #btTemaTopo:hover{ background:#1B1F27; border-color:#454A57; }
 .bt.icone.p{ width:29px; }
 .bt:disabled{ opacity:.42; pointer-events:none; }
 
@@ -6609,6 +6641,12 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
             <div id="nuvemErro"></div>
 
+            <!-- O carimbo fica junto da sincronização de propósito: é aqui que se
+                 desconfia de estar vendo uma versão antiga, e a resposta precisa
+                 estar à mão, não escondida noutra aba. Preenchido por código: este
+                 trecho é HTML estático, e `${}` aqui sairia impresso como texto. -->
+            <div class="fraco" id="nuvemBuild" style="font-family:var(--f-m);font-size:calc(11px * var(--esc));letter-spacing:.05em;margin:12px 0 0"></div>
+
             <div class="nota" style="margin-top:14px"><svg><use href="#i-info"/></svg>
               <div>A cópia baixada em arquivo continua valendo e não depende de internet nem de conta.
               A nuvem serve para os dois aparelhos verem o mesmo, não para substituir o backup local.</div>
@@ -6771,6 +6809,14 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
    importação só verifica se o campo existe, não o valor, então trocar aqui não
    invalida cópia antiga. */
 const VERSAO = '3.0';
+
+/* Carimbo do arquivo, trocado a cada entrega. Serve para responder de olho a
+   pergunta que sempre aparece quando algo não muda como deveria: o arquivo que
+   está aberto é o novo ou o navegador guardou o antigo?
+
+   Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
+   que mudou é justamente o que não está aparecendo, não há como saber. */
+const BUILD = '2026-09-04 04:29';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -10408,12 +10454,29 @@ function avisos(){
   DB.reservas.filter(r => r.status !== 'realizada' && r.status !== 'usada' && r.status !== 'cancelada').forEach(r => {
     const dias = diasAte(r.data);
     if (dias === null) return;
+
+    /* No próprio dia do voo, a hora decide. Sem ela, o dia inteiro conta como
+       ainda por vir — chamar de "já voou" às dez da manhã um voo que sai às dez
+       da noite manda marcar como realizado algo que nem embarcou. */
+    if (dias === 0 && r.hora){
+      const agora = new Date();
+      const [h, mi] = String(r.hora).split(':').map(Number);
+      const decolou = agora.getHours() > h || (agora.getHours() === h && agora.getMinutes() >= mi);
+      if (!decolou){
+        L.push({ grau:3, tipo:'reserva', dias:0,
+          curto:`${esc0(r.desc)} decola hoje`,
+          t:`${r.desc} decola hoje às ${esc(r.hora)}`,
+          s:`${r.quem === 'terceiro' ? `Cliente: ${r.cliente || 'sem nome'}` : 'Emissão própria'}. Confira o check-in antes da hora.`,
+          ir:['emissoes','em-resgates'], fn:`editarReserva('${r.id}')` });
+        return;
+      }
+    }
     const quem = r.quem === 'terceiro' ? `Cliente: ${r.cliente || 'sem nome'}` : 'Emissão própria';
 
     if (dias < 0){
       L.push({ grau:3, tipo:'reserva', dias,
         curto:`${esc0(r.desc)} · marcar`,
-        t:`${r.desc} já voou e continua como emitida`,
+        t:`${r.desc} já voou${r.hora ? ` — decolou às ${esc(r.hora)}` : ''} e continua como emitida`,
         s:`${quem}. Marque como realizada para ela sair do que está em aberto e entrar no que já voou.`,
         ir:['emissoes','em-resgates'], fn:`marcarRealizada('${r.id}')` });
       return;
@@ -21390,7 +21453,18 @@ function editarReserva(id, rascunho){
       <div class="campo"><label>Tipo</label><select id="rsTipo">${Object.entries(ROTULO_TIPO).map(([k, v]) => `<option value="${k}"${k === r.tipo ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Para quem</label><select id="rsQuem"><option value="proprio"${r.quem === 'proprio' ? ' selected' : ''}>Uso próprio</option><option value="terceiro"${r.quem === 'terceiro' ? ' selected' : ''}>Cliente</option></select></div>
       <div class="campo"><label>Cliente</label><input type="text" id="rsCliente" value="${esc(r.cliente)}" placeholder="Só para venda"></div>
-      <div class="campo"><label>Data</label><input type="date" id="rsData" value="${r.data}"></div>
+      <!-- "Data do voo", e não só "Data": o campo sempre foi a data da viagem —
+           é ela que define a faixa etária do passageiro, o aviso de check-in e o
+           próximo voo —, mas o rótulo genérico com hoje preenchido convidava a
+           registrar a data da emissão, e aí o alerta de "já voou" disparava com o
+           voo ainda por acontecer. -->
+      <div class="campo"><label>Data do voo</label><input type="date" id="rsData" value="${r.data}">
+        <div class="dica">Quando a viagem acontece, não quando foi emitida.</div></div>
+      <!-- A hora deixa o alerta preciso no próprio dia: voo às 22h não é passado
+           às 10h da manhã. Fica em branco quando não se sabe, e aí o dia inteiro
+           conta como ainda por vir. -->
+      <div class="campo"><label>Hora do voo</label><input type="time" id="rsHora" value="${esc(r.hora || '')}">
+        <div class="dica">Opcional. Sem ela, o voo só vira passado no dia seguinte.</div></div>
       <!-- Ordem natural: ida, ida e volta, multitrechos — do mais simples ao mais
            composto, que é a ordem em que se pensa a viagem. Em ordem alfabética
            "Ida e Volta" viria antes de "Somente Ida" e a lista perderia o sentido. -->
@@ -21545,7 +21619,7 @@ function editarReserva(id, rascunho){
   $('#rsPaxAbrir').onclick = () => {
     const rascunho = {...r,
       tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(),
-      desc:$('#rsDesc').value.trim(), data:$('#rsData').value, trajeto:$('#rsTrajeto').value,
+      desc:$('#rsDesc').value.trim(), data:$('#rsData').value, hora:$('#rsHora').value, trajeto:$('#rsTrajeto').value,
       prog:$('#rsProg').value, milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value),
       cartaoId:$('#rsCartao').value, parcelas:Number($('#rsParcelas').value) || 1,
       custoExtra:moedaNum($('#rsExtra').value), cobrado:moedaNum($('#rsCobrado').value),
@@ -21592,7 +21666,7 @@ function editarReserva(id, rascunho){
       $('#rsConta').focus(); return;
     }
     const novo = {id:r.id || uid(), tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(),
-      desc:$('#rsDesc').value.trim() || 'Reserva', data:$('#rsData').value, prog:$('#rsProg').value,
+      desc:$('#rsDesc').value.trim() || 'Reserva', data:$('#rsData').value, hora:$('#rsHora').value, prog:$('#rsProg').value,
       milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value), cartaoId:$('#rsCartao').value,
       cobrado:moedaNum($('#rsCobrado').value), contaId:$('#rsConta').value, creditoEm:$('#rsCredito').value, custoExtra:moedaNum($('#rsExtra').value),
       trajeto:$('#rsTrajeto').value,
@@ -25014,6 +25088,8 @@ function renderAjustes(){
       </div>
       <div style="flex:1;min-width:260px">
       <h3 style="font-family:var(--f-d);font-size:calc(25px * var(--esc));font-variation-settings:'wdth' 82;letter-spacing:.02em;margin-bottom:6px">TORRE DE CONTROLE ${VERSAO}</h3>
+      <div class="fraco" style="font-family:var(--f-m);font-size:calc(11.5px * var(--esc));letter-spacing:.05em;margin:-2px 0 8px">
+        arquivo de ${esc(BUILD)}</div>
       <p class="fraco" style="font-size:calc(14px * var(--esc));line-height:1.6;text-wrap:pretty">Torre de controle para quem trata milha como moeda: fabrica barato, guarda com prazo à vista, queima onde ela estica mais e, quando faz sentido, vende. Um arquivo só, sem servidor, sem conta, sem nada saindo do seu navegador.</p>
       </div>
     </div>
@@ -25250,8 +25326,11 @@ function alternarTema(){
   const novo = document.documentElement.dataset.theme === 'breu' ? 'papel' : 'breu';
   document.documentElement.dataset.theme = novo;
   DB.cfg.tema = novo; salvar();
-  /* Os dois botões mostram o mesmo estado: o da barra lateral e o do topo. */
-  const iconeTema = `<svg><use href="#i-${novo === 'breu' ? 'lua' : 'sol'}"/></svg>`;
+  /* O ícone anuncia o DESTINO, não o estado atual: no escuro aparece o sol,
+     porque clicar leva ao claro; no claro aparece a lua. Ao mostrar o estado, o
+     botão virava um letreiro do óbvio — a tela já diz em que tema está — e quem
+     olhava rápido clicava esperando o contrário do que acontecia. */
+  const iconeTema = `<svg><use href="#i-${novo === 'breu' ? 'sol' : 'lua'}"/></svg>`;
   $('#btTema').innerHTML = iconeTema;
   if ($('#btTemaTopo')) $('#btTemaTopo').innerHTML = iconeTema;
   document.querySelector('meta[name="theme-color"]').content = novo === 'breu' ? '#0A0B0E' : '#EFEDE6';
@@ -25279,7 +25358,8 @@ function alternarTema(){
    quem está operando. Sobrescrever calado é rápido e um dia apaga um dia inteiro
    de trabalho.
    ══════════════════════════════════════════════════════════════════════════════ */
-const NUVEM_PADRAO = {repo:'', caminho:'torre.json', token:'', ligado:false, sha:null, ultima:null, auto:true};
+const NUVEM_PADRAO = {repo:'', caminho:'torre.json', token:'', ligado:false,
+                      sha:null, marca:null, ultima:null, auto:true};
 
 function nuvemCfg(){
   DB.cfg = DB.cfg || {};
@@ -25389,6 +25469,50 @@ async function nuvemGravar(sha){
   return {conflito:false, sha:(j.content || {}).sha};
 }
 
+/* Compara o que é DADO, ignorando o que é preferência de aparelho. O tema, a
+   escala da letra e a própria configuração da nuvem são de cada navegador: se
+   entrassem na conta, trocar o tema no computador viraria "conflito" no celular.
+   E o `sha` e a hora da última sincronização vivem dentro da configuração, então
+   comparar o banco inteiro daria diferença sempre, mesmo com tudo igual.
+
+   As coleções são descobertas no próprio banco, e não escritas à mão. A lista
+   manual que existia aqui deixou treze de fora — entre elas as reservas, que são
+   as emissões — e citava três que nem existem. O efeito era o pior possível: um
+   conflito que a tabela não conseguia explicar, porque a diferença estava
+   justamente numa coleção que ninguém listou.
+
+   Descobrindo do banco, uma coleção nova entra sozinha no dia em que for
+   criada. */
+function colecoesDe(a, b){
+  const chaves = new Set();
+  [a, b].forEach(db => Object.keys(db || {}).forEach(k => {
+    if (Array.isArray((db || {})[k])) chaves.add(k);
+  }));
+  return [...chaves].sort();
+}
+
+function mesmoConteudo(a, b){
+  if (!a || !b) return false;
+  return diferencasEntre(a, b).length === 0;
+}
+
+/* Quais coleções diferem, e em quanto. Devolver a lista em vez de um sim-ou-não
+   permite dizer na tela o que mudou — sem isso, a folha de conflito mostrava seis
+   linhas idênticas e nenhuma explicação, que é como pedir uma decisão às cegas. */
+function diferencasEntre(a, b){
+  return colecoesDe(a, b).filter(k =>
+    JSON.stringify((a || {})[k] || []) !== JSON.stringify((b || {})[k] || []))
+    .map(k => ({colecao:k, aqui:(((a || {})[k]) || []).length, la:(((b || {})[k]) || []).length}));
+}
+
+/* Retrato do conteúdo num texto só, para comparar bancos sem percorrer registro
+   a registro. Guardado a cada sincronização, ele responde a pergunta que decide
+   tudo: este aparelho mexeu em alguma coisa desde a última vez? */
+function assinaturaDados(db){
+  if (!db) return '';
+  return colecoesDe(db, db).map(k => JSON.stringify((db[k] || []))).join('|');
+}
+
 let nuvemOcupada = false;
 
 async function nuvemSincronizar(manual){
@@ -25402,18 +25526,69 @@ async function nuvemSincronizar(manual){
     if (remoto.vazio){
       const g = await nuvemGravar(null);
       nuvemCfg().sha = g.sha;
+      nuvemCfg().marca = assinaturaDados(DB);
     } else if (remoto.sha === nuvemCfg().sha){
-      /* O que está lá é o que esta máquina leu por último: pode gravar. */
-      const g = await nuvemGravar(remoto.sha);
-      if (g.conflito){ nuvemAbrirConflito(remoto); return; }
-      nuvemCfg().sha = g.sha;
+      /* O que está lá é o que esta máquina leu por último: pode gravar — mas só
+         se houver o que gravar. Sem esta verificação, cada sincronização criava
+         um commit igual ao anterior, e o histórico, que é justamente o backup,
+         viraria uma pilha de versões idênticas onde achar a que interessa fica
+         impossível. */
+      if (mesmoConteudo(DB, remoto.dados)){
+        nuvemCfg().sha = remoto.sha;
+      } else {
+        const g = await nuvemGravar(remoto.sha);
+        if (g.conflito){ nuvemAbrirConflito(remoto); return; }
+        nuvemCfg().sha = g.sha;
+      }
+      nuvemCfg().marca = assinaturaDados(DB);
     } else if (!nuvemCfg().sha){
-      /* Aparelho novo, que nunca leu: traz o que está na nuvem em vez de
-         empurrar um banco em branco por cima de tudo. */
-      nuvemAbrirConflito(remoto, 'primeira');
-      return;
+      /* Aparelho novo, que nunca leu. Se o conteúdo já for o mesmo, não há o que
+         escolher: adota o `sha` e pronto. */
+      if (mesmoConteudo(DB, remoto.dados)){
+        nuvemCfg().sha = remoto.sha;
+        nuvemCfg().marca = assinaturaDados(DB);
+      } else {
+        /* Havendo diferença, traz ou envia é decisão de quem opera — empurrar um
+           banco em branco por cima de tudo seria o pior desfecho possível. */
+        nuvemAbrirConflito(remoto, 'primeira');
+        return;
+      }
+    } else if (mesmoConteudo(DB, remoto.dados)){
+      /* Mesmo conteúdo, versão diferente. Acontece o tempo todo: o outro aparelho
+         gravou sem alterar nada, ou este aqui já enviou e perdeu a conta da
+         versão — uma recarga de página basta. Não há o que gravar nem o que
+         perguntar. */
+      nuvemCfg().sha = remoto.sha;
+      nuvemCfg().marca = assinaturaDados(DB);
     } else {
-      /* Alguém gravou entre a última leitura e agora. Quem decide é quem opera. */
+      /* ── quem mudou? ───────────────────────────────────────────────────────
+         A `marca` guarda como os dados estavam na última sincronização deste
+         aparelho. Comparando os dois lados com ela, dá para saber quem mexeu — e
+         só há decisão a tomar quando os DOIS mexeram.
+
+         Não se usa a data para isso. Relógio de aparelho desanda, e quem lança no
+         celular sem internet e depois abre o computador com dados velhos perderia
+         o que lançou, porque o computador teria a hora mais recente. */
+      const marca = nuvemCfg().marca;
+      const mudouAqui = marca ? assinaturaDados(DB) !== marca : true;
+      const mudouLa   = marca ? assinaturaDados(remoto.dados) !== marca : true;
+
+      if (marca && !mudouAqui && mudouLa){
+        /* Só a nuvem mudou. Trazer é seguro: não há nada aqui para perder, e é o
+           caso mais comum — abrir o celular depois de ter lançado no computador. */
+        DB = remoto.dados;
+        nuvemCfg().sha = remoto.sha;
+        nuvemCfg().marca = assinaturaDados(DB);
+        nuvemCfg().ultima = Date.now();
+        salvar(); aplicarTudo();
+        nuvemEstado('ok');
+        avisar('Dados atualizados a partir da nuvem.', 'ok');
+        return;
+      }
+
+      /* Os dois lados mudaram desde o último ponto comum. Agora sim há duas
+         versões legítimas, e escolher por conta própria apagaria trabalho de
+         alguém. */
       nuvemAbrirConflito(remoto);
       return;
     }
@@ -25429,9 +25604,23 @@ async function nuvemSincronizar(manual){
   }
 }
 
+/* Nome de gente para cada coleção. Sem isto a folha diria "reservas" e
+   "cotacoes", que são nomes de dentro do código. */
+const NOME_COLECAO = {
+  lancamentos:'Lançamentos', campanhas:'Campanhas', contas:'Contas', saldos:'Saldos',
+  assinaturas:'Assinaturas de clube', metas:'Metas de viagem', reservas:'Emissões',
+  cartoes:'Cartões', lotes:'Lotes de validade', lojas:'Lojas parceiras',
+  compras:'Compras inteligentes', roteiros:'Roteiros', pendentes:'Pendências',
+  cpfs:'Política de CPF', pagamentos:'Pagamentos', mural:'Mural',
+  cotacoes:'Cotações', monitores:'Monitores de voo', buscas:'Buscas guardadas',
+  simulacoes:'Simulações', vitrines:'Vitrines', desejos:'Lista de desejos',
+  planos:'Planos de clube'
+};
+
 function nuvemAbrirConflito(remoto, motivo){
   nuvemEstado('conflito');
   const aqui = retratoBanco(DB), la = retratoBanco(remoto.dados);
+  const dif = diferencasEntre(DB, remoto.dados);
   const linha = (r, a, b) => `<tr><td>${esc(r)}</td><td class="n">${a}</td><td class="n">${b}</td></tr>`;
 
   abrirFolha({
@@ -25443,6 +25632,23 @@ function nuvemAbrirConflito(remoto, motivo){
           ? 'Este aparelho nunca sincronizou e já há um banco guardado. Trazer o da nuvem substitui o que está aqui; enviar este substitui o de lá.'
           : 'Outro aparelho gravou depois da última vez que este leu. Escolha qual versão fica — a outra continua no histórico do repositório e pode ser recuperada lá.'}</div>
       </div>
+      <!-- Primeiro o que DIFERE, que é o que decide. A tabela fixa de seis linhas
+           que existia aqui mostrava tudo igual quando a diferença estava numa
+           coleção fora dela, e pedir escolha sem mostrar a diferença é pedir
+           escolha no escuro. -->
+      ${dif.length ? `
+        <div class="olho destaque" style="margin:0 0 9px">O que está diferente</div>
+        <div class="rolo" style="margin:0 0 16px;padding:0">
+          <table class="tb-dados">
+            <thead><tr><th>Onde</th><th class="n">Neste aparelho</th><th class="n">Na nuvem</th></tr></thead>
+            <tbody>${dif.map(d => `<tr>
+              <td><b>${esc(NOME_COLECAO[d.colecao] || d.colecao)}</b></td>
+              <td class="n"><b>${nBR(d.aqui)}</b></td>
+              <td class="n"><b>${nBR(d.la)}</b></td></tr>`).join('')}</tbody>
+          </table>
+        </div>` : ''}
+
+      <div class="olho" style="margin:0 0 9px">O resto do banco</div>
       <div class="rolo" style="margin:0;padding:0">
         <table class="tb-dados">
           <thead><tr><th>O que tem</th><th class="n">Neste aparelho</th><th class="n">Na nuvem</th></tr></thead>
@@ -25477,6 +25683,7 @@ async function nuvemResolver(escolha){
     if (escolha === 'trazer'){
       DB = remoto.dados;
       nuvemCfg().sha = remoto.sha;
+      nuvemCfg().marca = assinaturaDados(DB);
       nuvemCfg().ultima = Date.now();
       salvar(); aplicarTudo();
       avisar('Banco da nuvem carregado neste aparelho.', 'ok');
@@ -25484,6 +25691,7 @@ async function nuvemResolver(escolha){
       const g = await nuvemGravar(remoto.sha);
       if (g.conflito){ avisar('A nuvem mudou de novo. Sincronize outra vez.', 'alerta'); return; }
       nuvemCfg().sha = g.sha;
+      nuvemCfg().marca = assinaturaDados(DB);
       nuvemCfg().ultima = Date.now();
       salvar();
       avisar('Este banco foi enviado para a nuvem.', 'ok');
@@ -25583,7 +25791,8 @@ const RENDER = { mesa:() => { renderMesa(); renderVender(); }, radar:renderRadar
 function aplicarTudo(){
   document.documentElement.dataset.theme = DB.cfg.tema || 'breu';
   aplicarEscala(DB.cfg.escala || 1);
-  const ic = `<svg><use href="#i-${(DB.cfg.tema || 'breu') === 'breu' ? 'lua' : 'sol'}"/></svg>`;
+  /* Mesma regra na primeira pintura: o ícone é o do tema para onde se vai. */
+  const ic = `<svg><use href="#i-${(DB.cfg.tema || 'breu') === 'breu' ? 'sol' : 'lua'}"/></svg>`;
   $('#btTema').innerHTML = ic;
   if ($('#btTemaTopo')) $('#btTemaTopo').innerHTML = ic;
   $('#rtDestino').innerHTML = PROG_RESGATE.map(p => `<option value="${p}"${p === 'smiles' ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('');
@@ -26179,6 +26388,7 @@ function arrancar(){
   tocarRodizioPlanos();
   ligarEventos();
   ligarObservadorDeTabelas();
+  if ($('#nuvemBuild')) $('#nuvemBuild').textContent = `Arquivo desta Torre: ${BUILD}`;
   nuvemLigarAuto();
   /* Ao abrir, traz o que houver na nuvem antes de qualquer edição: é o momento
      em que o outro aparelho pode ter gravado algo. */
