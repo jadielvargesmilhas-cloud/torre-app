@@ -10000,30 +10000,87 @@ function irParaAba(grupo, aba){
 
 /* Custo médio ponderado do milheiro, por programa. Lançamento orgânico entra com
    custo zero e puxa a média para baixo, é exatamente o efeito que se quer medir. */
-function cpmPorPrograma(){
+/* ══════════════════════════════════════════════════════════════════════════════
+   CUSTO MÉDIO PONDERADO
+   ──────────────────────────────────────────────────────────────────────────────
+   Somar todos os custos e dividir pelo saldo dava um número errado sempre que
+   milha saía. A saída reduzia a quantidade mas não o custo, e o milheiro subia
+   sozinho: quatrocentas mil milhas por 17.374 reais custam 43,44 o milheiro;
+   depois de emitir 142.967, a Torre mostrava 67,60 — como se as milhas que
+   ficaram tivessem encarecido por terem saído outras.
+
+   O certo é o que qualquer estoque faz: a saída leva embora o custo médio dela.
+   Saíram 142.967 a 43,44 o milheiro, então 6.209 reais saem junto, e o que fica
+   continua valendo 43,44. Emitir não muda o preço do que sobrou.
+
+   Por isso os lançamentos são percorridos em ORDEM DE DATA, e não em bloco: o
+   custo médio de uma saída depende do que havia no estoque naquele momento, e
+   uma compra posterior não pode baratear uma emissão que já aconteceu.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function estoqueMedio(lancamentos){
   const acc = {};
-  DB.lancamentos.forEach(l => {
-    if (!acc[l.prog]) acc[l.prog] = {qtd:0, custo:0, n:0};
-    acc[l.prog].qtd += Number(l.qtd) || 0;
-    acc[l.prog].custo += Number(l.custo) || 0;
-    acc[l.prog].n++;
-  });
+  [...(lancamentos || [])]
+    .sort((a, b) => String(a.data || '').localeCompare(String(b.data || ''))
+                 || (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0))
+    .forEach(l => {
+      const p = l.prog; if (!p) return;
+      const e = acc[p] = acc[p] || {qtd:0, custo:0, n:0};
+      const q = Number(l.qtd) || 0;
+      e.n++;
+
+      if (q >= 0){
+        /* Entrada: soma quantidade e custo, e o médio se recalcula sozinho. */
+        e.qtd += q;
+        e.custo += Number(l.custo) || 0;
+        return;
+      }
+
+      /* Saída: leva o custo médio do momento. Sem estoque anterior não há custo a
+         levar — é o caso de quem lança o resgate antes de registrar de onde a
+         milha veio, e aí a saída sai a custo zero em vez de virar custo negativo. */
+      const sai = Math.min(Math.abs(q), e.qtd);
+      const medio = e.qtd > 0 ? e.custo / e.qtd : 0;
+      e.qtd -= sai;
+      e.custo = Math.max(0, e.custo - medio * sai);
+    });
+  return acc;
+}
+
+function cpmPorPrograma(){
+  const acc = estoqueMedio(DB.lancamentos);
   const saida = {};
   for (const p in acc) saida[p] = acc[p].qtd > 0 ? (acc[p].custo / acc[p].qtd) * 1000 : null;
+  return saida;
+}
+
+/* Quanto custou o que ainda está em estoque, por programa. É este o número que a
+   coluna "custo total" deve mostrar: o custo do que resta, não o de tudo que já
+   passou pela conta. */
+function custoEmEstoque(){
+  const acc = estoqueMedio(DB.lancamentos);
+  const saida = {};
+  for (const p in acc) saida[p] = acc[p].custo;
   return saida;
 }
 /* CPM por programa E por conta. O lançamento já sabe de quem é, então o custo
    médio ponderado pode ser recortado por CPF sem inventar nada. É isso que
    revela quem no grupo está fabricando barato e quem está pagando caro. */
 function cpmPorProgramaConta(){
+  /* Mesma regra de estoque, recortada por titular: cada conta tem o próprio
+     estoque e o próprio custo médio, e a saída de uma não pode baratear a outra. */
   const acc = {};
+  const porConta = {};
   DB.lancamentos.forEach(l => {
     if (!l.contaId) return;
-    acc[l.prog] = acc[l.prog] || {};
-    const a = acc[l.prog][l.contaId] = acc[l.prog][l.contaId] || {qtd:0, custo:0};
-    a.qtd += Number(l.qtd) || 0;
-    a.custo += Number(l.custo) || 0;
+    (porConta[l.contaId] = porConta[l.contaId] || []).push(l);
   });
+  for (const c in porConta){
+    const e = estoqueMedio(porConta[c]);
+    for (const p in e){
+      acc[p] = acc[p] || {};
+      acc[p][c] = {qtd:e[p].qtd, custo:e[p].custo};
+    }
+  }
   const saida = {};
   for (const p in acc){
     saida[p] = {};
