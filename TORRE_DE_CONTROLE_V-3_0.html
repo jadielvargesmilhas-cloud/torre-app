@@ -16052,7 +16052,12 @@ function renderLancamentos(){
       const zona = saida ? 'saida' : !l.custo ? 'jade' : cpm <= f.alvo ? 'jade' : cpm <= f.razoavel ? 'ouro' : 'brasa';
       return `<tr class="lanc-l${saida ? ' lanc-saida' : ''}${novoDia ? ' dia-novo' : ''}"><td class="c fraco">${novoDia ? dataBR(l.data) : ''}</td>
         <td><span class="prog-linha">${discoProg(l.prog, 'p')}${esc(prog(l.prog).n)}</span></td>
-        <td>${saida ? 'Saída por transferência' : esc(nomeTipoLanc(l.tipo))}${l.nota ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${esc(l.nota)}</div>` : ''}</td>
+        <!-- Toda saída era chamada de "Saída por transferência", mas transferência
+             é só uma das formas de o ponto sair: venda, resgate de passagem, de
+             produto e de diária também tiram do saldo. O tipo já está gravado no
+             lançamento; usá-lo é dizer a verdade, e a etiqueta genérica escondia
+             justamente a linha que a pessoa procurava. -->
+        <td>${esc(saida && l.tipo === 'transferencia' ? 'Saída por transferência' : nomeTipoLanc(l.tipo))}${l.nota ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${esc(l.nota)}</div>` : ''}</td>
         <td class="fraco" style="font-size:calc(13.5px * var(--esc))" data-dica="${esc(nomeConta(l.contaId))}">${esc(nomeCurtoConta(l.contaId))}</td>
         <!-- A barra dá o tamanho relativo do lançamento sem obrigar a comparar
              números de sete dígitos linha a linha. -->
