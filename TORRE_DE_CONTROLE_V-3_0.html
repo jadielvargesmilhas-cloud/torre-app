@@ -6641,6 +6641,12 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
             <div id="nuvemErro"></div>
 
+            <!-- Emissões cadastradas antes desta mudança não descontaram nada.
+                 O ajuste não é feito sozinho de propósito: se alguém já tinha
+                 lançado o resgate à mão, aplicar por conta própria tiraria a
+                 mesma milha duas vezes. Quem sabe se lançou é quem operou. -->
+            <div id="emissoesSemBaixa"></div>
+
             <!-- O carimbo fica junto da sincronização de propósito: é aqui que se
                  desconfia de estar vendo uma versão antiga, e a resposta precisa
                  estar à mão, não escondida noutra aba. Preenchido por código: este
@@ -16841,8 +16847,16 @@ function apagar(colecao, id, oQue){
       });
       DB.lancamentos = DB.lancamentos.filter(x => x.saidaDe !== id);
     }
-    /* Apagar a emissão libera a vaga de CPF que ela ocupava. */
-    if (colecao === 'reservas') DB.cpfs = (DB.cpfs || []).filter(x => x.reservaId !== id);
+    /* Apagar a emissão libera a vaga de CPF que ela ocupava, e devolve as milhas:
+       o lançamento de saída existia por causa dela e não faz sentido sozinho. */
+    if (colecao === 'reservas'){
+      DB.cpfs = (DB.cpfs || []).filter(x => x.reservaId !== id);
+      /* Devolve as milhas antes de remover o lançamento: apagar a linha sem
+         desfazer o efeito deixaria o saldo baixo para sempre. */
+      (DB.lancamentos || []).filter(x => x.daEmissao === id && x.mexeuSaldo)
+        .forEach(x => mexerSaldo(x.contaId, x.prog, -Number(x.qtd || 0)));
+      DB.lancamentos = (DB.lancamentos || []).filter(x => x.daEmissao !== id);
+    }
     DB[colecao] = DB[colecao].filter(x => x.id !== id);
     salvar();
     if (RENDER[vistaAtual]) RENDER[vistaAtual]();
@@ -21321,6 +21335,9 @@ function editarViagemAntigo(id, fechando){
       status:$('#viFeita').checked ? 'usada' : 'emitida'};
     const i = DB.reservas.findIndex(x => x.id === novo.id);
     if (i >= 0) DB.reservas[i] = novo; else DB.reservas.push(novo);
+    /* A saída de milhas acompanha a emissão em toda gravação: criada com ela,
+       corrigida quando a quantidade muda, apagada quando ela é cancelada. */
+    sincronizarSaidaDaEmissao(novo);
     salvar(); fecharFolha(); renderRota(); renderBalcao(); renderMesa();
     if (typeof renderEmissoes === 'function') renderEmissoes();
     const v = valorResgate(novo);
@@ -21459,6 +21476,128 @@ function duplicarLancamento(id){
      aconteceu. */
   copia.data = hojeISO();
   editarLancamento(null, copia);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   A EMISSÃO BAIXA O SALDO
+   ──────────────────────────────────────────────────────────────────────────────
+   Antes a emissão ficava só registrada em Emissões e não tocava no saldo, embora
+   a ajuda do Diário prometesse o contrário — dizia que lançar o resgate à mão
+   contaria a mesma milha duas vezes. Quem seguia a instrução ficava com o saldo
+   inflado; quem lançava à mão via a advertência. Não havia caminho certo.
+
+   Agora cada emissão tem um lançamento de saída atrelado a ela, criado, alterado
+   e removido junto. Um só, nunca dois: o vínculo é pelo id da emissão, e a função
+   abaixo reescreve o lançamento existente em vez de acrescentar outro.
+
+   O lançamento entra com custo zero de propósito. As milhas já foram pagas quando
+   entraram, e atribuir custo à saída derrubaria o milheiro médio do que sobrou —
+   as taxas em dinheiro são outra conta, e vivem na própria emissão.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const TIPO_SAIDA_DA_EMISSAO = {voo:'resgatePass', hospedagem:'resgateAccor', carro:'resgateProd'};
+
+/* Soma no saldo de uma conta, criando a linha se ainda não existir. Espelha o
+   que o formulário de lançamento faz, para os dois caminhos moverem o saldo do
+   mesmo jeito. */
+function mexerSaldo(contaId, prog, delta){
+  if (!contaId || !prog || !delta) return;
+  const s = DB.saldos.find(x => x.contaId === contaId && x.prog === prog);
+  if (s) s.qtd = Math.max(0, (Number(s.qtd) || 0) + delta);
+  else if (delta > 0) DB.saldos.push({id:uid(), contaId, prog, qtd:delta});
+}
+
+function sincronizarSaidaDaEmissao(r){
+  DB.lancamentos = DB.lancamentos || [];
+  const i = DB.lancamentos.findIndex(l => l.daEmissao === r.id);
+  const antigo = i >= 0 ? DB.lancamentos[i] : null;
+  const milhas = Number(r.milhas) || 0;
+
+  /* Desfaz o efeito anterior antes de aplicar o novo. Sem isto, editar de 38 mil
+     para 45 mil tiraria 45 mil A MAIS em vez de sete: o saldo iria descendo a
+     cada gravação, e o erro só apareceria semanas depois, sem causa aparente. */
+  if (antigo && antigo.mexeuSaldo) mexerSaldo(antigo.contaId, antigo.prog, -Number(antigo.qtd || 0));
+
+  /* Emissão cancelada ou sem milhas não tira nada do saldo: a milha voltou, ou
+     nunca saiu. O lançamento some junto. */
+  const vale = milhas > 0 && r.status !== 'cancelada' && r.prog;
+  if (!vale){
+    if (i >= 0) DB.lancamentos.splice(i, 1);
+    return;
+  }
+
+  const base = {
+    daEmissao: r.id,
+    data: r.data || hojeISO(),
+    contaId: r.contaId || (DB.contas[0] || {}).id || '',
+    prog: r.prog,
+    tipo: TIPO_SAIDA_DA_EMISSAO[r.tipo] || 'resgatePass',
+    qtd: -Math.abs(milhas),
+    custo: 0,
+    parcelas: 1,
+    mexeuSaldo: true,
+    nota: `Emissão: ${r.desc || 'sem descrição'}${r.cliente ? ` · ${r.cliente}` : ''}`
+  };
+
+  if (i >= 0) DB.lancamentos[i] = {...DB.lancamentos[i], ...base};
+  else DB.lancamentos.push({...base, id: 'le' + Date.now() + Math.random().toString(36).slice(2, 6), criadoEm: Date.now()});
+
+  mexerSaldo(base.contaId, base.prog, base.qtd);
+}
+
+/* Passa por todas as emissões de uma vez. Usada ao aplicar a mudança nos dados
+   que já existiam e depois de qualquer importação. */
+function sincronizarSaidasDeTodasEmissoes(){
+  (DB.reservas || []).forEach(sincronizarSaidaDaEmissao);
+  /* Emissão apagada fora do fluxo normal deixaria um lançamento órfão puxando
+     saldo para baixo sem dono. */
+  DB.lancamentos = (DB.lancamentos || []).filter(l =>
+    !l.daEmissao || (DB.reservas || []).some(r => r.id === l.daEmissao));
+}
+
+
+/* Emissões anteriores à mudança não têm lançamento de saída. Em vez de corrigir
+   em silêncio, a Torre mostra quais são e quanto some do saldo, e deixa a decisão
+   com quem sabe se já lançou o resgate à mão — aplicar por conta própria poderia
+   descontar a mesma milha duas vezes. */
+function pintarEmissoesSemBaixa(){
+  const cx = $('#emissoesSemBaixa'); if (!cx) return;
+  const sem = (DB.reservas || []).filter(r =>
+    (Number(r.milhas) || 0) > 0 && r.status !== 'cancelada' && r.prog
+    && !(DB.lancamentos || []).some(l => l.daEmissao === r.id));
+
+  if (!sem.length){ cx.innerHTML = ''; return; }
+
+  const total = soma(sem.map(r => Number(r.milhas) || 0));
+  cx.innerHTML = `<div class="nota ouro" style="margin-top:14px">
+    <svg><use href="#i-alerta"/></svg>
+    <div class="pilha compacta">
+      <div><b>${sem.length} ${sem.length === 1 ? 'emissão não desconta' : 'emissões não descontam'} do saldo.</b>
+        ${sem.length === 1 ? 'Ela foi cadastrada' : 'Elas foram cadastradas'} antes de a emissão passar a baixar as milhas,
+        e ${sem.length === 1 ? 'consome' : 'consomem'} <b>${nBR(total)}</b> que ainda aparecem como disponíveis.</div>
+      <div>${sem.slice(0, 6).map(r => `${esc(r.desc || 'sem descrição')} · ${nBR(r.milhas)} em ${esc(prog(r.prog).n)}`).join('<br>')}
+        ${sem.length > 6 ? `<br>e mais ${sem.length - 6}` : ''}</div>
+      <div>Se você já lançou esses resgates à mão no Diário, <b>não aplique</b> — seria a mesma milha saindo duas vezes.</div>
+      <div style="margin-top:6px"><button class="bt p primario" onclick="aplicarBaixaDasEmissoes()">
+        <svg><use href="#i-ok"/></svg>Descontar ${nBR(total)} agora</button></div>
+    </div></div>`;
+}
+
+function aplicarBaixaDasEmissoes(){
+  const sem = (DB.reservas || []).filter(r =>
+    (Number(r.milhas) || 0) > 0 && r.status !== 'cancelada' && r.prog
+    && !(DB.lancamentos || []).some(l => l.daEmissao === r.id));
+  const total = soma(sem.map(r => Number(r.milhas) || 0));
+
+  confirmar('Descontar as emissões antigas',
+    `Serão criados ${sem.length} lançamentos de saída, somando ${nBR(total)} milhas. `
+    + 'Cada um fica ligado à sua emissão e pode ser desfeito apagando a emissão. '
+    + 'Se você já tinha lançado esses resgates à mão, cancele e apague os lançamentos manuais primeiro.',
+    () => {
+      sem.forEach(sincronizarSaidaDaEmissao);
+      salvar(); aplicarTudo();
+      avisar(`${sem.length} ${sem.length === 1 ? 'emissão descontada' : 'emissões descontadas'}: ${nBR(total)} saíram do saldo.`, 'ok', 5000);
+    }, 'Descontar');
 }
 
 function duplicarReserva(id){
@@ -21722,6 +21861,7 @@ function editarReserva(id, rascunho){
        estado anterior até alguém recarregar a página — a vaga já tinha sido
        consumida e a tela dizia que não. */
     sincCpfDaEmissao(novo);
+    sincronizarSaidaDaEmissao(novo);
     salvar(); fecharFolha();
     renderBalcao(); renderEmissoes(); renderFita();
     avisar('Emissão salva.', 'ok');
@@ -25008,6 +25148,9 @@ function renderDatas(){
 
 function renderAjustes(){
   renderDatas();
+  /* Redesenhado a cada visita: emissões podem ter sido criadas ou ajustadas
+     noutra tela desde a última vez. */
+  pintarEmissoesSemBaixa();
   $('#ajProvedores').innerHTML = Object.entries(PROVEDORES).map(([k, p]) => {
     const usadoD = DB.cfg.provDinheiro === k, usadoM = DB.cfg.provMilhas === k;
     return `<div class="cartao">
@@ -26429,6 +26572,7 @@ function arrancar(){
   ligarEventos();
   ligarObservadorDeTabelas();
   if ($('#nuvemBuild')) $('#nuvemBuild').textContent = `Arquivo desta Torre: ${BUILD}`;
+  pintarEmissoesSemBaixa();
   nuvemLigarAuto();
   /* Ao abrir, traz o que houver na nuvem antes de qualquer edição: é o momento
      em que o outro aparelho pode ter gravado algo. */
