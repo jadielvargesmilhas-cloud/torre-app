@@ -16066,6 +16066,7 @@ function renderLancamentos(){
         <td class="n">${l.custo ? brl(l.custo) : '<span class="jade">grátis</span>'}</td>
         <td class="n"><span class="lanc-cpm z-${zona}">${l.custo ? brl2(cpm) : '—'}</span></td>
         <td><div class="acoes-cel">
+          <button class="bt p fantasma icone" onclick="duplicarLancamento('${l.id}')" data-dica="Duplicar: abre um novo já preenchido"><svg><use href="#i-copiar"/></svg></button>
           <button class="bt p fantasma icone" onclick="editarLancamento('${l.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
           <button class="bt p fantasma icone" onclick="apagar('lancamentos','${l.id}','o lançamento')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button></div></td></tr>`;
       }).join('');
@@ -21428,6 +21429,7 @@ function renderBalcao(){
         ? `<div class="item-num" style="color:${res >= 0 ? 'var(--jade)' : 'var(--brasa)'}">${brl(res)}<small>resultado</small></div>`
         : `<div class="item-num fraco">${r.milhas ? nBR(r.milhas) : brl(r.custoExtra)}<small>${r.milhas ? 'milhas' : 'em dinheiro'}</small></div>`}
       <div class="item-acoes">
+        <button class="bt p fantasma icone" onclick="duplicarReserva('${r.id}')" data-dica="Duplicar: abre uma nova já preenchida"><svg><use href="#i-copiar"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarReserva('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
         <button class="bt p fantasma icone" onclick="apagar('reservas','${r.id}','a reserva')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
       </div>
@@ -21438,6 +21440,39 @@ function renderBalcao(){
   renderResultado();
   renderIR();
   renderClientes();
+}
+
+
+/* ── duplicar ────────────────────────────────────────────────────────────────
+   Abre o formulário preenchido com uma cópia, sem gravar nada: quem duplica quase
+   sempre precisa mudar alguma coisa — a data, o trecho, o passageiro —, e gravar
+   direto criaria um gêmeo idêntico que ninguém queria.
+
+   O que NÃO é copiado tem razão de ser em cada caso. */
+function duplicarLancamento(id){
+  const l = DB.lancamentos.find(x => x.id === id); if (!l) return;
+  const copia = {...l};
+  /* Identidade e carimbo de criação são de cada registro, não do conteúdo. */
+  delete copia.id; delete copia.criadoEm;
+  /* A data volta para hoje: repetir uma compra é comprar de novo agora, e manter
+     a data antiga faria o milheiro médio ser recalculado com uma data que não
+     aconteceu. */
+  copia.data = hojeISO();
+  editarLancamento(null, copia);
+}
+
+function duplicarReserva(id){
+  const r = DB.reservas.find(x => x.id === id); if (!r) return;
+  const copia = {...r};
+  delete copia.id;
+  copia.criada = hojeISO();
+  /* A situação volta ao começo: uma emissão nova não nasce realizada, mesmo que
+     a que a originou já esteja. */
+  copia.status = 'emitida';
+  /* Data e hora do voo ficam: quem duplica costuma estar lançando a volta ou o
+     mesmo trecho para outro passageiro, e a data quase sempre é próxima. Fica
+     visível no formulário para ser corrigida. */
+  editarReserva(null, copia);
 }
 
 function editarReserva(id, rascunho){
