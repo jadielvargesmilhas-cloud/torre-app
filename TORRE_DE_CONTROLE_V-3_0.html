@@ -10515,20 +10515,24 @@ function avisos(){
      A última é grau 3 porque não se resolve sozinha com o tempo: passa a semana,
      passa o mês, e continua lá até alguém marcar. */
   DB.reservas.filter(r => r.status !== 'realizada' && r.status !== 'usada' && r.status !== 'cancelada').forEach(r => {
-    const dias = diasAte(r.data);
+    /* Numa ida e volta, a viagem acaba na volta. Olhar só a ida faria a Torre
+       cobrar "marque como realizada" com o passageiro ainda no destino. */
+    const ultimoVoo = r.dataVolta && r.dataVolta > r.data ? r.dataVolta : r.data;
+    const horaUltima = r.dataVolta && r.dataVolta > r.data ? r.horaVolta : r.hora;
+    const dias = diasAte(ultimoVoo);
     if (dias === null) return;
 
     /* No próprio dia do voo, a hora decide. Sem ela, o dia inteiro conta como
        ainda por vir — chamar de "já voou" às dez da manhã um voo que sai às dez
        da noite manda marcar como realizado algo que nem embarcou. */
-    if (dias === 0 && r.hora){
+    if (dias === 0 && horaUltima){
       const agora = new Date();
-      const [h, mi] = String(r.hora).split(':').map(Number);
+      const [h, mi] = String(horaUltima).split(':').map(Number);
       const decolou = agora.getHours() > h || (agora.getHours() === h && agora.getMinutes() >= mi);
       if (!decolou){
         L.push({ grau:3, tipo:'reserva', dias:0,
           curto:`${esc0(r.desc)} decola hoje`,
-          t:`${r.desc} decola hoje às ${esc(r.hora)}`,
+          t:`${r.desc} ${r.dataVolta && r.dataVolta > r.data ? 'volta' : 'decola'} hoje às ${esc(horaUltima)}`,
           s:`${r.quem === 'terceiro' ? `Cliente: ${r.cliente || 'sem nome'}` : 'Emissão própria'}. Confira o check-in antes da hora.`,
           ir:['emissoes','em-resgates'], fn:`editarReserva('${r.id}')` });
         return;
@@ -10539,7 +10543,7 @@ function avisos(){
     if (dias < 0){
       L.push({ grau:3, tipo:'reserva', dias,
         curto:`${esc0(r.desc)} · marcar`,
-        t:`${r.desc} já voou${r.hora ? ` — decolou às ${esc(r.hora)}` : ''} e continua como emitida`,
+        t:`${r.desc} já voou${horaUltima ? ` — ${r.dataVolta && r.dataVolta > r.data ? 'voltou' : 'decolou'} às ${esc(horaUltima)}` : ''} e continua como emitida`,
         s:`${quem}. Marque como realizada para ela sair do que está em aberto e entrar no que já voou.`,
         ir:['emissoes','em-resgates'], fn:`marcarRealizada('${r.id}')` });
       return;
@@ -21689,24 +21693,39 @@ function editarReserva(id, rascunho){
       <div class="campo"><label>Tipo</label><select id="rsTipo">${Object.entries(ROTULO_TIPO).map(([k, v]) => `<option value="${k}"${k === r.tipo ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Para quem</label><select id="rsQuem"><option value="proprio"${r.quem === 'proprio' ? ' selected' : ''}>Uso próprio</option><option value="terceiro"${r.quem === 'terceiro' ? ' selected' : ''}>Cliente</option></select></div>
       <div class="campo"><label>Cliente</label><input type="text" id="rsCliente" value="${esc(r.cliente)}" placeholder="Só para venda"></div>
-      <!-- "Data do voo", e não só "Data": o campo sempre foi a data da viagem —
-           é ela que define a faixa etária do passageiro, o aviso de check-in e o
-           próximo voo —, mas o rótulo genérico com hoje preenchido convidava a
-           registrar a data da emissão, e aí o alerta de "já voou" disparava com o
-           voo ainda por acontecer. -->
-      <div class="campo"><label>Data do voo</label><input type="date" id="rsData" value="${r.data}">
-        <div class="dica">Quando a viagem acontece, não quando foi emitida.</div></div>
-      <!-- A hora deixa o alerta preciso no próprio dia: voo às 22h não é passado
-           às 10h da manhã. Fica em branco quando não se sabe, e aí o dia inteiro
-           conta como ainda por vir. -->
-      <div class="campo"><label>Hora do voo</label><input type="time" id="rsHora" value="${esc(r.hora || '')}">
-        <div class="dica">Opcional. Sem ela, o voo só vira passado no dia seguinte.</div></div>
+      <!-- Emissão vem logo depois do cliente porque é o dado do ato de comprar:
+           quem preenche está com o comprovante na mão e digita na ordem em que
+           ele apresenta as coisas. As datas de voo vêm adiante, junto do trajeto,
+           que é quem determina quantas são. -->
+      <div class="campo"><label>Data da emissão</label><input type="date" id="rsCriada" value="${esc(r.criada || hojeISO())}">
+        <div class="dica">Quando a passagem foi emitida.</div></div>
+      <div class="campo"><label>Hora da emissão</label><input type="time" id="rsCriadaHora" value="${esc(r.criadaHora || '')}">
+        <div class="dica">Opcional. Útil quando a promoção tem hora para acabar.</div></div>
+
       <!-- Ordem natural: ida, ida e volta, multitrechos — do mais simples ao mais
            composto, que é a ordem em que se pensa a viagem. Em ordem alfabética
-           "Ida e Volta" viria antes de "Somente Ida" e a lista perderia o sentido. -->
+           "Ida e Volta" viria antes de "Somente Ida" e a lista perderia o sentido.
+
+           O trajeto vem ANTES das datas de voo porque é ele que decide se há uma
+           data ou duas: escolher primeiro e ver os campos aparecerem é a ordem em
+           que a viagem se organiza na cabeça. -->
       <div class="campo"><label>Trajeto</label><select id="rsTrajeto" data-ordem="natural">${
         [['ida','Somente Ida'],['idavolta','Ida e Volta'],['multi','Multitrechos']]
         .map(([v, n]) => `<option value="${v}"${v === (r.trajeto || 'ida') ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+
+      <!-- ── datas do voo ────────────────────────────────────────────────────
+           A ida sempre aparece. A volta só com trajeto de ida e volta, e some
+           quando o trajeto muda — deixar um campo de volta preenchido numa
+           emissão só de ida faria o alerta de "já voou" esperar por um voo que
+           não existe. -->
+      <div class="campo"><label id="rsRotIda">Data do voo</label><input type="date" id="rsData" value="${r.data}">
+        <div class="dica">Quando a viagem acontece, não quando foi emitida.</div></div>
+      <div class="campo"><label id="rsRotIdaH">Hora do voo</label><input type="time" id="rsHora" value="${esc(r.hora || '')}">
+        <div class="dica">Opcional. Sem ela, o voo só vira passado no dia seguinte.</div></div>
+      <div class="campo" id="rsBoxVolta" hidden><label>Data da volta</label><input type="date" id="rsDataVolta" value="${esc(r.dataVolta || '')}">
+        <div class="dica">O retorno desta mesma emissão.</div></div>
+      <div class="campo" id="rsBoxVoltaH" hidden><label>Hora da volta</label><input type="time" id="rsHoraVolta" value="${esc(r.horaVolta || '')}">
+        <div class="dica">Opcional.</div></div>
       <!-- Descrição sozinha na linha seguinte, ocupando as cinco colunas: é o
            campo mais longo da folha e espremê-lo numa coluna faria o texto sumir
            antes do meio. -->
@@ -21855,7 +21874,11 @@ function editarReserva(id, rascunho){
   $('#rsPaxAbrir').onclick = () => {
     const rascunho = {...r,
       tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(),
-      desc:$('#rsDesc').value.trim(), data:$('#rsData').value, hora:$('#rsHora').value, trajeto:$('#rsTrajeto').value,
+      desc:$('#rsDesc').value.trim(), data:$('#rsData').value, hora:$('#rsHora').value,
+      dataVolta:$('#rsDataVolta') ? $('#rsDataVolta').value : '',
+      horaVolta:$('#rsHoraVolta') ? $('#rsHoraVolta').value : '',
+      criadaHora:$('#rsCriadaHora') ? $('#rsCriadaHora').value : '',
+      trajeto:$('#rsTrajeto').value,
       prog:$('#rsProg').value, milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value),
       cartaoId:$('#rsCartao').value, parcelas:Number($('#rsParcelas').value) || 1,
       custoExtra:moedaNum($('#rsExtra').value), cobrado:moedaNum($('#rsCobrado').value),
@@ -21873,6 +21896,24 @@ function editarReserva(id, rascunho){
   };
   $('#rsData').addEventListener('change', desenharPax);
   desenharPax();
+
+  /* ── volta à vista só quando existe ─────────────────────────────────────────
+     Os campos de retorno aparecem com "Ida e Volta" e somem no resto. Some junto
+     o valor: uma data de volta esquecida numa emissão só de ida faria o alerta
+     de "já voou" esperar por um voo que não vai acontecer.
+
+     Os rótulos da ida também mudam — "Data do voo" vira "Data da ida" quando há
+     duas, porque aí "do voo" deixa de identificar qual. */
+  const arrumarTrajeto = () => {
+    const idaVolta = $('#rsTrajeto').value === 'idavolta';
+    $('#rsBoxVolta').hidden = !idaVolta;
+    $('#rsBoxVoltaH').hidden = !idaVolta;
+    $('#rsRotIda').textContent = idaVolta ? 'Data da ida' : 'Data do voo';
+    $('#rsRotIdaH').textContent = idaVolta ? 'Hora da ida' : 'Hora do voo';
+    if (!idaVolta){ $('#rsDataVolta').value = ''; $('#rsHoraVolta').value = ''; }
+  };
+  $('#rsTrajeto').addEventListener('change', arrumarTrajeto);
+  arrumarTrajeto();
 
   const sincPagto = () => {
     const terceiro = $('#rsQuem').value === 'terceiro';
@@ -21902,7 +21943,9 @@ function editarReserva(id, rascunho){
       $('#rsConta').focus(); return;
     }
     const novo = {id:r.id || uid(), tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(),
-      desc:$('#rsDesc').value.trim() || 'Reserva', data:$('#rsData').value, hora:$('#rsHora').value, prog:$('#rsProg').value,
+      desc:$('#rsDesc').value.trim() || 'Reserva', data:$('#rsData').value, hora:$('#rsHora').value,
+      dataVolta:($('#rsDataVolta') || {}).value || '', horaVolta:($('#rsHoraVolta') || {}).value || '',
+      criadaHora:($('#rsCriadaHora') || {}).value || '', prog:$('#rsProg').value,
       milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value), cartaoId:$('#rsCartao').value,
       cobrado:moedaNum($('#rsCobrado').value), contaId:$('#rsConta').value, creditoEm:$('#rsCredito').value, custoExtra:moedaNum($('#rsExtra').value),
       trajeto:$('#rsTrajeto').value,
@@ -21911,7 +21954,10 @@ function editarReserva(id, rascunho){
       metaId: $('#rsQuem').value === 'terceiro' ? '' : $('#rsMeta').value,
       precoVista: $('#rsQuem').value === 'terceiro' ? 0 : moedaNum($('#rsVista').value),
       pagto: $('#rsQuem').value === 'terceiro' ? $('#rsPagto').value : '',
-      status:$('#rsStatus').value, criada:r.criada || hojeISO(), itin:$('#rsItin').value.trim()};
+      /* A data de emissão passou a ser digitada, e não mais assumida como hoje:
+         quem lança uma emissão de semana passada precisa registrar o dia certo. */
+      status:$('#rsStatus').value, criada:($('#rsCriada') && $('#rsCriada').value) || r.criada || hojeISO(),
+      itin:$('#rsItin').value.trim()};
     if (id) DB.reservas[DB.reservas.findIndex(x => x.id === id)] = novo; else DB.reservas.push(novo);
     /* A emissão alimenta três telas ao mesmo tempo: a lista, o controle de CPF e
        o resultado do balcão. Redesenhar só a lista deixava o controle mostrando o
