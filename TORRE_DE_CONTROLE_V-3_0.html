@@ -21355,7 +21355,7 @@ function editarViagemAntigo(id, fechando){
       ${campoParcelas('viParcelas', r.parcelas)}
       <div class="campo"><label>Meta</label><select id="viMeta"><option value="">— avulsa —</option>${DB.metas.map(m => `<option value="${m.id}"${m.id === r.metaId ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select></div>
     </div>
-    <div class="campo rotulo-inteiro" style="margin-top:14px"><label>Preço à vista que você pagaria (R$)</label>
+    <div class="campo rotulo-inteiro" style="margin-top:14px"><label>Preço à vista que pagaria (R$)</label>
       <input type="text" inputmode="decimal" data-moeda id="viVista" value="${moedaTxt(r.precoVista || 0)}">
       <div class="dica">O preço que você <b>realmente</b> pagaria por esse trecho, não a tarifa de balcão. É contra ele que a Torre mede o valor do resgate.</div></div>
     <div id="viPrevia" style="margin-top:13px"></div>
@@ -21503,9 +21503,24 @@ function renderBalcao(){
           r.custoExtra ? ' · despesa de <b class="n-brasa">' + brl(r.custoExtra) + '</b>' : ''}</div>
         ${r.quem === 'terceiro' ? `<div class="item-sub">Custo real <b class="n-jade">${brl(c)}</b> · cobrado <b class="n-ouro">${brl(r.cobrado)}</b></div>` : ''}
       </div>
+      <!-- "Resultado" servia para os dois casos e não dizia nada em nenhum. Numa
+           venda o número é lucro; numa emissão própria é economia — dinheiro que
+           não saiu do bolso porque a passagem foi paga com milha. São contas
+           diferentes e merecem nomes diferentes.
+
+           Venda que dá prejuízo também é dita pelo nome: chamar de "lucro de
+           −R$ 300" seria maquiar com sinal negativo o que a palavra já resolve. -->
       ${r.quem === 'terceiro'
-        ? `<div class="item-num" style="color:${res >= 0 ? 'var(--jade)' : 'var(--brasa)'}">${brl(res)}<small>resultado</small></div>`
-        : `<div class="item-num fraco">${r.milhas ? nBR(r.milhas) : brl(r.custoExtra)}<small>${r.milhas ? 'milhas' : 'em dinheiro'}</small></div>`}
+        ? `<div class="item-num" style="color:${res >= 0 ? 'var(--jade)' : 'var(--brasa)'}">${brl(Math.abs(res))}<small>${res >= 0 ? 'lucro' : 'prejuízo'}</small></div>`
+        : (() => {
+            /* A economia só existe quando se sabe quanto a passagem custaria em
+               dinheiro. Sem esse número não há com o que comparar, e aí a lista
+               volta a mostrar o volume de milhas, que é o dado que sempre existe. */
+            const vista = Number(r.precoVista) || 0;
+            if (!vista) return `<div class="item-num fraco">${r.milhas ? nBR(r.milhas) : brl(r.custoExtra)}<small>${r.milhas ? 'milhas' : 'em dinheiro'}</small></div>`;
+            const eco = vista - c;
+            return `<div class="item-num" style="color:${eco >= 0 ? 'var(--jade)' : 'var(--brasa)'}">${brl(Math.abs(eco))}<small>${eco >= 0 ? 'economia' : 'a mais que a tarifa'}</small></div>`;
+          })()}
       <div class="item-acoes">
         <button class="bt p fantasma icone" onclick="duplicarReserva('${r.id}')" data-dica="Duplicar: abre uma nova já preenchida"><svg><use href="#i-copiar"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarReserva('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -21763,7 +21778,7 @@ function editarReserva(id, rascunho){
            aparece no seu caso. -->
       <div class="campo" id="rsMetaBox"><label>Meta de viagem</label><select id="rsMeta"><option value="">— avulsa —</option>${
         (DB.metas || []).map(m => `<option value="${m.id}"${m.id === r.metaId ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select></div>
-      <div class="campo" id="rsVistaBox"><label>Preço à vista que você pagaria (R$)</label>
+      <div class="campo" id="rsVistaBox"><label>Preço à vista que pagaria (R$)</label>
         <input type="text" inputmode="decimal" data-moeda id="rsVista" value="${moedaTxt(r.precoVista || 0)}"></div>
 
       <!-- Cobrado só existe quando há cliente: em uso próprio não se cobra de
