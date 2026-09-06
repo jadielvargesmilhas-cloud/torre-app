@@ -1,3 +1,13 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Publica a Torre no GitHub Pages a cada envio para a branch principal.
+#
+# O arquivo é encontrado, e não nomeado. A versão anterior exigia o nome exato
+# TORRE_DE_CONTROLE_V-3_0.html, e qualquer renomeação quebrava a publicação em
+# silêncio: o robô falhava e o site ficava com a versão antiga ou fora do ar.
+#
+# Agora ele pega o .html mais recente da raiz do repositório. Assim, mudar de
+# V-3 para V-4 é só enviar o arquivo novo — nada aqui precisa ser tocado.
+# ══════════════════════════════════════════════════════════════════════════════
 name: Publicar a Torre
 
 on:
@@ -22,11 +32,35 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Preparar a pasta do site
         run: |
+          set -e
           mkdir -p site
-          cp TORRE_DE_CONTROLE_V-3_0.html site/index.html
+
+          # Procura só na raiz (-maxdepth 1) para não pegar nada que venha a
+          # existir em subpastas, e ordena pela data de modificação: com mais de
+          # um html, vence o que foi enviado por último, que é o que se quer
+          # publicar. O index.html eventual fica de fora para não competir com
+          # ele mesmo numa segunda execução.
+          ARQUIVO=$(find . -maxdepth 1 -name '*.html' ! -name 'index.html' -printf '%T@ %p\n' \
+                    | sort -rn | head -1 | cut -d' ' -f2-)
+
+          # Sem nenhum html, parar aqui com uma mensagem que se entende. Antes o
+          # erro era um "cp: cannot stat" que não dizia o que fazer.
+          if [ -z "$ARQUIVO" ]; then
+            echo "::error::Nenhum arquivo .html encontrado na raiz do repositório."
+            echo "::error::Envie o arquivo da Torre e a publicação recomeça sozinha."
+            exit 1
+          fi
+
+          echo "Publicando: $ARQUIVO"
+          cp "$ARQUIVO" site/index.html
+
+          # Sem isto o GitHub Pages processa a pasta com Jekyll, o que é mais
+          # lento e ignora arquivos começados com underline.
           touch site/.nojekyll
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
