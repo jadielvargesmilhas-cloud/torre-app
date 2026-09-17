@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-17 21:35';
+const BUILD = '2026-09-17 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16809,6 +16809,17 @@ function editarLancamento(id, pre){
        redesenhada ao ENTRAR na Mesa, então quem já estava nela via o custo antigo
        — e o valor errado ficava na tela até trocar de vista e voltar, o que é o
        pior tipo de defeito: silencioso e com cara de estar certo. */
+    /* Acerta sozinho antes de desenhar. A carteira e o Diário movem juntos a cada
+       lançamento, e quando se separam é por defeito — não por decisão de alguém.
+       Corrigir na hora impede que a diferença se acumule em silêncio e apareça
+       semanas depois, quando ninguém mais sabe de onde veio.
+
+       Só mexe no programa e na conta deste lançamento: um desencontro noutro
+       canto da carteira continua aparecendo em Sistema → Dados, para ser visto
+       antes de ser mexido. */
+    acertarSaldoDe(novo.contaId, novo.prog);
+    if (origem) acertarSaldoDe(novo.contaId, origem);
+
     salvar(); fecharFolha(); renderLancamentos(); renderMesa(); renderFita(); renderSaldo(); renderVender();
     avisar(origem ? `Lançado nas duas pontas: entrou em ${prog(novo.prog).n}, saiu de ${prog(origem).n}.` : 'Lançado. O termômetro já foi recalibrado.', 'ok', 5000);
     /* Depois do aviso do lançamento, e não antes: quem veio de uma meta recebe
@@ -16946,6 +16957,15 @@ function apagar(colecao, id, oQue){
       DB.lancamentos = (DB.lancamentos || []).filter(x => x.daEmissao !== id);
     }
     DB[colecao] = DB[colecao].filter(x => x.id !== id);
+    /* Depois de apagar, a carteira volta a bater com o Diário. O desfazer acima
+       já subtrai o efeito do lançamento; este acerto cobre o caso em que o
+       registro apagado carregava um erro antigo — sem ele, apagar a linha errada
+       deixava a diferença para trás. */
+    if (colecao === 'lancamentos' && l && l.contaId){
+      acertarSaldoDe(l.contaId, l.prog);
+      (DB.lancamentos || []).filter(x => x.saidaDe === id).forEach(x => acertarSaldoDe(x.contaId, x.prog));
+    }
+
     salvar();
     if (RENDER[vistaAtual]) RENDER[vistaAtual]();
     renderFita();
@@ -17958,6 +17978,14 @@ function editarSaldo(id){
     if (dup){ dup.qtd = novo.qtd; DB.saldos = DB.saldos.filter(x => x.id !== s.id || !id); }
     else if (id) DB.saldos[DB.saldos.findIndex(x => x.id === id)] = novo;
     else DB.saldos.push(novo);
+
+    /* Saldo digitado à mão deixa rastro: guarda quanto foi posto e quando. Sem
+       isso não há como distinguir um saldo legítimo que nunca passou pelo Diário
+       de uma divergência causada por erro — e a conferência automática apagaria o
+       primeiro junto com o segundo. */
+    novo.digitadoEm = Date.now();
+    novo.digitado = novo.qtd;
+
     salvar(); fecharFolha(); renderSaldo(); renderFita(); renderMesa();
     const d = novo.qtd - original;
     avisar(d > 0 ? `Saldo atualizado. Entraram ${nBR(d)} — lance o custo na Fábrica se houve.`
@@ -21705,10 +21733,39 @@ function conferirSaldos(){
       });
       soma = Math.max(0, soma);
 
-      if (Math.abs(naCarteira - soma) > 0.5) fora.push({conta:c, prog:p, naCarteira, soma, dif:naCarteira - soma});
+      /* Saldo digitado à mão, num programa que nunca teve lançamento, é o número
+         que a pessoa informou e não há Diário para comparar: não é divergência.
+         Assim que um lançamento entrar nesse programa, ele passa a valer. */
+      const digitadoSemDiario = s && s.digitado !== undefined && !doPrograma.length;
+      if (!digitadoSemDiario && Math.abs(naCarteira - soma) > 0.5){
+        fora.push({conta:c, prog:p, naCarteira, soma, dif:naCarteira - soma});
+      }
     });
   });
   return fora;
+}
+
+/* Acerta um programa de uma conta: a carteira passa a valer o que os lançamentos
+   dizem. Usada automaticamente a cada gravação, onde o desencontro só pode ser
+   defeito — quem digitou um saldo à mão fez isso noutra tela, e ali o número dele
+   é a verdade até o primeiro lançamento chegar. */
+function acertarSaldoDe(contaId, prog){
+  if (!contaId || !prog) return;
+  const doPrograma = (DB.lancamentos || [])
+    .filter(l => l.contaId === contaId && l.prog === prog)
+    .sort((a, b) => String(a.data||'').localeCompare(String(b.data||'')) || (a.criadoEm||0) - (b.criadoEm||0));
+  if (!doPrograma.length) return;
+
+  let soma = 0;
+  doPrograma.forEach(l => {
+    if (l.tipo === 'inicial') soma = Number(l.qtd) || 0;
+    else soma += Number(l.qtd) || 0;
+  });
+  soma = Math.max(0, soma);
+
+  const s = (DB.saldos || []).find(x => x.contaId === contaId && x.prog === prog);
+  if (s){ if (Math.abs((Number(s.qtd) || 0) - soma) > 0.5) s.qtd = soma; }
+  else if (soma > 0) DB.saldos.push({id:uid(), contaId, prog, qtd:soma});
 }
 
 function pintarConferenciaDeSaldo(){
