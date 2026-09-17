@@ -11248,7 +11248,7 @@ function renderComposicao(){
       return `<div class="cartao"><div class="cartao-cab"><h3><span class="selo-painel">${rot}</span><div class="sub">${nota}</div></h3></div>
         <div class="vazio" style="padding:22px;border:0">
           <p>${dono ? esc(dono.nome) + ' não tem saldo em ' + rot.toLowerCase() + '.' : 'Nada lançado em ' + rot.toLowerCase() + ' ainda.'}</p>
-          <button class="etq leva" onclick="irPara('fabrica');irParaAba('fabrica','ms-lancamentos');editarLancamento(${arg})">Cadastrar lançamento<svg><use href="#i-seta-d"/></svg></button>
+          <button class="etq leva" onclick="irPara('mesa');irParaAba('mesa','ms-lancamentos');editarLancamento(${arg})">Cadastrar lançamento<svg><use href="#i-seta-d"/></svg></button>
         </div></div>`;
     }
     return `<div class="cartao comp-cartao">
@@ -16782,7 +16782,12 @@ function editarLancamento(id, pre){
          saiba o que desfazer. */
       novo.mexeuSaldo = true;
     }
-    salvar(); fecharFolha(); renderLancamentos(); renderMesa(); renderFita(); renderSaldo();
+    /* `renderVender` entra na lista: um lançamento muda o custo médio, e a
+       prateleira "De onde emitir agora" mostra justamente esse número. Ela só era
+       redesenhada ao ENTRAR na Mesa, então quem já estava nela via o custo antigo
+       — e o valor errado ficava na tela até trocar de vista e voltar, o que é o
+       pior tipo de defeito: silencioso e com cara de estar certo. */
+    salvar(); fecharFolha(); renderLancamentos(); renderMesa(); renderFita(); renderSaldo(); renderVender();
     avisar(origem ? `Lançado nas duas pontas: entrou em ${prog(novo.prog).n}, saiu de ${prog(origem).n}.` : 'Lançado. O termômetro já foi recalibrado.', 'ok', 5000);
     /* Depois do aviso do lançamento, e não antes: quem veio de uma meta recebe
        primeiro a confirmação do que gravou e em seguida o efeito disso na meta,
@@ -17906,7 +17911,7 @@ function editarSaldo(id){
         <div class="pilha" style="gap:6px">
           <div><b>Entraram ${nBR(d)} ${prog(prg).tipo === 'pontos' ? 'pontos' : 'milhas'}</b> desde o último registro.</div>
           <div>Se essa entrada teve custo — compra, transferência, clube — lance na Fábrica. Sem isso, o seu milheiro${meu != null ? ` de ${brl2(meu)}` : ''} fica mais barato do que a realidade.</div>
-          <div><button class="bt p fantasma" onclick="fecharFolha();irPara('fabrica');irParaAba('fabrica','ms-lancamentos');editarLancamento(null,{prog:'${prg}',contaId:'${s.contaId}',qtd:${d}})"><svg><use href="#i-fabrica"/></svg>Lançar o custo dessas ${nBR(d)}</button></div>
+          <div><button class="bt p fantasma" onclick="fecharFolha();irPara('mesa');irParaAba('mesa','ms-lancamentos');editarLancamento(null,{prog:'${prg}',contaId:'${s.contaId}',qtd:${d}})"><svg><use href="#i-fabrica"/></svg>Lançar o custo dessas ${nBR(d)}</button></div>
         </div></div>`;
     } else {
       const saiu = Math.abs(d);
@@ -24842,8 +24847,12 @@ function registrarCTnoDiario(){
     ? `${modo.n} · ${nBR(Math.round(r.base))} pontos${r.bonus > 0 ? ` + ${nBR(Math.round(r.bonus))} de bônus` : ''}`
     : `${modo.n} de ${prog(r.origem).n}${r.bonus > 0 ? ` · ${nBR(Math.round(r.bonus))} de bônus` : ''}`;
 
-  irPara('fabrica');
-  irParaAba('fabrica', 'ms-lancamentos');
+  /* O Diário de Bordo vive na MESA, não na Fábrica. Mandar a Fábrica abrir uma
+     aba que é de outra vista deixava as quatro abas dela sem nenhuma ativa, e a
+     tela ficava em branco: o formulário abria por cima de um painel vazio, e ao
+     fechá-lo não havia nada embaixo. */
+  irPara('mesa');
+  irParaAba('mesa', 'ms-lancamentos');
   editarLancamento(null, {
     tipo: ctTipo === 'compra' ? 'compra' : 'transferencia',
     prog: r.prog,
@@ -25557,7 +25566,7 @@ function comandos(){
   const C = [];
   Object.entries(TITULOS).forEach(([k, [n, s]]) => C.push({t:`Ir para ${n}`, s, i:'#i-' + k, g:'ir', f:() => irPara(k)}));
   C.push(
-    {t:'Novo lançamento na fábrica', s:'Registrar pontos que entraram com custo', i:'#i-mais', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'ms-lancamentos'); editarLancamento(); }},
+    {t:'Novo lançamento na fábrica', s:'Registrar pontos que entraram com custo', i:'#i-mais', g:'criar', f:() => { irPara('mesa'); irParaAba('mesa', 'ms-lancamentos'); editarLancamento(); }},
     {t:'Nova Campanha', s:'Cadastrar bônus de transferência ou desconto', i:'#i-fogo', g:'criar', f:() => { abrirCampanhasEm('transferencia'); editarCampanha(); }},
     {t:'Nova assinatura de clube', s:'', i:'#i-etiqueta', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); editarAssinatura(); }},
     {t:'Abrir o bumerangue', s:'Simular a volta dos pontos com bônus nas duas pontas', i:'#i-atualizar', g:'ir', f:abrirBumerangueFolha},
@@ -26672,7 +26681,7 @@ function ligarEventos(){
     /* mesma ordem do trilho, para o atalho numérico bater com o que se vê */
     const ordem = ['mesa','fabrica','saldo','radar','rota','balcao','ajustes'];
     if (/^[1-7]$/.test(e.key)){ irPara(ordem[Number(e.key) - 1]); return; }
-    if (e.key.toLowerCase() === 'n'){ irPara('fabrica'); irParaAba('fabrica', 'ms-lancamentos'); editarLancamento(); }
+    if (e.key.toLowerCase() === 'n'){ irPara('mesa'); irParaAba('mesa', 'ms-lancamentos'); editarLancamento(); }
     if (e.key.toLowerCase() === 'b'){ irPara('radar'); irParaAba('radar', 'rd-buscar'); setTimeout(() => $('#bOri').focus(), 120); }
     if (e.key.toLowerCase() === 't') alternarTema();
     if (e.key === '+' || e.key === '='){ const p = [1, 1.14, 1.3]; aplicarEscala(p[Math.min(2, p.indexOf(DB.cfg.escala || 1) + 1)]); }
