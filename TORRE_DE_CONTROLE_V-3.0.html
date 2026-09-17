@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-17 22:00';
+const BUILD = '2026-09-17 22:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24339,6 +24339,56 @@ function avaliarTabelas(){
 /* O rótulo precisa ser posto depois de cada desenho, e há dezenas de funções que
    desenham tabela. Um observador no palco cobre todas de uma vez, inclusive as
    que forem criadas no futuro, sem depender de ninguém lembrar de chamar. */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CAMPO NUMÉRICO: CLICOU, PODE DIGITAR
+   ──────────────────────────────────────────────────────────────────────────────
+   Campo de número que já vem preenchido tem um vício: ao clicar, o cursor pousa
+   no meio do texto e o que se digita se mistura ao que estava lá. Quem queria
+   trocar 375.000 por 400.000 acabava com 375.400.000, e precisava apagar dígito
+   a dígito antes de escrever.
+
+   Ao receber o foco, o conteúdo fica selecionado: a primeira tecla substitui
+   tudo. Quem quiser aproveitar o valor antigo é só clicar uma segunda vez, que
+   desfaz a seleção e põe o cursor onde se clicou.
+
+   Vale só para número, moeda e porcentagem. Em campo de texto — nome, descrição,
+   observação — selecionar tudo seria hostil: ali quase sempre se quer completar o
+   que já está escrito, não trocar.
+
+   Um observador cuida dos campos que nascem depois, porque quase toda tela aqui
+   é montada na hora.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function ligarSelecaoAoFocar(raiz){
+  const alvo = (raiz && raiz.querySelectorAll) ? raiz : document;
+  alvo.querySelectorAll(
+    'input[type="number"], input[data-moeda], input[data-casas], ' +
+    'input[inputmode="decimal"], input[inputmode="numeric"]'
+  ).forEach(el => {
+    if (el.dataset.selFoco === '1') return;
+    el.dataset.selFoco = '1';
+
+    el.addEventListener('focus', () => {
+      /* Um quadro de espera: no toque, o navegador posiciona o cursor depois do
+         foco, e selecionar antes disso seria desfeito em seguida. */
+      setTimeout(() => {
+        if (document.activeElement !== el) return;
+        try { el.select(); } catch(e){}
+      }, 0);
+    });
+
+    /* No celular não há foco por clique do mouse: o `pointerup` é o momento em
+       que o dedo sai da tela, e sem isto a seleção se perde ali. */
+    el.addEventListener('pointerup', e => {
+      if (el.dataset.jaFocado === '1') return;
+      e.preventDefault();
+      try { el.select(); } catch(err){}
+      el.dataset.jaFocado = '1';
+    });
+    el.addEventListener('blur', () => { delete el.dataset.jaFocado; });
+  });
+}
+
 function ligarObservadorDeTabelas(){
   /* O corpo inteiro, e não só o palco: as folhas vivem fora dele, penduradas no
      véu, e as tabelas que abrem ali — o roteador, o panorama, a conta aberta —
@@ -24354,12 +24404,14 @@ function ligarObservadorDeTabelas(){
        desenho. */
     requestAnimationFrame(() => {
       pendente = false; rotularTabelas(document); avaliarTabelas(); marcarBotoesPrincipais();
+      ligarSelecaoAoFocar(document);
     });
   });
   obs.observe(palco, {childList:true, subtree:true});
   rotularTabelas(document);
   avaliarTabelas();
   marcarBotoesPrincipais();
+  ligarSelecaoAoFocar(document);
   /* Girar o aparelho ou redimensionar a janela muda o que cabe. */
   addEventListener('resize', () => avaliarTabelas(), {passive:true});
 }
