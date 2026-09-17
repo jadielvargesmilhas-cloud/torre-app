@@ -6646,6 +6646,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
                  lançado o resgate à mão, aplicar por conta própria tiraria a
                  mesma milha duas vezes. Quem sabe se lançou é quem operou. -->
             <div id="emissoesSemBaixa"></div>
+            <div id="saldoDivergente"></div>
 
             <!-- O carimbo fica junto da sincronização de propósito: é aqui que se
                  desconfia de estar vendo uma versão antiga, e a resposta precisa
@@ -6822,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-17 21:05';
+const BUILD = '2026-09-17 21:35';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -21662,6 +21663,91 @@ function sincronizarSaidasDeTodasEmissoes(){
    em silêncio, a Torre mostra quais são e quanto some do saldo, e deixa a decisão
    com quem sabe se já lançou o resgate à mão — aplicar por conta própria poderia
    descontar a mesma milha duas vezes. */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CONFERÊNCIA DE SALDO
+   ──────────────────────────────────────────────────────────────────────────────
+   A Torre guarda o saldo em dois lugares: a lista de saldos, que a prateleira
+   mostra, e a soma dos lançamentos, de onde sai o custo médio. Os dois deveriam
+   dizer a mesma coisa sempre — cada lançamento move os dois juntos.
+
+   Mas basta uma gravação interrompida, um lançamento apagado por fora, ou um
+   erro antigo já corrigido, para os dois se separarem. E quando se separam, a
+   prateleira fica incoerente consigo mesma: mostra a quantidade de um lado e o
+   milheiro do outro, e a conta não fecha para quem confere.
+
+   Divergência não se corrige em silêncio: quem opera precisa ver o tamanho dela
+   antes de decidir. A soma dos lançamentos é a referência, porque cada linha ali
+   tem data, origem e motivo — o saldo é só um número.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function conferirSaldos(){
+  const fora = [];
+  (DB.contas || []).forEach(c => {
+    const progs = new Set([
+      ...(DB.saldos || []).filter(s => s.contaId === c.id).map(s => s.prog),
+      ...(DB.lancamentos || []).filter(l => l.contaId === c.id).map(l => l.prog)
+    ]);
+    progs.forEach(p => {
+      if (!p) return;
+      const s = (DB.saldos || []).find(x => x.contaId === c.id && x.prog === p);
+      const naCarteira = s ? (Number(s.qtd) || 0) : 0;
+
+      /* Saldo inicial é fotografia: ele DEFINE o saldo naquele momento, e o que
+         veio antes dele não entra na conta. Somar tudo daria número maior que o
+         real em qualquer conta que já teve uma importação. */
+      const doPrograma = (DB.lancamentos || [])
+        .filter(l => l.contaId === c.id && l.prog === p)
+        .sort((a, b) => String(a.data||'').localeCompare(String(b.data||'')) || (a.criadoEm||0) - (b.criadoEm||0));
+      let soma = 0;
+      doPrograma.forEach(l => {
+        if (l.tipo === 'inicial') soma = Number(l.qtd) || 0;
+        else soma += Number(l.qtd) || 0;
+      });
+      soma = Math.max(0, soma);
+
+      if (Math.abs(naCarteira - soma) > 0.5) fora.push({conta:c, prog:p, naCarteira, soma, dif:naCarteira - soma});
+    });
+  });
+  return fora;
+}
+
+function pintarConferenciaDeSaldo(){
+  const cx = $('#saldoDivergente'); if (!cx) return;
+  const fora = conferirSaldos();
+  if (!fora.length){ cx.innerHTML = ''; return; }
+
+  cx.innerHTML = `<div class="nota brasa" style="margin-top:14px">
+    <svg><use href="#i-alerta"/></svg>
+    <div class="pilha compacta">
+      <div><b>${fora.length} ${fora.length === 1 ? 'saldo não bate' : 'saldos não batem'} com o Diário de Bordo.</b>
+        A prateleira mostra a quantidade da carteira e o milheiro calculado pelos lançamentos:
+        quando os dois discordam, a linha fica incoerente consigo mesma.</div>
+      <div>${fora.map(f => `${esc(prog(f.prog).n)} · ${esc(nomeCurto(f.conta.nome))}: carteira <b>${nBR(f.naCarteira)}</b>,
+        Diário <b>${nBR(f.soma)}</b> <span class="${f.dif > 0 ? 'brasa' : 'ouro'}">(${f.dif > 0 ? '+' : ''}${nBR(f.dif)})</span>`).join('<br>')}</div>
+      <div>Acertar deixa a carteira igual à soma dos lançamentos, que é onde cada entrada e saída
+        tem data e motivo. Nenhum lançamento é criado ou apagado.</div>
+      <div style="margin-top:6px"><button class="bt p primario" onclick="acertarSaldosPeloDiario()">
+        <svg><use href="#i-ok"/></svg>Acertar pela soma do Diário</button></div>
+    </div></div>`;
+}
+
+function acertarSaldosPeloDiario(){
+  const fora = conferirSaldos();
+  if (!fora.length) return;
+  confirmar('Acertar os saldos',
+    `${fora.length} ${fora.length === 1 ? 'saldo será ajustado' : 'saldos serão ajustados'} para bater com a soma dos lançamentos. `
+    + 'Os lançamentos não mudam: só a quantidade guardada na carteira passa a refletir o que eles dizem.',
+    () => {
+      fora.forEach(f => {
+        const s = (DB.saldos || []).find(x => x.contaId === f.conta.id && x.prog === f.prog);
+        if (s) s.qtd = f.soma;
+        else if (f.soma > 0) DB.saldos.push({id:uid(), contaId:f.conta.id, prog:f.prog, qtd:f.soma});
+      });
+      salvar(); aplicarTudo();
+      avisar(`${fora.length} ${fora.length === 1 ? 'saldo acertado' : 'saldos acertados'}.`, 'ok', 4000);
+    }, 'Acertar');
+}
+
 function pintarEmissoesSemBaixa(){
   const cx = $('#emissoesSemBaixa'); if (!cx) return;
   const sem = (DB.reservas || []).filter(r =>
@@ -25320,6 +25406,7 @@ function renderAjustes(){
   /* Redesenhado a cada visita: emissões podem ter sido criadas ou ajustadas
      noutra tela desde a última vez. */
   pintarEmissoesSemBaixa();
+  pintarConferenciaDeSaldo();
   $('#ajProvedores').innerHTML = Object.entries(PROVEDORES).map(([k, p]) => {
     const usadoD = DB.cfg.provDinheiro === k, usadoM = DB.cfg.provMilhas === k;
     return `<div class="cartao">
@@ -26745,6 +26832,7 @@ function arrancar(){
   ligarObservadorDeTabelas();
   if ($('#nuvemBuild')) $('#nuvemBuild').textContent = `Arquivo desta Torre: ${BUILD}`;
   pintarEmissoesSemBaixa();
+  pintarConferenciaDeSaldo();
   nuvemLigarAuto();
   /* Ao abrir, traz o que houver na nuvem antes de qualquer edição: é o momento
      em que o outro aparelho pode ter gravado algo. */
