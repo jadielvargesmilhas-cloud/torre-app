@@ -6822,7 +6822,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-17 20:40';
+const BUILD = '2026-09-17 21:05';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16181,6 +16181,9 @@ function renderLancamentos(){
 /* `pre` permite abrir o formulário já preenchido a partir de outra tela — é o
    caminho que o ajuste de saldo usa quando detecta entrada sem custo lançado. */
 function editarLancamento(id, pre){
+  /* Trava o custo quando ele vem de uma simulação: a estimativa pelo milheiro da
+     origem não pode sobrescrever um número que já foi calculado. */
+  let custoTravado = !!(pre && pre.custoDeSimulacao);
   const l = id ? DB.lancamentos.find(x => x.id === id)
               : {data:hojeISO(), contaId:(pre && pre.contaId) || (DB.contas[0] || {}).id,
                  prog:(pre && pre.prog) || 'smiles', tipo:(pre && pre.tipo) || 'transferencia',
@@ -16350,6 +16353,15 @@ function editarLancamento(id, pre){
      viveu aquilo. */
   const puxarCustoDaOrigem = () => {
     if ($('#lcTipo').value === 'inicial') return;
+    /* Custo que veio de uma simulação não é sugestão: é resultado de conta feita.
+       No Hack do Carrinho o valor é o que se pagou no carrinho — R$ 8.872,88 —, e
+       a estimativa pelo milheiro da origem devolvia R$ 0,50, porque só enxerga os
+       pontos próprios que entraram na jogada. O campo era reescrito duas vezes
+       depois de preenchido, e o lançamento nascia com meio real de custo.
+
+       A marca é posta por quem preenche e apagada assim que a pessoa digita: a
+       partir daí o campo volta a ser dela, e a sugestão automática retorna. */
+    if (custoTravado) return;
     const v = custoPeloCPM();
     if (v === null) return;
     $('#lcCusto').value = v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -16477,7 +16489,13 @@ function editarLancamento(id, pre){
       const v = custoPeloCPM();
       custo.readOnly = true;
       custo.closest('.campo').style.opacity = '.8';
-      if (v !== null) custo.value = v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      /* `custoTravado` protege o valor que veio de uma simulação. No Hack do
+         Carrinho o custo é o que se pagou no carrinho — R$ 8.872,88 —, e a
+         estimativa pelo milheiro da origem devolve R$ 0,50, porque só enxerga os
+         pontos próprios da jogada e ignora o dinheiro do carrinho. Sem a guarda,
+         o lançamento nascia com meio real de custo e o milheiro do destino saía
+         errado. */
+      if (v !== null && !custoTravado) custo.value = v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
       nota.className = 'nota ' + (v === null ? 'ouro' : 'jade');
       nota.innerHTML = v === null
         ? `<svg><use href="#i-alerta"/></svg><div class="pilha compacta">
@@ -16580,6 +16598,9 @@ function editarLancamento(id, pre){
   $('#lcCusto').oninput = aplicarForma;
   $('#lcProg').onchange = () => { montarSaida(); aplicarForma(); };
   $('#lcTipo').onchange = () => { montarSaida(); aplicarForma(); pintarNotaTipo(); };
+  /* Digitou no campo, o campo é seu: a trava cai e a sugestão automática volta a
+     valer nas próximas trocas de origem. */
+  if ($('#lcCusto')) $('#lcCusto').addEventListener('keydown', () => { custoTravado = false; });
   $('#lcConta').onchange = () => { puxarSaldoOrigem(); calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); };
   $('#lcForma').onchange = aplicarForma;
   /* Cartão e parcelas também refazem o aviso: agora que ele aponta a próxima
@@ -24858,6 +24879,11 @@ function registrarCTnoDiario(){
     prog: r.prog,
     qtd: Math.round(r.qtd),
     custo: Math.round(r.custo * 100) / 100,
+    /* Avisa o formulário de que este custo é resultado de conta feita, e não um
+       campo em branco esperando sugestão. Vai no rascunho, e não escrito no campo
+       depois: a estimativa automática dispara durante a montagem, antes de
+       qualquer coisa que se escreva em seguida. */
+    custoDeSimulacao: true,
     nota
   });
 
@@ -24873,10 +24899,26 @@ function registrarCTnoDiario(){
       if (sa && r.saiuDaOrigem){ sa.value = Math.round(r.saiuDaOrigem); sa.dispatchEvent(new Event('input', {bubbles:true})); }
       const q = $('#lcQtd');
       if (q){ q.value = qtdTxt(Math.round(r.qtd)); q.dispatchEvent(new Event('input', {bubbles:true})); q.blur(); }
-      const c = $('#lcCusto');
-      if (c){ c.value = moedaTxt(Math.round(r.custo * 100) / 100); c.dispatchEvent(new Event('input', {bubbles:true})); c.blur(); }
       const nt = $('#lcNota');
       if (nt) nt.value = nota;
+
+      /* O custo é escrito POR ÚLTIMO, e num quadro à parte.
+
+         Preencher origem e quantidade dispara, em cadeia, a estimativa pelo
+         milheiro da origem: cada um desses campos repõe o custo calculado por
+         ela. Escrevendo antes, o valor certo era sobrescrito em seguida — no Hack
+         do Carrinho, R$ 8.872,88 virava R$ 0,50, porque a estimativa só enxerga
+         os pontos próprios da jogada e ignora o que foi pago no carrinho.
+
+         O `input` é disparado no fim, porque é ele que habilita a forma de
+         pagamento conforme o custo. Nesse momento a cadeia da estimativa já
+         terminou, então ele não tem mais o que sobrescrever. */
+      setTimeout(() => {
+        const c = $('#lcCusto');
+        if (!c) return;
+        c.value = moedaTxt(Math.round(r.custo * 100) / 100);
+        c.dispatchEvent(new Event('input', {bubbles:true}));
+      }, 60);
     }, 30);
   }, 30);
 }
