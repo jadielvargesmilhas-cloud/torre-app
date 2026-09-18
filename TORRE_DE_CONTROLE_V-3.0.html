@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-17 22:20';
+const BUILD = '2026-09-18 01:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -10018,9 +10018,17 @@ function irParaAba(grupo, aba){
    custo médio de uma saída depende do que havia no estoque naquele momento, e
    uma compra posterior não pode baratear uma emissão que já aconteceu.
    ══════════════════════════════════════════════════════════════════════════════ */
+/* Lançamento com data futura existe e está certo: a emissão de um voo de outubro
+   nasce hoje, com a data do voo. Mas ele não pode entrar na conta de HOJE — as
+   milhas ainda estão na conta, e o resgate só tira quando o dia chegar.
+
+   Sem essa separação, a prateleira mostrava 232.170 onde havia 270.170, e o
+   milheiro saía calculado sobre um estoque que ainda não existia. */
+const jaAconteceu = l => !l || !l.data || String(l.data) <= hojeISO();
+
 function estoqueMedio(lancamentos){
   const acc = {};
-  [...(lancamentos || [])]
+  [...(lancamentos || [])].filter(jaAconteceu)
     .sort((a, b) => String(a.data || '').localeCompare(String(b.data || ''))
                  || (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0))
     .forEach(l => {
@@ -16125,7 +16133,12 @@ function renderLancamentos(){
              produto e de diária também tiram do saldo. O tipo já está gravado no
              lançamento; usá-lo é dizer a verdade, e a etiqueta genérica escondia
              justamente a linha que a pessoa procurava. -->
-        <td>${esc(saida && l.tipo === 'transferencia' ? 'Saída por transferência' : nomeTipoLanc(l.tipo))}${l.nota ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${esc(l.nota)}</div>` : ''}</td>
+        <!-- Lançamento de data futura fica marcado: ele está no Diário mas ainda
+             não entrou no saldo nem no custo médio, e sem dizer isso a soma da
+             lista parece não bater com a prateleira. -->
+        <td>${esc(saida && l.tipo === 'transferencia' ? 'Saída por transferência' : nomeTipoLanc(l.tipo))}${
+          jaAconteceu(l) ? '' : `<span class="etq ouro" style="margin-left:7px">ainda vai acontecer</span>`
+        }${l.nota ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${esc(l.nota)}</div>` : ''}</td>
         <td class="fraco" style="font-size:calc(13.5px * var(--esc))" data-dica="${esc(nomeConta(l.contaId))}">${esc(nomeCurtoConta(l.contaId))}</td>
         <!-- A barra dá o tamanho relativo do lançamento sem obrigar a comparar
              números de sete dígitos linha a linha. -->
@@ -21724,7 +21737,7 @@ function conferirSaldos(){
          veio antes dele não entra na conta. Somar tudo daria número maior que o
          real em qualquer conta que já teve uma importação. */
       const doPrograma = (DB.lancamentos || [])
-        .filter(l => l.contaId === c.id && l.prog === p)
+        .filter(l => l.contaId === c.id && l.prog === p && jaAconteceu(l))
         .sort((a, b) => String(a.data||'').localeCompare(String(b.data||'')) || (a.criadoEm||0) - (b.criadoEm||0));
       let soma = 0;
       doPrograma.forEach(l => {
@@ -21752,8 +21765,10 @@ function conferirSaldos(){
 function acertarSaldoDe(contaId, prog){
   if (!contaId || !prog) return;
   const doPrograma = (DB.lancamentos || [])
-    .filter(l => l.contaId === contaId && l.prog === prog)
+    .filter(l => l.contaId === contaId && l.prog === prog && jaAconteceu(l))
     .sort((a, b) => String(a.data||'').localeCompare(String(b.data||'')) || (a.criadoEm||0) - (b.criadoEm||0));
+  /* Sem nada que já tenha acontecido, não há o que acertar: um programa só com
+     lançamento futuro mantém o saldo que está lá. */
   if (!doPrograma.length) return;
 
   let soma = 0;
@@ -26939,6 +26954,20 @@ function arrancar(){
   tocarRodizioPlanos();
   ligarEventos();
   ligarObservadorDeTabelas();
+
+  /* Passa a carteira a limpo ao abrir. É aqui que um lançamento futuro vira
+     presente: a emissão de outubro não faz nada hoje, mas no dia 10 a milha
+     precisa sair sozinha, sem depender de alguém lançar outra coisa para
+     disparar o acerto.
+
+     Só mexe em programa que tem lançamento; saldo digitado à mão, sem Diário
+     para comparar, continua sendo o número que a pessoa informou. */
+  (DB.contas || []).forEach(c => {
+    const progs = new Set((DB.lancamentos || []).filter(l => l.contaId === c.id).map(l => l.prog));
+    progs.forEach(p => { if (p) acertarSaldoDe(c.id, p); });
+  });
+  salvar();
+
   if ($('#nuvemBuild')) $('#nuvemBuild').textContent = `Arquivo desta Torre: ${BUILD}`;
   pintarEmissoesSemBaixa();
   pintarConferenciaDeSaldo();
