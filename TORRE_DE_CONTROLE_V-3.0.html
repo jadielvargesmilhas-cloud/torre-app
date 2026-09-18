@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-18 02:10';
+const BUILD = '2026-09-18 02:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16198,7 +16198,11 @@ function editarLancamento(id, pre){
   /* Trava o custo e a quantidade que entra quando vêm de uma simulação: nem a
      estimativa pelo milheiro da origem nem o cálculo pela paridade podem
      sobrescrever números que já foram calculados com bônus e desconto. */
+  /* O custo simulado é protegido da estimativa automática durante a montagem do
+     formulário. Quando ele é derivado do milheiro da origem, a proteção cai assim
+     que a montagem termina: daí em diante, trocar o titular deve refazê-lo. */
   let custoTravado = !!(pre && pre.custoDeSimulacao);
+  const custoSeguePorConta = !!(pre && pre.custoDeSimulacao && !pre.custoEhDinheiroNovo);
   let entradaTravada = !!(pre && pre.custoDeSimulacao && pre.qtd);
   const l = id ? DB.lancamentos.find(x => x.id === id)
               : {data:hojeISO(), contaId:(pre && pre.contaId) || (DB.contas[0] || {}).id,
@@ -16454,7 +16458,17 @@ function editarLancamento(id, pre){
   const custoPeloCPM = () => {
     const o = $('#lcOrigem');
     if (!o || !o.value) return null;
-    const cpm = cpmPorPrograma()[o.value];
+
+    /* O milheiro é o DA CONTA, não a média do programa. Duas contas podem ter
+       comprado Esfera a preços muito diferentes, e usar a média das duas atribuía
+       à transferência um custo que nenhuma delas pagou — e que não mudava ao
+       trocar o titular, porque a média do programa é a mesma para todo mundo.
+
+       A média do programa continua valendo quando a conta não tem histórico
+       próprio naquele programa: é a melhor estimativa disponível. */
+    const conta = ($('#lcConta') || {}).value;
+    const porConta = conta ? (cpmPorProgramaConta()[o.value] || {})[conta] : null;
+    const cpm = porConta != null ? porConta : cpmPorPrograma()[o.value];
     if (!cpm) return null;
     return Math.round(cpm * rgNum($('#lcSaiu').value) / 1000 * 100) / 100;
   };
@@ -16660,7 +16674,19 @@ function editarLancamento(id, pre){
        tinha bônus que a Torre não conhece. */
     $('#lcQtd').addEventListener('keydown', () => { entradaTravada = true; });
   }
-  $('#lcConta').onchange = () => { puxarSaldoOrigem(); calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); };
+  /* Trocar o titular refaz o custo quando ele vem do milheiro da origem: são os
+     pontos de outra conta, comprados a outro preço. O custo com dinheiro novo
+     fica, porque o que se pagou no carrinho não muda de dono. */
+  $('#lcConta').onchange = () => {
+    /* A ordem importa: a trava cai ANTES de qualquer recálculo, senão tanto a
+       estimativa quanto o `aplicarForma` — que também repõe o custo quando o
+       pagamento é pelo próprio milheiro — encontram a trava de pé e não fazem
+       nada. */
+    if (custoSeguePorConta) custoTravado = false;
+    puxarSaldoOrigem(); calcularEntrada();
+    aplicarForma();
+    puxarCustoDaOrigem();
+  };
   $('#lcForma').onchange = aplicarForma;
   /* Cartão e parcelas também refazem o aviso: agora que ele aponta a próxima
      pendência, preencher um campo tem de apagar a cobrança dele. Antes nada
@@ -25139,6 +25165,18 @@ function registrarCTnoDiario(){
        depois: a estimativa automática dispara durante a montagem, antes de
        qualquer coisa que se escreva em seguida. */
     custoDeSimulacao: true,
+
+    /* Nem todo custo simulado é da mesma natureza, e isso decide o que acontece
+       ao trocar o titular.
+
+       Na transferência simples, o custo É o milheiro da origem vezes o que saiu:
+       trocar de conta muda o milheiro, e o número precisa ser refeito — senão o
+       lançamento fica com o custo da conta de outra pessoa.
+
+       No Hack do Carrinho e na compra, parte do dinheiro é novo — o que se pagou
+       no carrinho. Esse valor não depende de quem é o titular e não pode ser
+       recalculado por milheiro nenhum. */
+    custoEhDinheiroNovo: ctTipo === 'compra' || ctModo === 'hack',
     nota
   });
 
