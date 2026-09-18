@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-18 01:15';
+const BUILD = '2026-09-18 02:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16195,9 +16195,11 @@ function renderLancamentos(){
 /* `pre` permite abrir o formulário já preenchido a partir de outra tela — é o
    caminho que o ajuste de saldo usa quando detecta entrada sem custo lançado. */
 function editarLancamento(id, pre){
-  /* Trava o custo quando ele vem de uma simulação: a estimativa pelo milheiro da
-     origem não pode sobrescrever um número que já foi calculado. */
+  /* Trava o custo e a quantidade que entra quando vêm de uma simulação: nem a
+     estimativa pelo milheiro da origem nem o cálculo pela paridade podem
+     sobrescrever números que já foram calculados com bônus e desconto. */
   let custoTravado = !!(pre && pre.custoDeSimulacao);
+  let entradaTravada = !!(pre && pre.custoDeSimulacao && pre.qtd);
   const l = id ? DB.lancamentos.find(x => x.id === id)
               : {data:hojeISO(), contaId:(pre && pre.contaId) || (DB.contas[0] || {}).id,
                  prog:(pre && pre.prog) || 'smiles', tipo:(pre && pre.tipo) || 'transferencia',
@@ -16348,8 +16350,19 @@ function editarLancamento(id, pre){
        e a saída a custo cheio, tirando dinheiro do investido total. */
     ligarCampoContagem('#lcSaiu', () => { calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); });
     ligarCampoContagem('#lcQtd', previa);
-    $('#lcQtd').readOnly = true;
-    $('#lcOrigem').onchange = () => { puxarSaldoOrigem(); calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); };
+    /* Em transferência a quantidade que entra é calculada pela paridade, e por
+       isso o campo é fechado: digitar ali seria contradizer a rota.
+
+       Vindo de uma simulação, não. O número já traz o bônus da campanha, que a
+       paridade não conhece, e trocar o titular ou ajustar a quantidade deixava a
+       pessoa presa — o campo mostrava um valor que ela não podia corrigir. Aqui
+       ele fica aberto, com a conta da simulação já feita e liberdade para
+       ajustar. */
+    $('#lcQtd').readOnly = !entradaTravada;
+    /* Trocar o PROGRAMA de origem refaz a quantidade: é outro saldo, e o número
+       anterior não quer dizer nada ali. Trocar o titular, não — a operação é a
+       mesma, só muda de quem é. */
+    $('#lcOrigem').onchange = () => { puxarSaldoOrigem(true); calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); };
     calcularEntrada();
   };
 
@@ -16381,9 +16394,18 @@ function editarLancamento(id, pre){
     $('#lcCusto').value = v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   };
 
-  const puxarSaldoOrigem = () => {
+  /* Preenche a quantidade que sai com o saldo da origem, como ponto de partida
+     para quem está começando o lançamento do zero.
+
+     Não sobrescreve número que já está lá. Trocar o titular só corrige quem é o
+     dono da operação — não é motivo para refazer a conta: 250.000 combinados na
+     simulação viravam o saldo da outra conta, e como a quantidade que entra é
+     calculada, não havia como digitar de volta. Quem quiser o saldo da nova conta
+     apaga o campo, e ele se preenche sozinho. */
+  const puxarSaldoOrigem = (forcar) => {
     const o = $('#lcOrigem'), campo = $('#lcSaiu');
     if (!o || !campo) return;
+    if (!forcar && rgNum(campo.value) > 0) return;
     if (!o.value){ campo.value = nBR(0); return; }
     const conta = $('#lcConta').value;
     const saldo = soma(DB.saldos.filter(x => x.prog === o.value && x.contaId === conta).map(x => Number(x.qtd) || 0));
@@ -16403,10 +16425,22 @@ function editarLancamento(id, pre){
     const temClube = DB.assinaturas.some(a => a.status === 'ativa' && a.prog === o.value);
     return (temClube && x.clube) ? x.clube : x.p;
   };
+  /* A entrada sai da paridade da rota. Mas quando o lançamento veio de uma
+     simulação, o número já está calculado com o bônus da campanha — e a paridade
+     sozinha não sabe disso: ela devolvia 250.000 onde a campanha tinha feito
+     450.000, e como o campo é calculado, não havia como digitar de volta.
+
+     Enquanto a quantidade que sai não mudar, o que a simulação trouxe continua
+     valendo. Mexeu na quantidade, a conta é refeita pela paridade, que é o que
+     a Torre sabe por conta própria. */
   const calcularEntrada = () => {
     const campo = $('#lcQtd'); if (!campo) return;
-    const par = paridadeDaRota();
+    /* Enquanto a trava estiver de pé, o número da simulação fica. Ela cai assim
+       que alguém digita na quantidade que sai — aí a conta passa a ser da Torre,
+       pela paridade da rota. */
+    if (entradaTravada) return;
     const saiu = rgNum(($('#lcSaiu') || {}).value);
+    const par = paridadeDaRota();
     campo.value = (par && saiu) ? nBR(Math.round(saiu / par)) : nBR(0);
   };
 
@@ -16612,9 +16646,20 @@ function editarLancamento(id, pre){
   $('#lcCusto').oninput = aplicarForma;
   $('#lcProg').onchange = () => { montarSaida(); aplicarForma(); };
   $('#lcTipo').onchange = () => { montarSaida(); aplicarForma(); pintarNotaTipo(); };
-  /* Digitou no campo, o campo é seu: a trava cai e a sugestão automática volta a
-     valer nas próximas trocas de origem. */
+  /* Digitou no campo, o campo é seu: a trava cai e a conta automática volta a
+     valer. Vale para o custo e para a quantidade que sai — mexer num deles é
+     dizer que a simulação já não descreve o que está sendo lançado. */
   if ($('#lcCusto')) $('#lcCusto').addEventListener('keydown', () => { custoTravado = false; });
+  /* `keydown` sozinho não basta: colar com o mouse, apagar pelo teclado virtual
+     ou usar as setas não passam por ele. O `input` cobre qualquer alteração feita
+     por quem está operando, e a trava só existe para proteger o número da
+     simulação de recálculos automáticos — nunca de uma edição de verdade. */
+  if ($('#lcSaiu')){
+    /* Digitar na quantidade que entra é assumir o número: a partir daí a paridade
+       não o reescreve mais. É o que permite corrigir o valor quando a campanha
+       tinha bônus que a Torre não conhece. */
+    $('#lcQtd').addEventListener('keydown', () => { entradaTravada = true; });
+  }
   $('#lcConta').onchange = () => { puxarSaldoOrigem(); calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); };
   $('#lcForma').onchange = aplicarForma;
   /* Cartão e parcelas também refazem o aviso: agora que ele aponta a próxima
