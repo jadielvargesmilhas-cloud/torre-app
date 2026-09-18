@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-18 02:45';
+const BUILD = '2026-09-18 03:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -29115,17 +29115,39 @@ function renderVender(){
    pratica preço, e ter de redigitar a cada visita faria a coluna não servir. */
 const MARGEM_VENDA_PADRAO = 35;
 
-const precoVendaDe = (prg, cpm) => {
-  const guardado = (DB.precoVenda || {})[prg];
-  if (guardado != null) return {v:Number(guardado), meu:true};
+/* O preço de venda é POR CONTA, não por programa.
+
+   Cada conta tem o próprio milheiro — uma comprou Smiles a R$ 14, outra a R$ 22 —
+   e o preço que faz sentido pedir por uma não faz pela outra. Guardado só pelo
+   programa, definir o preço numa conta mudava o de todas as outras, inclusive
+   das que custaram o dobro.
+
+   A chave é conta e programa juntos. Um preço antigo, gravado só pelo programa,
+   continua valendo como padrão para as contas que ainda não têm o seu: assim
+   nada do que já foi definido se perde. */
+const chavePreco = (contaId, prg) => `${contaId || '-'}|${prg}`;
+
+const precoVendaDe = (prg, cpm, contaId) => {
+  const mapa = DB.precoVenda || {};
+  const daConta = contaId != null ? mapa[chavePreco(contaId, prg)] : undefined;
+  if (daConta != null) return {v:Number(daConta), meu:true};
+  /* Formato antigo, guardado só pelo programa. */
+  const doPrograma = mapa[prg];
+  if (doPrograma != null) return {v:Number(doPrograma), meu:true};
   return {v: cpm * (1 + MARGEM_VENDA_PADRAO / 100), meu:false};
 };
 
-function definirPrecoVenda(prg, valor){
+function definirPrecoVenda(prg, valor, contaId){
   DB.precoVenda = DB.precoVenda || {};
   const v = Number(valor) || 0;
-  if (v > 0) DB.precoVenda[prg] = v;
-  else delete DB.precoVenda[prg];
+  const k = chavePreco(contaId, prg);
+  if (v > 0) DB.precoVenda[k] = v;
+  else {
+    delete DB.precoVenda[k];
+    /* Apagar também solta a herança do formato antigo: sem isto, limpar o campo
+       devolveria o preço do programa em vez da sugestão pelo custo da conta. */
+    delete DB.precoVenda[prg];
+  }
   salvar();
   renderVender();
 }
@@ -29153,12 +29175,12 @@ const linhaPosicao = l => {
              e mandar abrir uma folha para digitar um número quebra o comparativo
              que a tabela está mostrando. -->
         <td class="pos venda-cel">${(() => {
-          const pv = precoVendaDe(l.prog, l.cpm);
+          const pv = precoVendaDe(l.prog, l.cpm, l.conta.id);
           const ganho = pv.v - l.cpm;
           return `<input class="venda-in${pv.meu ? ' meu' : ''}" type="text" inputmode="decimal"
               value="${moedaTxt(Math.round(pv.v * 100) / 100)}"
-              data-prog="${l.prog}"
-              data-dica="${pv.meu ? 'Preço que você definiu para ' + esc(prog(l.prog).n) + '. Apague para voltar à sugestão.'
+              data-prog="${l.prog}" data-conta="${l.conta.id}"
+              data-dica="${pv.meu ? 'Preço que você definiu para ' + esc(prog(l.prog).n) + ' nesta conta. Apague para voltar à sugestão.'
                 : 'Sugestão: seu milheiro mais ' + MARGEM_VENDA_PADRAO + '% de margem. Digite para fixar o seu.'}">
             <span class="venda-ganho ${ganho > 0 ? 'jade' : 'brasa'}">${ganho > 0 ? '+' : ''}${brl2(ganho)}/mil</span>`;
         })()}</td>
@@ -29246,7 +29268,7 @@ const linhaPosicao = l => {
        por 1, 18, 18,5 — e cada um desses redesenharia a tabela debaixo do dedo.
        Enter também confirma, porque é o gesto que se faz sem pensar. */
     $$('#vdPrateleira .venda-in').forEach(el => {
-      el.addEventListener('blur', () => definirPrecoVenda(el.dataset.prog, moedaNum(el.value)));
+      el.addEventListener('blur', () => definirPrecoVenda(el.dataset.prog, moedaNum(el.value), el.dataset.conta));
       el.addEventListener('keydown', e => { if (e.key === 'Enter') el.blur(); });
     });
   }
