@@ -6823,7 +6823,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-18 03:10';
+const BUILD = '2026-09-18 12:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -6894,6 +6894,15 @@ const PROGRAMAS = {
      a campanha de compra não tinha de que descontar e o milheiro saía zerado.
      Aferido contra as campanhas publicadas: 52% de desconto → R$ 33,60 e 50% →
      R$ 35, que são os valores que as fontes citam. */
+  /* Premmia é ponto de abastecimento, e a troca para Smiles não é transferência
+     comum: são 300 pontos MAIS dinheiro por 10.000 milhas. O ponto sozinho quase
+     não paga nada — quem decide o custo é o valor em reais. Por isso a faixa é
+     larga: o milheiro depende inteiramente do bônus da campanha da vez, que já
+     foi de 40%, 85% e 120% em datas diferentes. */
+  premmia:   { n:'Premmia', cia:'Petrobras / Vibra',        tipo:'pontos', cor:'#00A859', ali:'—',
+               faixas:{otimo:14, alvo:20, razoavel:32}, base:0, validade:0,
+               fonte:'petrobraspremmia.com.br · smiles.com.br/parceiro/premmia · conferido em 18/09/2026',
+               nota:'Troca para Smiles é pontos mais dinheiro, pelo aplicativo Premmia.\nOferta base: 300 pontos + R$ 294,90 por 10.000 milhas.\nSó entre contas do mesmo titular.\nMilhas creditadas em até 5 dias úteis; o bônus, em até 15 dias úteis após o fim da campanha.\nCampanhas recorrentes de 40% a 120% de bônus, maiores para quem assina o Clube Smiles ANTES de trocar.' },
   esfera:    { n:'Esfera', cia:'Santander',                tipo:'pontos', cor:'#EC0000', ali:'—',
                faixas:{otimo:12, alvo:17, razoavel:24}, base:70, validade:24,
                fonte:'Calibração da casa · tabela aferida em ago/2026',
@@ -8149,6 +8158,15 @@ const PARIDADES = [
   { de:'esfera', para:'flyingblue', p:3.5, clube:3,   nota:'3 : 1 para assinantes do Clube Esfera.' },
   { de:'esfera', para:'aeromexico', p:3.5, nota:'' },
   { de:'esfera', para:'iberia',     p:3,   nota:'Avios.' },
+  /* A rota existe e tem campanha recorrente — o histórico da Torre já registra
+     três delas —, mas a linha da paridade faltava, e sem ela o roteador não
+     enxergava o caminho nem calculava o custo de quem transfere para a Copa. */
+  { de:'esfera', para:'connect',    p:3,   nota:'Deságio de 3 : 1. Transferência mínima de 30.000 pontos.' },
+  /* Paridade nominal da oferta base: 300 pontos por 10.000 milhas. Ela sozinha
+     não conta a história — o dinheiro é que paga a conta —, mas sem a linha o
+     roteador não enxerga o caminho. O custo real se calcula no Hack do Carrinho,
+     que soma ponto próprio e dinheiro. */
+  { de:'premmia', para:'smiles',    p:0.03, nota:'Troca por pontos mais dinheiro, pelo app Premmia: 300 pontos + R$ 294,90 por 10.000 milhas. Só entre contas do mesmo titular.' },
 
   /* Livelo é o único programa brasileiro que envia direto para a British.
      Qatar e Finnair não recebem de banco nenhum: entram sempre pela British,
@@ -12800,7 +12818,7 @@ function renderCampanhas(){
     return `<div class="item ${morta ? '' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'ok'}" style="${morta ? 'opacity:.5' : ''};align-items:flex-start">
       <div class="item-corpo">
         <div class="item-tit">${esc(c.titulo)}</div>
-        <div class="item-sub">${c.de ? esc(prog(c.de).n) + ' → ' : ''}<b style="color:var(--giz-2)">${esc(prog(c.para).n)}</b>${c.limite ? ' · limite de ' + nBR(c.limite) + ' por CPF' : ''}${c.fim ? ' · até <b style="color:var(--ouro);font-weight:600">' + dataBR(c.fim) + '</b>' : ''} ${morta ? '<span class="etq">encerrada</span>' : dias <= 1 ? '<span class="etq brasa"><i class="ponto pulsa"></i>fecha ' + prazoTexto(dias) + '</span>' : '<span class="etq">fecha ' + prazoTexto(dias) + '</span>'}</div>
+        <div class="item-sub">${c.de ? esc(prog(c.de).n) + ' → ' : ''}<b style="color:var(--giz-2)">${esc(prog(c.para).n)}</b>${c.limite ? ' · limite de ' + nBR(c.limite) + ' por CPF' : ''}${c.minimo ? ' · mínimo de ' + nBR(c.minimo) : ''}${c.carrinho ? ' · carrinho a ' + brl2(c.carrinho) + '/mil' : ''}${c.fim ? ' · até <b style="color:var(--ouro);font-weight:600">' + dataBR(c.fim) + '</b>' : ''} ${morta ? '<span class="etq">encerrada</span>' : dias <= 1 ? '<span class="etq brasa"><i class="ponto pulsa"></i>fecha ' + prazoTexto(dias) + '</span>' : '<span class="etq">fecha ' + prazoTexto(dias) + '</span>'}</div>
         ${c.regra && !temFaixa ? `<div class="pilha" style="gap:4px;margin-top:6px">${regrasComDestaque(c.regra)}</div>` : ''}
 
       </div>
@@ -14148,6 +14166,16 @@ function editarCampanha(id, tipoPadrao){
       <div class="campo"><label>Desconto (%)</label><input type="number" id="cpDesc" value="${c.desconto || 0}" step="5"></div>
       <div class="campo"><label>Fecha em</label><input type="date" id="cpFim" value="${c.fim || ''}"></div>
       <div class="campo"><label>Limite por CPF</label><input type="number" id="cpLim" value="${c.limite || 0}" step="10000"></div>
+      <!-- Mínimo por transferência: muita campanha exige um piso, e quem transfere
+           abaixo dele perde o bônus sem aviso do programa. -->
+      <div class="campo"><label>Mínimo por transferência</label><input type="number" id="cpMin" value="${c.minimo || 0}" step="1000">
+        <div class="dica">Zero quando a campanha não exige piso.</div></div>
+      <!-- Preço no carrinho: em campanha de compra na hora da transferência, é o
+           número que decide se vale a pena, e o que o Hack do Carrinho precisa
+           para calcular. Fica guardado aqui para não ser procurado no grupo toda
+           vez que a operação for repetida. -->
+      <div class="campo"><label>Preço no carrinho (R$/mil)</label><input type="text" inputmode="decimal" data-moeda id="cpCarrinho" value="${moedaTxt(c.carrinho || 0)}">
+        <div class="dica">Só para campanha de compra na hora da transferência. Zero quando não há.</div></div>
     </div>
     <div class="campo" style="margin-top:13px"><label>Título</label><input type="text" id="cpTit" value="${esc(c.titulo)}" placeholder="Até 110% de bônus na transferência para o Azul"></div>
     <div class="campo" style="margin-top:13px"><label>Regra que importa</label><textarea id="cpRegra" placeholder="Cadastro obrigatório antes de transferir. Crédito em até 15 dias úteis. Validade do bônus: 6 meses.">${esc(c.regra)}</textarea><div class="dica">Escreva a letra miúda que costuma custar caro esquecer: cadastro prévio, prazo de crédito, validade do bônus, exigência de clube ativo. Cada frase vira uma linha no cartão, então separe as condições com ponto.</div></div>
@@ -14176,7 +14204,8 @@ function editarCampanha(id, tipoPadrao){
     const novo = {
       id: c.id || uid(), tipo:$('#cpTipo').value, de:$('#cpDe').value, para:$('#cpPara').value,
       bonus:Number($('#cpBonus').value) || 0, desconto:Number($('#cpDesc').value) || 0,
-      fim:$('#cpFim').value, limite:Number($('#cpLim').value) || 0,
+      fim:$('#cpFim').value, limite:Number($('#cpLim').value) || 0, minimo:Number(($('#cpMin')||{}).value) || 0,
+      carrinho:rgNum((($('#cpCarrinho')||{}).value) || 0),
       titulo:$('#cpTit').value.trim() || 'Campanha sem título', regra:$('#cpRegra').value.trim(), link:$('#cpLink').value.trim()
     };
     if (id) DB.campanhas[DB.campanhas.findIndex(x => x.id === id)] = novo; else DB.campanhas.push(novo);
@@ -24098,6 +24127,17 @@ const CT_CAMPOS = {
   ]
 };
 
+/* Paridade da rota, com a do clube quando há assinatura ativa na origem. Mesma
+   regra do formulário de lançamento; aqui ela não podia faltar, porque é o que
+   separa transferir para um programa 1 : 1 de um 3 : 1. */
+function paridadeCT(de, para){
+  if (!de || !para) return 1;
+  const x = PARIDADES.find(y => y.de === de && y.para === para);
+  if (!x) return 1;
+  const temClube = (DB.assinaturas || []).some(a => a.status === 'ativa' && a.prog === de);
+  return (temClube && x.clube) ? x.clube : (x.p || 1);
+}
+
 function calcularCT(tipo, modo, v){
   const n = x => Number(v[x]) || 0;
 
@@ -24115,15 +24155,24 @@ function calcularCT(tipo, modo, v){
             prog: v.prog};
   }
   if (tipo === 'transferencia' && modo === 'organico'){
-    const base = n('pontosOrganicos');
+    const saiu = n('pontosOrganicos');
+    /* A paridade entra na conta antes do bônus. Sem ela, 30.000 pontos Esfera
+       viravam 46.500 milhas da Copa, quando a rota é 3 : 1 e o certo são 15.500:
+       dez mil chegam, e o bônus incide sobre esses dez mil. Rotas 1 : 1 não
+       mudavam de resultado, e por isso o erro passava despercebido. */
+    const par = paridadeCT(v.progOrigem, v.progDestino);
+    const base = saiu / par;
     const qtd = base * (1 + n('percentual') / 100);
-    const custo = base * (n('cpmOrigem') / 1000);
+    const custo = saiu * (n('cpmOrigem') / 1000);
     return {qtd, base, bonus:qtd - base, custo, cpm: qtd > 0 ? custo / qtd * 1000 : null,
-            prog: v.progDestino, origem: v.progOrigem, saiuDaOrigem: base};
+            prog: v.progDestino, origem: v.progOrigem, saiuDaOrigem: saiu, paridade: par};
   }
   if (tipo === 'transferencia' && modo === 'hack'){
     const usados = n('organicos') * (n('pctOrganico') / 100);
-    const base = usados + n('qtdCarrinho');
+    const par = paridadeCT(v.progOrigem, v.progDestino);
+    /* Pontos próprios e comprados no carrinho saem os dois da origem, então os
+       dois passam pela mesma paridade antes de virarem milhas no destino. */
+    const base = (usados + n('qtdCarrinho')) / par;
     const qtd = base * (1 + n('percentual') / 100);
     const custo = usados * (n('cpmOrigem') / 1000) + n('valorCarrinho');
     return {qtd, base, bonus:qtd - base, custo, cpm: qtd > 0 ? custo / qtd * 1000 : null,
@@ -24519,6 +24568,41 @@ function renderVistaComprar(){
 
    Só age enquanto ninguém digitou: simular com um volume diferente do que se tem
    é uso legítimo, e a marca de tocado protege isso. */
+/* Campanha cadastrada de compra no carrinho vira sugestão na simulação: o preço
+   por mil já está guardado, e digitá-lo de novo a cada operação é trabalho que a
+   Torre pode poupar. Sugere o valor TOTAL, que é o que o campo pede — preço por
+   mil vezes a quantidade que falta comprar.
+
+   Não toca no campo depois que alguém digita nele: o carrinho real costuma
+   fechar em outro número, e a promoção anuncia o preço de tabela. */
+function sugerirCarrinhoDaCampanha(){
+  const el = $('#ct_valorCarrinho'); if (!el || el.dataset.tocado) return;
+  const o = $('#ct_progOrigem'), d = $('#ct_progDestino');
+  if (!o || !d) return;
+
+  const camp = campanhasVivas('transferencia')
+    .filter(c => c.de === o.value && c.para === d.value && (Number(c.carrinho) || 0) > 0)
+    .sort((a, b) => (Number(a.carrinho) || 0) - (Number(b.carrinho) || 0))[0];
+  /* A dica vive no `.campo`, e neste campo ela não existe no HTML: é criada na
+     primeira vez que há campanha para anunciar. */
+  const caixa = el.closest('.campo') || el.parentElement;
+  let dica = caixa && caixa.querySelector('.dica');
+  if (!camp){ if (dica) dica.textContent = ' '; return; }
+  if (caixa && !dica){
+    dica = document.createElement('div');
+    dica.className = 'dica';
+    caixa.appendChild(dica);
+  }
+
+  const qtd = Number(ctVals.qtdCarrinho) || 0;
+  if (qtd > 0){
+    const total = Math.round(qtd / 1000 * Number(camp.carrinho) * 100) / 100;
+    el.value = moedaTxt(total);
+    ctVals.valorCarrinho = total;
+  }
+  if (dica) dica.textContent = `Campanha ativa: ${brl2(camp.carrinho)} por mil. Confira no carrinho antes de fechar.`;
+}
+
 function puxarSaldoOrigem(){
   const el = $('#ct_organicos'); if (!el || el.dataset.tocado) return;
   const o = $('#ct_progOrigem'); if (!o) return;
@@ -24727,6 +24811,9 @@ function pintarResultadoCT(){
     puxarSaldoOrigem();
     if (qtdNum(org.value) > 0) derivarCarrinho();
   }
+  /* Depois de derivar a quantidade do carrinho, e não antes: a sugestão de preço
+     é o valor por mil vezes essa quantidade. */
+  if (ctModo === 'hack') sugerirCarrinhoDaCampanha();
   const r = calcularCT(ctTipo, ctModo, ctVals);
   if (!r) return;
 
@@ -29326,7 +29413,20 @@ const linhaPosicao = l => {
 
    Existe num lugar só para não haver duas grafias no sistema — era o que
    acontecia com quatro trechos montando a mesma razão cada um do seu jeito. */
-const paridadeTxt = par => `${par === 1 ? '1' : par} : 1`;
+/* Paridade de deságio é "3 : 1" — três pontos viram uma milha. Mas há rota em
+   que o ponto vale MAIS que a milha, como Premmia para Smiles, onde 300 pontos
+   viram 10.000: escrito do mesmo jeito sairia "0.03 : 1", que ninguém lê.
+
+   Abaixo de 1 a razão é invertida e escrita como ganho: "1 : 33". */
+const paridadeTxt = par => {
+  const p = Number(par) || 1;
+  if (p === 1) return '1 : 1';
+  if (p > 1) return `${nBRdec(p)} : 1`;
+  return `1 : ${nBRdec(Math.round((1 / p) * 10) / 10)}`;
+};
+
+/* Número com casa decimal só quando ela existe: "2,7" e "33", nunca "33,0". */
+const nBRdec = n => Number(n).toLocaleString('pt-BR', {maximumFractionDigits:1});
 
 /* `tom` escolhe a cor dos destaques. A rota que vale sai em azul; as duas
    seguintes, em cinza — elas são referência de comparação, e em azul competiriam
