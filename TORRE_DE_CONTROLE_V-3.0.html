@@ -79,6 +79,7 @@
      que precisam acompanhá-la. Trocado pelo botão Aa no topo. */
   --esc:1;
   --trilho:calc(72px * var(--esc));
+  --trilho-dir:calc(72px * var(--esc));
   --topo-h:calc(62px * var(--esc));
   --ease:cubic-bezier(.22,.68,.32,1);
   --mola:linear(0,.25 8%,.64 18%,.91 27%,1.03 36%,1.05 46%,1.01 62%,1);
@@ -174,7 +175,11 @@ p:last-child{ margin-bottom:0; }
 /* ── grelha do aplicativo ─────────────────────────────────────────────────── */
 .casco{
   display:grid;
-  grid-template-columns:var(--trilho) minmax(0,1fr);
+  /* Duas colunas de trilho no computador: a da esquerda com o que FAZ milha
+     (painel, fábrica, compra, tanque, radar, rotas) e a da direita com o que a
+     USA (emissões, balcão, cartões) mais o sistema. No celular tudo volta para
+     uma barra só, no rodapé — lá não há dois lados. */
+  grid-template-columns:var(--trilho) minmax(0,1fr) var(--trilho-dir);
   min-height:100dvh;
   position:relative;
   z-index:1;
@@ -189,6 +194,20 @@ p:last-child{ margin-bottom:0; }
   backdrop-filter:blur(14px) saturate(140%);
   border-right:1px solid var(--fio);
 }
+/* Espelho da barra esquerda, encostado na outra borda. Mesmas medidas e mesmo
+   comportamento; muda o lado em que se apoia e a borda que desenha. */
+.trilho-dir{
+  position:fixed; inset:0 0 0 auto; width:var(--trilho-dir); z-index:60;
+  display:flex; flex-direction:column; align-items:center;
+  padding:12px 0 14px;
+  background:color-mix(in oklab, var(--sup-0) 88%, transparent);
+  backdrop-filter:blur(14px) saturate(140%);
+  border-left:1px solid var(--fio);
+}
+/* Sem marca no topo: o logotipo é um só, e repeti-lo dos dois lados faria a tela
+   parecer dois aplicativos lado a lado. O espaço vira respiro. */
+.trilho-dir .trilho-nav{ margin-top:calc(42px * var(--esc) + 16px); }
+
 .marca{
   width:calc(42px * var(--esc));height:calc(42px * var(--esc));border-radius:11px;display:grid;place-items:center;
   background:linear-gradient(150deg, var(--sup-2), var(--sup-0));
@@ -5071,8 +5090,11 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
 /* ── mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width:860px){
-  :root{ --trilho:0px; --pad:14px; }
+  :root{ --trilho:0px; --trilho-dir:0px; --pad:14px; }
   .casco{ grid-template-columns:1fr; }
+  /* A barra direita não existe no celular: os itens dela voltam para o rodapé
+     único, na ordem original. */
+  .trilho-dir{ display:none; }
   .trilho{
     inset:auto 0 0 0; width:100%; height:60px; flex-direction:row; padding:0 4px;
     border-right:0; border-top:1px solid var(--fio); justify-content:space-around;
@@ -5211,6 +5233,11 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 <div class="casco">
 
   <!-- ═══ trilho ═══════════════════════════════════════════════════════════ -->
+  <!-- Barra da direita: preenchida por código a partir da esquerda, para os
+       itens continuarem existindo num lugar só no HTML e a ordem do celular
+       nunca divergir da do computador. -->
+  <aside class="trilho-dir" id="trilhoDir"><nav class="trilho-nav"></nav></aside>
+
   <aside class="trilho">
     <div class="marca" data-dica="VEM · Viagens & Experiências com Milhas" data-dica-lado="direita">
       <img src="data:image/png;base64,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" alt="VEM">
@@ -5978,7 +6005,11 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
                   <option value="anual">Anual, no fim</option>
                 </select></div>
                 <div class="campo"><label>Horizonte (meses)</label><input type="number" id="ccMeses" value="12" min="1" max="60"></div>
-                <div class="campo"><label>Pontos por bônus</label><input type="text" inputmode="numeric" id="ccQtdBonus" placeholder="Ex.: 1.000"></div>
+                <!-- O rótulo diz de que período é o número esperado. "Pontos por
+                     bônus" com bonificação quadrimestral é ambíguo: pode ser o do
+                     quadrimestre ou o do ano, e a diferença é de quatro vezes. -->
+                <div class="campo"><label id="ccRotBonus">Pontos por bônus</label><input type="text" inputmode="numeric" id="ccQtdBonus" placeholder="Ex.: 1.000">
+                  <div class="dica" id="ccDicaBonus"></div></div>
               </div>
 
               <div class="calc-saida" id="ccSaida"></div>
@@ -6827,7 +6858,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-19 10:30';
+const BUILD = '2026-09-23 00:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14291,12 +14322,35 @@ const calcCPM = {prog:'', plano:'', pagto:'mensal', qtd:0, valor:0,
 
 const MODALIDADES_CALC = {mensal:'Mensal', anual_parcelado:'Anual parcelado', anual_avista:'Anual à vista'};
 
+/* De quantos em quantos meses o bônus cai. "assinatura" é pagamento único, na
+   adesão: acontece uma vez e não se repete. */
+const INTERVALO_BONUS = {
+  mensal:1, trimestral:3, quadrimestral:4, semestral:6, anual:12
+};
+
+/* Quantas vezes o bônus entra dentro do horizonte.
+
+   Antes a conta multiplicava os pontos do bônus pelo número de MESES, qualquer
+   que fosse a periodicidade: um bônus quadrimestral de 25.000 em doze meses
+   virava 300.000 em vez de 75.000 — quatro vezes mais do que cai de verdade. O
+   erro inflava o total e derrubava o milheiro, que é justamente o número que
+   decide se o plano vale a pena. */
+function ocorrenciasBonus(tipo, horizonte){
+  const h = Math.max(0, Number(horizonte) || 0);
+  if (!tipo || tipo === 'sem') return 0;
+  /* Bônus de adesão cai uma vez só, desde que o período tenha começado. */
+  if (tipo === 'assinatura') return h > 0 ? 1 : 0;
+  const passo = INTERVALO_BONUS[tipo] || 1;
+  return Math.floor(h / passo);
+}
+
 function contaCalcCPM(){
   const permanencia = calcCPM.cancelar ? Math.max(1, calcCPM.permanencia) : 12;
   const pontos = (calcCPM.qtd || 0) * permanencia;
   /* Bônus só existe quando a bonificação foi escolhida e não é "sem bônus". */
   const temBonus = calcCPM.bonus && calcCPM.bonus !== 'sem';
-  const bonus = temBonus ? (calcCPM.qtdBonus || 0) * (calcCPM.meses || 0) : 0;
+  const vezes = ocorrenciasBonus(calcCPM.bonus, calcCPM.meses);
+  const bonus = temBonus ? (calcCPM.qtdBonus || 0) * vezes : 0;
   /* No anual à vista o valor digitado é o do ano inteiro: multiplicá-lo pelos
      meses daria doze anuidades. Cancelar antes do prazo não devolve nada do que
      já foi pago, então o custo permanece o mesmo — o que muda é quantos pontos
@@ -14605,7 +14659,7 @@ function abrirContaAbertaClube(){
     ['Pontos do plano', `${nBR(calcCPM.qtd)} × ${r.permanencia} = ${nBR(r.pontos)}`]
   ];
   if (temBonus) linhas.push(['Bônus da campanha',
-    `${nBR(calcCPM.qtdBonus)} × ${calcCPM.meses} = ${nBR(r.bonus)}`]);
+    `${nBR(calcCPM.qtdBonus)} × ${ocorrenciasBonus(calcCPM.bonus, calcCPM.meses)} = ${nBR(r.bonus)}`]);
   linhas.push(['Total acumulado', nBR(r.total), 'forte']);
   linhas.push(['Milheiro', r.cpm != null ? brl2(r.cpm) : '—', 'fecho']);
 
@@ -14667,6 +14721,7 @@ function sincCalcPlanos(){
   if (rot) rot.textContent = calcCPM.pagto === 'anual_avista'
     ? 'Valor do ano à vista (R$)' : 'Valor mensal (R$)';
 
+
   /* O plano preenche os campos, e o que estiver ali pode ser sobrescrito à mão:
      a calculadora serve tanto para ler o catálogo quanto para testar um preço
      que ainda não está nele. */
@@ -14684,7 +14739,32 @@ function sincCalcPlanos(){
   renderCalcCPM();
 }
 
+/* Os rótulos que dependem do que foi escolhido. Ficam aqui, e não na sincronia
+   de planos, porque trocar a bonificação ou o horizonte também os muda — e essa
+   troca não passa por lá. */
+function rotulosCalcCPM(){
+  const rot = $('#ccRotValor');
+  if (rot) rot.textContent = calcCPM.pagto === 'anual_avista'
+    ? 'Valor do ano à vista (R$)' : 'Valor mensal (R$)';
+
+  const rotB = $('#ccRotBonus'), dicaB = $('#ccDicaBonus');
+  const NOME_PERIODO = {
+    mensal:'por mês', trimestral:'por trimestre', quadrimestral:'por quadrimestre',
+    semestral:'por semestre', anual:'no ano', assinatura:'na adesão'
+  };
+  if (rotB) rotB.textContent = calcCPM.bonus && calcCPM.bonus !== 'sem'
+    ? `Pontos de bônus ${NOME_PERIODO[calcCPM.bonus] || ''}`.trim()
+    : 'Pontos por bônus';
+  if (dicaB){
+    const v = ocorrenciasBonus(calcCPM.bonus, calcCPM.meses);
+    dicaB.textContent = (calcCPM.bonus && calcCPM.bonus !== 'sem' && v > 0)
+      ? `Cai ${v} ${v === 1 ? 'vez' : 'vezes'} em ${calcCPM.meses} ${calcCPM.meses === 1 ? 'mês' : 'meses'}.`
+      : ' ';
+  }
+}
+
 function renderCalcCPM(){
+  rotulosCalcCPM();
   /* O passo a passo acompanha a simulação: trocar de programa ou de modalidade
      muda a carência, o texto do cancelamento e os links. */
   pintarPassosClube();
@@ -24545,6 +24625,52 @@ function ligarSelecaoAoFocar(raiz){
   });
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DUAS BARRAS NO COMPUTADOR, UMA NO CELULAR
+   ──────────────────────────────────────────────────────────────────────────────
+   O trilho é escrito uma vez só no HTML, com todos os itens na ordem natural.
+   Em tela larga, os grupos de saída migram para a barra da direita; abaixo de
+   860px eles voltam, na mesma ordem em que estavam.
+
+   Mover em vez de duplicar evita o defeito clássico dessa divisão: dois
+   conjuntos de botões que, com o tempo, deixam de concordar entre si.
+
+   O corte segue o ciclo da milha. À esquerda onde ela é feita e avaliada; à
+   direita onde ela é usada e onde se acerta o sistema.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const GRUPOS_DIREITA = ['SOL', 'HAN'];
+
+function arrumarTrilhos(){
+  const esq = document.querySelector('.trilho .trilho-nav');
+  const dir = document.querySelector('.trilho-dir .trilho-nav');
+  if (!esq || !dir) return;
+
+  const largo = window.matchMedia('(min-width:861px)').matches;
+
+  if (!largo){
+    /* Devolve tudo, na ordem gravada na saída. Sem a ordem guardada, itens
+       voltariam empilhados no fim e o rodapé do celular sairia embaralhado. */
+    [...dir.children]
+      .sort((a, b) => (Number(a.dataset.ordem) || 0) - (Number(b.dataset.ordem) || 0))
+      .forEach(el => esq.appendChild(el));
+    return;
+  }
+
+  if (dir.children.length) return;   /* já dividido */
+
+  /* Numera antes de mover: é esse número que reconstrói a ordem na volta. */
+  [...esq.children].forEach((el, i) => { el.dataset.ordem = i; });
+
+  let levando = false;
+  [...esq.children].forEach(el => {
+    if (el.classList.contains('trilho-grupo')){
+      levando = GRUPOS_DIREITA.includes((el.textContent || '').trim());
+    }
+    if (levando) dir.appendChild(el);
+  });
+}
+
 function ligarObservadorDeTabelas(){
   /* O corpo inteiro, e não só o palco: as folhas vivem fora dele, penduradas no
      véu, e as tabelas que abrem ali — o roteador, o panorama, a conta aberta —
@@ -24561,6 +24687,11 @@ function ligarObservadorDeTabelas(){
     requestAnimationFrame(() => {
       pendente = false; rotularTabelas(document); avaliarTabelas(); marcarBotoesPrincipais();
       ligarSelecaoAoFocar(document);
+  arrumarTrilhos();
+  /* Girar o tablet ou redimensionar a janela cruza o limite dos 860px: sem
+     ouvir a mudança, a barra da direita ficaria vazia na horizontal ou os itens
+     sumiriam ao estreitar. */
+  window.matchMedia('(min-width:861px)').addEventListener('change', arrumarTrilhos);
     });
   });
   obs.observe(palco, {childList:true, subtree:true});
@@ -29412,6 +29543,22 @@ const linhaPosicao = l => {
           <div class="mp-nome">${discoProg(p)}
             <span>${esc(prog(p).n)}</span></div>
           <div class="num mp-qtd" style="font-size:calc(19px * var(--esc))">${nBR(q)}</div>
+          <!-- Duas linhas que o cartão não tinha: o que estes pontos custaram e a
+               quanto saiu o milheiro. Sem elas o cartão só dizia quanto o ponto
+               VALE hoje — e valor sem custo não responde a pergunta que importa,
+               que é se a compra foi boa ou não. -->
+          ${(() => {
+            const custo = (custoEmEstoque() || {})[p] || 0;
+            const meu = (cpmPorPrograma() || {})[p];
+            if (!custo || !meu) return `<div class="fraco mp-centro" style="font-size:calc(12.5px * var(--esc));margin-top:3px">Sem custo lançado.</div>`;
+            /* Ganho sobre o custo: o que o ponto vale hoje contra o que ele custou.
+               É a leitura que decide entre transferir agora e esperar campanha. */
+            const ganho = v.valor - custo;
+            return `<div class="mp-centro" style="margin-top:3px;font-size:calc(13px * var(--esc))">
+                Custou ${brl(custo)} · <b>${brl2(meu)}</b>/mil</div>
+              <div class="mp-centro ${ganho >= 0 ? 'jade' : 'brasa'}" style="font-size:calc(12.5px * var(--esc));margin-top:1px">
+                ${ganho >= 0 ? '+' : '−'}${brl(Math.abs(ganho))} sobre o custo</div>`;
+          })()}
           <div class="vale-linha mp-centro" style="margin-top:3px">Vale ${brl(v.valor)}.</div>
           <div class="fraco mp-centro" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${viaComDestino(v)}.</div>
         </div>`;
