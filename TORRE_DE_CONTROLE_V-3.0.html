@@ -5962,7 +5962,11 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
                 <div class="campo"><label>Forma de pagamento</label><select id="ccPagto" data-ordem="natural"></select></div>
                 <div class="campo"><label>Pontos por mês</label><input type="text" inputmode="numeric" id="ccQtd" placeholder="1.000"></div>
 
-                <div class="campo"><label>Valor mensal (R$)</label><input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="ccValor" placeholder="Ex.: 799,90"></div>
+                <!-- O rótulo acompanha a forma de pagamento. No anual à vista o
+                     dinheiro sai de uma vez, e pedir "valor mensal" ali obrigava a
+                     dividir por doze de cabeça — quem digitasse o valor do ano
+                     inteiro teria o custo multiplicado por doze sem perceber. -->
+                <div class="campo"><label id="ccRotValor">Valor mensal (R$)</label><input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="ccValor" placeholder="Ex.: 799,90"></div>
                 <div class="campo"><label>Bonificação</label><select id="ccBonus" data-ordem="natural">
                   <option value="">— selecionar —</option>
                   <option value="sem">Sem bônus</option>
@@ -6823,7 +6827,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-18 12:50';
+const BUILD = '2026-09-19 10:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14293,7 +14297,13 @@ function contaCalcCPM(){
   /* Bônus só existe quando a bonificação foi escolhida e não é "sem bônus". */
   const temBonus = calcCPM.bonus && calcCPM.bonus !== 'sem';
   const bonus = temBonus ? (calcCPM.qtdBonus || 0) * (calcCPM.meses || 0) : 0;
-  const custo = (calcCPM.valor || 0) * permanencia;
+  /* No anual à vista o valor digitado é o do ano inteiro: multiplicá-lo pelos
+     meses daria doze anuidades. Cancelar antes do prazo não devolve nada do que
+     já foi pago, então o custo permanece o mesmo — o que muda é quantos pontos
+     entram, e isso a conta de pontos já cobre. */
+  const custo = calcCPM.pagto === 'anual_avista'
+    ? (calcCPM.valor || 0)
+    : (calcCPM.valor || 0) * permanencia;
   const total = pontos + bonus;
 
   const faltaBonus = temBonus && !(calcCPM.qtdBonus > 0);
@@ -14302,7 +14312,7 @@ function contaCalcCPM(){
           cpm: pronto ? (custo / total) * 1000 : null,
           faltando: pronto ? null : [
             !calcCPM.qtd ? 'pontos por mês' : '',
-            !calcCPM.valor ? 'valor mensal' : '',
+            !calcCPM.valor ? (calcCPM.pagto === 'anual_avista' ? 'valor da anuidade' : 'valor mensal') : '',
             !calcCPM.bonus ? 'bonificação' : '',
             faltaBonus ? 'pontos por bônus' : ''
           ].filter(Boolean)};
@@ -14589,7 +14599,7 @@ function abrirContaAbertaClube(){
   const linhas = [
     ['Plano', pl ? pl.n : '—'],
     ['Forma de pagamento', MODALIDADES_CALC[calcCPM.pagto] || calcCPM.pagto],
-    ['Mensalidade', brl2(calcCPM.valor)],
+    [calcCPM.pagto === 'anual_avista' ? 'Anuidade à vista' : 'Mensalidade', brl2(calcCPM.valor)],
     ['Meses pagos', `${r.permanencia}${r.permanencia !== 12 ? ' de 12' : ''}`],
     ['Custo do período', brl(r.custo), 'forte'],
     ['Pontos do plano', `${nBR(calcCPM.qtd)} × ${r.permanencia} = ${nBR(r.pontos)}`]
@@ -14651,12 +14661,23 @@ function sincCalcPlanos(){
   if (!mods.includes(calcCPM.pagto)) calcCPM.pagto = mods[0] || 'mensal';
   $('#ccPagto').value = calcCPM.pagto;
 
+  /* O rótulo do campo de valor, redesenhado a cada render: é ele que diz se o
+     número esperado é de um mês ou do ano inteiro. */
+  const rot = $('#ccRotValor');
+  if (rot) rot.textContent = calcCPM.pagto === 'anual_avista'
+    ? 'Valor do ano à vista (R$)' : 'Valor mensal (R$)';
+
   /* O plano preenche os campos, e o que estiver ali pode ser sobrescrito à mão:
      a calculadora serve tanto para ler o catálogo quanto para testar um preço
      que ainda não está nele. */
   if (pl){
     calcCPM.qtd = pl.mensal || pl.qtd || 0;
-    calcCPM.valor = Number((pl.precos || {})[calcCPM.pagto]) || 0;
+    /* O catálogo guarda a mensalidade equivalente de cada forma. No à vista, o
+       que se paga é ela vezes doze, e é esse número que o campo deve mostrar. */
+    const mensalidade = Number((pl.precos || {})[calcCPM.pagto]) || 0;
+    calcCPM.valor = calcCPM.pagto === 'anual_avista'
+      ? Math.round(mensalidade * 12 * 100) / 100
+      : mensalidade;
     $('#ccQtd').value = nBR(calcCPM.qtd);
     $('#ccValor').value = calcCPM.valor ? moedaTxt(calcCPM.valor) : '';
   }
