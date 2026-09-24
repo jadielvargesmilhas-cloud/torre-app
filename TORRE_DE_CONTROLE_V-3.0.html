@@ -950,6 +950,11 @@ p:last-child{ margin-bottom:0; }
   .gm-passo{ grid-template-columns:28px minmax(0, 1fr); gap:10px; }
 }
 
+
+.gm-coletor{ margin:8px 0 0 auto; max-width:200px; padding:7px 9px; border-radius:8px; background:#12151c; color:#e8e6df;
+  font-size:calc(10.5px * var(--esc)); line-height:1.4; border:1px solid #2a2f3a; }
+.gm-coletor > b:first-child{ display:block; color:#e8b44f; }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -7735,7 +7740,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-25 19:00';
+const BUILD = '2026-09-26 10:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31552,7 +31557,9 @@ function extrairBrutoR360(doc){
   }
   var texto = pedacos.join(' | ');
   var iC = pedacos.findIndex(function(t){ return /^Comparativo por faixa$/i.test(t); });
-  var mh = texto.match(/Dados atualizados em (\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
+  /* "24/09/2026, 11:51" no arquivo salvo; "25/09/2026 às 09:14" na página ao
+     vivo. Aceita qualquer separador curto entre a data e a hora. */
+  var mh = texto.match(/atualizad[oa]s? em (\d{2})\/(\d{2})\/(\d{4})[^\d|]{0,8}(\d{2}):(\d{2})/i);
   var linhas = [];
   doc.querySelectorAll('table tr').forEach(function(tr){
     var c = [].map.call(tr.children, function(td){ return td.textContent.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim(); });
@@ -31566,7 +31573,11 @@ function extrairBrutoR360(doc){
     linhas: linhas, foco: mf ? mf.slice(1, 6) : null, ofertas: ofertas};
 }
 
-function interpretarBrutoR360(b, nomeArquivo){
+/* Data e hora locais no formato da Torre: 2026-09-25T09:14. */
+const isoLocalMin = d => { const x = new Date(d); const z = n => String(n).padStart(2, '0');
+  return `${x.getFullYear()}-${z(x.getMonth() + 1)}-${z(x.getDate())}T${z(x.getHours())}:${z(x.getMinutes())}`; };
+
+function interpretarBrutoR360(b, nomeArquivo, quandoReserva){
   if (!b || !b.mercado) return {erro:`${nomeArquivo}: não parece a página Mercado do Rota 360.`};
   const campos = String(b.legenda || '').split('·').map(x => x.trim());
   const nomeProg = campos[0] || '';
@@ -31574,7 +31585,11 @@ function interpretarBrutoR360(b, nomeArquivo){
   if (!prg) return {erro:`${nomeProg || 'Programa sem nome'} está no Rota 360, mas não existe na Torre.`, ignorado:true, nome:nomeProg};
   const periodo = campos[1] || '';
   const parcial = campos.some(x => /parcial/i.test(x));
-  const lidoEm = b.lido ? `${b.lido[2]}-${b.lido[1]}-${b.lido[0]}T${b.lido[3]}:${b.lido[4]}` : null;
+  /* A data escrita na página manda. Sem ela, vale a hora de reserva: a do
+     clique no favorito — a página estava ao vivo na tela — ou a do arquivo
+     salvo. Nunca mais uma leitura boa recusada por falta de data. */
+  const lidoEm = b.lido ? `${b.lido[2]}-${b.lido[1]}-${b.lido[0]}T${b.lido[3]}:${b.lido[4]}`
+    : quandoReserva ? isoLocalMin(quandoReserva) : null;
   if (!lidoEm) return {erro:`${nomeArquivo}: não encontrei a data da leitura.`};
 
   /* A faixa vem numa célula de cabeçalho e o resto em células comuns; o último
@@ -31599,9 +31614,9 @@ function interpretarBrutoR360(b, nomeArquivo){
     importadoEm:new Date().toISOString(), faixas, foco, ofertasPorProg}};
 }
 
-function lerLeituraR360(html, nomeArquivo){
+function lerLeituraR360(html, nomeArquivo, quando){
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  return interpretarBrutoR360(extrairBrutoR360(doc), nomeArquivo);
+  return interpretarBrutoR360(extrairBrutoR360(doc), nomeArquivo, quando);
 }
 
 /* A leitura mais recente de cada programa. */
@@ -31657,15 +31672,16 @@ function guardarLeiturasMercado(res){
   DB.mercado.leituras = Object.values(porProg).flatMap(v => v.slice(0, 60));
   if (ok.length) salvar();
   renderVender();
-  if (ok.length) avisar(`Leitura importada: ${ok.join('; ')}.${erros.length ? ' ' + erros.join(' ') : ''}`, 'ok');
-  else avisar(erros.join(' ') || 'Nada foi lido.', 'erro');
+  /* Com vários programas o texto fica longo: o aviso dura o bastante para ler. */
+  if (ok.length) avisar(`Leitura importada: ${ok.join('; ')}.${erros.length ? ' ' + erros.join(' ') : ''}`, 'ok', 5000 + 2000 * (ok.length + erros.length));
+  else avisar(erros.join(' ') || 'Nada foi lido.', 'erro', 9000);
   return {ok, erros};
 }
 
 function importarLeiturasMercado(arquivos){
   const lista = [...(arquivos || [])];
   if (!lista.length) return;
-  Promise.all(lista.map(f => f.text().then(t => lerLeituraR360(t, f.name)))).then(guardarLeiturasMercado);
+  Promise.all(lista.map(f => f.text().then(t => lerLeituraR360(t, f.name, f.lastModified)))).then(guardarLeiturasMercado);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -31679,15 +31695,86 @@ function importarLeiturasMercado(arquivos){
    O código do favorito é a própria função de extração da Torre, copiada para
    dentro dele: o mesmo leitor que já foi testado com o arquivo salvo.
    ══════════════════════════════════════════════════════════════════════════════ */
+/* ── o coletor que roda dentro do favorito ─────────────────────────────────────
+   Na primeira versão o favorito lia só o programa selecionado na tela: para ter
+   os quatro, era preciso clicar em cada um e no favorito de novo. Agora ele
+   percorre as abas de programa sozinho — clica, espera a tabela daquele
+   programa aparecer, lê — e volta para a aba em que a pessoa estava.
+
+   Um programa que não carrega não derruba os outros: vai para a lista de falhas,
+   que a Torre mostra no aviso. E o favorito só abre a Torre no fim; se o
+   navegador bloquear a janela por ter demorado, aparece um botão para abrir.
+
+   Como a extração, esta função é copiada para dentro do favorito: não pode
+   depender de nada da Torre. */
+function coletorR360(extrair, destino){
+  var caixa = document.createElement('div');
+  caixa.setAttribute('data-torre-coletor', '1');
+  caixa.style.cssText = 'position:fixed;z-index:2147483647;right:18px;bottom:18px;max-width:360px;padding:14px 16px;border-radius:12px;background:#12151c;color:#e8e6df;font:14px/1.5 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.45);border:1px solid #2a2f3a';
+  document.body.appendChild(caixa);
+  var diz = function(h){ caixa.innerHTML = '<b style="color:#e8b44f">Torre de Controle</b><br>' + h; };
+  var espera = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
+  var botoes = [].filter.call(document.querySelectorAll('button[aria-selected]'), function(b){ return /ofertas/i.test(b.textContent); });
+  var nomeDe = function(b){ return (b.getAttribute('aria-label') || b.textContent.replace(/\d+\s*ofertas[\s\S]*/i, '')).trim(); };
+  var original = botoes.filter(function(b){ return b.getAttribute('aria-selected') === 'true'; })[0];
+  var agora = new Date().toISOString();
+  var leituras = [], falhas = [];
+
+  (async function(){
+    try {
+      var b0 = extrair(document);
+      if (!b0.mercado){ diz('Abra a página <b>Mercado</b> do Rota 360 (Inteligência → Mercado) e clique de novo.'); setTimeout(function(){ caixa.remove(); }, 7000); return; }
+      if (!botoes.length){ if (b0.linhas.length) leituras.push(b0); }
+      for (var i = 0; i < botoes.length; i++){
+        var bt = botoes[i], nome = nomeDe(bt);
+        diz('Lendo <b>' + nome + '</b>… (' + (i + 1) + ' de ' + botoes.length + ')');
+        var antes = JSON.stringify(extrair(document).linhas);
+        var jaAberto = bt.getAttribute('aria-selected') === 'true';
+        if (!jaAberto) bt.click();
+        var lida = null, t0 = Date.now(), anterior = null;
+        while (Date.now() - t0 < 12000){
+          await espera(350);
+          var b = extrair(document);
+          var leg = String(b.legenda || '').split('·')[0].trim().toLowerCase();
+          var pronto = bt.getAttribute('aria-selected') === 'true' && b.linhas.length &&
+            (leg === nome.toLowerCase() || jaAberto || JSON.stringify(b.linhas) !== antes);
+          if (!pronto) continue;
+          /* Duas leituras iguais seguidas: a tabela parou de mudar. */
+          var assinatura = JSON.stringify([b.legenda, b.linhas]);
+          if (assinatura === anterior){ lida = b; break; }
+          anterior = assinatura;
+        }
+        if (lida){ lida.nome = nome; leituras.push(lida); }
+        else falhas.push(nome);
+      }
+      if (original && original.getAttribute('aria-selected') !== 'true') original.click();
+
+      if (!leituras.length){ diz('Nenhum programa carregou a tabela a tempo. Espere a página terminar de carregar e clique de novo.'); return; }
+      var pacote = {v:2, agora:agora, leituras:leituras, falhas:falhas};
+      var d = btoa(unescape(encodeURIComponent(JSON.stringify(pacote)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      var url = destino + '#mercado=' + d;
+      var w = window.open(url, 'torre');
+      var lista = leituras.map(function(x){ return x.nome || String(x.legenda || '').split('·')[0].trim(); }).join(', ');
+      if (w){
+        diz('Enviado para a Torre: <b>' + lista + '</b>.' + (falhas.length ? '<br>Não carregou: ' + falhas.join(', ') + '.' : ''));
+        setTimeout(function(){ caixa.remove(); }, 6000);
+      } else {
+        /* O navegador bloqueia janela aberta muito depois do clique: um
+           segundo clique, este, conta como novo gesto e passa. */
+        diz('Lido: <b>' + lista + '</b>.<br><a href="' + url + '" target="torre" style="display:inline-block;margin-top:8px;padding:6px 12px;border-radius:8px;background:#e8b44f;color:#12151c;font-weight:600;text-decoration:none">Abrir a Torre com os preços</a>');
+        caixa.querySelector('a').addEventListener('click', function(){ setTimeout(function(){ caixa.remove(); }, 300); });
+      }
+    } catch(e){ diz('Não consegui ler esta página: ' + e.message); }
+  })();
+}
+
 function codigoFavoritoR360(){
   const destino = location.origin + location.pathname;
-  const corpo = `(function(){try{var extrair=${extrairBrutoR360.toString()};
-var b=extrair(document);
-if(!b.mercado||!b.linhas.length){alert('Abra a página Mercado do Rota 360 (Inteligência → Mercado) e clique de novo.');return;}
-var d=btoa(unescape(encodeURIComponent(JSON.stringify(b)))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
-window.open(${JSON.stringify(destino)}+'#mercado='+d,'torre');
-}catch(e){alert('Não consegui ler esta página: '+e.message);}})()`;
-  return 'javascript:' + encodeURIComponent(corpo.replace(/\n/g, ''));
+  const corpo = `(function(){var extrair=${extrairBrutoR360.toString()};
+var coletar=${coletorR360.toString()};
+if(document.querySelector('[data-torre-coletor]'))return;
+coletar(extrair,${JSON.stringify(destino)});})()`;
+  return 'javascript:' + encodeURIComponent(corpo.replace(/\n\s*/g, '\n'));
 }
 
 /* A Torre recebe a leitura pelo endereço — ao abrir, ou já aberta, quando o
@@ -31702,9 +31789,14 @@ function receberDoFavorito(){
     const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
     bruto = JSON.parse(decodeURIComponent(escape(atob(b64 + '==='.slice((b64.length + 3) % 4)))));
   } catch(e){ avisar('A leitura enviada pelo favorito veio incompleta. Tente de novo na página do Rota 360.', 'erro'); return true; }
-  const r = interpretarBrutoR360(bruto, 'Favorito');
+  /* v1: um programa só. v2: todos os programas que o coletor conseguiu ler, e
+     os que não carregaram. */
+  const agora = bruto.agora || new Date().toISOString();
+  const lidos = bruto.v === 2 ? (bruto.leituras || []) : [bruto];
+  const res = lidos.map(x => interpretarBrutoR360(x, x.nome || 'Favorito', agora));
+  (bruto.falhas || []).forEach(n => res.push({erro:`${n}: a tabela não carregou a tempo no Rota 360.`}));
   irPara('mesa'); irParaAba('mesa', 'ms-vender');
-  setTimeout(() => guardarLeiturasMercado([r]), 60);
+  setTimeout(() => guardarLeiturasMercado(res), 60);
   return true;
 }
 window.addEventListener('hashchange', receberDoFavorito);
@@ -31809,18 +31901,16 @@ function abrirGuiaFavorito(aba){
 
   const usar = `<ol class="gm-passos">
     ${passoGuia(1, 'No Rota 360, abra a página Mercado',
-      `No menu da esquerda do Rota 360, em <b>Inteligência</b>, clique em <b>Mercado</b>. Prefira o período de <b>7 dias</b> ou <b>30 dias</b>: "Hoje" muda muito ao longo do dia.`,
+      `No menu da esquerda do Rota 360, em <b>Inteligência</b>, clique em <b>Mercado</b>. Escolha o período — <b>7 dias</b> ou <b>30 dias</b> são mais estáveis que "Hoje". Não precisa escolher programa.`,
       mockNavegador({endereco:'app.rota360viagens.com.br/mercado', favoritos:[{n:'Enviar para a Torre'}], conteudo:mockRota({mercado:true})}))}
-    ${passoGuia(2, 'Escolha o programa',
-      `Clique no programa que quer atualizar — <b>LATAM Pass</b>, <b>Smiles</b> ou <b>Azul Viagens</b>. A tabela embaixo passa a mostrar os preços dele.`,
-      mockNavegador({endereco:'app.rota360viagens.com.br/mercado', favoritos:[{n:'Enviar para a Torre'}], conteudo:mockRota({programa:true})}))}
-    ${passoGuia(3, 'Clique no favorito',
-      `Um clique em <b>Enviar para a Torre</b>, na barra de favoritos. Não precisa salvar nada.`,
-      mockNavegador({endereco:'app.rota360viagens.com.br/mercado', favoritos:[{n:'Enviar para a Torre', destaque:true}], conteudo:mockRota({})}))}
-    ${passoGuia(4, 'A Torre abre com os preços',
-      `A Torre abre na Prateleira, com um aviso verde confirmando o programa importado. A venda sugerida de cada posição já usa o preço novo.`,
+    ${passoGuia(2, 'Clique no favorito e espere',
+      `Um clique em <b>Enviar para a Torre</b>. Ele passa sozinho por <b>todos os programas</b> — LATAM Pass, Smiles, Azul Viagens, AAdvantage —, lê a tabela de cada um e volta para onde você estava. Um aviso no canto da tela mostra o andamento. <b>Não mexa na página enquanto ele lê</b>: leva alguns segundos.`,
+      mockNavegador({endereco:'app.rota360viagens.com.br/mercado', favoritos:[{n:'Enviar para a Torre', destaque:true}],
+        conteudo:mockRota({}) + '<div class="gm-coletor"><b>Torre de Controle</b>Lendo <b>Smiles</b>… (2 de 4)</div>'}))}
+    ${passoGuia(3, 'A Torre abre com os preços',
+      `A Torre abre na Prateleira, com um aviso verde listando os programas importados. A venda sugerida de cada posição já usa o preço novo.`,
       mockNavegador({endereco:ENDERECO_TORRE, favoritos:[{n:'Enviar para a Torre'}], conteudo:mockTorre({aberta:true, importado:true, aviso:true})}))}
-    <li class="gm-dica"><svg><use href="#i-atualizar"/></svg><div><b>Vários programas?</b> Volte ao Rota 360, escolha o próximo programa e clique no favorito de novo. A Torre já aberta é reaproveitada.</div></li>
+    <li class="gm-dica"><svg><use href="#i-info"/></svg><div><b>Apareceu "Abrir a Torre com os preços" no canto?</b> O navegador segurou a janela porque a leitura demorou. Clique nesse botão e pronto.</div></li>
   </ol>`;
 
   const arquivo = `<ol class="gm-passos">
@@ -31841,6 +31931,7 @@ function abrirGuiaFavorito(aba){
     <details><summary>O favorito guarda a minha senha do Rota 360?</summary><p>Não. Ele só lê o que já está na sua tela, com você logado. Os preços vão para a Torre pelo próprio endereço da página, sem passar por servidor nenhum.</p></details>
     <details><summary>Cliquei e apareceu "Abra a página Mercado"</summary><p>O favorito só funciona na página Mercado. Vá em Inteligência → Mercado e clique de novo.</p></details>
     <details><summary>Cliquei no botão e nada foi para a barra</summary><p>É preciso arrastar: clicar, segurar e soltar sobre a barra de favoritos. Se a barra não aparece, aperte Ctrl + Shift + B.</p></details>
+    <details><summary>Já tinha instalado o favorito antes</summary><p>O favorito guarda a versão da época em que foi arrastado. Quando a Torre ganhar uma versão nova dele, apague o antigo — clique com o botão direito sobre ele na barra e escolha <b>Excluir</b> — e arraste o novo.</p></details>
     <details><summary>Apareceu "AAdvantage está no Rota 360, mas não existe na Torre"</summary><p>A Torre só guarda preço de programa que ela conhece. Os demais ficam de fora até serem cadastrados.</p></details>
   </div>`;
 
@@ -31896,7 +31987,7 @@ function renderMercado(posicoes){
       title="Arraste para a barra de favoritos"><svg><use href="#i-link"/></svg>Enviar para a Torre</a>`;
   const instalar = `<div class="mk-fav">
       <div class="mk-fav-txt"><b>Um clique, sem salvar arquivo.</b> Arraste o botão ao lado para a barra de favoritos do navegador.
-        No Rota 360, na página Mercado, clique nele: a Torre abre com a leitura já importada.
+        No Rota 360, na página Mercado, clique nele: ele lê todos os programas e a Torre abre com os preços.
         <span class="fraco">Barra de favoritos escondida? No Chrome, <b>Ctrl + Shift + B</b> (no Mac, <b>Cmd + Shift + B</b>).</span></div>
       <div class="mk-fav-acoes">${favorito}
         <button type="button" class="bt p primario" onclick="abrirGuiaFavorito('instalar')"><svg><use href="#i-livro"/></svg>Ver o Passo a Passo</button></div>
