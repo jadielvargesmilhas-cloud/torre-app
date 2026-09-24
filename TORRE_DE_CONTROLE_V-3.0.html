@@ -787,6 +787,55 @@ p:last-child{ margin-bottom:0; }
   color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 12%, transparent); }
 @media (max-width:640px){ .mk-progs{ grid-template-columns:1fr; } .mk-rot, .mk-faixa > b{ font-size:calc(10.5px * var(--esc)); } }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CAMPANHA DA ROTA E "VALE A PENA?" NA CALCULADORA DE TRANSFERÊNCIA
+   ══════════════════════════════════════════════════════════════════════════════ */
+#ctCampanhaRota:empty{ display:none; }
+#ctCampanhaRota{ margin-bottom:16px; }
+.ctc{ position:relative; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:12px 14px 12px 18px; border-radius:12px; overflow:hidden;
+  background:var(--sup-1); border:1px solid var(--fio); }
+.ctc::before{ content:''; position:absolute; inset:0 auto 0 0; width:4px; background:var(--jade); }
+.ctc-brasa::before{ background:var(--brasa); } .ctc-ouro::before{ background:var(--ouro); }
+.ctc-sem::before{ background:var(--fio-forte); }
+.ctc-rota{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.ctc-txt{ flex:1 1 380px; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.ctc-l1{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.ctc-l1 b{ font-size:calc(15px * var(--esc)); color:var(--giz); }
+.ctc-prazo{ font-size:calc(13px * var(--esc)); font-weight:600; color:var(--jade); }
+.ctc-brasa .ctc-prazo{ color:var(--brasa); } .ctc-ouro .ctc-prazo{ color:var(--ouro); }
+.ctc-l2, .ctc-l3{ font-size:calc(13.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.ctc-l2 b{ color:var(--ouro); }
+.ctc-link{ font:inherit; border:0; background:none; padding:0; cursor:pointer; color:var(--anil-claro);
+  text-decoration:underline; text-underline-offset:2px; }
+.ctc-alts{ display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; }
+.ctc-alt{ display:inline-flex; align-items:center; gap:7px; padding:4px 10px 4px 5px; border-radius:99px; cursor:pointer;
+  font:inherit; font-size:calc(13px * var(--esc)); color:var(--giz); background:var(--sup-0); border:1px solid var(--fio-forte); }
+.ctc-alt b{ color:var(--ouro); font-variant-numeric:tabular-nums; }
+.ctc-alt:hover{ border-color:var(--anil-claro); }
+.ctc-alt .disco-prog{ width:22px; height:22px; font-size:9px; }
+
+#ctMercado:empty{ display:none; }
+#ctMercado{ margin-top:12px; }
+/* Mora na coluna estreita dos campos: os dois números lado a lado e a
+   explicação embaixo, na largura toda — em três colunas o texto virava uma
+   tira de dez linhas. */
+.ctm{ display:grid; grid-template-columns:1fr 1fr; gap:8px 18px; align-items:start;
+  padding:12px 14px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); }
+.ctm-jade{ border-color:color-mix(in oklab, var(--jade) 40%, transparent); background:color-mix(in oklab, var(--jade) 7%, var(--sup-1)); }
+.ctm-brasa{ border-color:color-mix(in oklab, var(--brasa) 40%, transparent); background:color-mix(in oklab, var(--brasa) 7%, var(--sup-1)); }
+.ctm-num{ display:flex; flex-direction:column; gap:1px; }
+.ctm-num span{ font-family:var(--f-m); font-size:calc(11px * var(--esc)); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite-dim); }
+.ctm-num b{ font-family:var(--f-d); font-weight:700; font-size:calc(22px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.ctm-num b.jade{ color:var(--jade); } .ctm-num b.brasa{ color:var(--brasa); }
+.ctm-num small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); }
+.ctm p{ grid-column:1 / -1; margin:0; font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); line-height:1.45; }
+.ctm p b{ color:var(--grafite); }
+.ctm-sem{ display:flex; gap:9px; align-items:flex-start; font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.ctm-sem svg{ width:16px; height:16px; flex-shrink:0; margin-top:2px; fill:none; stroke:var(--anil-claro); stroke-width:1.9; }
+
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -6290,6 +6339,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
             <div id="ctPassosA"></div>
 
             <div class="cartao">
+              <div id="ctCampanhaRota"></div>
               <!-- Campos à esquerda, efeito na carteira à direita, os dois no topo:
                    a tabela muda a cada tecla, e ficando na mesma altura do campo
                    que está sendo digitado ela é vista sem tirar os olhos dali.
@@ -6302,6 +6352,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
                 <div class="ct-entrada">
                   <div class="grade ct-grade" id="ctCampos"></div>
                   <div class="grade ct-cards" id="ctCards"></div>
+                  <div id="ctMercado"></div>
                 </div>
                 <!-- Régua, tabela e conclusão num bloco só. A conclusão precisa
                      atravessar os dois cards e encostar neles, e isso não se
@@ -7570,7 +7621,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-25 12:20';
+const BUILD = '2026-09-25 15:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14152,8 +14203,10 @@ function abrirRegras(id, gatilho){
 
       <footer class="dr-pe">
         <button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRegras').close()">Fechar</button>
-        ${c.link ? `<a class="bt primario" href="${esc(c.link)}" target="_blank" rel="noopener">
-          <svg><use href="#i-link"/></svg>Abrir página da campanha</a>` : ''}
+        ${c.link ? `<a class="bt fantasma" href="${esc(c.link)}" target="_blank" rel="noopener">
+          <svg><use href="#i-link"/></svg>Abrir Página da Campanha</a>` : ''}
+        ${temSim ? `<button type="button" class="bt primario" onclick="transferirAgora('${c.id}')">
+          <svg><use href="#i-troca"/></svg>Transferir Agora</button>` : ''}
       </footer>
     </div>`;
 
@@ -26048,6 +26101,11 @@ function calcularCT(tipo, modo, v){
    a cada troca de operação, e o que já foi digitado nos campos que continuam
    existindo não deve se perder. */
 let ctTipo = 'compra', ctModo = 'desconto', ctVals = {}, ctFeitos = {};
+/* Campos que chegaram prontos da janela de uma campanha ("Transferir Agora").
+   Nascem marcados como tocados, para que nenhum preenchimento automático —
+   milheiro da origem, saldo, teto do carrinho, bônus — escreva por cima do que
+   foi simulado lá. */
+let ctTravados = new Set();
 
 
 /* ── a tela ───────────────────────────────────────────────────────────────────
@@ -26573,6 +26631,170 @@ function puxarSaldoOrigem(){
   if (dica) dica.textContent = saldo ? 'Saldo atual do programa de origem.' : ' ';
 }
 
+
+/* Pontos a transferir, na Transferência Simples, começam com o saldo da origem
+   — como os pontos próprios no Hack do Carrinho. Até alguém digitar por cima. */
+function puxarPontosTransferir(){
+  const el = $('#ct_pontosOrganicos'); if (!el || el.dataset.tocado) return;
+  const o = $('#ct_progOrigem'); if (!o) return;
+  const saldo = saldoPorPrograma()[o.value] || 0;
+  el.value = saldo ? qtdTxt(saldo) : '';
+  ctVals.pontosOrganicos = saldo;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   A CAMPANHA DA ROTA, NO TOPO DA CALCULADORA
+   ──────────────────────────────────────────────────────────────────────────────
+   Escolhidas origem e destino, a Torre sabe se há campanha no ar para aquela
+   rota — e, com a assinatura cadastrada, qual é o SEU bônus nela. Pedir que isso
+   seja digitado era pedir o que ela já sabe. O campo de bônus se preenche até
+   alguém escrever por cima; trocar a rota devolve o automático.
+
+   Sem campanha na rota, a faixa mostra para onde há campanha a partir da mesma
+   origem: um toque troca o destino.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function campanhaDaRota(de, para){
+  return campanhasVivas('transferencia').filter(c => c.de === de && c.para === para)
+    .sort((a, b) => (bonusDoUsuario(b) ?? b.bonus) - (bonusDoUsuario(a) ?? a.bonus))[0] || null;
+}
+
+/* Troca o conteúdo só quando ele muda. A faixa é redesenhada a cada tecla e a
+   cada perda de foco dos campos — e redesenhar por igual substituía o botão
+   debaixo do mouse entre o apertar e o soltar: o navegador descartava o clique,
+   e "Usar o bônus da campanha" parecia não fazer nada. */
+function porSeMudou(el, html){
+  if (el._html === html) return;
+  el._html = html; el.innerHTML = html;
+}
+
+function pintarCampanhaRota(){
+  const cx = $('#ctCampanhaRota'); if (!cx) return;
+  if (ctTipo !== 'transferencia'){ porSeMudou(cx, ''); return; }
+  const o = ($('#ct_progOrigem') || {}).value, d = ($('#ct_progDestino') || {}).value;
+  if (!o || !d){ porSeMudou(cx, ''); return; }
+  const pc = $('#ct_percentual');
+  const c = campanhaDaRota(o, d);
+
+  if (c){
+    const bUser = bonusDoUsuario(c);
+    const b = bUser != null ? bUser : Number(c.bonus) || 0;
+    if (pc && !pc.dataset.tocado && Number(ctVals.percentual) !== b){
+      pc.value = String(b).replace('.', ','); ctVals.percentual = b; pc.dataset.auto = '1';
+    }
+    const dias = diasAte(c.fim);
+    const prazo = dias === null ? '' : dias <= 0 ? 'fecha hoje' : dias === 1 ? 'fecha amanhã' : `fecha em ${dias} dias`;
+    const urg = dias !== null && dias <= 1 ? 'brasa' : dias !== null && dias <= 5 ? 'ouro' : 'jade';
+    const ver = vereditoCampanha(medidaCampanha(c), referenciasCampanha(c));
+    const pos = degrausClube(c) ? posicaoNoClube(c, degrausClube(c)) : null;
+    const porque = bUser != null && bUser !== Number(c.bonus)
+      ? (pos && pos.meses != null ? `com ${pos.meses} ${pos.meses === 1 ? 'mês' : 'meses'} de Clube` : 'pelo seu plano do Clube') : '';
+    const querHack = Number(c.carrinho) > 0 && ctModo !== 'hack';
+    const usado = pc && pc.dataset.tocado && Number(ctVals.percentual) !== b;
+    porSeMudou(cx, `<div class="ctc ctc-${urg}">
+      <div class="ctc-rota">${discoProg(c.de)}<svg class="cp-seta"><use href="#i-seta-d"/></svg>${discoProg(c.para)}</div>
+      <div class="ctc-txt">
+        <div class="ctc-l1"><b>Campanha no ar: ${nBRdec(c.bonus)}% de bônus</b>
+          <span class="ctc-prazo">${prazo}${c.fim ? ' · ' + dataBR(c.fim) : ''}</span></div>
+        <div class="ctc-l2">${bUser != null ? `O seu bônus: <b>${nBRdec(b)}%</b>${porque ? ' ' + porque : ''}. ` : ''}<span class="cp-${ver.tom}">${esc(ver.txt)}</span></div>
+        ${usado ? `<div class="ctc-l3">Você digitou ${nBRdec(ctVals.percentual)}% no bônus. <button type="button" class="ctc-link" onclick="usarBonusDaCampanha()">Usar ${nBRdec(b)}% da campanha</button></div>` : ''}
+        ${querHack ? `<div class="ctc-l3">Esta campanha tem carrinho a ${brl2(c.carrinho)} por mil. <button type="button" class="ctc-link" onclick="ctModo='hack';ctFeitos={};renderComprarTransferir()">Simular com o Hack do Carrinho</button></div>` : ''}
+      </div>
+      <button type="button" class="bt p fantasma" onclick="abrirRegras('${c.id}', this)"><svg><use href="#i-info"/></svg>Regras Completas</button>
+    </div>`);
+    return;
+  }
+
+  /* Sem campanha: o bônus automático volta a zero, e a faixa aponta alternativas. */
+  if (pc && pc.dataset.auto && !pc.dataset.tocado){ pc.value = '0'; ctVals.percentual = 0; delete pc.dataset.auto; }
+  const alt = {};
+  campanhasVivas('transferencia').filter(x => x.de === o && x.para !== d).forEach(x => {
+    const bx = bonusDoUsuario(x) ?? (Number(x.bonus) || 0);
+    if (!alt[x.para] || bx > alt[x.para].b) alt[x.para] = {c:x, b:bx};
+  });
+  const lista = Object.values(alt).sort((a, b2) => b2.b - a.b);
+  const ultima = (DB.campanhas || []).filter(x => x.tipo === 'transferencia' && x.de === o && x.para === d && x.fim)
+    .sort((a, b2) => b2.fim.localeCompare(a.fim))[0];
+  porSeMudou(cx, `<div class="ctc ctc-sem">
+    <div class="ctc-rota">${discoProg(o)}<svg class="cp-seta"><use href="#i-seta-d"/></svg>${discoProg(d)}</div>
+    <div class="ctc-txt">
+      <div class="ctc-l1"><b>Sem campanha no ar de ${esc(prog(o).n)} para ${esc(prog(d).n)}</b></div>
+      <div class="ctc-l2">${ultima ? `A última pagou ${(ultima.mesApenas || /até/i.test(ultima.titulo || '')) ? 'até ' : ''}${nBRdec(ultima.bonus)}%, em ${mesAnoCurto(ultima.fim)}. ` : ''}${
+        lista.length ? `Com campanha agora a partir de ${esc(prog(o).n)}:` : `Nenhuma campanha no ar a partir de ${esc(prog(o).n)}.`}</div>
+      ${lista.length ? `<div class="ctc-alts">${lista.map(a => `<button type="button" class="ctc-alt" onclick="trocarDestinoCT('${a.c.para}')">
+        ${discoProg(a.c.para)}<span>${esc(prog(a.c.para).n)}</span><b>${nBRdec(a.b)}%</b></button>`).join('')}</div>` : ''}
+    </div>
+  </div>`);
+}
+
+function usarBonusDaCampanha(){
+  const pc = $('#ct_percentual'); if (pc){ delete pc.dataset.tocado; }
+  ctTravados.delete('percentual');
+  ctVals.percentual = -1;
+  pintarResultadoCT(); pintarPassosCT();
+}
+
+function trocarDestinoCT(para){
+  const d = $('#ct_progDestino'); if (!d) return;
+  d.value = para;
+  d.dispatchEvent(new Event('change'));
+}
+
+/* ── vale a pena? ──────────────────────────────────────────────────────────────
+   Com leitura do Rota 360 para o destino, o resultado ganha a pergunta que
+   decide: quanto essas milhas valem se vendidas agora, e quanto sobra. */
+function pintarMercadoCT(r){
+  const cx = $('#ctMercado'); if (!cx) return;
+  if (!r || !(r.qtd > 0) || !r.prog || ctTipo !== 'transferencia'){ porSeMudou(cx, ''); return; }
+  const ref = referenciaMercado(r.prog, r.qtd);
+  if (!ref){
+    porSeMudou(cx, `<div class="ctm ctm-sem"><svg><use href="#i-grafico"/></svg><span>Quer saber se vale a pena? Importe a leitura do Rota 360 de
+      ${esc(prog(r.prog).n)} em <button type="button" class="ctc-link" onclick="irPara('mesa');irParaAba('mesa','ms-vender')">Mesa → Vender</button>
+      e aqui aparece quanto essas milhas valem no mercado.</span></div>`);
+    return;
+  }
+  const valor = r.qtd / 1000 * ref.faixa.mediana;
+  const lucro = valor - (r.custo || 0);
+  const pct = r.custo > 0 ? lucro / r.custo * 100 : null;
+  const tom = lucro > 0 ? 'jade' : 'brasa';
+  porSeMudou(cx, `<div class="ctm ctm-${tom}">
+    <div class="ctm-num"><span>Se vender</span><b>${brl(valor)}</b></div>
+    <div class="ctm-num"><span>${lucro >= 0 ? 'Lucro' : 'Prejuízo'}</span><b class="${tom}">${lucro >= 0 ? '+' : '−'}${brl(Math.abs(lucro))}</b>${pct != null ? `<small>${lucro >= 0 ? '+' : '−'}${nBRdec(Math.abs(pct))}% sobre o custo</small>` : ''}</div>
+    <p>Mediana de <b>${brl2(ref.faixa.mediana)}</b> por mil para lotes de ${esc(ref.faixa.rot)}, no Rota 360
+      (leitura de ${dataBR(ref.leitura.lidoEm.slice(0, 10))}${ref.idade.velha ? ', ' + Math.floor(ref.idade.dias) + ' dias atrás' : ''}). Referência de mercado, não venda garantida.</p>
+  </div>`);
+}
+
+/* ── da janela da campanha para a calculadora ─────────────────────────────── */
+function transferirAgora(id){
+  const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+  const d = document.getElementById('dlgRegras');
+  const st = (d && d._sim) || {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
+  const r = contaCarrinho(c, st.qtd || 100000, !!st.usarSaldo);
+  const bonus = st.bonus != null ? st.bonus : (bonusDoUsuario(c) ?? (Number(c.bonus) || 0));
+  if (d && d.open) d.close();
+
+  const hack = r.comCarrinho && r.noCarrinho > 0;
+  ctTipo = 'transferencia';
+  ctModo = hack ? 'hack' : 'organico';
+  ctFeitos = {};
+  ctVals = hack
+    ? {progOrigem:c.de, progDestino:c.para, organicos:r.proprios, pctOrganico:100,
+       cpmOrigem:r.cpmProprio, qtdCarrinho:r.noCarrinho,
+       valorCarrinho:Math.round(r.custoCarrinho * 100) / 100, percentual:bonus}
+    : {progOrigem:c.de, progDestino:c.para, pontosOrganicos:st.qtd || 100000,
+       cpmOrigem:r.cpmProprio, percentual:bonus};
+  ctTravados = new Set(Object.keys(ctVals).filter(k => !['progOrigem', 'progDestino'].includes(k)));
+
+  irPara('comprar');
+  irParaAba('comprar', 'ct-transferir');
+  setTimeout(() => {
+    renderComprarTransferir();
+    const alvo = $('#ctCampanhaRota');
+    if (alvo) alvo.scrollIntoView({block:'center', behavior:'smooth'});
+    avisar(`${prog(c.de).n} para ${prog(c.para).n}: ${nBR(st.qtd || 100000)} pontos com ${nBRdec(bonus)}% de bônus, como na simulação. Confira e registre no Diário.`, 'ok');
+  }, 60);
+}
+
 function renderComprarTransferir(){
   const alvo = $('#ctCampos'); if (!alvo) return;
 
@@ -26582,7 +26804,7 @@ function renderComprarTransferir(){
   $('#segCtModo').innerHTML = modos.map(m =>
     `<button class="${m.k === ctModo ? 'on' : ''}" data-m="${m.k}">${m.n}</button>`).join('');
   $$('#segCtModo button').forEach(b => b.onclick = () => {
-    ctModo = b.dataset.m; ctFeitos = {}; renderComprarTransferir();
+    ctModo = b.dataset.m; ctFeitos = {}; ctTravados.clear(); renderComprarTransferir();
   });
 
   const modo = modos.find(m => m.k === ctModo);
@@ -26610,7 +26832,7 @@ function renderComprarTransferir(){
        leitura, o preenchimento automático e os ouvintes todos procuram o input
        pelo id, e sem ele o valor entraria como indefinido na conta. */
     return `<div class="campo"${c.oc ? ' hidden' : ''}><label>${esc(c.r)}</label>
-      <input ${attr} id="ct_${c.k}" value="${esc(String(v))}"${c.t === 'pct' ? ' placeholder="0"' : ''}>
+      <input ${attr} id="ct_${c.k}" value="${esc(String(v))}"${c.t === 'pct' ? ' placeholder="0"' : ''}${ctTravados.has(c.k) ? ' data-tocado="1"' : ''}>
       ${c.d ? `<div class="dica">${esc(c.d)}</div>` : ''}</div>`;
   }).join('');
 
@@ -26678,20 +26900,38 @@ function renderComprarTransferir(){
         const d = el.parentElement && el.parentElement.querySelector('.dica');
         if (d) d.innerHTML = '&nbsp;';
       }
-      /* Mudou o que se tem ou quanto se usa dele: o teto do carrinho muda junto. */
-      if (c.k === 'organicos' || c.k === 'pctOrganico'){ ler(); derivarCarrinho(); }
+      if (c.k === 'percentual'){ el.dataset.tocado = '1'; delete el.dataset.auto; }
+      if (c.k === 'pontosOrganicos') el.dataset.tocado = '1';
+      /* Mudou o que se tem ou quanto se usa dele: o teto do carrinho muda junto —
+         inclusive quando ele tinha vindo pronto da janela da campanha. */
+      if (c.k === 'organicos' || c.k === 'pctOrganico'){
+        const qc = $('#ct_qtdCarrinho'); if (qc) delete qc.dataset.tocado;
+        const vc = $('#ct_valorCarrinho'); if (vc) delete vc.dataset.tocado;
+        ctTravados.delete('qtdCarrinho'); ctTravados.delete('valorCarrinho');
+        ler(); derivarCarrinho();
+      }
       ler(); pintarResultadoCT(); pintarPassosCT();
     });
     el.addEventListener('change', () => {
       /* Trocar o programa de origem devolve o campo ao automático: o milheiro que
          estava lá era o do programa anterior, e mantê-lo é pior que apagá-lo. */
+      /* Rota nova, preenchimento automático de novo: o bônus e os números que
+         vieram da janela eram da rota anterior. */
+      if (c.k === 'progOrigem' || c.k === 'progDestino'){
+        ctTravados.clear();
+        const pc = $('#ct_percentual'); if (pc) delete pc.dataset.tocado;
+        ['qtdCarrinho', 'valorCarrinho'].forEach(k => { const e2 = $('#ct_' + k); if (e2) delete e2.dataset.tocado; });
+      }
       if (c.k === 'progOrigem'){
         const ce = $('#ct_cpmOrigem');
         if (ce) delete ce.dataset.tocado;
         const pe = $('#ct_organicos');
         if (pe) delete pe.dataset.tocado;
+        const po = $('#ct_pontosOrganicos');
+        if (po) delete po.dataset.tocado;
         puxarCpmOrigem();
         puxarPontosProprios();
+        puxarPontosTransferir();
         derivarCarrinho();
       }
       ler(); pintarResultadoCT(); pintarPassosCT();
@@ -26700,6 +26940,7 @@ function renderComprarTransferir(){
 
   puxarCpmOrigem();
   puxarPontosProprios();
+  puxarPontosTransferir();
   ler();
   derivarCarrinho();
   pintarResultadoCT();
@@ -26717,7 +26958,7 @@ function renderComprarTransferir(){
 const MIN_ORGANICO_PCT = 1;
 
 function derivarCarrinho(){
-  const el = $('#ct_qtdCarrinho'); if (!el) return;
+  const el = $('#ct_qtdCarrinho'); if (!el || el.dataset.tocado) return;
   /* `qtdNum` e `qtdTxt` convertem valor, não escrevem em campo: uma lê o texto
      formatado e devolve número, a outra faz o caminho de volta. */
   const proprios = qtdNum(($('#ct_organicos') || {}).value);
@@ -26772,7 +27013,10 @@ function pintarResultadoCT(){
   /* Depois de derivar a quantidade do carrinho, e não antes: a sugestão de preço
      é o valor por mil vezes essa quantidade. */
   if (ctModo === 'hack') sugerirCarrinhoDaCampanha();
+  /* A campanha da rota vem antes da conta: é ela que preenche o bônus. */
+  pintarCampanhaRota();
   const r = calcularCT(ctTipo, ctModo, ctVals);
+  pintarMercadoCT(r);
   if (!r) return;
 
   const faixas = faixasDe(r.prog);
@@ -28872,6 +29116,7 @@ function ligarEventos(){
 
   /* comprar e transferir: o tipo agora vem da aba, e quem o troca é montarCorpoCT */
   if ($('#btCtLimpar')) $('#btCtLimpar').onclick = () => {
+    ctTravados.clear();
     ctVals = {}; ctFeitos = {}; renderComprarTransferir();
   };
   if ($('#btCtZerar')) $('#btCtZerar').onclick = () => { ctFeitos = {}; pintarPassosCT(); };
