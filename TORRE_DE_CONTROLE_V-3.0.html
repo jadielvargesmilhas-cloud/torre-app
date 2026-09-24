@@ -1020,6 +1020,17 @@ p:last-child{ margin-bottom:0; }
 .dr-sim-bonus > button.sel, .dr-sim-bonus > button.eu.sel{ background:var(--sel-fundo); outline:2px solid var(--anil-claro); outline-offset:-1px; }
 .dr-sim-bonus > button.sel b{ color:var(--anil-claro); }
 
+
+.radar-ocultos{ display:flex; align-items:center; gap:8px; margin:0 0 12px; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.radar-ocultos svg{ width:15px; height:15px; flex-shrink:0; fill:none; stroke:var(--anil-claro); stroke-width:2; }
+
+
+.dr-sim-sem-preco{ display:flex; gap:9px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:12px;
+  font-size:calc(14px * var(--esc)); color:var(--grafite); line-height:1.5; background:var(--sup-1); border:1px dashed var(--fio-forte); }
+.dr-sim-sem-preco svg{ width:16px; height:16px; flex-shrink:0; margin-top:2px; fill:none; stroke:var(--anil-claro); stroke-width:2; }
+.dr-sim-merc{ margin:8px 0 0; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.dr-sim-merc.jade b{ color:var(--jade); } .dr-sim-merc.brasa b{ color:var(--brasa); }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -2174,9 +2185,13 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 .ct-resultado{ display:flex; flex-direction:column; gap:14px; }
 .ct-resultado:not(:empty){ margin-top:20px; }
 
-/* Abaixo de 1340 a leitura desce inteira para baixo dos campos, mantendo régua
-   e tabela lado a lado — é a proporção que preserva a comparação entre as duas. */
-@media (max-width:1340px){
+/* Abaixo de 1540 a leitura desce inteira para baixo dos campos, mantendo régua
+   e tabela lado a lado — é a proporção que preserva a comparação entre as duas.
+   Era 1340, calculado antes da coluna de seções (212px) ao lado do trilho: com
+   ela, em 1366 px os campos ficavam com 161px e cortavam o nome do programa.
+   Régua (300) + tabela (460) + campos (360, o mínimo legível) + trilho, coluna
+   e margens dão cerca de 1540. */
+@media (max-width:1540px){
   .ct-topo{ grid-template-columns:minmax(0, 1fr); }
   .ct-leitura{ grid-template-columns:var(--card-milheiro-l) minmax(0, 1fr); }
 }
@@ -7805,7 +7820,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 14:30';
+const BUILD = '2026-09-26 17:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12887,16 +12902,25 @@ let janelaRadar = 30;
    programa, as mesmas do termômetro. */
 function renderRadarMilheiro(tipo, nomeJanela){
   const alvo = $(alvoCamp().radar);
-  const destinos = destinosComHistorico(tipo, janelaRadar);
+  /* Mesma regra do radar de bônus: programa com campanha no ar fica de fora. */
+  const noAr = new Set(campanhasVivas(tipo).map(c => c.para));
+  const todos = destinosComHistorico(tipo, janelaRadar);
+  const destinos = todos.filter(p => !noAr.has(p));
+  const ocultos = todos.filter(p => noAr.has(p));
+  const notaOcultos = ocultos.length ? `<p class="radar-ocultos"><svg><use href="#i-info"/></svg>Fora do radar por estarem com campanha no ar, nos cartões acima: ${ocultos.map(p => esc(prog(p).n)).join(', ')}.</p>` : '';
   const nome = tipo === 'compra' ? 'campanha de compra' : 'campanha de clube';
   const comDados = destinos.map(p => ({p, r:radarMilheiro(p, tipo, janelaRadar)})).filter(x => x.r.n);
+  if (!comDados.length && ocultos.length){
+    alvo.innerHTML = `${notaOcultos}<div class="vazio" style="border:0;padding:18px 24px"><p>Todos os programas com histórico estão com ${nome} no ar agora.</p></div>`;
+    return;
+  }
   if (!comDados.length){
     alvo.innerHTML = `<div class="vazio" style="border:0;padding:24px"><p>Nenhuma ${nome} nos últimos ${nomeJanela}${
       tipo === 'compra' ? ', ou os programas envolvidos ainda não têm preço de tabela cadastrado em Sistema → Programas' : ''}. ${
       janelaRadar < 365 ? 'Abra a janela de 12 meses para ver o histórico.' : ''}</p></div>`;
     return;
   }
-  alvo.innerHTML = `<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:13px">
+  alvo.innerHTML = `${notaOcultos}<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:13px">
     ${comDados.map(({p, r}) => {
       const f = faixasDe(p);
       const teto = Math.max(f.razoavel * 1.25, r.melhor || 0);
@@ -13308,12 +13332,22 @@ function renderRadarBonus(){
 
   if (tipo !== 'transferencia') return renderRadarMilheiro(tipo, nomeJanela);
 
-  const destinos = destinosComHistorico('transferencia', janelaRadar);
+  /* Programa com campanha no ar já tem o cartão lá em cima: projetar a próxima
+     campanha dele aqui é olhar para trás com a oferta aberta na frente. */
+  const noAr = new Set(campanhasVivas('transferencia').map(c => c.para));
+  const todosDestinos = destinosComHistorico('transferencia', janelaRadar);
+  const destinos = todosDestinos.filter(p => !noAr.has(p));
+  const ocultos = todosDestinos.filter(p => noAr.has(p));
+  const notaOcultos = ocultos.length ? `<p class="radar-ocultos"><svg><use href="#i-info"/></svg>Fora do radar por estarem com campanha no ar, nos cartões acima: ${ocultos.map(p => esc(prog(p).n)).join(', ')}.</p>` : '';
+  if (!destinos.length && ocultos.length){
+    alvo.innerHTML = `${notaOcultos}<div class="vazio" style="border:0;padding:18px 24px"><p>Todos os destinos com histórico estão com campanha no ar agora.</p></div>`;
+    return;
+  }
   if (!destinos.length){
     alvo.innerHTML = `<div class="vazio" style="border:0;padding:24px"><p>Nenhuma transferência bonificada nos últimos ${nomeJanela}. ${janelaRadar < 365 ? 'Abra a janela de 12 meses para ver o histórico.' : 'Conforme você registra as ofertas, o radar passa a mostrar o padrão de cada destino.'}</p></div>`;
     return;
   }
-  alvo.innerHTML = `<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:13px">
+  alvo.innerHTML = `${notaOcultos}<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:13px">
     ${destinos.map(p => {
       const r = radarBonus(p, janelaRadar);
       const ref = refBonus(p);
@@ -13781,13 +13815,24 @@ const mesAnoCurto = iso => {
 };
 
 /* A medida comparável de cada campanha. */
-function medidaCampanha(c){
+/* A medida que decide se uma campanha é boa, e em que direção.
+   Transferência: o bônus, maior é melhor.
+   Compra: o MILHEIRO em reais, menor é melhor. Porcentagem não serve de medida
+   na compra — 365% de bônus e 63% de desconto não se comparam —, e comparar
+   descontos dizia "30 pontos abaixo do recorde de 80,6%", uma frase sem uso.
+   Sem preço de tabela do programa, a compra cai no desconto efetivo. */
+const precoCheioDe = c => Number(c.precoCheio) > 0 ? Number(c.precoCheio) : (tabelaDe(c.para) || 0);
+function metricaCampanha(c){
   if (c.tipo === 'compra'){
     const d = (Number(c.desconto) || 0) / 100, b = (Number(c.bonus) || 0) / 100;
-    return Math.round((1 - (1 - d) / (1 + b)) * 1000) / 10;
+    const cheio = precoCheioDe(c);
+    if (cheio > 0) return {v:Math.round(cheio * (1 - d) / (1 + b) * 100) / 100, menor:true, reais:true};
+    return {v:Math.round((1 - (1 - d) / (1 + b)) * 1000) / 10, menor:false, reais:false};
   }
-  return Number(c.bonus) || 0;
+  return {v:Number(c.bonus) || 0, menor:false, reais:false};
 }
+const medidaCampanha = c => metricaCampanha(c).v;
+const fmtMedida = (m, v) => m.reais ? brl2(v) : nBRdec(v) + '%';
 
 function referenciasCampanha(c){
   const hoje = hojeISO();
@@ -13802,10 +13847,12 @@ function referenciasCampanha(c){
     const dentro = irmas.filter(x => x.fim && x.fim >= inicio && x.fim <= somaDias(400));
     /* Em empate, vale a mais recente: "igual a setembro" orienta melhor que
        "igual a abril" quando as duas pagaram o mesmo. */
+    const menor = metricaCampanha(c).menor;
     const melhor = dentro.reduce((m, x) => {
       if (!m) return x;
       const vx = medidaCampanha(x), vm = medidaCampanha(m);
-      return vx > vm || (vx === vm && x.fim > m.fim) ? x : m;
+      const vence = menor ? vx < vm : vx > vm;
+      return vence || (vx === vm && x.fim > m.fim) ? x : m;
     }, null);
     return {...j, n:dentro.length, melhor, valor: melhor ? medidaCampanha(melhor) : null};
   });
@@ -13813,12 +13860,27 @@ function referenciasCampanha(c){
 
 /* Uma frase que diz a conclusão por extenso. Cor nunca é o único sinal: a
    palavra carrega o mesmo sentido para quem não distingue os tons. */
-function vereditoCampanha(atual, refs){
+function vereditoCampanha(atual, refs, c){
   const [r30, r6, r12] = refs;
+  const m = c ? metricaCampanha(c) : {menor:false, reais:false};
+  if (m.menor){
+    /* Compra: milheiro em reais, menor é melhor. */
+    const nome = c ? esc(prog(c.para).n) : 'este programa';
+    if (!r12.melhor) return {tom:'anil', txt:`Primeira campanha de compra de ${nome} registrada no último ano. Ainda não há com o que comparar.`};
+    const rec = `${brl2(r12.valor)} em ${mesAnoCurto(r12.melhor.fim)}`;
+    if (atual < r12.valor) return {tom:'jade', txt:`Menor milheiro de ${nome} em 12 meses. O recorde anterior era ${rec}.`};
+    if (atual === r12.valor) return {tom:'jade', txt:`Empata com o melhor milheiro dos últimos 12 meses: ${rec}.`};
+    const dif = Math.round((atual - r12.valor) * 100) / 100;
+    if (r6.melhor && atual <= r6.valor)
+      return {tom:'ouro', txt:`O melhor milheiro dos últimos 6 meses, mas ${brl2(dif)} por mil acima do recorde de 12 meses: ${rec}.`};
+    if (!r6.melhor)
+      return {tom:'ouro', txt:`Sem outra campanha de compra de ${nome} em 6 meses. O recorde de 12 meses foi ${rec}.`};
+    return {tom:'brasa', txt:`${brl2(dif)} por mil acima do recorde de 12 meses: ${nome} já vendeu a ${rec}.`};
+  }
   /* Campanha do histórico costuma ser registrada pelo teto — "até 165%" —, que
      em geral exige clube e tempo de assinatura. Dizer "pagou 165%" exageraria a
      comparação; "chegou a oferecer até" diz o que de fato se sabe. */
-  const ate = m => (m.mesApenas || /até/i.test(m.titulo || '')) ? 'até ' : '';
+  const ate = x => (x.mesApenas || /até/i.test(x.titulo || '')) ? 'até ' : '';
   if (!r12.melhor) return {tom:'anil', txt:'Primeira campanha registrada nesta rota no último ano. Ainda não há com o que comparar.'};
   const rec = `${ate(r12.melhor)}${nBRdec(r12.valor)}% em ${mesAnoCurto(r12.melhor.fim)}`;
   if (atual > r12.valor) return {tom:'jade', txt:`Maior bônus desta rota em 12 meses. O recorde anterior era ${rec}.`};
@@ -13902,8 +13964,8 @@ const destacarNumeros = txt => esc(txt).replace(
    cálculos separados acabariam discordando em alguma casa decimal. */
 function cpmProjetadoCampanha(c, bonusUsado){
   const b = bonusUsado != null ? bonusUsado : (Number(c.bonus) || 0);
-  if (c.tipo === 'compra' && tabelaDe(c.para))
-    return tabelaDe(c.para) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
+  if (c.tipo === 'compra' && precoCheioDe(c) > 0)
+    return precoCheioDe(c) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
   if (c.tipo === 'transferencia'){
     const par = PARIDADES.find(x => x.de === c.de && x.para === c.para);
     if (!par) return null;
@@ -14252,6 +14314,7 @@ function atualizarEntornoDoCarrinho(c){
 }
 
 function simuladorCarrinho(c, st, soCorpo){
+  if (c.tipo === 'compra') return simuladorCompra(c, st, soCorpo);
   const r = contaCarrinho(c, st.qtd, st.usarSaldo);
   const bUser = bonusDoUsuario(c);
   /* O bônus da conta: o escolhido na escada ou na faixa, senão o seu, senão o
@@ -14374,6 +14437,149 @@ function drSimularBonus(id, total){
   drAba('sim');
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SIMULADOR DE COMPRA
+   ──────────────────────────────────────────────────────────────────────────────
+   O mesmo desenho do simulador de transferência, para a compra: preço cheio →
+   com desconto → o que chega na conta, com bônus. O preço cheio vem da tabela do
+   programa (Sistema → Programas) e pode ser corrigido ali mesmo, porque o site
+   do programa muda o preço de tabela sem aviso — como o carrinho, ele fica
+   gravado na campanha com a hora em que foi informado.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const QTDS_COMPRA = [10000, 20000, 50000, 100000];
+const QTD_COMPRA_PADRAO = 50000;
+
+function contaCompra(c, qtd){
+  const preco = precoCheioDe(c);
+  const d = (Number(c.desconto) || 0) / 100, b = (Number(c.bonus) || 0) / 100;
+  const cheio = qtd / 1000 * preco, paga = cheio * (1 - d);
+  const bonus = Math.min(qtd * b, Number(c.limite) > 0 ? Number(c.limite) : Infinity);
+  const recebe = qtd + bonus;
+  return {preco, d, b, cheio, paga, economia:cheio - paga, bonus, recebe, cpm: recebe > 0 && preco > 0 ? paga / (recebe / 1000) : null};
+}
+
+function quandoPrecoCheio(c){
+  if (Number(c.precoCheio) > 0 && c.precoCheioEm){
+    const em = new Date(c.precoCheioEm), hoje = hojeISO() === isoLocalMin(em).slice(0, 10), hora = isoLocalMin(em).slice(11);
+    return hoje ? {txt:`informado hoje às ${hora}`, velho:false}
+      : {txt:`informado em ${dataBR(isoLocalMin(em).slice(0, 10)).slice(0, 5)} às ${hora} — confira de novo`, velho:true};
+  }
+  if (tabelaDe(c.para)) return {txt:'preço de tabela da Torre — confira no site', velho:false};
+  return null;
+}
+
+function simCabecalhoCompra(c, st){
+  const q = quandoPrecoCheio(c);
+  const preco = precoCheioDe(c);
+  return `<div class="dr-sim-cab">
+      <label class="dr-sim-preco">Preço cheio
+        <span class="dr-sim-preco-caixa">R$ <input type="text" inputmode="decimal" id="drPrecoCheio" value="${preco > 0 ? moedaTxt(preco) : ''}"
+          placeholder="0,00" aria-describedby="drPrecoMeta" oninput="precoCheioDigitado('${c.id}', this)" onkeydown="if(event.key==='Enter')this.blur()"></span>
+        por mil</label>
+      <span class="dr-sim-meta" id="drPrecoMeta">${q ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span>` : 'digite o preço cheio que o site mostra'}</span>
+      <div class="dr-sim-qtds" role="group" aria-label="Quanto comprar">
+        ${QTDS_COMPRA.map(q2 => `<button type="button" class="${q2 === st.qtd ? 'on' : ''}" aria-pressed="${q2 === st.qtd}"
+          onclick="simCarrinho('${c.id}', {qtd:${q2}})">${nBR(q2 / 1000)} mil</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function simuladorCompra(c, st, soCorpo){
+  const r = contaCompra(c, st.qtd);
+  const nomePara = esc(prog(c.para).n);
+  const avisos = `<div class="cp-criticas dr-sim-avisos" role="note">
+      <div class="regra-limite dr-aviso-brasa"><svg><use href="#i-alerta"/></svg><span>Valores sujeitos a alterações!</span></div>
+      <div class="regra-limite dr-aviso-anil"><svg><use href="#i-info"/></svg><span>Faça sempre a simulação na hora da compra.</span></div>
+    </div>`;
+  let corpo;
+  if (!(r.preco > 0)){
+    corpo = `<p class="dr-sim-sem-preco"><svg><use href="#i-info"/></svg><span>Digite acima o preço cheio por mil que o site da ${nomePara} mostra, sem desconto: com ele, a Torre calcula o que você paga e a quanto sai o milheiro.</span></p>${avisos}`;
+  } else {
+    const ref = referenciaMercado(c.para, r.recebe);
+    const valor = ref ? r.recebe / 1000 * ref.faixa.mediana : null;
+    corpo = `
+    <div class="dr-sim-fluxo${r.d > 0 ? '' : ' sem-carrinho'}">
+      <div class="dr-sim-bloco">
+        <span>Preço cheio</span>
+        <b>${nBR(st.qtd)}</b>
+        <em>${brl2(r.cheio)}</em>
+        <small>a ${brl2(r.preco)}/mil</small>
+      </div>
+      ${r.d > 0 ? `<div class="dr-sim-op dr-sim-seta" aria-hidden="true"><svg><use href="#i-seta-d"/></svg></div>
+      <div class="dr-sim-bloco">
+        <span>Com ${nBRdec(r.d * 100)}% de desconto</span>
+        <b>${brl2(r.paga)}</b>
+        <em>economia de ${brl2(r.economia)}</em>
+        <small>a ${brl2(r.preco * (1 - r.d))}/mil</small>
+      </div>` : ''}
+      <div class="dr-sim-op dr-sim-seta" aria-hidden="true"><svg><use href="#i-seta-d"/></svg></div>
+      <div class="dr-sim-bloco dr-sim-chega">
+        <span>Chega na ${nomePara}</span>
+        <b>${nBR(Math.round(r.recebe))}</b>
+        <em>${r.bonus > 0 ? `${nBR(st.qtd)} + ${nBR(Math.round(r.bonus))} de bônus` : 'sem bônus'}</em>
+        <small>${r.b > 0 ? `com ${nBRdec(r.b * 100)}% de bônus` : '&nbsp;'}</small>
+      </div>
+    </div>
+    ${avisos}
+    <div class="dr-sim-res">
+      <div><span>Você paga</span><b>${brl2(r.paga)}</b></div>
+      <div class="dr-sim-destaque"><span>Milheiro ${nomePara}</span><b>${brl2(r.cpm)}</b></div>
+      <div><span>${valor != null ? 'Se vender' : 'Economia'}</span><b>${valor != null ? brl(valor) : brl2(r.economia)}</b></div>
+    </div>
+    ${valor != null ? `<p class="dr-sim-merc ${valor - r.paga >= 0 ? 'jade' : 'brasa'}">${valor - r.paga >= 0 ? 'Lucro' : 'Prejuízo'} de <b>${brl(Math.abs(valor - r.paga))}</b> se vendidas agora, pela mediana de ${brl2(ref.faixa.mediana)} por mil em ${esc(ref.faixa.rot)} (Rota 360).</p>` : ''}`;
+  }
+  if (soCorpo) return corpo;
+  return `<section class="dr-sim" aria-label="Simulação da compra">
+    ${simCabecalhoCompra(c, st)}
+    <div class="dr-sim-corpo">${corpo}</div>
+  </section>`;
+}
+
+let tempoPrecoCheio = null;
+function precoCheioDigitado(id, el){
+  clearTimeout(tempoPrecoCheio);
+  tempoPrecoCheio = setTimeout(() => {
+    const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+    const v = moedaNum(el.value) || 0;
+    if (v === (Number(c.precoCheio) || 0)) return;
+    c.precoCheio = v > 0 ? Math.round(v * 100) / 100 : 0;
+    if (v > 0) c.precoCheioEm = new Date().toISOString(); else delete c.precoCheioEm;
+    salvar();
+    const d = document.getElementById('dlgRegras'); if (!d) return;
+    d._sujo = true;
+    const corpo = d.querySelector('.dr-sim-corpo'); if (corpo) corpo.innerHTML = simuladorCompra(c, d._sim, true);
+    const meta = d.querySelector('#drPrecoMeta'); const q = quandoPrecoCheio(c);
+    if (meta) meta.innerHTML = q ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span>` : 'digite o preço cheio que o site mostra';
+    const b = d.querySelector('[data-drcpm]'); const v2 = cpmProjetadoCampanha(c); if (b && v2 != null) b.textContent = brl2(v2);
+  }, 280);
+}
+
+/* Da janela da campanha de compra para a calculadora de compra. A calculadora
+   faz uma coisa de cada vez — desconto OU bônus —; campanha com os dois vai no
+   modo bônus, com o valor pago já descontado. */
+function comprarAgora(id){
+  const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+  const d = document.getElementById('dlgRegras');
+  const qtd = (d && d._sim && d._sim.qtd) || QTD_COMPRA_PADRAO;
+  const r = contaCompra(c, qtd);
+  if (d && d.open) d.close();
+  ctTipo = 'compra';
+  ctModo = Number(c.bonus) > 0 ? 'bonus' : 'desconto';
+  ctFeitos = {};
+  ctVals = ctModo === 'desconto'
+    ? {prog:c.para, quantidade:qtd, valorCheio:Math.round(r.cheio * 100) / 100, percentual:Number(c.desconto) || 0}
+    : {prog:c.para, quantidadeBase:qtd, valorPago:Math.round(r.paga * 100) / 100, percentual:Number(c.bonus) || 0};
+  ctTravados = new Set(Object.keys(ctVals).filter(k => k !== 'prog'));
+  irPara('comprar');
+  irParaAba('comprar', 'ct-comprar');
+  setTimeout(() => {
+    renderComprarTransferir();
+    const alvo = $('#ctCampanhaRota'); if (alvo) alvo.scrollIntoView({block:'center', behavior:'smooth'});
+    avisar(`${prog(c.para).n}: ${nBR(qtd)} pontos, ${brl2(r.paga)}, como na simulação. Confira no site e registre no Diário.`, 'ok');
+  }, 60);
+}
+
 function abrirRegras(id, gatilho){
   const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
   let d = document.getElementById('dlgRegras');
@@ -14393,7 +14599,7 @@ function abrirRegras(id, gatilho){
     });
   }
   d._volta = gatilho || null;
-  d._sim = {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
+  d._sim = c.tipo === 'compra' ? {qtd:QTD_COMPRA_PADRAO} : {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
 
   const dg = degrausClube(c);
   const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean)
@@ -14431,12 +14637,15 @@ function abrirRegras(id, gatilho){
      hora de transferir; sem carrinho, os seus próprios pontos. A ordem das abas
      segue a da decisão — primeiro as regras, depois quanto o Clube rende, por
      último a conta. */
-  const temSim = c.tipo === 'transferencia' && !!PARIDADES.find(x => x.de === c.de && x.para === c.para);
-  const comCarrinho = temSim && Number(c.carrinho) > 0;
+  /* Compra também simula: preço cheio, desconto, bônus, e o milheiro que sai. */
+  const ehCompra = c.tipo === 'compra';
+  const temSim = ehCompra || (c.tipo === 'transferencia' && !!PARIDADES.find(x => x.de === c.de && x.para === c.para));
+  const comCarrinho = !ehCompra && temSim && Number(c.carrinho) > 0;
   const abas = [
     {k:'regras', rot:'Regras', icone:'info', n: linhas.length},
     ...(dg ? [{k:'clube', rot: dg.criterio === 'tempo' ? 'Tempo de Clube' : 'Plano do Clube', icone: dg.criterio === 'tempo' ? 'relogio' : 'etiqueta'}] : []),
-    ...(temSim ? [{k:'sim', rot: comCarrinho ? 'Simular carrinho' : 'Simular transferência', icone: comCarrinho ? 'carrinho' : 'troca'}] : [])
+    ...(temSim ? [{k:'sim', rot: ehCompra ? 'Simular compra' : comCarrinho ? 'Simular carrinho' : 'Simular transferência',
+      icone: ehCompra ? 'sacola' : comCarrinho ? 'carrinho' : 'troca'}] : [])
   ];
   const ativa = abas.some(a => a.k === ultimaAbaRegras) ? ultimaAbaRegras : abas[0].k;
   d._abas = abas.map(a => a.k);
@@ -14492,7 +14701,9 @@ function abrirRegras(id, gatilho){
         <button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRegras').close()">Fechar</button>
         ${c.link ? `<a class="bt fantasma" href="${esc(c.link)}" target="_blank" rel="noopener">
           <svg><use href="#i-link"/></svg>Abrir Página da Campanha</a>` : ''}
-        ${temSim ? `<button type="button" class="bt primario" onclick="transferirAgora('${c.id}')">
+        ${ehCompra ? `<button type="button" class="bt primario" onclick="comprarAgora('${c.id}')">
+          <svg><use href="#i-sacola"/></svg>Comprar Agora</button>` : ''}
+        ${temSim && !ehCompra ? `<button type="button" class="bt primario" onclick="transferirAgora('${c.id}')">
           <svg><use href="#i-troca"/></svg>Transferir Agora</button>` : ''}
       </footer>
     </div>`;
@@ -14517,9 +14728,10 @@ function abrirRegras(id, gatilho){
 function cartaoCampanha(c){
   const dias = diasAte(c.fim);
   const urg = dias === null ? 'folga' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'folga';
-  const atual = medidaCampanha(c);
+  const met = metricaCampanha(c);
+  const atual = met.v;
   const refs = referenciasCampanha(c);
-  const ver = vereditoCampanha(atual, refs);
+  const ver = vereditoCampanha(atual, refs, c);
 
   /* Hero: o número que decide. Compra mostra desconto quando há; o resto,
      bônus. */
@@ -14538,7 +14750,7 @@ function cartaoCampanha(c){
   const marcas = Object.entries(grupos).map(([v, rots]) => {
     const nome = rots.length === 1 ? (rots[0].includes('dias') ? rots[0] : rots[0] + ' meses')
       : rots.slice(0, -1).join(', ') + ' e ' + rots[rots.length - 1] + (rots[rots.length - 1].includes('dias') ? '' : ' meses');
-    return `<span class="cp-marca" style="left:${pos(Number(v))}%" title="Melhor em ${esc(nome)}: ${nBRdec(Number(v))}%"><i></i><em>${esc(nome)}</em></span>`;
+    return `<span class="cp-marca" style="left:${pos(Number(v))}%" title="Melhor em ${esc(nome)}: ${fmtMedida(met, Number(v))}"><i></i><em>${esc(nome)}</em></span>`;
   }).join('');
 
   const cpm = cpmProjetadoCampanha(c);
@@ -14597,17 +14809,21 @@ function cartaoCampanha(c){
         ${refs[2].melhor ? `<div class="cp-regua" role="img" aria-label="${esc(ver.txt)}">
           <div class="cp-trilha"><div class="cp-cheio" style="width:${pos(atual)}%"></div></div>
           ${marcas}
-          <span class="cp-atual" style="left:${pos(atual)}%"><b>${nBRdec(atual)}%</b></span>
+          <span class="cp-atual" style="left:${pos(atual)}%"><b>${fmtMedida(met, atual)}</b></span>
         </div>
         <div class="cp-janelas">
           ${refs.map(r => {
             if (!r.melhor) return `<div class="cp-jan"><span>${r.rot}</span><b class="fraco">sem outra</b></div>`;
-            const d = Math.round((atual - r.valor) * 10) / 10;
-            const sinal = d > 0 ? `+${nBRdec(d)}` : d < 0 ? `−${nBRdec(Math.abs(d))}` : '=';
-            const tom = d > 0 ? 'jade' : d < 0 ? 'brasa' : 'ouro';
+            const d = Math.round((atual - r.valor) * 100) / 100;
+            /* Na compra, milheiro MENOR que o melhor é o bom sinal. */
+            const bom = met.menor ? d < 0 : d > 0, ruim = met.menor ? d > 0 : d < 0;
+            const tom = bom ? 'jade' : ruim ? 'brasa' : 'ouro';
+            const txtD = d === 0 ? 'igual a esta'
+              : met.reais ? `${d > 0 ? '+' : '−'}${brl2(Math.abs(d))} por mil`
+              : `${d > 0 ? '+' : '−'}${nBRdec(Math.abs(Math.round(d * 10) / 10))} pts`;
             return `<div class="cp-jan"><span>Melhor em ${r.rot}</span>
-              <b>${nBRdec(r.valor)}% <small>${mesAnoCurto(r.melhor.fim)}</small></b>
-              <em class="cp-${tom}">${sinal === '=' ? 'igual a esta' : sinal + ' pts'}</em></div>`;
+              <b>${fmtMedida(met, r.valor)} <small>${mesAnoCurto(r.melhor.fim)}</small></b>
+              <em class="cp-${tom}">${txtD}</em></div>`;
           }).join('')}
         </div>` : `<p class="cp-sem-hist">Cada campanha nova desta rota que você cadastrar passa a servir de régua para as próximas.</p>`}
       </div>
@@ -16161,7 +16377,10 @@ const MODELOS_CLUBE = {
     aviso:'Os regulamentos divergem: o do Clube LATAM Pass diz que prevalece o maior percentual, mas os das campanhas de 2026 dizem que só se credita o bônus da campanha. Confirme no regulamento desta campanha antes de contar com o bônus do plano.'
   }
 };
-const modeloClube = c => (c && c.tipo !== 'clube' && MODELOS_CLUBE[c.para]) || null;
+/* Só na transferência: os degraus por tempo e por plano vêm dos regulamentos das
+   campanhas de transferência de bancos. Aplicados a uma compra de pontos,
+   pré-preenchiam 80% de bônus e uma escada que a compra não tem. */
+const modeloClube = c => (c && c.tipo === 'transferencia' && MODELOS_CLUBE[c.para]) || null;
 const rotMeses = m => m < 12 ? `${m} meses` : m === 12 ? '1 ano' : m % 12 ? `${nBRdec(m / 12)} anos` : `${m / 12} anos`;
 
 function editarCampanha(id, tipoPadrao){
@@ -26962,6 +27181,7 @@ function porSeMudou(el, html){
 
 function pintarCampanhaRota(){
   const cx = $('#ctCampanhaRota'); if (!cx) return;
+  if (ctTipo === 'compra'){ pintarCampanhaCompra(cx); return; }
   if (ctTipo !== 'transferencia'){ porSeMudou(cx, ''); return; }
   const o = ($('#ct_progOrigem') || {}).value, d = ($('#ct_progDestino') || {}).value;
   if (!o || !d){ porSeMudou(cx, ''); return; }
@@ -26977,7 +27197,7 @@ function pintarCampanhaRota(){
     const dias = diasAte(c.fim);
     const prazo = dias === null ? '' : dias <= 0 ? 'fecha hoje' : dias === 1 ? 'fecha amanhã' : `fecha em ${dias} dias`;
     const urg = dias !== null && dias <= 1 ? 'brasa' : dias !== null && dias <= 5 ? 'ouro' : 'jade';
-    const ver = vereditoCampanha(medidaCampanha(c), referenciasCampanha(c));
+    const ver = vereditoCampanha(medidaCampanha(c), referenciasCampanha(c), c);
     const pos = degrausClube(c) ? posicaoNoClube(c, degrausClube(c)) : null;
     const porque = bUser != null && bUser !== Number(c.bonus)
       ? (pos && pos.meses != null ? `com ${pos.meses} ${pos.meses === 1 ? 'mês' : 'meses'} de Clube` : 'pelo seu plano do Clube') : '';
@@ -27019,6 +27239,90 @@ function pintarCampanhaRota(){
   </div>`);
 }
 
+
+/* ── a campanha do programa, na calculadora de compra ─────────────────────────
+   Mesma ideia da transferência: escolhido o programa, a Torre mostra a campanha
+   de compra no ar, preenche o percentual do modo aberto (desconto ou bônus) e o
+   preço cheio pela quantidade. Sem campanha, aponta os programas que têm. */
+function campanhaCompraDe(prg){
+  return campanhasVivas('compra').filter(c => c.para === prg)
+    .sort((a, b) => (medidaCampanha(a) || 1e9) - (medidaCampanha(b) || 1e9))[0] || null;
+}
+
+function pintarCampanhaCompra(cx){
+  const prg = ($('#ct_prog') || {}).value; if (!prg){ porSeMudou(cx, ''); return; }
+  const c = campanhaCompraDe(prg);
+  const pc = $('#ct_percentual');
+  const preco = c ? precoCheioDe(c) : (tabelaDe(prg) || 0);
+
+  /* Preço cheio pela quantidade, até alguém digitar por cima. */
+  const campoValor = ctModo === 'desconto' ? $('#ct_valorCheio') : $('#ct_valorPago');
+  const qtd = ctModo === 'desconto' ? qtdNum(($('#ct_quantidade') || {}).value) : qtdNum(($('#ct_quantidadeBase') || {}).value);
+  if (campoValor && !campoValor.dataset.tocado && qtd > 0 && preco > 0){
+    const desc = ctModo === 'bonus' && c ? (Number(c.desconto) || 0) / 100 : 0;
+    const v = Math.round(qtd / 1000 * preco * (1 - desc) * 100) / 100;
+    campoValor.value = moedaTxt(v);
+    ctVals[ctModo === 'desconto' ? 'valorCheio' : 'valorPago'] = v;
+    const caixa = campoValor.closest('.campo');
+    let dica = caixa && caixa.querySelector('.dica');
+    if (caixa && !dica){ dica = document.createElement('div'); dica.className = 'dica'; caixa.appendChild(dica); }
+    if (dica) dica.textContent = `${brl2(preco)} por mil${desc ? ` com ${nBRdec(desc * 100)}% de desconto` : ''}. Valores sujeitos a alterações: confira no site.`;
+  }
+
+  if (c){
+    const alvoPct = ctModo === 'desconto' ? Number(c.desconto) || 0 : Number(c.bonus) || 0;
+    if (pc && !pc.dataset.tocado && Number(ctVals.percentual) !== alvoPct){
+      pc.value = String(alvoPct).replace('.', ','); ctVals.percentual = alvoPct; pc.dataset.auto = '1';
+    }
+    const dias = diasAte(c.fim);
+    const prazo = dias === null ? '' : dias <= 0 ? 'fecha hoje' : dias === 1 ? 'fecha amanhã' : `fecha em ${dias} dias`;
+    const urg = dias !== null && dias <= 1 ? 'brasa' : dias !== null && dias <= 5 ? 'ouro' : 'jade';
+    const ver = vereditoCampanha(medidaCampanha(c), referenciasCampanha(c), c);
+    const oferta = [c.desconto ? `${nBRdec(c.desconto)}% de desconto` : '', c.bonus ? `${nBRdec(c.bonus)}% de bônus` : ''].filter(Boolean).join(' e ');
+    /* Modo que não enxerga a oferta: desconto aberto numa campanha só de bônus,
+       ou o contrário. */
+    const outroModo = ctModo === 'desconto' && !c.desconto && c.bonus ? 'bonus' : ctModo === 'bonus' && !c.bonus && c.desconto ? 'desconto' : null;
+    const ambos = c.desconto > 0 && c.bonus > 0;
+    porSeMudou(cx, `<div class="ctc ctc-${urg}">
+      <div class="ctc-rota">${discoProg(c.para)}</div>
+      <div class="ctc-txt">
+        <div class="ctc-l1"><b>Campanha no ar: ${oferta || 'sem percentual cadastrado'}</b>
+          <span class="ctc-prazo">${prazo}${c.fim ? ' · ' + dataBR(c.fim) : ''}</span></div>
+        <div class="ctc-l2"><span class="cp-${ver.tom}">${esc(ver.txt)}</span></div>
+        ${outroModo ? `<div class="ctc-l3">A oferta é de ${outroModo === 'bonus' ? 'bônus' : 'desconto'}. <button type="button" class="ctc-link" onclick="ctModo='${outroModo}';ctFeitos={};renderComprarTransferir()">Simular com ${outroModo === 'bonus' ? 'Bônus' : 'Desconto'}</button></div>` : ''}
+        ${ambos ? `<div class="ctc-l3">Esta campanha soma desconto e bônus; a calculadora faz um de cada vez. A conta completa está no simulador das Regras Completas.</div>` : ''}
+      </div>
+      <button type="button" class="bt p fantasma" onclick="abrirRegras('${c.id}', this)"><svg><use href="#i-info"/></svg>Regras Completas</button>
+    </div>`);
+    return;
+  }
+
+  if (pc && pc.dataset.auto && !pc.dataset.tocado){ pc.value = '0'; ctVals.percentual = 0; delete pc.dataset.auto; }
+  const alt = {};
+  campanhasVivas('compra').filter(x => x.para !== prg).forEach(x => {
+    if (!alt[x.para] || medidaCampanha(x) < medidaCampanha(alt[x.para])) alt[x.para] = x;
+  });
+  const lista = Object.values(alt);
+  const ultima = (DB.campanhas || []).filter(x => x.tipo === 'compra' && x.para === prg && x.fim).sort((a, b) => b.fim.localeCompare(a.fim))[0];
+  const oferta = x => [x.desconto ? `${nBRdec(x.desconto)}% off` : '', x.bonus ? `+${nBRdec(x.bonus)}%` : ''].filter(Boolean).join(' ');
+  porSeMudou(cx, `<div class="ctc ctc-sem">
+    <div class="ctc-rota">${discoProg(prg)}</div>
+    <div class="ctc-txt">
+      <div class="ctc-l1"><b>Sem campanha de compra no ar para ${esc(prog(prg).n)}</b></div>
+      <div class="ctc-l2">${ultima ? `A última foi de ${oferta(ultima) || 'percentual não registrado'}, em ${mesAnoCurto(ultima.fim)}. ` : ''}${
+        lista.length ? 'Com campanha de compra agora:' : 'Nenhuma campanha de compra no ar.'}</div>
+      ${lista.length ? `<div class="ctc-alts">${lista.map(x => `<button type="button" class="ctc-alt" onclick="trocarProgramaCT('${x.para}')">
+        ${discoProg(x.para)}<span>${esc(prog(x.para).n)}</span><b>${oferta(x)}</b></button>`).join('')}</div>` : ''}
+    </div>
+  </div>`);
+}
+
+function trocarProgramaCT(prg){
+  const el = $('#ct_prog'); if (!el) return;
+  el.value = prg;
+  el.dispatchEvent(new Event('change'));
+}
+
 function usarBonusDaCampanha(){
   const pc = $('#ct_percentual'); if (pc){ delete pc.dataset.tocado; }
   ctTravados.delete('percentual');
@@ -27037,7 +27341,7 @@ function trocarDestinoCT(para){
    decide: quanto essas milhas valem se vendidas agora, e quanto sobra. */
 function pintarMercadoCT(r){
   const cx = $('#ctMercado'); if (!cx) return;
-  if (!r || !(r.qtd > 0) || !r.prog || ctTipo !== 'transferencia'){ porSeMudou(cx, ''); return; }
+  if (!r || !(r.qtd > 0) || !r.prog || !['transferencia', 'compra'].includes(ctTipo)){ porSeMudou(cx, ''); return; }
   const ref = referenciaMercado(r.prog, r.qtd);
   if (!ref){
     porSeMudou(cx, `<div class="ctm ctm-sem"><svg><use href="#i-grafico"/></svg><span>Quer saber se vale a pena? Importe a leitura do Rota 360 de
@@ -27194,6 +27498,7 @@ function renderComprarTransferir(){
         if (d) d.innerHTML = '&nbsp;';
       }
       if (c.k === 'percentual'){ el.dataset.tocado = '1'; delete el.dataset.auto; }
+      if (c.k === 'valorCheio' || c.k === 'valorPago') el.dataset.tocado = '1';
       if (c.k === 'pontosOrganicos') el.dataset.tocado = '1';
       /* Mudou o que se tem ou quanto se usa dele: o teto do carrinho muda junto —
          inclusive quando ele tinha vindo pronto da janela da campanha. */
@@ -27210,10 +27515,10 @@ function renderComprarTransferir(){
          estava lá era o do programa anterior, e mantê-lo é pior que apagá-lo. */
       /* Rota nova, preenchimento automático de novo: o bônus e os números que
          vieram da janela eram da rota anterior. */
-      if (c.k === 'progOrigem' || c.k === 'progDestino'){
+      if (c.k === 'progOrigem' || c.k === 'progDestino' || c.k === 'prog'){
         ctTravados.clear();
         const pc = $('#ct_percentual'); if (pc) delete pc.dataset.tocado;
-        ['qtdCarrinho', 'valorCarrinho'].forEach(k => { const e2 = $('#ct_' + k); if (e2) delete e2.dataset.tocado; });
+        ['qtdCarrinho', 'valorCarrinho', 'valorCheio', 'valorPago'].forEach(k => { const e2 = $('#ct_' + k); if (e2) delete e2.dataset.tocado; });
       }
       if (c.k === 'progOrigem'){
         const ce = $('#ct_cpmOrigem');
