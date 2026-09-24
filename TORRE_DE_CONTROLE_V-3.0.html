@@ -955,6 +955,23 @@ p:last-child{ margin-bottom:0; }
   font-size:calc(10.5px * var(--esc)); line-height:1.4; border:1px solid #2a2f3a; }
 .gm-coletor > b:first-child{ display:block; color:#e8b44f; }
 
+
+/* ── preço do carrinho no simulador ──────────────────────────────────────────── */
+.dr-sim-cab{ gap:8px 12px; }
+.dr-sim-preco{ display:inline-flex; align-items:center; gap:7px; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.dr-sim-preco-caixa{ display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:8px;
+  background:var(--sup-1); border:1px solid var(--fio-forte); color:var(--grafite-dim); }
+.dr-sim-preco-caixa:focus-within{ border-color:var(--ouro); box-shadow:0 0 0 3px color-mix(in oklab, var(--ouro) 18%, transparent); }
+/* O estilo geral de campo da Torre (borda, fundo, largura) pintava uma caixa
+   dentro da caixa e empurrava os botões de quantidade para outra linha. */
+.dr-sim-preco .dr-sim-preco-caixa input{ width:62px !important; min-width:0 !important; height:auto !important; min-height:0 !important;
+  border:0 !important; background:transparent !important; box-shadow:none !important; padding:2px 0 !important; margin:0 !important;
+  font:inherit; font-size:calc(14px * var(--esc)); font-weight:600; color:var(--giz); font-variant-numeric:tabular-nums; outline:none; }
+.dr-sim-meta{ flex:1 1 150px; }
+.dr-sim-meta{ flex:1 1 180px; font-size:calc(12px * var(--esc)); color:var(--grafite-dim); line-height:1.35; }
+.dr-sim-meta .brasa{ color:var(--brasa); }
+.dr-sim-sujeito{ color:var(--ouro); font-weight:600; }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -7740,7 +7757,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 10:20';
+const BUILD = '2026-09-26 11:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14092,7 +14109,101 @@ function contaCarrinho(c, qtd, usarSaldo){
           noCarrinho, cpmProprio, cpmMeu, custoProprio, custoCarrinho, total, base, comBonus, cpmOrigem: total / (qtd / 1000)};
 }
 
-function simuladorCarrinho(c, st){
+/* O último carrinho informado para a mesma origem, em outra campanha: serve de
+   referência quando esta ainda não tem preço. É referência, não valor — o
+   carrinho muda ao longo do dia e de um destino para outro. */
+function ultimoCarrinhoDaOrigem(c){
+  const outras = (DB.campanhas || []).filter(x => x.id !== c.id && x.tipo === 'transferencia' && x.de === c.de && Number(x.carrinho) > 0);
+  return outras.sort((a, b) => String(b.carrinhoEm || b.fim || '').localeCompare(String(a.carrinhoEm || a.fim || '')))[0] || null;
+}
+
+/* Quando o preço do carrinho foi informado, dito em palavras. */
+function quandoCarrinho(c){
+  if (!(Number(c.carrinho) > 0)) return null;
+  if (!c.carrinhoEm) return {txt:'informado no cadastro da campanha', velho:true};
+  const em = new Date(c.carrinhoEm), hoje = hojeISO() === isoLocalMin(em).slice(0, 10);
+  const hora = isoLocalMin(em).slice(11);
+  return hoje ? {txt:`informado hoje às ${hora}`, velho:false}
+    : {txt:`informado em ${dataBR(isoLocalMin(em).slice(0, 10)).slice(0, 5)} às ${hora} — confira de novo`, velho:true};
+}
+
+function simCabecalho(c, st){
+  const q = quandoCarrinho(c);
+  const ref = !(Number(c.carrinho) > 0) ? ultimoCarrinhoDaOrigem(c) : null;
+  const meta = q
+    ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span> · <b class="dr-sim-sujeito">sujeito a alterações</b>`
+    : ref ? `sem preço nesta campanha. Último para ${esc(prog(c.de).n)}: <button type="button" class="dr-sim-volta"
+        onclick="usarCarrinhoReferencia('${c.id}', ${Number(ref.carrinho)})">${brl2(ref.carrinho)}</button>
+        <span class="fraco">(${ref.carrinhoEm ? dataBR(isoLocalMin(ref.carrinhoEm).slice(0, 10)).slice(0, 5) : 'campanha para ' + esc(prog(ref.para).n)})</span>`
+    : 'digite o preço que o carrinho mostra agora';
+  return `<div class="dr-sim-cab">
+      <label class="dr-sim-preco">Carrinho
+        <span class="dr-sim-preco-caixa">R$ <input type="text" inputmode="decimal" id="drCarrinho" value="${Number(c.carrinho) > 0 ? moedaTxt(c.carrinho) : ''}"
+          placeholder="0,00" aria-describedby="drCarrinhoMeta" oninput="precoCarrinhoDigitado('${c.id}', this)" onkeydown="if(event.key==='Enter')this.blur()"></span>
+        por mil</label>
+      <span class="dr-sim-meta" id="drCarrinhoMeta">${meta}</span>
+      <div class="dr-sim-qtds" role="group" aria-label="Quanto transferir">
+        ${QTDS_SIM.map(q2 => `<button type="button" class="${q2 === st.qtd ? 'on' : ''}" aria-pressed="${q2 === st.qtd}"
+          onclick="simCarrinho('${c.id}', {qtd:${q2}})">${nBR(q2 / 1000)} mil</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* Preço digitado: grava na campanha com a hora, e refaz só a conta — o campo em
+   que se digita fica parado, senão cada tecla o redesenharia, o foco sairia e a
+   seleção automática apagaria o que foi digitado. */
+let tempoPrecoCarrinho = null;
+function precoCarrinhoDigitado(id, el){
+  clearTimeout(tempoPrecoCarrinho);
+  tempoPrecoCarrinho = setTimeout(() => {
+    const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+    const v = moedaNum(el.value) || 0;
+    if (v === (Number(c.carrinho) || 0)) return;
+    aplicarPrecoCarrinho(c, v);
+    const d = document.getElementById('dlgRegras');
+    const corpo = d && d.querySelector('.dr-sim-corpo');
+    if (corpo) corpo.innerHTML = simuladorCarrinho(c, d._sim, true);
+    atualizarEntornoDoCarrinho(c);
+  }, 280);
+}
+
+function aplicarPrecoCarrinho(c, v){
+  c.carrinho = v > 0 ? Math.round(v * 100) / 100 : 0;
+  if (v > 0){
+    c.carrinhoEm = new Date().toISOString();
+    /* Guarda os preços vistos: o carrinho muda de manhã para a tarde, e o
+       histórico é o que permite dizer isso com número. */
+    c.carrinhoVisto = [{v:c.carrinho, em:c.carrinhoEm}, ...(c.carrinhoVisto || [])].slice(0, 30);
+  } else delete c.carrinhoEm;
+  salvar();
+  const d = document.getElementById('dlgRegras'); if (d) d._sujo = true;
+}
+
+function usarCarrinhoReferencia(id, v){
+  const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+  aplicarPrecoCarrinho(c, v);
+  const d = document.getElementById('dlgRegras');
+  simCarrinho(id, {});
+  const inp = d && d.querySelector('#drCarrinho'); if (inp) inp.value = moedaTxt(v);
+  atualizarEntornoDoCarrinho(c);
+}
+
+/* O que muda em volta do simulador quando o carrinho muda: o texto de quando foi
+   informado, o nome da aba, o milheiro do resumo e a dica da escada. */
+function atualizarEntornoDoCarrinho(c){
+  const d = document.getElementById('dlgRegras'); if (!d) return;
+  const meta = d.querySelector('#drCarrinhoMeta');
+  if (meta){ const t = document.createElement('div'); t.innerHTML = simCabecalho(c, d._sim); const m2 = t.querySelector('#drCarrinhoMeta'); if (m2) meta.innerHTML = m2.innerHTML; }
+  const comCarrinho = Number(c.carrinho) > 0;
+  const aba = d.querySelector('#drt-sim');
+  if (aba) aba.innerHTML = `<svg><use href="#i-${comCarrinho ? 'carrinho' : 'troca'}"/></svg>${comCarrinho ? 'Simular carrinho' : 'Simular transferência'}`;
+  const b = d.querySelector('[data-drcpm]');
+  if (b){ const v = cpmProjetadoCampanha(c, bonusDoUsuario(c)); if (v != null) b.textContent = brl2(v); }
+  const dg = degrausClube(c), velhaEsc = d.querySelector('.dr-escada-bloco');
+  if (dg && velhaEsc){ const e = document.createElement('div'); e.innerHTML = escadaClube(c, dg, true); velhaEsc.replaceWith(e.firstElementChild); }
+}
+
+function simuladorCarrinho(c, st, soCorpo){
   const r = contaCarrinho(c, st.qtd, st.usarSaldo);
   const bUser = bonusDoUsuario(c);
   /* O bônus da conta: o escolhido na escada ou na faixa, senão o seu, senão o
@@ -14106,15 +14217,7 @@ function simuladorCarrinho(c, st){
   ])].sort((a, b) => a - b);
   const nomeDe = esc(prog(c.de).n), nomePara = esc(prog(c.para).n);
 
-  return `<section class="dr-sim" aria-label="Simulação da compra no carrinho">
-    <div class="dr-sim-cab">
-      <span class="dr-sim-rot">Quanto transferir</span>
-      <div class="dr-sim-qtds" role="group" aria-label="Quanto transferir">
-        ${QTDS_SIM.map(q => `<button type="button" class="${q === st.qtd ? 'on' : ''}" aria-pressed="${q === st.qtd}"
-          onclick="simCarrinho('${c.id}', {qtd:${q}})">${nBR(q / 1000)} mil</button>`).join('')}
-      </div>
-    </div>
-
+  const corpo = `
     <div class="dr-sim-fluxo${r.comCarrinho ? '' : ' sem-carrinho'}">
       <div class="dr-sim-bloco">
         <span>Seus pontos ${nomeDe}</span>
@@ -14166,6 +14269,11 @@ function simuladorCarrinho(c, st){
           onclick="simCarrinho('${c.id}', {bonus:${b}})"><em>${nBRdec(b)}%</em><b>${brl2(x.cpm)}</b>${eu ? '<small>o seu</small>' : ''}</button>`;
       }).join('')}</div>
     </div>` : ''}
+  `;
+  if (soCorpo) return corpo;
+  return `<section class="dr-sim" aria-label="Simulação da transferência">
+    ${simCabecalho(c, st)}
+    <div class="dr-sim-corpo">${corpo}</div>
   </section>`;
 }
 
@@ -14222,7 +14330,12 @@ function abrirRegras(id, gatilho){
     /* Clique fora do painel fecha. O alvo é o próprio <dialog> quando se clica
        no fundo escurecido, porque o painel ocupa só o miolo. */
     d.addEventListener('click', e => { if (e.target === d) d.close(); });
-    d.addEventListener('close', () => { if (d._volta) d._volta.focus(); });
+    d.addEventListener('close', () => {
+      /* O preço do carrinho pode ter mudado lá dentro: o cartão da campanha e a
+         calculadora usam o mesmo número. */
+      if (d._sujo){ d._sujo = false; renderCampanhas(); if (typeof renderComprarTransferir === 'function') renderComprarTransferir(); }
+      if (d._volta && document.contains(d._volta)) d._volta.focus();
+    });
   }
   d._volta = gatilho || null;
   d._sim = {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
@@ -14291,7 +14404,7 @@ function abrirRegras(id, gatilho){
         <div class="dr-num"><b>${num}</b><span>${numRot}</span></div>
         <dl class="dr-meta">
           ${prazo ? `<div><dt>Prazo</dt><dd class="dr-prazo">${prazo}${c.fim ? ` <small>${dataBR(c.fim)}</small>` : ''}</dd></div>` : ''}
-          ${cpm != null ? `<div><dt>Milheiro projetado</dt><dd><b class="cp-${tomCpm}">${brl2(cpm)}</b>${bUser != null ? ` <small class="fraco">com ${nBRdec(bUser)}%</small>` : ''}</dd></div>` : ''}
+          ${cpm != null ? `<div><dt>Milheiro projetado</dt><dd><b class="cp-${tomCpm}" data-drcpm>${brl2(cpm)}</b>${bUser != null ? ` <small class="fraco">com ${nBRdec(bUser)}%</small>` : ''}</dd></div>` : ''}
           ${fatos.length ? `<div class="dr-meta-lim"><dt>Limites</dt><dd>${fatos.join('<span class="dr-sep">·</span>')}</dd></div>` : ''}
         </dl>
       </div>
@@ -14450,7 +14563,7 @@ function cartaoCampanha(c){
       ${c.limite ? `<span class="cp-fato">Limite de <b>${nBR(c.limite)}</b> por CPF</span>` : ''}
       ${c.limiteClube ? `<span class="cp-fato">Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube</span>` : ''}
       ${c.minimo ? `<span class="cp-fato">Mínimo de <b>${nBR(c.minimo)}</b></span>` : ''}
-      ${c.carrinho ? `<span class="cp-fato">Carrinho a <b>${brl2(c.carrinho)}</b> por mil</span>` : ''}
+      ${c.carrinho ? `<span class="cp-fato" data-dica="Sujeito a alterações: o carrinho muda ao longo do dia.">Carrinho a <b>${brl2(c.carrinho)}</b> por mil${quandoCarrinho(c) && !quandoCarrinho(c).velho ? ` <small class="fraco">${esc(quandoCarrinho(c).txt.replace('informado ', ''))}</small>` : ''}</span>` : ''}
     </div>
 
     ${escopo.length || obrig.length || linhas.length ? `<div class="cp-criticas">${
@@ -26713,7 +26826,10 @@ function renderVistaComprar(){
    Não toca no campo depois que alguém digita nele: o carrinho real costuma
    fechar em outro número, e a promoção anuncia o preço de tabela. */
 function sugerirCarrinhoDaCampanha(){
-  const el = $('#ct_valorCarrinho'); if (!el || el.dataset.tocado) return;
+  /* O aviso aparece sempre; só o VALOR fica parado quando foi digitado ou veio
+     pronto da janela da campanha. */
+  const el = $('#ct_valorCarrinho'); if (!el) return;
+  const travado = !!el.dataset.tocado;
   const o = $('#ct_progOrigem'), d = $('#ct_progDestino');
   if (!o || !d) return;
 
@@ -26732,12 +26848,13 @@ function sugerirCarrinhoDaCampanha(){
   }
 
   const qtd = Number(ctVals.qtdCarrinho) || 0;
-  if (qtd > 0){
+  if (qtd > 0 && !travado){
     const total = Math.round(qtd / 1000 * Number(camp.carrinho) * 100) / 100;
     el.value = moedaTxt(total);
     ctVals.valorCarrinho = total;
   }
-  if (dica) dica.textContent = `Campanha ativa: ${brl2(camp.carrinho)} por mil. Confira no carrinho antes de fechar.`;
+  const q = quandoCarrinho(camp);
+  if (dica) dica.textContent = `Campanha: ${brl2(camp.carrinho)} por mil${q ? ', ' + q.txt : ''}. Sujeito a alterações: confira no carrinho antes de fechar.`;
 }
 
 function puxarSaldoOrigem(){
