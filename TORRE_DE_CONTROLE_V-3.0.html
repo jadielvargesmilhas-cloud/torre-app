@@ -38,7 +38,10 @@
      fixa, que é o que impede o card de pular entre telas, sem a faixa vazia que
      sobrava embaixo. */
   --card-milheiro-l:300px;
-  --card-milheiro-a:276px;
+  /* 312: o conteúdo do cartão do milheiro — cabeçalho, régua, faixas e as duas
+     linhas de leitura — mede até 308px. Com 276, faltavam 32, e o navegador os
+     tirava da régua, que sumia e deixava a barra colorida cair sobre a legenda. */
+  --card-milheiro-a:312px;
   --breu:#0A0B0E;
   --sup-0:#0F1116;
   --sup-1:#151821;
@@ -2023,12 +2026,12 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
      empurrava a página para fora. O `max-width` cede quando não cabe e não muda
      nada onde cabe. */
   width:var(--card-milheiro-l); max-width:100%;
-  height:var(--card-milheiro-a); margin:0 auto;
+  min-height:var(--card-milheiro-a); margin:0 auto;
   display:flex; flex-direction:column; padding:0; border:0; background:none;
 }
 .calc-regua > *{
-  flex:1 1 auto; min-height:0; width:100% !important;
-  height:var(--card-milheiro-a) !important; box-sizing:border-box; overflow:auto;
+  flex:1 1 auto; width:100% !important;
+  min-height:var(--card-milheiro-a) !important; height:auto !important; box-sizing:border-box; overflow:visible;
 }
 .calc-regua-vazia{ display:flex; align-items:center; justify-content:center; }
 @media (max-width:900px){
@@ -2044,11 +2047,20 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 
    Antes eram 2fr e 1fr, com vão diferente — os cards ficavam mais largos que os
    campos e nada se alinhava verticalmente. */
+/* A régua nunca abaixo de 300px — a medida para a qual o cartão foi desenhado.
+   Com quatro colunas iguais, a coluna de seções ao lado do trilho (212px) tirava
+   espaço e o cartão encolhia até 166px, com a legenda encostando nos valores. Os
+   três números ficam com o que sobra; em tela larga a divisão continua sendo a
+   de quatro colunas, alinhada com os campos acima. */
 .calc-corpo{
   display:grid; gap:14px; align-items:stretch;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
+  grid-template-columns:minmax(0, 3fr) minmax(var(--card-milheiro-l), 1fr);
 }
-.calc-corpo > div:first-child{ grid-column:span 3; display:flex; flex-direction:column; }
+.calc-corpo > div:first-child{ display:flex; flex-direction:column; }
+@media (max-width:1180px){
+  .calc-corpo{ grid-template-columns:1fr; }
+  .calc-regua{ width:100%; max-width:var(--card-milheiro-l); }
+}
 .calc-kpis{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; }
 .calc-kpi{
   background:var(--sup-1); border:1px solid var(--fio); border-radius:var(--r-p);
@@ -2205,18 +2217,20 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 /* O cartão do milheiro mede igual aqui, no lançamento e na assinatura: é a mesma
    peça, e medida diferente por tela é o que a regra do sistema proíbe. Vale para
    o cartão preenchido e para o vazio. */
+/* Altura MÍNIMA, não fixa. Todos começam com a mesma medida — a regra de ser a
+   mesma peça em toda tela vale no caso comum —, mas a última linha de explicação
+   muda de tamanho com o texto, e numa altura fixa ela era cortada ou rolava
+   dentro de um cartão pequeno. O cartão cresce quando o texto pede. */
 #ctTermo{
   width:var(--card-milheiro-l);
-  height:var(--card-milheiro-a);
+  min-height:var(--card-milheiro-a);
   display:flex; flex-direction:column;
 }
-/* O cartão ocupa a caixa, mas o conteúdo rola por dentro se precisar: com altura
-   imposta e sem escape, as faixas e o veredito se comprimiam até se sobrepor. */
 #ctTermo > *{
-  flex:1 1 auto; min-height:0;
+  flex:1 1 auto;
   width:100% !important;
-  height:var(--card-milheiro-a) !important;
-  box-sizing:border-box; overflow:auto;
+  min-height:var(--card-milheiro-a) !important; height:auto !important;
+  box-sizing:border-box; overflow:visible;
 }
 .ct-termo-vazio{ display:flex; align-items:center; justify-content:center; }
 @media (max-width:900px){ #ctTermo{ width:100%; } }
@@ -5352,7 +5366,11 @@ details[open] > .resumo-dobra::before{ rotate:90deg; }
 .termo.compacto .termo-valor{ text-align:left; min-width:calc(96px * var(--esc)); }
 .termo-cpm small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); letter-spacing:.06em; margin-left:2px; }
 
-.regua{ position:relative; height:26px; }
+/* Não encolhe. O cartão empilha os itens na vertical e todos podiam encolher; a
+   régua só tem filhos posicionados por cima dela, então o navegador a tratava
+   como vazia e a reduzia a zero quando faltava altura — a barra colorida, que
+   continua sendo desenhada, caía em cima da linha "ÓTIMO" da legenda. */
+.regua{ position:relative; height:26px; flex-shrink:0; min-height:26px; }
 .regua-faixas{
   position:absolute; inset:9px 0 auto; height:9px; border-radius:99px; overflow:hidden;
   display:flex; border:1px solid var(--fio);
@@ -7820,7 +7838,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 17:40';
+const BUILD = '2026-09-26 19:05';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
