@@ -290,26 +290,14 @@ p:last-child{ margin-bottom:0; }
 .cp-fato.cp-jade b{ color:var(--jade); }
 .cp-fato.cp-ouro b{ color:var(--ouro); }
 .cp-fato.cp-brasa b{ color:var(--brasa); }
-/* Uma faixa única, lida da esquerda para a direita: primeiro para quem vale
-   (✓), uma divisória, depois o que é obrigatório (⚠). Quatro caixas separadas
-   gastavam borda e margem cada uma e não cabiam numa linha em tela de notebook;
-   numa faixa só, o espaço vai para o texto. Cada item fica inteiro; se ainda
-   assim não couber, o que sobra desce inteiro, e a ordem se mantém. */
-.cp-criticas{
-  display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; margin-top:12px;
-  padding:8px 12px; border-radius:8px; background:var(--sup-1);
-  border:1px solid var(--fio);
-}
-.cp-criticas > .cp-crit{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
-  font-size:calc(13px * var(--esc)); color:var(--giz); }
-.cp-criticas > .cp-crit svg{ width:14px; height:14px; flex-shrink:0; fill:none; stroke-width:2;
-  stroke-linecap:round; stroke-linejoin:round; }
-.cp-crit.livre svg{ stroke:var(--jade); }
-.cp-crit.limite svg{ stroke:var(--ouro); }
-.cp-crit-div{ width:1px; align-self:stretch; background:var(--fio-forte); }
-@media (max-width:900px){
-  .cp-criticas > .cp-crit{ white-space:normal; }
-  .cp-crit-div{ display:none; }
+/* Cada item na própria caixa, com a cor da sua categoria — verde para quem a
+   campanha vale, dourado para o que é obrigatório —, lado a lado numa linha e
+   na ordem de leitura: primeiro para quem vale, depois o que fazer. As caixas
+   não se fundem: cada uma é uma informação, e a cor diz de que tipo ela é.
+   Quando não couberem todas, a que sobra desce inteira, sem cortar a frase. */
+.cp-criticas{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; }
+.cp-criticas > div{ white-space:nowrap; margin:0; }
+@media (max-width:900px){ .cp-criticas > div{ white-space:normal; } }
 }
 .cp-regras{ margin-top:10px; }
 .cp-regras summary{ cursor:pointer; font-size:calc(13.5px * var(--esc));
@@ -7113,7 +7101,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 14:05';
+const BUILD = '2026-09-24 14:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13218,10 +13206,9 @@ function cartaoCampanha(c){
        não tem conserto depois da transferência. */
     .sort((x, y) => (/cadastr|antes de transferir/i.test(y) ? 1 : 0) - (/cadastr|antes de transferir/i.test(x) ? 1 : 0))
     .slice(0, 2);
-  /* O ponto final sai: em faixa, cada item já termina onde começa o próximo. */
   const linhaDestaque = (l, tipo) => {
     const alerta = tipo === 'obrig' || GATILHOS_RESTRICAO.some(r => r.test(l));
-    return `<span class="cp-crit ${alerta ? 'limite' : 'livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg>${esc(l.replace(/\.$/, ''))}</span>`;
+    return `<div class="${alerta ? 'regra-limite' : 'regra-livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg><span>${esc(l)}</span></div>`;
   };
 
   const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
@@ -13282,7 +13269,6 @@ function cartaoCampanha(c){
 
     ${escopo.length || obrig.length ? `<div class="cp-criticas">${
       escopo.map(l => linhaDestaque(l, 'escopo')).join('')}${
-      escopo.length && obrig.length ? '<i class="cp-crit-div" aria-hidden="true"></i>' : ''}${
       obrig.map(l => linhaDestaque(l, 'obrig')).join('')}</div>` : ''}
 
     ${linhas.length ? `<details class="cp-regras"><summary>Regras completas</summary>
