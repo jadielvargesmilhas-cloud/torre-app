@@ -693,7 +693,10 @@ p:last-child{ margin-bottom:0; }
    A janela usa quase toda a altura da tela, e as partes fixas — cabeçalho,
    resumo, abas, rodapé — ficam mais enxutas, para sobrar espaço para o que
    muda de aba para aba. */
-.dr-painel{ width:min(780px, calc(100vw - 32px)); max-height:calc(100dvh - 28px); }
+/* 880 px: a frase "Valores sujeitos a alterações! Faça sempre a simulação na
+   hora da transferência." cabe numa linha só, e os blocos do simulador deixam de
+   quebrar as legendas em duas linhas — o que também devolve altura. */
+.dr-painel{ width:min(880px, calc(100vw - 32px)); max-height:calc(100dvh - 28px); }
 .dr-cab{ padding:16px 20px 0 22px; }
 .dr-rota-txt h2{ font-size:calc(17px * var(--esc)); }
 .dr-rotulo{ margin-top:4px; }
@@ -970,7 +973,14 @@ p:last-child{ margin-bottom:0; }
 .dr-sim-meta{ flex:1 1 150px; }
 .dr-sim-meta{ flex:1 1 180px; font-size:calc(12px * var(--esc)); color:var(--grafite-dim); line-height:1.35; }
 .dr-sim-meta .brasa{ color:var(--brasa); }
-.dr-sim-sujeito{ color:var(--ouro); font-weight:600; }
+
+
+.dr-sim-alerta{ display:flex; align-items:center; gap:8px; margin:10px 0 0; padding:7px 12px; border-radius:9px;
+  font-size:calc(13.5px * var(--esc)); line-height:1.4; color:var(--giz); white-space:nowrap;
+  background:color-mix(in oklab, var(--ouro) 11%, transparent); border:1px solid color-mix(in oklab, var(--ouro) 40%, transparent); }
+.dr-sim-alerta svg{ width:16px; height:16px; flex-shrink:0; fill:none; stroke:var(--ouro); stroke-width:2; }
+.dr-sim-alerta b{ color:var(--ouro); }
+@media (max-width:640px){ .dr-sim-alerta{ white-space:normal; align-items:flex-start; } .dr-sim-alerta svg{ margin-top:2px; } }
 
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
@@ -7757,7 +7767,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 11:40';
+const BUILD = '2026-09-26 12:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14131,7 +14141,7 @@ function simCabecalho(c, st){
   const q = quandoCarrinho(c);
   const ref = !(Number(c.carrinho) > 0) ? ultimoCarrinhoDaOrigem(c) : null;
   const meta = q
-    ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span> · <b class="dr-sim-sujeito">sujeito a alterações</b>`
+    ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span>`
     : ref ? `sem preço nesta campanha. Último para ${esc(prog(c.de).n)}: <button type="button" class="dr-sim-volta"
         onclick="usarCarrinhoReferencia('${c.id}', ${Number(ref.carrinho)})">${brl2(ref.carrinho)}</button>
         <span class="fraco">(${ref.carrinhoEm ? dataBR(isoLocalMin(ref.carrinhoEm).slice(0, 10)).slice(0, 5) : 'campanha para ' + esc(prog(ref.para).n)})</span>`
@@ -14241,6 +14251,8 @@ function simuladorCarrinho(c, st, soCorpo){
       </div>
     </div>
 
+    <p class="dr-sim-alerta" role="note"><svg><use href="#i-alerta"/></svg><span><b>Valores sujeitos a alterações!</b>
+      Faça sempre a simulação na hora da transferência.</span></p>
     <div class="dr-sim-res">
       <div><span>${r.comCarrinho ? 'Você paga' : 'Custo dos pontos'}</span><b>${brl2(r.total)}</b></div>
       <div class="dr-sim-destaque"><span>Milheiro ${nomePara}</span><b>${brl2(res.cpm)}</b></div>
