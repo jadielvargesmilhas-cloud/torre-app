@@ -79,7 +79,7 @@
      que precisam acompanhá-la. Trocado pelo botão Aa no topo. */
   --esc:1;
   --trilho:calc(72px * var(--esc));
-  --trilho-dir:calc(72px * var(--esc));
+  --menu:calc(212px * var(--esc));
   --topo-h:calc(62px * var(--esc));
   --ease:cubic-bezier(.22,.68,.32,1);
   --mola:linear(0,.25 8%,.64 18%,.91 27%,1.03 36%,1.05 46%,1.01 62%,1);
@@ -175,11 +175,9 @@ p:last-child{ margin-bottom:0; }
 /* ── grelha do aplicativo ─────────────────────────────────────────────────── */
 .casco{
   display:grid;
-  /* Duas colunas de trilho no computador: a da esquerda com o que FAZ milha
-     (painel, fábrica, compra, tanque, radar, rotas) e a da direita com o que a
-     USA (emissões, balcão, cartões) mais o sistema. No celular tudo volta para
-     uma barra só, no rodapé — lá não há dois lados. */
-  grid-template-columns:var(--trilho) minmax(0,1fr) var(--trilho-dir);
+  /* Trilho de ícones, coluna de menu em texto, conteúdo. No celular as duas
+     primeiras desaparecem e a navegação volta para o rodapé. */
+  grid-template-columns:var(--trilho) var(--menu) minmax(0,1fr);
   min-height:100dvh;
   position:relative;
   z-index:1;
@@ -194,19 +192,104 @@ p:last-child{ margin-bottom:0; }
   backdrop-filter:blur(14px) saturate(140%);
   border-right:1px solid var(--fio);
 }
-/* Espelho da barra esquerda, encostado na outra borda. Mesmas medidas e mesmo
-   comportamento; muda o lado em que se apoia e a borda que desenha. */
-.trilho-dir{
-  position:fixed; inset:0 0 0 auto; width:var(--trilho-dir); z-index:60;
-  display:flex; flex-direction:column; align-items:center;
-  padding:12px 0 14px;
-  background:color-mix(in oklab, var(--sup-0) 88%, transparent);
-  backdrop-filter:blur(14px) saturate(140%);
-  border-left:1px solid var(--fio);
+/* ── coluna de menu ──────────────────────────────────────────────────────────
+   Nome por extenso ao lado da sigla. As três letras do trilho são boas para
+   quem já conhece o caminho; para quem está aprendendo, ou volta depois de
+   semanas, "CTP" não diz o que faz e "Comprar e transferir" diz.
+
+   O trilho e o menu são fixos, fora do fluxo; quem ocupa as duas primeiras
+   faixas da grade são espaçadores invisíveis. Sem isso o conteúdo — que é o
+   terceiro filho — cairia na faixa do menu e ficaria por baixo dele. */
+.casco > .coluna{ grid-column:3; }
+
+/* As abas horizontais são a navegação do celular. No computador a coluna diz o
+   mesmo, e manter as duas obrigaria a escolher entre dois caminhos idênticos,
+   além de gastar uma faixa da tela com repetição. */
+@media (min-width:861px){
+  .vista > .abas{ display:none; }
 }
-/* Sem marca no topo: o logotipo é um só, e repeti-lo dos dois lados faria a tela
-   parecer dois aplicativos lado a lado. O espaço vira respiro. */
-.trilho-dir .trilho-nav{ margin-top:calc(42px * var(--esc) + 16px); }
+
+/* ── faixa de módulo ───────────────────────────────────────────────────────── */
+.faixa-modulo{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:9px var(--pad); border-bottom:1px solid var(--fio);
+  background:var(--sup-0); font-size:calc(13px * var(--esc));
+  position:sticky; top:0; z-index:52;
+}
+.fm-ponto{
+  width:7px; height:7px; border-radius:50%; background:var(--jade); flex-shrink:0;
+  box-shadow:0 0 0 3px color-mix(in oklab, var(--jade) 18%, transparent);
+}
+.fm-nome{ color:var(--grafite); }
+.fm-nome b{
+  color:var(--anil-claro); font-family:var(--f-m); font-weight:600;
+  letter-spacing:.08em; font-size:calc(12.5px * var(--esc));
+}
+.fm-resumo{ color:var(--grafite-dim); margin-left:4px; }
+
+/* ── cabeçalho grande da vista ─────────────────────────────────────────────── */
+.cab-vista{
+  background:linear-gradient(140deg, var(--sup-1), var(--sup-0));
+  border:1px solid var(--fio); border-radius:var(--r);
+  padding:22px var(--pad); margin-bottom:16px;
+  display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;
+}
+.cab-vista .cv-texto{ flex:1 1 320px; min-width:0; }
+.cab-vista .cv-olho{
+  font-family:var(--f-m); font-size:calc(11px * var(--esc)); letter-spacing:.18em;
+  text-transform:uppercase; color:var(--grafite-dim); margin-bottom:6px;
+}
+.cab-vista h2{
+  margin:0 0 5px; font-size:calc(34px * var(--esc)); line-height:1.05;
+  color:var(--giz); font-weight:600; letter-spacing:-.02em;
+}
+.cab-vista .cv-sub{ color:var(--grafite); font-size:calc(14.5px * var(--esc)); }
+.coluna-menu{
+  position:fixed; inset:0 auto 0 var(--trilho); width:var(--menu); z-index:59;
+  display:flex; flex-direction:column;
+  padding:12px 0 14px;
+  background:color-mix(in oklab, var(--sup-0) 70%, transparent);
+  backdrop-filter:blur(14px) saturate(140%);
+  border-right:1px solid var(--fio);
+  overflow-y:auto; overflow-x:hidden;
+}
+/* O nome da tela aberta, no alto da coluna: é ele que dá contexto às seções
+   listadas abaixo — sem ele, "Campanhas" e "Mural" ficariam soltos. */
+.cm-titulo{ padding:2px 16px 0; margin-bottom:16px; flex-shrink:0; }
+.cm-tit-nome{
+  font-size:calc(20px * var(--esc)); font-weight:600; color:var(--giz);
+  line-height:1.15; letter-spacing:-.01em;
+}
+.cm-tit-sub{
+  font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim);
+  line-height:1.35; margin-top:3px;
+}
+.cm-vazio{ padding:10px 9px; font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
+.cm-nav{ display:flex; flex-direction:column; gap:1px; padding:0 9px; }
+.cm-item{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 9px; border-radius:9px; cursor:pointer;
+  color:var(--grafite); font-size:calc(14px * var(--esc));
+  border:1px solid transparent; text-align:left; width:100%;
+  transition:.15s var(--ease);
+  /* Fundo e fonte explícitos: sem eles o item herdava o botão padrão do
+     navegador — cinza chapado no escuro, quase branco no claro — e a coluna
+     parecia uma pilha de botões de formulário em vez de um menu. */
+  background:transparent; font-family:inherit; appearance:none; -webkit-appearance:none;
+}
+.cm-item svg{ width:17px; height:17px; flex-shrink:0; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.cm-item:hover{ background:var(--sup-1); color:var(--giz); }
+.cm-item.on{
+  background:color-mix(in oklab, var(--ouro) 12%, transparent);
+  border-color:color-mix(in oklab, var(--ouro) 30%, transparent);
+  color:var(--ouro); font-weight:500;
+}
+/* O contador acompanha o do trilho: mesma informação, mesmo lugar na leitura. */
+.cm-item .cm-selo{
+  margin-left:auto; font-family:var(--f-m); font-size:calc(11px * var(--esc));
+  background:var(--brasa); color:#fff; border-radius:99px; padding:1px 7px; flex-shrink:0;
+}
 
 .marca{
   width:calc(42px * var(--esc));height:calc(42px * var(--esc));border-radius:11px;display:grid;place-items:center;
@@ -462,7 +545,16 @@ p:last-child{ margin-bottom:0; }
 .cel-saldo.vazia:hover{ color:var(--jade); background:color-mix(in oklab, var(--jade) 12%, transparent); }
 tr.oculta{ display:none; }
 .painel-aba{ display:none; }
-.painel-aba.on{ display:block; animation:entrar .26s var(--ease) both; }
+/* Sem animação de entrada na troca de seção. Ela começava com opacidade zero:
+   a cada clique o conteúdo sumia por inteiro e voltava ao longo de 260 ms,
+   deslizando de baixo — o que se lê como a página recarregando. No CTP era pior,
+   porque Comprar e Transferir mostram o mesmo corpo de simulação, e ele piscava
+   sem ter mudado.
+
+   Chegar numa TELA nova continua animado: quem faz isso é a própria vista, e é
+   ali que a transição ajuda a perceber que se mudou de lugar. Dentro da tela, a
+   troca é instantânea, como virar a página de um caderno aberto. */
+.painel-aba.on{ display:block; }
 
 /* ── mural de oportunidades ──────────────────────────────────────────────── */
 .mural-cartao{
@@ -1084,7 +1176,12 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 /* Centralizada na coluna: ela é mais estreita que a quarta coluna, e encostá-la
    num dos lados desalinharia o cartão do campo que fecha a fileira acima. */
 .calc-regua{
-  width:var(--card-milheiro-l); height:var(--card-milheiro-a); margin:0 auto;
+  /* Largura fixa com teto: o cartão foi desenhado para 300px, mas com a coluna de
+     menu ocupando 212px a tela de 1280 deixou de ter esse espaço, e a régua
+     empurrava a página para fora. O `max-width` cede quando não cabe e não muda
+     nada onde cabe. */
+  width:var(--card-milheiro-l); max-width:100%;
+  height:var(--card-milheiro-a); margin:0 auto;
   display:flex; flex-direction:column; padding:0; border:0; background:none;
 }
 .calc-regua > *{
@@ -5090,11 +5187,10 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
 /* ── mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width:860px){
-  :root{ --trilho:0px; --trilho-dir:0px; --pad:14px; }
+  :root{ --trilho:0px; --menu:0px; --pad:14px; }
   .casco{ grid-template-columns:1fr; }
-  /* A barra direita não existe no celular: os itens dela voltam para o rodapé
-     único, na ordem original. */
-  .trilho-dir{ display:none; }
+  /* No celular a navegação é o rodapé de ícones, e só ele. */
+  .coluna-menu{ display:none; }
   .trilho{
     inset:auto 0 0 0; width:100%; height:60px; flex-direction:row; padding:0 4px;
     border-right:0; border-top:1px solid var(--fio); justify-content:space-around;
@@ -5233,10 +5329,17 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 <div class="casco">
 
   <!-- ═══ trilho ═══════════════════════════════════════════════════════════ -->
-  <!-- Barra da direita: preenchida por código a partir da esquerda, para os
-       itens continuarem existindo num lugar só no HTML e a ordem do celular
-       nunca divergir da do computador. -->
-  <aside class="trilho-dir" id="trilhoDir"><nav class="trilho-nav"></nav></aside>
+  <!-- Coluna de menu em texto, ao lado do trilho de ícones. Preenchida por
+       código a partir dos próprios itens do trilho: os destinos continuam
+       declarados num lugar só, e o celular — onde ela não existe — nunca fica
+       fora de passo com o computador. -->
+  <aside class="coluna-menu" id="colunaMenu">
+    <div class="cm-titulo">
+      <div class="cm-tit-nome">Painel</div>
+      <div class="cm-tit-sub">Onde o dinheiro e a milha se encontram</div>
+    </div>
+    <nav class="cm-nav"></nav>
+  </aside>
 
   <aside class="trilho">
     <div class="marca" data-dica="VEM · Viagens & Experiências com Milhas" data-dica-lado="direita">
@@ -5279,6 +5382,15 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
   <!-- ═══ coluna ═══════════════════════════════════════════════════════════ -->
   <div class="coluna">
+
+    <!-- Faixa de módulo: diz em que parte do sistema se está e o tamanho da
+         operação, antes de qualquer número. Quem abre a Torre depois de dias
+         precisa desse chão antes de ler indicador. -->
+    <div class="faixa-modulo">
+      <span class="fm-ponto"></span>
+      <span class="fm-nome">Módulo <b id="fmNome">PAINEL</b></span>
+      <span class="fm-resumo" id="fmResumo"></span>
+    </div>
 
     <header class="topo">
       <div class="topo-titulo">
@@ -6858,7 +6970,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-23 00:20';
+const BUILD = '2026-09-24 11:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -6934,6 +7046,10 @@ const PROGRAMAS = {
      não paga nada — quem decide o custo é o valor em reais. Por isso a faixa é
      larga: o milheiro depende inteiramente do bônus da campanha da vez, que já
      foi de 40%, 85% e 120% em datas diferentes. */
+  banriclube:{ n:'Banriclube', cia:'Banrisul',              tipo:'pontos', cor:'#0046AD', ali:'—',
+               faixas:{otimo:12, alvo:17, razoavel:24}, base:0, validade:0,
+               fonte:'latampass.latam.com/pt_br/junte-milhas/banrisul · conferido em 24/09/2026',
+               nota:'Programa de pontos dos cartões Banrisul.\nTransfere 1 : 1 para LATAM Pass, mínimo de 5.000 pontos.\nCampanhas recorrentes de 25% a 30% de bônus na LATAM, com milhas extras na primeira transferência.' },
   premmia:   { n:'Premmia', cia:'Petrobras / Vibra',        tipo:'pontos', cor:'#00A859', ali:'—',
                faixas:{otimo:14, alvo:20, razoavel:32}, base:0, validade:0,
                fonte:'petrobraspremmia.com.br · smiles.com.br/parceiro/premmia · conferido em 18/09/2026',
@@ -7034,7 +7150,7 @@ const PROG_MILHAS = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'milhas');
 const SIGLA_PROG = {
   azul:'AZ', smiles:'SM', latampass:'LA', tap:'TP', flyingblue:'FB', iberia:'IB',
   connect:'CM', aeromexico:'AM', united:'MP', lifemiles:'LM', aeroplan:'AP',
-  suma:'AE', livelo:'LV', esfera:'ES', atomos:'AT', revpoints:'RP', uau:'UA',
+  suma:'AE', livelo:'LV', esfera:'ES', atomos:'AT', revpoints:'RP', uau:'UA', banriclube:'BR',
   british:'BA', qatar:'QR', finnair:'AY',
   hilton:'HH', ihg:'IH', accor:'AC'
 };
@@ -8192,7 +8308,10 @@ const PARIDADES = [
   { de:'esfera', para:'tap',        p:2.7, clube:2.2, nota:'2,2 : 1 para assinantes do Clube Esfera, 2,7 : 1 para os demais.' },
   { de:'esfera', para:'flyingblue', p:3.5, clube:3,   nota:'3 : 1 para assinantes do Clube Esfera.' },
   { de:'esfera', para:'aeromexico', p:3.5, nota:'' },
-  { de:'esfera', para:'iberia',     p:3,   nota:'Avios.' },
+  /* Era 3 : 1, e o certo é 2 : 1 — confirmado pela Esfera e pela imprensa
+     especializada em 2026. O erro subestimava em um terço os Avios de qualquer
+     transferência por este caminho, justamente o melhor que a Esfera tem. */
+  { de:'esfera', para:'iberia',     p:2,   nota:'2 : 1 em Avios, a melhor paridade da Esfera. Mínimo de 15.000 pontos, menor para assinante do Clube Esfera.' },
   /* A rota existe e tem campanha recorrente — o histórico da Torre já registra
      três delas —, mas a linha da paridade faltava, e sem ela o roteador não
      enxergava o caminho nem calculava o custo de quem transfere para a Copa. */
@@ -8201,6 +8320,7 @@ const PARIDADES = [
      não conta a história — o dinheiro é que paga a conta —, mas sem a linha o
      roteador não enxerga o caminho. O custo real se calcula no Hack do Carrinho,
      que soma ponto próprio e dinheiro. */
+  { de:'banriclube', para:'latampass', p:1, nota:'1 : 1, mínimo de 5.000 pontos. Transferência pelo app Banrisul Digital ou pelo Banrishopping.' },
   { de:'premmia', para:'smiles',    p:0.03, nota:'Troca por pontos mais dinheiro, pelo app Premmia: 300 pontos + R$ 294,90 por 10.000 milhas. Só entre contas do mesmo titular.' },
 
   /* Livelo é o único programa brasileiro que envia direto para a British.
@@ -8221,7 +8341,11 @@ const PARIDADES = [
   { de:'esfera', para:'accor',      p:3.5, nota:'Deságio de 3,5 : 1.' },
   { de:'smiles', para:'accor',      p:8,   nota:'8 milhas viram 1 ponto; 7 : 1 para Clube Smiles ou Diamante.' },
   { de:'latampass', para:'accor',   p:8,   nota:'Milha aérea para ponto de hotel.' },
-  { de:'azul',   para:'accor',      p:8,   nota:'Milha aérea para ponto de hotel.' }
+  /* Era 8 : 1, mais otimista que qualquer condição real. A convencional em 2026
+     é 9 : 1 para assinante do Clube Azul e 9,5 : 1 para os demais. Campanhas
+     baixam para 7,5 : 1, mas só enquanto duram — isso fica na regra de cada
+     campanha, não aqui. */
+  { de:'azul',   para:'accor',      p:9.5, clube:9, nota:'Milha aérea para ponto de hotel. 9 : 1 com Clube Azul, 9,5 : 1 sem; campanhas chegam a 7,5 : 1 para elegíveis. 1.000 pontos ALL valem cerca de 20 euros.' }
 ];
 
 /* ── catálogo de clubes ───────────────────────────────────────────────────── */
@@ -9980,6 +10104,10 @@ function irPara(v){
     $$('.vista').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
     $('#topoTit').textContent = TITULOS[v][0];
     $('#topoSub').textContent = TITULOS[v][1];
+    pintarFaixaModulo(v);
+    /* A coluna é montada DEPOIS da troca de vista: ela lê as abas da tela que
+       está aberta, e montada antes leria as da anterior. */
+    montarColunaMenu();
     /* o subtítulo é um elemento só para os sete módulos: a vista atual entra
        como atributo para o CSS poder tratar um deles sem tocar nos outros */
     $('#topoSub').dataset.vista = v;
@@ -10017,6 +10145,9 @@ function montarCorpoCT(aba){
 
 function irParaAba(grupo, aba){
   const cx = $(`.abas[data-grupo="${grupo}"]`); if (!cx) return;
+  /* A coluna de seções espelha a aba ativa. Marcada no fim desta função, para
+     que o estado já esteja aplicado quando ela ler. */
+  setTimeout(marcarColunaMenu, 0);
   /* Se esta aba já era a aberta, a navegação é um redesenho e não uma entrada. */
   const jaEstava = !!$(`.abas[data-grupo="${grupo}"] .aba.on[data-aba="${aba}"]`);
   /* Uma aba pode responder por mais de um painel: o botão fica marcado se o
@@ -14027,7 +14158,52 @@ const CAMPANHAS_PUBLICADAS = [
     bonus:100, desconto:0, limite:300000, fim:'2025-11-13',
     titulo:'Smiles com até 100% de bônus em todos os parceiros',
     regra:'O maior bônus Smiles do período: 100% para o Clube no plano 20.000 ou categoria Diamante, contra os 80% que viraram teto em 2026. Valeu para todos os parceiros financeiros. Assinatura do Clube precisava estar ativa ANTES da transferência. Milhas bônus creditadas até 27/11/2025, válidas por 12 meses; o extra por plano de clube era limitado a 10.000 milhas.',
-    link:'https://passageirodeprimeira.com/voltou-smiles-oferece-ate-100-de-bonus-nas-transferencias-de-pontos-dos-cartoes-de-credito/' }
+    link:'https://passageirodeprimeira.com/voltou-smiles-oferece-ate-100-de-bonus-nas-transferencias-de-pontos-dos-cartoes-de-credito/' },
+  { id:'pub-tb-livelo-latampass-260922', tipo:'transferencia', de:'livelo', para:'latampass',
+    bonus:25, desconto:0, limite:300000, minimo:0, carrinho:31, fim:'2026-09-22',
+    titulo:'Livelo para LATAM Pass com 25% de bônus',
+    regra:'Cadastro obrigatório na página da LATAM Pass ANTES de transferir. 25% para todos, sem exigir clube Livelo ou LATAM Pass. Limite de 300 mil milhas de bônus por CPF, atingido com 1,2 milhão de pontos transferidos. Só entre contas do mesmo titular. Bônus creditado em até 30 dias após o fim da campanha, com validade de 36 meses. Carrinho Livelo a cerca de R$ 31/mil em 21/09, com 5% de desconto no PIX: com 1 mil pontos próprios e 99 mil no carrinho, R$ 3.099 no cartão (R$ 24,79 o milheiro LATAM) ou R$ 2.945,55 no PIX (R$ 23,56).',
+    link:'https://www.livelo.com.br/transfira-seus-pontos-promo-latampass' },
+  { id:'pub-tb-esfera-iberia-260922', tipo:'transferencia', de:'esfera', para:'iberia',
+    bonus:25, desconto:0, limite:0, minimo:0, carrinho:0, fim:'2026-09-22',
+    titulo:'Esfera para Iberia Plus com até 25% de bônus',
+    regra:'Paridade 2 : 1: o bônus incide sobre os Avios já convertidos. 25% para quem assinar o Novo Clube Esfera ou subir para um plano de maior valor, ativo na data da transferência e na da bonificação; 10% para os demais. Transferência limitada a 1 milhão de pontos Esfera, ou enquanto durar o estoque. Bônus em até 10 dias úteis. Exemplo: 64 mil Esfera viram 32 mil Avios, mais 8 mil de bônus; a R$ 35 o milheiro Esfera no carrinho, o Avios sai a R$ 56.',
+    link:'https://www.esfera.com.vc/p/iberia-plus/e000100072' },
+  { id:'pub-tb-banriclube-latampass-260924', tipo:'transferencia', de:'banriclube', para:'latampass',
+    bonus:25, desconto:0, limite:0, minimo:0, carrinho:0, fim:'2026-09-24',
+    titulo:'Banriclube para LATAM Pass com 25% de bônus',
+    regra:'Cadastro do CPF na página da LATAM Pass antes de transferir. 25% para todos, sem exigir clube. Mil milhas extras na primeira transferência. Não participa quem teve bloqueio na conta LATAM nos últimos 12 meses. Bônus em até 30 dias após o fim, com validade de 3 anos.',
+    link:'https://latampass.latam.com/br/pt/promocoes/banrisul-milhas-extras' },
+  { id:'pub-tb-livelo-azul-260927', tipo:'transferencia', de:'livelo', para:'azul',
+    bonus:80, desconto:0, limite:300000, minimo:0, carrinho:0, fim:'2026-09-27',
+    titulo:'Livelo para Azul com até 80% + 30% de bônus',
+    regra:'Cadastro obrigatório na página da Azul antes de transferir. Vale para todos os parceiros, exceto Porto. 80% para assinante do Clube Azul, 50% para os demais, com limite de 300 mil pontos de bônus. Extra por tempo de Clube, limitado a 100 mil por ano: +5% acima de 6 meses, +10% acima de 1 ano, +20% acima de 3 anos, +30% acima de 5 anos — até 110% no total. Bônus em até 15 dias úteis após o fim, com validade de 6 meses.',
+    link:'https://www.voeazul.com.br/br/pt/ofertas/bancos' },
+  { id:'pub-tb-esfera-azul-260927', tipo:'transferencia', de:'esfera', para:'azul',
+    bonus:80, desconto:0, limite:300000, minimo:0, carrinho:26.2, fim:'2026-09-27',
+    titulo:'Esfera para Azul com até 80% + 30% de bônus e compra no carrinho',
+    regra:'Cadastro obrigatório na página da Azul antes de transferir. Vale para todos os parceiros, exceto Porto. 80% para assinante do Clube Azul, 50% para os demais, com limite de 300 mil pontos de bônus. Extra por tempo de Clube, limitado a 100 mil por ano: +5% acima de 6 meses, +10% acima de 1 ano, +20% acima de 3 anos, +30% acima de 5 anos — até 110% no total. Bônus em até 15 dias úteis após o fim, com validade de 6 meses. Carrinho Esfera a R$ 26,20 por mil na hora de transferir: com 1 mil pontos próprios e 99 mil no carrinho, R$ 2.637,38 viram 180 mil Azul a R$ 14,65 o milheiro (R$ 13,19 com 100% de bônus).',
+    link:'https://www.voeazul.com.br/br/pt/ofertas/bancos' },
+  { id:'pub-tb-atomos-azul-260927', tipo:'transferencia', de:'atomos', para:'azul',
+    bonus:80, desconto:0, limite:300000, minimo:0, carrinho:0, fim:'2026-09-27',
+    titulo:'C6 Átomos para Azul com até 80% + 30% de bônus',
+    regra:'Cadastro obrigatório na página da Azul antes de transferir. Vale para todos os parceiros, exceto Porto. 80% para assinante do Clube Azul, 50% para os demais, com limite de 300 mil pontos de bônus. Extra por tempo de Clube, limitado a 100 mil por ano: +5% acima de 6 meses, +10% acima de 1 ano, +20% acima de 3 anos, +30% acima de 5 anos — até 110% no total. Bônus em até 15 dias úteis após o fim, com validade de 6 meses.',
+    link:'https://www.voeazul.com.br/br/pt/ofertas/bancos' },
+  { id:'pub-tb-uau-azul-260927', tipo:'transferencia', de:'uau', para:'azul',
+    bonus:80, desconto:0, limite:300000, minimo:0, carrinho:0, fim:'2026-09-27',
+    titulo:'Uau CAIXA para Azul com até 80% + 30% de bônus',
+    regra:'Cadastro obrigatório na página da Azul antes de transferir. Vale para todos os parceiros, exceto Porto. 80% para assinante do Clube Azul, 50% para os demais, com limite de 300 mil pontos de bônus. Extra por tempo de Clube, limitado a 100 mil por ano: +5% acima de 6 meses, +10% acima de 1 ano, +20% acima de 3 anos, +30% acima de 5 anos — até 110% no total. Bônus em até 15 dias úteis após o fim, com validade de 6 meses.',
+    link:'https://www.voeazul.com.br/br/pt/ofertas/bancos' },
+  { id:'pub-tb-azul-accor-260925', tipo:'transferencia', de:'azul', para:'accor',
+    bonus:20, desconto:0, limite:0, minimo:0, carrinho:0, fim:'2026-09-25',
+    titulo:'Azul para ALL Accor com até 30% de bônus',
+    regra:'Paridade promocional de 7,5 : 1 só para elegíveis: Clube Azul, Azul One, Diamante, Diamante Unique e Cartão Azul Itaú. Para os demais não vale a pena. 20% de bônus para associados ALL, até 30% com ALL Signature ativo e regular. Mesmo titular nas duas contas. Até 25/09 às 23h59 ou enquanto houver disponibilidade. 2.000 pontos ALL valem cerca de 40 euros: com 20% de bônus, o milheiro Azul rende R$ 18,75; com 30%, R$ 20,31.',
+    link:'https://all.accor.com/a/pt-br/loyalty-program/partners/offers/oferta-transferencia-azul-fidelidade.html' },
+  { id:'pub-tb-esfera-latampass-260925', tipo:'transferencia', de:'esfera', para:'latampass',
+    bonus:25, desconto:0, limite:300000, minimo:0, carrinho:0, fim:'2026-09-25',
+    titulo:'Esfera para LATAM Pass com 25% de bônus',
+    regra:'Só cartões Santander. Cadastro na página da LATAM Pass antes de transferir. 25% para todos, sem exigir clube. Mil milhas extras na primeira transferência com o parceiro. Limite de 300 mil milhas de bônus. Não participa quem teve bloqueio na conta LATAM nos últimos 12 meses. Bônus em até 30 dias após o fim, com validade de 3 anos.',
+    link:'https://latampass.latam.com/br/pt/promocoes/esfera-milhas-extras' }
 ];
 
 /* ── o histórico que estava escrito e não entrava ─────────────────────────────
@@ -24627,47 +24803,92 @@ function ligarSelecaoAoFocar(raiz){
 
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   DUAS BARRAS NO COMPUTADOR, UMA NO CELULAR
+   COLUNA DE SEÇÕES
    ──────────────────────────────────────────────────────────────────────────────
-   O trilho é escrito uma vez só no HTML, com todos os itens na ordem natural.
-   Em tela larga, os grupos de saída migram para a barra da direita; abaixo de
-   860px eles voltam, na mesma ordem em que estavam.
+   Navegação em dois níveis: o trilho de ícones escolhe a TELA, e esta coluna
+   mostra as SEÇÕES dela. Repetir aqui os dez destinos do trilho seria dizer duas
+   vezes a mesma coisa, gastando a única coluna onde cabe texto.
 
-   Mover em vez de duplicar evita o defeito clássico dessa divisão: dois
-   conjuntos de botões que, com o tempo, deixam de concordar entre si.
-
-   O corte segue o ciclo da milha. À esquerda onde ela é feita e avaliada; à
-   direita onde ela é usada e onde se acerta o sistema.
+   As seções são as abas que a tela já tem, lidas do próprio HTML. Nenhuma lista
+   é mantida à parte: criar uma aba nova a faz aparecer aqui sozinha, com o mesmo
+   nome e o mesmo contador.
    ══════════════════════════════════════════════════════════════════════════════ */
-const GRUPOS_DIREITA = ['SOL', 'HAN'];
+/* Concordância: "1 emissões registradas" denuncia texto montado por máquina, e
+   isso corrói a confiança no resto dos números da tela. */
+const plural = (n, um, muitos) => `${nBR(n)} ${n === 1 ? um : muitos}`;
 
-function arrumarTrilhos(){
-  const esq = document.querySelector('.trilho .trilho-nav');
-  const dir = document.querySelector('.trilho-dir .trilho-nav');
-  if (!esq || !dir) return;
+/* A faixa de módulo mostra onde se está e o tamanho da operação. O resumo muda
+   com a tela: no Painel interessa quanto há guardado; nas Emissões, quantas
+   foram feitas. Um resumo fixo diria o mesmo em toda parte e viraria enfeite. */
+function pintarFaixaModulo(v){
+  const nome = $('#fmNome'), res = $('#fmResumo');
+  if (!nome || !res) return;
+  nome.textContent = (TITULOS[v] || ['—'])[0].toUpperCase();
 
-  const largo = window.matchMedia('(min-width:861px)').matches;
+  const saldos = saldoPorPrograma() || {};
+  const progs = Object.keys(saldos).filter(p => saldos[p] > 0).length;
+  const contas = (DB.contas || []).length;
 
-  if (!largo){
-    /* Devolve tudo, na ordem gravada na saída. Sem a ordem guardada, itens
-       voltariam empilhados no fim e o rodapé do celular sairia embaralhado. */
-    [...dir.children]
-      .sort((a, b) => (Number(a.dataset.ordem) || 0) - (Number(b.dataset.ordem) || 0))
-      .forEach(el => esq.appendChild(el));
+  const resumo = {
+    mesa:     () => `${nBR(saldoTotal('milhas'))} milhas em ${plural(progs, 'programa', 'programas')}`,
+    saldo:    () => `${plural(contas, 'titular', 'titulares')}, ${plural(progs, 'programa', 'programas')}`,
+    fabrica:  () => plural((DB.campanhas || []).length, 'campanha cadastrada', 'campanhas cadastradas'),
+    emissoes: () => plural((DB.reservas || []).length, 'emissão registrada', 'emissões registradas'),
+    balcao:   () => plural((DB.reservas || []).filter(r => r.quem === 'terceiro').length, 'emissão para cliente', 'emissões para cliente'),
+    cartoes:  () => plural((DB.cartoes || []).length, 'cartão', 'cartões'),
+    rota:     () => plural((DB.metas || []).length, 'meta', 'metas'),
+    radar:    () => plural((DB.monitores || []).length, 'monitor', 'monitores')
+  };
+  res.textContent = resumo[v] ? resumo[v]() : '';
+}
+
+function montarColunaMenu(){
+  const nav = document.querySelector('.cm-nav');
+  const tit = document.querySelector('.cm-titulo');
+  if (!nav) return;
+
+  const v = vistaAtual;
+  if (tit){
+    tit.querySelector('.cm-tit-nome').textContent = (TITULOS[v] || ['—'])[0];
+    tit.querySelector('.cm-tit-sub').textContent = (TITULOS[v] || ['', ''])[1] || '';
+  }
+
+  const abas = [...document.querySelectorAll('#v-' + v + ' .abas .aba')];
+  nav.innerHTML = '';
+
+  if (!abas.length){
+    /* Tela sem abas: a coluna não inventa item nenhum. Melhor vazia do que com
+       um destino que não existe. */
+    nav.innerHTML = '<div class="cm-vazio">Esta tela não tem seções.</div>';
     return;
   }
 
-  if (dir.children.length) return;   /* já dividido */
+  const caixa = abas[0].closest('.abas');
+  const grupo = caixa ? caixa.dataset.grupo : v;
 
-  /* Numera antes de mover: é esse número que reconstrói a ordem na volta. */
-  [...esq.children].forEach((el, i) => { el.dataset.ordem = i; });
+  abas.forEach(aba => {
+    /* O contador vem grudado no texto da aba ("Campanhas 3"); aqui ele é
+       separado para virar selo, como no trilho de ícones. */
+    const selo = aba.querySelector('.selo, .aba-selo, .badge');
+    const primeiro = aba.childNodes[0];
+    const nome = (primeiro && primeiro.nodeType === 3 ? primeiro.textContent : aba.textContent).trim();
 
-  let levando = false;
-  [...esq.children].forEach(el => {
-    if (el.classList.contains('trilho-grupo')){
-      levando = GRUPOS_DIREITA.includes((el.textContent || '').trim());
-    }
-    if (levando) dir.appendChild(el);
+    const b = document.createElement('button');
+    b.className = 'cm-item' + (aba.classList.contains('on') ? ' on' : '');
+    b.dataset.aba = aba.dataset.aba;
+    b.innerHTML = '<span>' + esc(nome) + '</span>' +
+      (selo && selo.textContent.trim() ? '<span class="cm-selo">' + esc(selo.textContent.trim()) + '</span>' : '');
+    b.onclick = () => { irParaAba(grupo, aba.dataset.aba); marcarColunaMenu(); };
+    nav.appendChild(b);
+  });
+}
+
+/* Chamada quando a seção muda por outro caminho — atalho, botão dentro da
+   página, paleta de comandos. Sem ela a coluna marcaria a seção anterior. */
+function marcarColunaMenu(){
+  const ativa = document.querySelector('#v-' + vistaAtual + ' .abas .aba.on');
+  document.querySelectorAll('.cm-item[data-aba]').forEach(b => {
+    b.classList.toggle('on', !!ativa && b.dataset.aba === ativa.dataset.aba);
   });
 }
 
@@ -24687,14 +24908,17 @@ function ligarObservadorDeTabelas(){
     requestAnimationFrame(() => {
       pendente = false; rotularTabelas(document); avaliarTabelas(); marcarBotoesPrincipais();
       ligarSelecaoAoFocar(document);
-  arrumarTrilhos();
-  /* Girar o tablet ou redimensionar a janela cruza o limite dos 860px: sem
-     ouvir a mudança, a barra da direita ficaria vazia na horizontal ou os itens
-     sumiriam ao estreitar. */
-  window.matchMedia('(min-width:861px)').addEventListener('change', arrumarTrilhos);
+      /* A coluna de seções NÃO é montada aqui. Este observador vigia a página
+         inteira, e montar a coluna recria os botões dela — o que é, por si, uma
+         mudança na página, que dispara o observador de novo. Era um laço sem fim:
+         118 recriações em dois segundos, e cada botão sumia antes de o clique
+         pousar. A coluna é montada ao trocar de tela; ao trocar de seção, só a
+         marcação muda. */
+      marcarColunaMenu();
     });
   });
   obs.observe(palco, {childList:true, subtree:true});
+  montarColunaMenu();
   rotularTabelas(document);
   avaliarTabelas();
   marcarBotoesPrincipais();
