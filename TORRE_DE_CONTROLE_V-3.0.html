@@ -290,7 +290,9 @@ p:last-child{ margin-bottom:0; }
 .cp-fato.cp-jade b{ color:var(--jade); }
 .cp-fato.cp-ouro b{ color:var(--ouro); }
 .cp-fato.cp-brasa b{ color:var(--brasa); }
-.cp-criticas{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+/* Em coluna, e não lado a lado: a ordem — para quem vale, depois o que fazer —
+   só se lê se as linhas estiverem uma embaixo da outra. */
+.cp-criticas{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:10px; }
 .cp-regras{ margin-top:10px; }
 .cp-regras summary{ cursor:pointer; font-size:calc(13.5px * var(--esc));
   color:var(--anil-claro); list-style:none; display:inline-flex; align-items:center; gap:6px; }
@@ -7093,7 +7095,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 12:40';
+const BUILD = '2026-09-24 13:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13122,6 +13124,17 @@ function vereditoCampanha(atual, refs){
 /* O título cadastrado costuma repetir a rota e o bônus, que o cartão já mostra
    grande. Só aparece quando diz algo a mais — "e compra no carrinho",
    "upgrade", "Pink Friday". */
+/* Linhas que dizem PARA QUEM a campanha vale: parceiros, cartões, perfil. */
+const ESCOPO_CAMPANHA = [
+  /^vale para/i, /^v[áa]lid[oa] para/i, /^v[áa]lida apenas/i, /\bexceto\b/i,
+  /^s[óo] cart[õo]es/i, /^s[óo] (os |as )?clientes/i, /^participa/i,
+  /para todos/i, /sem exigir clube/i, /eleg[íi]ve/i, /^apenas (os|as|para)/i
+];
+/* Linhas que dizem O QUE É PRECISO FAZER para receber. */
+const OBRIGACAO_CAMPANHA = [
+  /^cadastr/i, /antes de transferir/i, /^assine/i, /^mesmo titular/i, /^s[óo] entre contas/i
+];
+
 function extraTitulo(c){
   const t = String(c.titulo || '');
   /* Tira cada palavra dos dois nomes de programa, e não o nome inteiro: o título
@@ -13176,7 +13189,21 @@ function cartaoCampanha(c){
   /* Restrições que custam dinheiro se ignoradas ficam à vista, no máximo duas.
      O resto das regras espera num recolhível: são para consulta, não decisão. */
   const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean);
-  const criticas = linhas.filter(l => GATILHOS_RESTRICAO.some(r => r.test(l))).slice(0, 2);
+  /* Duas perguntas, nesta ordem, antes de abrir as regras: para quem vale, e o
+     que é obrigatório fazer. Saber primeiro se a campanha serve para você, e só
+     depois que é preciso se cadastrar no link, é a ordem em que a decisão
+     acontece. Cada grupo mostra no máximo duas linhas; o resto fica recolhido. */
+  const escopo = linhas.filter(l => ESCOPO_CAMPANHA.some(r => r.test(l))).slice(0, 2);
+  const obrig = linhas.filter(l => !escopo.includes(l) &&
+      (OBRIGACAO_CAMPANHA.some(r => r.test(l)) || GATILHOS_RESTRICAO.some(r => r.test(l))))
+    /* Dentro das obrigações, o cadastro vem primeiro: é a única que, esquecida,
+       não tem conserto depois da transferência. */
+    .sort((x, y) => (/cadastr|antes de transferir/i.test(y) ? 1 : 0) - (/cadastr|antes de transferir/i.test(x) ? 1 : 0))
+    .slice(0, 2);
+  const linhaDestaque = (l, tipo) => {
+    const alerta = tipo === 'obrig' || GATILHOS_RESTRICAO.some(r => r.test(l));
+    return `<div class="${alerta ? 'regra-limite' : 'regra-livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg><span>${esc(l)}</span></div>`;
+  };
 
   const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
     : dias === 0 ? 'Fecha hoje' : dias === 1 ? 'Fecha amanhã' : `Fecha em ${dias} dias`;
@@ -13234,8 +13261,9 @@ function cartaoCampanha(c){
       ${c.carrinho ? `<span class="cp-fato">Carrinho a <b>${brl2(c.carrinho)}</b> por mil</span>` : ''}
     </div>
 
-    ${criticas.length ? `<div class="cp-criticas">${criticas.map(l =>
-      `<div class="regra-limite"><svg><use href="#i-alerta"/></svg><span>${esc(l)}</span></div>`).join('')}</div>` : ''}
+    ${escopo.length || obrig.length ? `<div class="cp-criticas">${
+      escopo.map(l => linhaDestaque(l, 'escopo')).join('')}${
+      obrig.map(l => linhaDestaque(l, 'obrig')).join('')}</div>` : ''}
 
     ${linhas.length ? `<details class="cp-regras"><summary>Regras completas</summary>
       <div class="pilha" style="gap:4px">${regrasComDestaque(c.regra)}</div></details>` : ''}
