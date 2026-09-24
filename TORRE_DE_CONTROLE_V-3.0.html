@@ -299,14 +299,7 @@ p:last-child{ margin-bottom:0; }
 .cp-criticas > div{ white-space:nowrap; margin:0; }
 @media (max-width:900px){ .cp-criticas > div{ white-space:normal; } }
 }
-.cp-regras{ margin-top:10px; }
-.cp-regras summary{ cursor:pointer; font-size:calc(13.5px * var(--esc));
-  color:var(--anil-claro); list-style:none; display:inline-flex; align-items:center; gap:6px; }
-.cp-regras summary::-webkit-details-marker{ display:none; }
-.cp-regras summary::before{ content:'▸'; transition:transform .15s; }
-.cp-regras[open] summary::before{ transform:rotate(90deg); }
-.cp-regras summary:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:3px; border-radius:4px; }
-.cp-regras > .pilha{ margin-top:8px; }
+
 
 /* ── celular: empilha, e a régua ganha a largura toda ──────────────────────── */
 @media (max-width:640px){
@@ -318,7 +311,127 @@ p:last-child{ margin-bottom:0; }
   .cp-janelas{ gap:6px; }
   .cp-jan b{ font-size:calc(15px * var(--esc)); }
 }
-@media (prefers-reduced-motion:reduce){ .cp-regras summary::before{ transition:none; } }
+
+
+
+/* ── botão Regras Completas: na linha das caixas, encostado à direita ──────── */
+.cp-regras-bt{
+  margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+  padding:6px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;
+  font:inherit; font-size:calc(13.5px * var(--esc)); font-weight:500;
+  color:var(--anil-claro); background:transparent;
+  border:1px solid color-mix(in oklab, var(--anil-claro) 40%, transparent);
+  transition:background .15s var(--ease), border-color .15s var(--ease);
+}
+.cp-regras-bt svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round; }
+.cp-regras-bt:hover{ background:color-mix(in oklab, var(--anil-claro) 10%, transparent);
+  border-color:var(--anil-claro); }
+.cp-regras-bt:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:2px; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   JANELA DE REGRAS
+   O fundo escurece e desfoca: a campanha continua lá atrás, mas deixa de
+   competir. O painel tem três andares — quem, o resumo em números, as regras
+   por assunto — e o rodapé fica preso embaixo, para o Fechar estar sempre à mão
+   mesmo com a lista longa.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.dr{
+  padding:0; border:0; background:transparent; max-width:none; max-height:none;
+  width:100%; height:100%; margin:0; color:var(--giz);
+  display:grid; place-items:center;
+}
+.dr:not([open]){ display:none; }
+.dr::backdrop{
+  background:color-mix(in oklab, #05070B 62%, transparent);
+  backdrop-filter:blur(8px) saturate(120%);
+}
+.dr-painel{
+  position:relative; width:min(680px, calc(100vw - 32px));
+  max-height:min(86vh, 860px); display:flex; flex-direction:column;
+  background:var(--sup-0); border:1px solid var(--fio-forte); border-radius:20px;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.55), 0 0 0 1px color-mix(in oklab, var(--giz) 4%, transparent) inset;
+  overflow:hidden;
+  animation:drEntra .22s cubic-bezier(.2,.8,.2,1) both;
+}
+/* O fio superior leva a cor do prazo: a mesma leitura do trilho do cartão. */
+.dr-painel::before{ content:''; position:absolute; inset:0 0 auto 0; height:3px; background:var(--jade); }
+.dr-urgente::before{ background:var(--brasa); }
+.dr-atencao::before{ background:var(--ouro); }
+.dr-fim::before{ background:var(--fio-forte); }
+@keyframes drEntra{ from{ opacity:0; transform:translateY(10px) scale(.98); } to{ opacity:1; transform:none; } }
+
+.dr-cab{ display:flex; align-items:center; gap:12px; padding:22px 22px 0 24px; }
+.dr-rota{ display:flex; align-items:center; gap:7px; flex:1; min-width:0; }
+.dr-rota-txt{ display:flex; flex-direction:column; margin-left:6px; min-width:0; }
+.dr-rota-txt h2{ margin:0; font-size:calc(18px * var(--esc)); font-weight:600; color:var(--giz); line-height:1.2; }
+.dr-rota-txt span{ font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
+.dr-x{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center; cursor:pointer;
+  background:transparent; border:1px solid var(--fio); color:var(--grafite); flex-shrink:0; }
+.dr-x svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+.dr-x:hover{ border-color:var(--brasa); color:var(--brasa); }
+.dr-x:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:2px; }
+
+/* O resumo: o número da campanha e os fatos que mudam a conta, antes de
+   qualquer texto. Quem abriu a regra para conferir um detalhe já vê o resto. */
+.dr-resumo{ display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+  margin:18px 22px 0 24px; padding:16px 18px; border-radius:14px;
+  background:var(--sup-1); border:1px solid var(--fio); }
+.dr-num{ display:flex; flex-direction:column; padding-right:22px; border-right:1px solid var(--fio); }
+.dr-num b{ font-family:var(--f-d); font-weight:700; font-size:calc(44px * var(--esc)); line-height:.95;
+  letter-spacing:-.04em; color:var(--ouro); font-variant-numeric:tabular-nums; }
+.dr-num span{ margin-top:4px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.dr-meta{ margin:0; display:flex; flex-direction:column; gap:5px; flex:1; min-width:200px; }
+.dr-meta div{ display:flex; gap:8px; align-items:baseline; }
+.dr-meta dt{ font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); min-width:48px; }
+.dr-meta dd{ margin:0; font-size:calc(14px * var(--esc)); color:var(--grafite); }
+.dr-meta dd b{ color:var(--giz); font-variant-numeric:tabular-nums; }
+.dr-prazo{ font-weight:600; color:var(--giz) !important; }
+.dr-urgente .dr-prazo{ color:var(--brasa) !important; }
+.dr-atencao .dr-prazo{ color:var(--ouro) !important; }
+.dr-prazo small{ font-weight:400; color:var(--grafite-dim); margin-left:4px; }
+
+/* As regras, agrupadas. Cada grupo tem a cor da sua categoria no título e num
+   fio à esquerda de cada item — a mesma cor das caixas do cartão. */
+.dr-corpo{ overflow-y:auto; padding:6px 22px 8px 24px; margin-top:12px; overscroll-behavior:contain; }
+.dr-grupo{ padding:14px 0 6px; }
+.dr-grupo + .dr-grupo{ border-top:1px solid var(--fio); }
+.dr-grupo h3{ display:flex; align-items:center; gap:8px; margin:0 0 10px;
+  font-size:calc(14px * var(--esc)); font-weight:600; }
+.dr-grupo h3 svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round; }
+.dr-grupo ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
+.dr-grupo li{ padding:2px 0 2px 13px; border-left:2px solid currentColor;
+  font-size:calc(14.5px * var(--esc)); line-height:1.55; }
+.dr-grupo li{ color:var(--grafite); }
+.dr-grupo li b{ color:var(--giz); font-weight:600; font-variant-numeric:tabular-nums; }
+.dr-jade h3{ color:var(--jade); }   .dr-jade li{ border-left-color:color-mix(in oklab, var(--jade) 70%, transparent); }
+.dr-ouro h3{ color:var(--ouro); }   .dr-ouro li{ border-left-color:color-mix(in oklab, var(--ouro) 70%, transparent); }
+.dr-anil h3{ color:var(--anil-claro); } .dr-anil li{ border-left-color:color-mix(in oklab, var(--anil-claro) 70%, transparent); }
+.dr-giz h3{ color:var(--grafite); } .dr-giz li{ border-left-color:var(--fio-forte); }
+
+.dr-pe{ display:flex; justify-content:flex-end; gap:10px; padding:14px 22px 18px 24px;
+  border-top:1px solid var(--fio); background:var(--sup-0); }
+.dr-pe a.bt{ text-decoration:none; }
+.dr-meta dt{ min-width:62px; }
+.dr-meta dd b.cp-jade{ color:var(--jade); } .dr-meta dd b.cp-ouro{ color:var(--ouro); } .dr-meta dd b.cp-brasa{ color:var(--brasa); }
+
+/* Celular: a janela vira folha que sobe da borda de baixo, na largura toda —
+   é onde o polegar alcança o Fechar. */
+@media (max-width:640px){
+  .dr{ place-items:end stretch; }
+  .dr-painel{ width:100%; max-height:90vh; border-radius:20px 20px 0 0; border-bottom:0;
+    animation-name:drSobe; }
+  .dr-cab{ padding:20px 16px 0 18px; }
+  .dr-resumo{ margin:16px 16px 0 18px; gap:14px; }
+  .dr-num{ border-right:0; padding-right:0; flex-direction:row; align-items:baseline; gap:8px; }
+  .dr-num b{ font-size:calc(38px * var(--esc)); }
+  .dr-corpo{ padding:4px 16px 8px 18px; }
+  .dr-pe{ padding:12px 16px calc(14px + env(safe-area-inset-bottom, 0px)) 18px; }
+  .dr-pe .bt{ flex:1; justify-content:center; }
+}
+@keyframes drSobe{ from{ transform:translateY(24px); opacity:0; } to{ transform:none; opacity:1; } }
+@media (prefers-reduced-motion:reduce){ .dr-painel{ animation:none; } }
 
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
@@ -7101,7 +7214,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 15:00';
+const BUILD = '2026-09-24 15:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13155,6 +13268,136 @@ function extraTitulo(c){
   return resto.length > 3 ? t : '';
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   JANELA DE REGRAS
+   ──────────────────────────────────────────────────────────────────────────────
+   O regulamento resumido, organizado por assunto em vez de texto corrido: quem
+   lê regra procura uma resposta específica — "preciso de clube?", "até quando
+   cai o bônus?" —, e parágrafo único obriga a ler tudo para achar uma linha.
+
+   É o <dialog> do próprio navegador, não uma imitação: fecha com Esc, prende o
+   foco enquanto aberto e devolve ao botão que a abriu, o que janela montada à
+   mão costuma esquecer.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const GRUPOS_REGRA = [
+  {k:'escopo', tit:'Para quem vale',      tom:'jade', icone:'ok'},
+  {k:'obrig',  tit:'O que é obrigatório', tom:'ouro', icone:'alerta'},
+  {k:'vant',   tit:'Vantagens',           tom:'jade', icone:'ok'},
+  {k:'prazo',  tit:'Prazos e validade',   tom:'anil', icone:'relogio'},
+  {k:'outro',  tit:'Detalhes',            tom:'giz',  icone:'info'}
+];
+/* Ganhos que são da campanha, e não do regulamento geral: milhas extras na
+   primeira transferência, bônus adicional. Os gatilhos de vantagem do sistema
+   foram escritos para clube — carência, fidelidade — e não os reconheciam. */
+const VANTAGEM_CAMPANHA = [/milhas extras/i, /pontos extras/i, /b[ôo]nus (adicional|extra)/i, /^\+\d/i, /^mil milhas/i];
+const PRAZO_REGRA = [/cr[ée]dit/i, /validade/i, /v[áa]lid[oa]s? por/i, /dias [úu]teis/i, /\bat[ée] \d/i, /\bexpira/i];
+
+function classificarRegra(l){
+  if (ESCOPO_CAMPANHA.some(r => r.test(l))) return 'escopo';
+  if (OBRIGACAO_CAMPANHA.some(r => r.test(l)) || GATILHOS_RESTRICAO.some(r => r.test(l))) return 'obrig';
+  if (GATILHOS_VANTAGEM.some(r => r.test(l)) || VANTAGEM_CAMPANHA.some(r => r.test(l))) return 'vant';
+  if (PRAZO_REGRA.some(r => r.test(l))) return 'prazo';
+  return 'outro';
+}
+
+/* Números em destaque: é o que se procura numa regra — quanto, até quando,
+   quantos. O texto em volta fica no tom normal. */
+const destacarNumeros = txt => esc(txt).replace(
+  /(R\$\s?[\d.,]+|\d[\d.,]*\s?(?:%|mil|k)?(?:\s?:\s?\d[\d.,]*)?)/g, '<b>$1</b>');
+
+/* Quanto custaria o milheiro no destino se a campanha fosse usada hoje, com o
+   custo médio atual da origem. Uma função só para o cartão e a janela: dois
+   cálculos separados acabariam discordando em alguma casa decimal. */
+function cpmProjetadoCampanha(c){
+  if (c.tipo === 'compra' && tabelaDe(c.para))
+    return tabelaDe(c.para) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
+  if (c.tipo === 'transferencia'){
+    const par = PARIDADES.find(x => x.de === c.de && x.para === c.para);
+    const co = cpmPorPrograma()[c.de] ?? custoMarginal(c.de).cpm;
+    if (par && co) return co * par.p / (1 + (c.bonus || 0) / 100);
+  }
+  return null;
+}
+
+function abrirRegras(id, gatilho){
+  const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+  let d = document.getElementById('dlgRegras');
+  if (!d){
+    d = document.createElement('dialog');
+    d.id = 'dlgRegras'; d.className = 'dr';
+    d.setAttribute('aria-labelledby', 'drTit');
+    document.body.appendChild(d);
+    /* Clique fora do painel fecha. O alvo é o próprio <dialog> quando se clica
+       no fundo escurecido, porque o painel ocupa só o miolo. */
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });
+    d.addEventListener('close', () => { if (d._volta) d._volta.focus(); });
+  }
+  d._volta = gatilho || null;
+
+  const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean);
+  const grupos = {};
+  linhas.forEach(l => { const k = classificarRegra(l); (grupos[k] = grupos[k] || []).push(l); });
+
+  const dias = diasAte(c.fim);
+  const urg = dias === null ? 'folga' : dias < 0 ? 'fim' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'folga';
+  const prazo = dias === null ? '' : dias < 0 ? 'Encerrada' : dias === 0 ? 'Fecha hoje'
+    : dias === 1 ? 'Fecha amanhã' : `Fecha em ${dias} dias`;
+  const num = c.tipo === 'compra' && c.desconto ? `${nBRdec(c.desconto)}%` : `${nBRdec(c.bonus || 0)}%`;
+  const numRot = c.tipo === 'compra' && c.desconto ? 'de desconto' : 'de bônus';
+
+  const cpm = cpmProjetadoCampanha(c);
+  const fx = faixasDe(c.para);
+  const tomCpm = cpm == null ? '' : cpm <= fx.alvo ? 'jade' : cpm <= fx.razoavel ? 'ouro' : 'brasa';
+  const fatos = [
+    c.limite ? `Limite de <b>${nBR(c.limite)}</b> por CPF` : '',
+    c.limiteClube ? `Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube` : '',
+    c.minimo ? `Mínimo de <b>${nBR(c.minimo)}</b>` : '',
+    c.carrinho ? `Carrinho a <b>${brl2(c.carrinho)}</b> por mil` : ''
+  ].filter(Boolean);
+
+  d.innerHTML = `
+    <div class="dr-painel dr-${urg}">
+      <header class="dr-cab">
+        <div class="dr-rota">
+          ${c.de ? discoProg(c.de) + '<svg class="cp-seta"><use href="#i-seta-d"/></svg>' : ''}${discoProg(c.para)}
+          <div class="dr-rota-txt">
+            <h2 id="drTit">${c.de ? esc(prog(c.de).n) + ' para ' : ''}${esc(prog(c.para).n)}</h2>
+            <span>Regras Completas</span>
+          </div>
+        </div>
+        <button type="button" class="dr-x" onclick="document.getElementById('dlgRegras').close()" aria-label="Fechar">
+          <svg><use href="#i-x"/></svg></button>
+      </header>
+
+      <div class="dr-resumo">
+        <div class="dr-num"><b>${num}</b><span>${numRot}</span></div>
+        <dl class="dr-meta">
+          ${prazo ? `<div><dt>Prazo</dt><dd class="dr-prazo">${prazo}${c.fim ? ` <small>${dataBR(c.fim)}</small>` : ''}</dd></div>` : ''}
+          ${cpm != null ? `<div><dt>Milheiro</dt><dd>projetado em <b class="cp-${tomCpm}">${brl2(cpm)}</b></dd></div>` : ''}
+          ${fatos.length ? `<div><dt>Limites</dt><dd>${fatos.join('<br>')}</dd></div>` : ''}
+        </dl>
+      </div>
+
+      <div class="dr-corpo">
+        ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
+          <section class="dr-grupo dr-${g.tom}">
+            <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
+            <ul>${grupos[g.k].map(l => `<li>${destacarNumeros(l)}</li>`).join('')}</ul>
+          </section>`).join('')}
+      </div>
+
+      <footer class="dr-pe">
+        <button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRegras').close()">Fechar</button>
+        ${c.link ? `<a class="bt primario" href="${esc(c.link)}" target="_blank" rel="noopener">
+          <svg><use href="#i-link"/></svg>Abrir página da campanha</a>` : ''}
+      </footer>
+    </div>`;
+
+  d.showModal();
+  const x = d.querySelector('.dr-x'); if (x) x.focus();
+}
+
 function cartaoCampanha(c){
   const dias = diasAte(c.fim);
   const urg = dias === null ? 'folga' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'folga';
@@ -13182,13 +13425,7 @@ function cartaoCampanha(c){
     return `<span class="cp-marca" style="left:${pos(Number(v))}%" title="Melhor em ${esc(nome)}: ${nBRdec(Number(v))}%"><i></i><em>${esc(nome)}</em></span>`;
   }).join('');
 
-  let cpm = null;
-  if (c.tipo === 'compra' && tabelaDe(c.para)) cpm = tabelaDe(c.para) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
-  else if (c.tipo === 'transferencia'){
-    const par = PARIDADES.find(x => x.de === c.de && x.para === c.para);
-    const co = cpmPorPrograma()[c.de] ?? custoMarginal(c.de).cpm;
-    if (par && co) cpm = co * par.p / (1 + (c.bonus || 0) / 100);
-  }
+  const cpm = cpmProjetadoCampanha(c);
   const f = faixasDe(c.para);
   const tomCpm = cpm == null ? '' : cpm <= f.alvo ? 'jade' : cpm <= f.razoavel ? 'ouro' : 'brasa';
 
@@ -13268,12 +13505,11 @@ function cartaoCampanha(c){
       ${c.carrinho ? `<span class="cp-fato">Carrinho a <b>${brl2(c.carrinho)}</b> por mil</span>` : ''}
     </div>
 
-    ${escopo.length || obrig.length ? `<div class="cp-criticas">${
+    ${escopo.length || obrig.length || linhas.length ? `<div class="cp-criticas">${
       escopo.map(l => linhaDestaque(l, 'escopo')).join('')}${
-      obrig.map(l => linhaDestaque(l, 'obrig')).join('')}</div>` : ''}
-
-    ${linhas.length ? `<details class="cp-regras"><summary>Regras completas</summary>
-      <div class="pilha" style="gap:4px">${regrasComDestaque(c.regra)}</div></details>` : ''}
+      obrig.map(l => linhaDestaque(l, 'obrig')).join('')}${
+      linhas.length ? `<button type="button" class="cp-regras-bt" onclick="abrirRegras('${c.id}', this)"
+        aria-haspopup="dialog"><svg><use href="#i-info"/></svg>Regras Completas</button>` : ''}</div>` : ''}
   </article>`;
 }
 
