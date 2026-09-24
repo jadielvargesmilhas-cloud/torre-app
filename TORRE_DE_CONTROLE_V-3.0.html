@@ -836,6 +836,15 @@ p:last-child{ margin-bottom:0; }
 .ctm-sem svg{ width:16px; height:16px; flex-shrink:0; margin-top:2px; fill:none; stroke:var(--anil-claro); stroke-width:1.9; }
 
 
+
+.mk-fav{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:14px; padding:11px 14px; border-radius:12px;
+  background:color-mix(in oklab, var(--anil-claro) 7%, transparent); border:1px dashed color-mix(in oklab, var(--anil-claro) 40%, transparent); }
+.mk-fav-txt{ flex:1 1 420px; font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.mk-fav-txt b{ color:var(--giz); }
+.mk-fav-txt .fraco{ display:block; margin-top:2px; }
+.mk-favorito{ cursor:grab; white-space:nowrap; text-decoration:none; border-style:dashed; }
+.mk-favorito:active{ cursor:grabbing; }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -7621,7 +7630,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-25 15:10';
+const BUILD = '2026-09-25 17:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -26559,6 +26568,8 @@ function ligarObservadorDeTabelas(){
   });
   obs.observe(palco, {childList:true, subtree:true});
   montarColunaMenu();
+  /* Leitura vinda do botão de favoritos do Rota 360, se houver. */
+  setTimeout(receberDoFavorito, 400);
   rotularTabelas(document);
   avaliarTabelas();
   marcarBotoesPrincipais();
@@ -31382,10 +31393,24 @@ function posicoesDeVenda(){
    São referências de mercado — ofertas e respostas observadas —, não vendas
    concluídas, e a Torre diz isso onde usa o número.
    ══════════════════════════════════════════════════════════════════════════════ */
+/* Equivalência entre os nomes do Rota 360 e os programas da Torre. Conferida
+   um a um contra a lista de programas que o próprio Rota 360 publica: 24 existem
+   nos dois, e 9 deles com nome diferente — Banrisul lá é Banriclube aqui,
+   United Airlines é MileagePlus, Átomos é C6 Átomos. Sem esta tabela, uma
+   leitura de "Banrisul" seria recusada embora o programa exista na Torre.
+   Na tela Mercado a Azul aparece ainda como "Azul Viagens". */
 const NOMES_MERCADO = {
   'latam pass':'latampass', 'latam':'latampass', 'smiles':'smiles',
   'azul':'azul', 'azul viagens':'azul', 'azul fidelidade':'azul', 'tudoazul':'azul',
-  'tap':'tap', 'tap miles&go':'tap', 'iberia':'iberia', 'iberia plus':'iberia'
+  'livelo':'livelo', 'esfera':'esfera', 'átomos':'atomos', 'atomos':'atomos', 'c6 átomos':'atomos',
+  'uau caixa':'uau', 'revpoints':'revpoints', 'revpoints - revolution':'revpoints', 'revpoints - revolut':'revpoints',
+  'banrisul':'banriclube', 'banriclube':'banriclube', 'premmia':'premmia',
+  'tap':'tap', 'tap miles&go':'tap', 'iberia':'iberia', 'ibéria':'iberia', 'iberia plus':'iberia',
+  'flying blue':'flyingblue', 'british executive club':'british', 'british airways club':'british',
+  'qatar privilege club':'qatar', 'qatar':'qatar', 'finnair plus':'finnair', 'hilton honors':'hilton',
+  'ihg':'ihg', 'ihg one rewards':'ihg', 'all accor':'accor', 'connect miles':'connect', 'connectmiles':'connect',
+  'united airlines':'united', 'mileageplus':'united', 'lifemiles':'lifemiles', 'aeroplan':'aeroplan',
+  'air europa suma':'suma', 'aeromexico rewards':'aeromexico'
 };
 const progDoMercado = nome => NOMES_MERCADO[String(nome || '').trim().toLowerCase()] || null;
 const numBR = t => { const m = String(t || '').replace(/\u00a0/g, ' ').match(/-?[\d.]+(?:,\d+)?/); return m ? Number(m[0].replace(/\./g, '').replace(',', '.')) : null; };
@@ -31403,77 +31428,75 @@ function limitesFaixa(rot){
   return null;
 }
 
-/* Texto da página em pedaços, na ordem em que aparecem — sem layout, que o
-   DOMParser não calcula. */
-function pedacosDeTexto(doc){
-  const out = [], w = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_TEXT);
-  let n;
+/* ── o leitor, em duas camadas ─────────────────────────────────────────────────
+   EXTRAIR copia da página só o que está escrito nela, sem interpretar nada. É a
+   mesma função que roda dentro do botão de favoritos, na página do Rota 360 — por
+   isso ela é autossuficiente: não pode chamar nada da Torre, porque lá a Torre
+   não existe.
+
+   INTERPRETAR transforma o bruto em leitura: programa, faixas, preços. Roda
+   sempre na Torre, venha o bruto de um arquivo salvo ou do favorito. Um leitor
+   só, para os dois caminhos nunca discordarem. */
+function extrairBrutoR360(doc){
+  var pedacos = [], w = doc.createTreeWalker(doc.body || doc, 4), n;
   while ((n = w.nextNode())){
-    const pai = n.parentElement && n.parentElement.closest('script,style,template,svg,noscript');
-    if (pai) continue;
-    const t = n.nodeValue.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-    if (t) out.push(t);
+    var pai = n.parentElement;
+    if (pai && pai.closest('script,style,template,svg,noscript')) continue;
+    var t = n.nodeValue.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+    if (t) pedacos.push(t);
   }
-  return out;
+  var texto = pedacos.join(' | ');
+  var iC = pedacos.findIndex(function(t){ return /^Comparativo por faixa$/i.test(t); });
+  var mh = texto.match(/Dados atualizados em (\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
+  var linhas = [];
+  doc.querySelectorAll('table tr').forEach(function(tr){
+    var c = [].map.call(tr.children, function(td){ return td.textContent.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim(); });
+    if (c.length >= 5) linhas.push(c);
+  });
+  var mf = texto.match(/Mais indicadores de ([^|]+?) \| Pre[çc]o m[ée]dio \| R\$ ?([\d.,]+) \| 50% das respostas \| R\$ ?([\d.,]+) a R\$ ?([\d.,]+) \| Pedido inicial \| R\$ ?([\d.,]+)/);
+  var ofertas = {}, re = /([A-Za-zÀ-ú&.\- ]+?) \| (\d+) ofertas \|/g, mo;
+  while ((mo = re.exec(texto))){ var nm = mo[1].trim(); if (!(nm in ofertas)) ofertas[nm] = +mo[2]; }
+  return {v:1, mercado:/Mercado em n[úu]meros|Comparativo por faixa/i.test(texto),
+    legenda: iC >= 0 ? (pedacos[iC + 1] || '') : '', lido: mh ? mh.slice(1, 6) : null,
+    linhas: linhas, foco: mf ? mf.slice(1, 6) : null, ofertas: ofertas};
+}
+
+function interpretarBrutoR360(b, nomeArquivo){
+  if (!b || !b.mercado) return {erro:`${nomeArquivo}: não parece a página Mercado do Rota 360.`};
+  const campos = String(b.legenda || '').split('·').map(x => x.trim());
+  const nomeProg = campos[0] || '';
+  const prg = progDoMercado(nomeProg);
+  if (!prg) return {erro:`${nomeProg || 'Programa sem nome'} está no Rota 360, mas não existe na Torre.`, ignorado:true, nome:nomeProg};
+  const periodo = campos[1] || '';
+  const parcial = campos.some(x => /parcial/i.test(x));
+  const lidoEm = b.lido ? `${b.lido[2]}-${b.lido[1]}-${b.lido[0]}T${b.lido[3]}:${b.lido[4]}` : null;
+  if (!lidoEm) return {erro:`${nomeArquivo}: não encontrei a data da leitura.`};
+
+  /* A faixa vem numa célula de cabeçalho e o resto em células comuns; o último
+     preço vem colado na data, "R$ 27,2524/09/2026" — lido como R$ com duas
+     casas, senão viraria 27,2524. */
+  const reais = t => { const m = String(t).match(/R\$\s?([\d.]+,\d{2})/); return m ? Number(m[1].replace(/\./g, '').replace(',', '.')) : null; };
+  const faixas = [];
+  (b.linhas || []).forEach(c => {
+    const lim = limitesFaixa(c[0]); if (!lim) return;
+    const dt = String(c[2]).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    faixas.push({rot:c[0], ...lim, mediana:reais(c[1]), ultimo:reais(c[2]),
+      ultimoEm: dt ? `${dt[3]}-${dt[2]}-${dt[1]}` : null, ofertas:numBR(c[3]) || 0, respostas:numBR(c[4]) || 0});
+  });
+  if (!faixas.length) return {erro:`${nomeArquivo}: a tabela de faixas veio vazia.`};
+
+  const r2 = x => Number(String(x).replace(/\./g, '').replace(',', '.'));
+  const foco = b.foco ? {rot:String(b.foco[0]).trim(), media:r2(b.foco[1]), p25:r2(b.foco[2]), p75:r2(b.foco[3]), pedido:r2(b.foco[4])} : null;
+  const ofertasPorProg = {};
+  Object.entries(b.ofertas || {}).forEach(([nome, q]) => { const p2 = progDoMercado(nome); if (p2 && ofertasPorProg[p2] == null) ofertasPorProg[p2] = q; });
+
+  return {leitura:{id:uid(), fonte:'Rota 360', prog:prg, periodo, parcial, lidoEm,
+    importadoEm:new Date().toISOString(), faixas, foco, ofertasPorProg}};
 }
 
 function lerLeituraR360(html, nomeArquivo){
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const partes = pedacosDeTexto(doc);
-  const texto = partes.join(' | ');
-  if (!/Mercado em n[úu]meros/i.test(texto) && !/Comparativo por faixa/i.test(texto))
-    return {erro:`${nomeArquivo}: não parece a página Mercado do Rota 360.`};
-
-  /* Programa e período: a legenda do comparativo diz os dois. */
-  const iComp = partes.findIndex(t => /^Comparativo por faixa$/i.test(t));
-  const legenda = iComp >= 0 ? partes[iComp + 1] || '' : '';
-  const campos = legenda.split('·').map(x => x.trim());
-  const nomeProg = campos[0] || '';
-  const prg = progDoMercado(nomeProg);
-  if (!prg) return {erro:`${nomeArquivo}: o programa "${nomeProg || 'sem nome'}" não existe na Torre.`, ignorado:true};
-  const periodo = campos[1] || '';
-  const parcial = campos.some(x => /parcial/i.test(x));
-
-  const mh = texto.match(/Dados atualizados em (\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
-  const lidoEm = mh ? `${mh[3]}-${mh[2]}-${mh[1]}T${mh[4]}:${mh[5]}` : null;
-  if (!lidoEm) return {erro:`${nomeArquivo}: não encontrei a data da leitura.`};
-
-  /* A tabela do comparativo: faixa, mediana, último preço, ofertas, respostas. */
-  const faixas = [];
-  /* A faixa vem numa célula de cabeçalho (th) e o resto em células comuns — por
-     isso lê-se todos os filhos da linha. E o último preço vem colado na data,
-     "R$ 27,2524/09/2026": o preço é lido como R$ com duas casas, senão viraria
-     27,2524. */
-  const reais = t => { const m = String(t).replace(/\u00a0/g, ' ').match(/R\$\s?([\d.]+,\d{2})/); return m ? Number(m[1].replace(/\./g, '').replace(',', '.')) : null; };
-  doc.querySelectorAll('table tr').forEach(tr => {
-    const c = [...tr.children].map(td => td.textContent.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim());
-    if (c.length < 5) return;
-    const lim = limitesFaixa(c[0]);
-    if (!lim) return;
-    const dt = c[2].match(/(\d{2})\/(\d{2})\/(\d{4})/);
-    faixas.push({rot:c[0], ...lim, mediana:reais(c[1]), ultimo:reais(c[2]),
-      ultimoEm: dt ? `${dt[3]}-${dt[2]}-${dt[1]}` : null,
-      ofertas:numBR(c[3]) || 0, respostas:numBR(c[4]) || 0});
-  });
-  if (!faixas.length) return {erro:`${nomeArquivo}: a tabela de faixas veio vazia.`};
-
-  /* Indicadores extras da faixa em foco, quando a página os mostra. */
-  let foco = null;
-  const mf = texto.match(/Mais indicadores de ([^|]+?) \| Pre[çc]o m[ée]dio \| R\$ ?([\d.,]+) \| 50% das respostas \| R\$ ?([\d.,]+) a R\$ ?([\d.,]+) \| Pedido inicial \| R\$ ?([\d.,]+)/);
-  if (mf){ const r2 = x => Number(String(x).replace(/\./g, '').replace(',', '.'));
-    foco = {rot:mf[1].trim(), media:r2(mf[2]), p25:r2(mf[3]), p75:r2(mf[4]), pedido:r2(mf[5])}; }
-
-  /* Quantas ofertas cada programa teve no período — a procura de cada um. */
-  const ofertasPorProg = {};
-  const re = /([A-Za-zÀ-ú&. ]+?) \| (\d+) ofertas \|/g;
-  let mo;
-  while ((mo = re.exec(texto))){
-    const p2 = progDoMercado(mo[1]);
-    if (p2 && ofertasPorProg[p2] == null) ofertasPorProg[p2] = Number(mo[2]);
-  }
-
-  return {leitura:{id:uid(), fonte:'Rota 360', prog:prg, periodo, parcial, lidoEm,
-    importadoEm:new Date().toISOString(), faixas, foco, ofertasPorProg}};
+  return interpretarBrutoR360(extrairBrutoR360(doc), nomeArquivo);
 }
 
 /* A leitura mais recente de cada programa. */
@@ -31509,32 +31532,77 @@ function ganhoAoFatiar(prg, qtd){
   return {faixa:melhor, lotes, ganho:(melhor.mediana - r.faixa.mediana) * qtd / 1000, atual:r.faixa};
 }
 
+/* Guarda leituras já interpretadas, venham de arquivo ou do favorito. */
+function guardarLeiturasMercado(res){
+  DB.mercado = DB.mercado || {leituras:[]};
+  const ok = [], erros = [];
+  res.forEach(r => {
+    if (r.erro){ erros.push(r.erro); return; }
+    const L = r.leitura;
+    /* A mesma leitura importada duas vezes não duplica. */
+    const i = DB.mercado.leituras.findIndex(x => x.prog === L.prog && x.lidoEm === L.lidoEm && x.periodo === L.periodo);
+    if (i >= 0) DB.mercado.leituras[i] = {...L, id:DB.mercado.leituras[i].id}; else DB.mercado.leituras.push(L);
+    ok.push(`${prog(L.prog).n} (${L.periodo || 'período'}${L.parcial ? ', parcial' : ''}, ${L.faixas.length} faixas)`);
+  });
+  /* Guarda as 60 leituras mais recentes de cada programa: é histórico que basta
+     para ver tendência sem inchar o banco. */
+  const porProg = {};
+  DB.mercado.leituras.sort((a, b) => (b.lidoEm || '').localeCompare(a.lidoEm || ''))
+    .forEach(l => { (porProg[l.prog] = porProg[l.prog] || []).push(l); });
+  DB.mercado.leituras = Object.values(porProg).flatMap(v => v.slice(0, 60));
+  if (ok.length) salvar();
+  renderVender();
+  if (ok.length) avisar(`Leitura importada: ${ok.join('; ')}.${erros.length ? ' ' + erros.join(' ') : ''}`, 'ok');
+  else avisar(erros.join(' ') || 'Nada foi lido.', 'erro');
+  return {ok, erros};
+}
+
 function importarLeiturasMercado(arquivos){
   const lista = [...(arquivos || [])];
   if (!lista.length) return;
-  Promise.all(lista.map(f => f.text().then(t => lerLeituraR360(t, f.name)))).then(res => {
-    DB.mercado = DB.mercado || {leituras:[]};
-    const ok = [], erros = [];
-    res.forEach(r => {
-      if (r.erro){ erros.push(r.erro); return; }
-      const L = r.leitura;
-      /* A mesma leitura importada duas vezes não duplica. */
-      const i = DB.mercado.leituras.findIndex(x => x.prog === L.prog && x.lidoEm === L.lidoEm && x.periodo === L.periodo);
-      if (i >= 0) DB.mercado.leituras[i] = {...L, id:DB.mercado.leituras[i].id}; else DB.mercado.leituras.push(L);
-      ok.push(`${prog(L.prog).n} (${L.periodo || 'período'}${L.parcial ? ', parcial' : ''}, ${L.faixas.length} faixas)`);
-    });
-    /* Guarda as 60 leituras mais recentes de cada programa: é histórico que basta
-       para ver tendência sem inchar o banco. */
-    const porProg = {};
-    DB.mercado.leituras.sort((a, b) => (b.lidoEm || '').localeCompare(a.lidoEm || ''))
-      .forEach(l => { (porProg[l.prog] = porProg[l.prog] || []).push(l); });
-    DB.mercado.leituras = Object.values(porProg).flatMap(v => v.slice(0, 60));
-    if (ok.length) salvar();
-    renderVender();
-    if (ok.length) avisar(`Leitura importada: ${ok.join('; ')}.${erros.length ? ' ' + erros.join(' ') : ''}`, 'ok');
-    else avisar(erros.join(' ') || 'Nenhum arquivo lido.', 'erro');
-  });
+  Promise.all(lista.map(f => f.text().then(t => lerLeituraR360(t, f.name)))).then(guardarLeiturasMercado);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BOTÃO DE FAVORITOS "ENVIAR PARA A TORRE"
+   ──────────────────────────────────────────────────────────────────────────────
+   Um favorito que, clicado na página Mercado do Rota 360, lê a tabela que está
+   na tela e abre a Torre com a leitura. Roda na sessão de quem já está logado:
+   nenhuma senha é guardada, nenhum robô entra no Rota 360, e a leitura viaja no
+   endereço depois do "#" — trecho que o navegador não envia a servidor nenhum.
+
+   O código do favorito é a própria função de extração da Torre, copiada para
+   dentro dele: o mesmo leitor que já foi testado com o arquivo salvo.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function codigoFavoritoR360(){
+  const destino = location.origin + location.pathname;
+  const corpo = `(function(){try{var extrair=${extrairBrutoR360.toString()};
+var b=extrair(document);
+if(!b.mercado||!b.linhas.length){alert('Abra a página Mercado do Rota 360 (Inteligência → Mercado) e clique de novo.');return;}
+var d=btoa(unescape(encodeURIComponent(JSON.stringify(b)))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+window.open(${JSON.stringify(destino)}+'#mercado='+d,'torre');
+}catch(e){alert('Não consegui ler esta página: '+e.message);}})()`;
+  return 'javascript:' + encodeURIComponent(corpo.replace(/\n/g, ''));
+}
+
+/* A Torre recebe a leitura pelo endereço — ao abrir, ou já aberta, quando o
+   favorito reaproveita a aba. */
+function receberDoFavorito(){
+  const m = String(location.hash || '').match(/#mercado=([\w-]+)/);
+  if (!m) return false;
+  /* Limpa o endereço antes de tudo: recarregar a página não importa de novo. */
+  history.replaceState(null, '', location.pathname + location.search);
+  let bruto = null;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    bruto = JSON.parse(decodeURIComponent(escape(atob(b64 + '==='.slice((b64.length + 3) % 4)))));
+  } catch(e){ avisar('A leitura enviada pelo favorito veio incompleta. Tente de novo na página do Rota 360.', 'erro'); return true; }
+  const r = interpretarBrutoR360(bruto, 'Favorito');
+  irPara('mesa'); irParaAba('mesa', 'ms-vender');
+  setTimeout(() => guardarLeiturasMercado([r]), 60);
+  return true;
+}
+window.addEventListener('hashchange', receberDoFavorito);
 
 
 /* ── cartão "Preço de mercado" ─────────────────────────────────────────────── */
@@ -31546,6 +31614,17 @@ function renderMercado(posicoes){
     .map(p => leituraMercado(p)).filter(Boolean);
   const todas = [...leituras, ...outras];
 
+  /* O favorito se instala arrastando: o navegador transforma o link numa
+     entrada da barra de favoritos. Clicado aqui, ele só explica isso. */
+  const favorito = `<a class="bt p fantasma mk-favorito" href="${codigoFavoritoR360()}" draggable="true"
+      onclick="event.preventDefault(); avisar('Arraste este botão para a barra de favoritos. Depois, na página Mercado do Rota 360, é só clicar nele.', 'ok')"
+      title="Arraste para a barra de favoritos"><svg><use href="#i-link"/></svg>Enviar para a Torre</a>`;
+  const instalar = `<div class="mk-fav">
+      <div class="mk-fav-txt"><b>Um clique, sem salvar arquivo.</b> Arraste o botão ao lado para a barra de favoritos do navegador.
+        No Rota 360, na página Mercado, clique nele: a Torre abre com a leitura já importada.
+        <span class="fraco">Barra de favoritos escondida? No Chrome, <b>Ctrl + Shift + B</b> (no Mac, <b>Cmd + Shift + B</b>).</span></div>
+      ${favorito}
+    </div>`;
   const botao = `<label class="bt p primario mk-importar">
       <svg><use href="#i-subir"/></svg>Importar leitura do Rota 360
       <input type="file" accept=".html,.htm,text/html" multiple hidden onchange="importarLeiturasMercado(this.files); this.value=''">
@@ -31564,7 +31643,8 @@ function renderMercado(posicoes){
         <p class="fraco">Com a leitura, a venda sugerida da prateleira passa a ser a mediana do mercado na faixa de cada posição, em vez do seu custo mais margem.</p>
       </div>
       ${botao}
-    </div>`;
+    </div>
+    ${instalar}`;
     return;
   }
 
@@ -31616,7 +31696,8 @@ function renderMercado(posicoes){
       </div>
       ${botao}
     </div>
-    <div class="mk-progs">${blocos}</div>`;
+    <div class="mk-progs">${blocos}</div>
+    ${instalar}`;
 }
 
 function renderVender(){
