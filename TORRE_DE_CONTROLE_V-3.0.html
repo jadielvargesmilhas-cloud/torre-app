@@ -369,6 +369,8 @@ p:last-child{ margin-bottom:0; }
    para a linha de baixo, garantido em qualquer navegador, como etiqueta em
    azul — a mesma cor do botão que abriu a janela. */
 .dr-rota-txt h2{ display:block; }
+.dr-cab{ align-items:center; }
+.dr-cab > .dr-rotulo{ margin:0 0 0 auto; flex-shrink:0; }
 .dr-rotulo{ display:inline-flex; align-self:flex-start; align-items:center; gap:5px; margin-top:6px;
   padding:2px 10px 2px 8px; border-radius:99px;
   font-size:calc(12.5px * var(--esc)); font-weight:600; color:var(--anil-claro);
@@ -655,8 +657,10 @@ p:last-child{ margin-bottom:0; }
 .dr-aba-painel > .dr-sim, .dr-aba-painel > .dr-escada-bloco{ padding-top:12px; }
 
 /* Regras em duas colunas quando cabe: é o que as deixa sem rolagem. */
-.dr-regras-grade{ columns:2 260px; column-gap:26px; padding-top:4px; }
-.dr-regras-grade .dr-grupo{ break-inside:avoid; border-top:0 !important; padding:10px 0 4px; }
+/* Uma coluna: os grupos um abaixo do outro, na ordem em que a decisão os lê. */
+.dr-regras-grade{ padding-top:4px; }
+.dr-regras-grade .dr-grupo{ padding:9px 0 3px; }
+.dr-regras-grade .dr-grupo + .dr-grupo{ border-top:1px solid var(--fio); }
 
 .dr-sim-rot{ font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
 .dr-sim-volta{ font:inherit; border:0; background:none; padding:0; cursor:pointer;
@@ -715,6 +719,18 @@ p:last-child{ margin-bottom:0; }
 .dr-escada-leitura{ margin-top:10px; }
 .dr-escada-cta{ margin-top:10px; padding:10px 12px; }
 .dr-grupo li{ font-size:calc(14px * var(--esc)); line-height:1.5; }
+
+
+/* Sem carrinho: dois blocos, os seus pontos e o que chega. */
+.dr-sim-fluxo.sem-carrinho{ grid-template-columns:1fr auto 1.25fr; }
+@media (max-width:640px){ .dr-sim-fluxo.sem-carrinho{ grid-template-columns:1fr; }
+  .dr-sim-fluxo.sem-carrinho .dr-sim-chega{ grid-column:auto; } }
+
+
+.dr-escada-aviso{ display:flex; gap:8px; align-items:flex-start; margin:10px 0 0; padding:9px 12px; border-radius:10px;
+  font-size:calc(13px * var(--esc)); line-height:1.45; color:var(--giz);
+  background:color-mix(in oklab, var(--ouro) 10%, transparent); border:1px solid color-mix(in oklab, var(--ouro) 35%, transparent); }
+.dr-escada-aviso svg{ width:15px; height:15px; flex-shrink:0; margin-top:2px; fill:none; stroke:var(--ouro); stroke-width:2; }
 
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
@@ -7498,7 +7514,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 22:50';
+const BUILD = '2026-09-25 10:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13599,14 +13615,15 @@ function cpmProjetadoCampanha(c, bonusUsado){
     return tabelaDe(c.para) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
   if (c.tipo === 'transferencia'){
     const par = PARIDADES.find(x => x.de === c.de && x.para === c.para);
-    const co = cpmPorPrograma()[c.de] ?? custoMarginal(c.de).cpm;
-    const proprio = par && co ? co * par.p / (1 + b / 100) : null;
+    if (!par) return null;
     /* Com carrinho na campanha, há dois caminhos: transferir os pontos que já
        tem, ao custo médio deles, ou comprar no carrinho. O projetado é o mais
        barato dos dois — mostrar o caro ao lado do simulador, que usa o
        carrinho, dava dois números para a mesma pergunta. */
-    if (Number(c.carrinho) > 0) return contaCarrinho(c, 100000, usarSaldoPadrao(c)).comBonus(b).cpm;
-    return proprio;
+    /* A mesma conta do simulador, com ou sem carrinho: cartão, resumo e
+       simulador nunca discordam. */
+    const r = contaCarrinho(c, 100000, usarSaldoPadrao(c));
+    return r.total > 0 ? r.comBonus(b).cpm : null;
   }
   return null;
 }
@@ -13756,7 +13773,7 @@ function escadaClube(c, dg, ligaSim){
   const dlg = document.getElementById('dlgRegras');
   const escolhido = dlg && dlg._sim && dlg._sim.bonus != null ? dlg._sim.bonus : null;
   return `<section class="dr-escada-bloco" aria-label="${titulo}">
-    ${ligaSim ? `<p class="dr-escada-dica"><svg><use href="#i-carrinho"/></svg>Toque num degrau para simular o carrinho com o bônus dele.</p>` : ''}
+    ${ligaSim ? `<p class="dr-escada-dica"><svg><use href="#i-${Number(c.carrinho) > 0 ? 'carrinho' : 'troca'}"/></svg>Toque num degrau para simular ${Number(c.carrinho) > 0 ? 'o carrinho' : 'a transferência'} com o bônus dele.</p>` : ''}
     <div class="dr-escada" role="list">
       ${pts.map((p, i) => {
         const estado = atual < 0 ? (p.sem ? 'sem' : 'neutro') : i < atual ? 'passado' : i === atual ? 'atual' : 'futuro';
@@ -13778,7 +13795,8 @@ function escadaClube(c, dg, ligaSim){
       }).join('')}
     </div>
     ${leitura}
-    ${dg.naoCumulativo ? `<p class="dr-escada-nota">Não se soma: vale o maior entre o bônus da campanha e o do seu plano do Clube.</p>` : ''}
+    ${dg.naoCumulativo && !(MODELOS_CLUBE[c.para] || {}).aviso ? `<p class="dr-escada-nota">Não se soma: vale o maior entre o bônus da campanha e o do seu plano do Clube.</p>` : ''}
+    ${(MODELOS_CLUBE[c.para] || {}).aviso ? `<p class="dr-escada-aviso"><svg><use href="#i-alerta"/></svg><span>${esc(MODELOS_CLUBE[c.para].aviso)}</span></p>` : ''}
     ${dg.limite ? `<p class="dr-escada-nota">O extra por tempo de Clube tem teto próprio: <b>${nBR(dg.limite)}</b> pontos por ano, à parte do limite da campanha.</p>` : ''}
   </section>`;
 }
@@ -13815,15 +13833,27 @@ function usarSaldoPadrao(c){
 }
 
 function contaCarrinho(c, qtd, usarSaldo){
-  const par = (PARIDADES.find(x => x.de === c.de && x.para === c.para) || {p:1}).p || 1;
+  /* A paridade de quem está usando: com a do clube quando há assinatura ativa na
+     origem — é o que muda Azul para ALL de 9,5 : 1 para 9 : 1. */
+  const par = paridadeCT(c.de, c.para);
   const saldo = saldoPorPrograma()[c.de] || 0;
-  const minimo = Math.ceil(qtd * 0.01);
-  let proprios = usarSaldo ? Math.min(saldo, qtd) : Math.min(saldo, minimo);
-  const faltaMinimo = proprios < minimo;
-  if (faltaMinimo) proprios = minimo;
-  const noCarrinho = qtd - proprios;
+  const comCarrinho = Number(c.carrinho) > 0;
   const cpmMeu = cpmPorPrograma()[c.de];
-  const cpmProprio = cpmMeu || avulsoDe(c.de) || 0;
+  /* Sem custo lançado, vale a estimativa de reposição da Torre — a mesma que
+     o resto do sistema usa —, e o balcão só em último caso. */
+  const cpmProprio = cpmMeu || (custoMarginal(c.de) || {}).cpm || avulsoDe(c.de) || 0;
+  let proprios, noCarrinho, minimo = 0, faltaMinimo = false;
+  if (comCarrinho){
+    minimo = Math.ceil(qtd * 0.01);
+    proprios = usarSaldo ? Math.min(saldo, qtd) : Math.min(saldo, minimo);
+    faltaMinimo = proprios < minimo;
+    if (faltaMinimo) proprios = minimo;
+    noCarrinho = qtd - proprios;
+  } else {
+    /* Sem carrinho, tudo sai dos seus pontos. Se o saldo não cobre, a conta
+       segue — é uma simulação — e o aviso diz quanto falta. */
+    proprios = qtd; noCarrinho = 0;
+  }
   const custoProprio = proprios / 1000 * cpmProprio;
   const custoCarrinho = noCarrinho / 1000 * (Number(c.carrinho) || 0);
   const total = custoProprio + custoCarrinho;
@@ -13832,8 +13862,8 @@ function contaCarrinho(c, qtd, usarSaldo){
     const bonus = Math.min(base * b / 100, c.limite ? Number(c.limite) : Infinity);
     return {bonus, chega: base + bonus, cpm: total / ((base + bonus) / 1000)};
   };
-  return {par, saldo, minimo, proprios, faltaMinimo, noCarrinho, cpmProprio, cpmMeu,
-          custoProprio, custoCarrinho, total, base, comBonus, cpmOrigem: total / (qtd / 1000)};
+  return {par, saldo, minimo, proprios, faltaMinimo, faltaSaldo: !comCarrinho && saldo < qtd, comCarrinho,
+          noCarrinho, cpmProprio, cpmMeu, custoProprio, custoCarrinho, total, base, comBonus, cpmOrigem: total / (qtd / 1000)};
 }
 
 function simuladorCarrinho(c, st){
@@ -13859,20 +13889,20 @@ function simuladorCarrinho(c, st){
       </div>
     </div>
 
-    <div class="dr-sim-fluxo">
+    <div class="dr-sim-fluxo${r.comCarrinho ? '' : ' sem-carrinho'}">
       <div class="dr-sim-bloco">
         <span>Seus pontos ${nomeDe}</span>
         <b>${nBR(r.proprios)}</b>
         <em>${brl2(r.custoProprio)}</em>
-        <small>${r.cpmMeu ? `a ${brl2(r.cpmProprio)}/mil, seu custo médio` : `a ${brl2(r.cpmProprio)}/mil, preço de balcão`}</small>
+        <small>a ${brl2(r.cpmProprio)}/mil, ${r.cpmMeu ? 'seu custo médio' : 'custo estimado de reposição'}</small>
       </div>
-      <div class="dr-sim-op" aria-hidden="true">+</div>
+      ${r.comCarrinho ? `<div class="dr-sim-op" aria-hidden="true">+</div>
       <div class="dr-sim-bloco">
         <span>No carrinho</span>
         <b>${nBR(r.noCarrinho)}</b>
         <em>${brl2(r.custoCarrinho)}</em>
         <small>a ${brl2(c.carrinho)}/mil</small>
-      </div>
+      </div>` : ''}
       <div class="dr-sim-op dr-sim-seta" aria-hidden="true"><svg><use href="#i-seta-d"/></svg></div>
       <div class="dr-sim-bloco dr-sim-chega">
         <span>Chega na ${nomePara}</span>
@@ -13883,17 +13913,21 @@ function simuladorCarrinho(c, st){
     </div>
 
     <div class="dr-sim-res">
-      <div><span>Você paga</span><b>${brl2(r.total)}</b></div>
+      <div><span>${r.comCarrinho ? 'Você paga' : 'Custo dos pontos'}</span><b>${brl2(r.total)}</b></div>
       <div class="dr-sim-destaque"><span>Milheiro ${nomePara}</span><b>${brl2(res.cpm)}</b></div>
-      <div><span>Milheiro ${nomeDe}</span><b>${brl2(r.cpmOrigem)}</b></div>
+      ${r.comCarrinho ? `<div><span>Milheiro ${nomeDe}</span><b>${brl2(r.cpmOrigem)}</b></div>`
+        : `<div><span>Paridade</span><b>${paridadeTxt(r.par)}</b></div>`}
     </div>
 
     ${r.faltaMinimo ? `<p class="dr-sim-aviso"><svg><use href="#i-alerta"/></svg><span>O carrinho exige ao menos
       <b>${nBR(r.minimo)}</b> pontos ${nomeDe} próprios; hoje a Torre registra <b>${nBR(r.saldo)}</b>. A conta supõe o mínimo.</span></p>` : ''}
 
-    <label class="dr-sim-saldo"><input type="checkbox" ${st.usarSaldo ? 'checked' : ''}
+    ${r.faltaSaldo ? `<p class="dr-sim-aviso"><svg><use href="#i-alerta"/></svg><span>Hoje a Torre registra
+      <b>${nBR(r.saldo)}</b> pontos ${nomeDe}; para transferir ${nBR(st.qtd)} faltam <b>${nBR(st.qtd - r.saldo)}</b>.</span></p>` : ''}
+
+    ${r.comCarrinho ? `<label class="dr-sim-saldo"><input type="checkbox" ${st.usarSaldo ? 'checked' : ''}
       onchange="simCarrinho('${c.id}', {usarSaldo:this.checked})">
-      Usar o meu saldo ${nomeDe} (${nBR(r.saldo)}) antes de comprar no carrinho</label>
+      Usar o meu saldo ${nomeDe} (${nBR(r.saldo)}) antes de comprar no carrinho</label>` : ''}
 
     ${bonuses.length > 1 ? `<div class="dr-sim-faixa">
       <span class="dr-sim-faixa-tit">Milheiro ${nomePara} conforme o bônus${
@@ -13926,7 +13960,7 @@ function simCarrinho(id, mud){
   }
 }
 
-let ultimaAbaRegras = 'sim';
+let ultimaAbaRegras = 'regras';
 
 /* Troca de aba. Todas as abas ficam montadas, empilhadas no mesmo lugar: a
    janela assume a altura da maior e não pula ao trocar. Só a visível recebe
@@ -13999,11 +14033,16 @@ function abrirRegras(id, gatilho){
   /* Três partes, cada uma numa aba: o simulador (quando há carrinho), a escada
      do Clube (quando há estrutura de clube) e as regras. Abre na aba usada por
      último, se ela existir nesta campanha. */
-  const temSim = c.tipo === 'transferencia' && Number(c.carrinho) > 0;
+  /* Toda transferência bonificada ganha simulador: com carrinho, a compra na
+     hora de transferir; sem carrinho, os seus próprios pontos. A ordem das abas
+     segue a da decisão — primeiro as regras, depois quanto o Clube rende, por
+     último a conta. */
+  const temSim = c.tipo === 'transferencia' && !!PARIDADES.find(x => x.de === c.de && x.para === c.para);
+  const comCarrinho = temSim && Number(c.carrinho) > 0;
   const abas = [
-    ...(temSim ? [{k:'sim', rot:'Simular carrinho', icone:'carrinho'}] : []),
+    {k:'regras', rot:'Regras', icone:'info', n: linhas.length},
     ...(dg ? [{k:'clube', rot: dg.criterio === 'tempo' ? 'Tempo de Clube' : 'Plano do Clube', icone: dg.criterio === 'tempo' ? 'relogio' : 'etiqueta'}] : []),
-    {k:'regras', rot:'Regras', icone:'info', n: linhas.length}
+    ...(temSim ? [{k:'sim', rot: comCarrinho ? 'Simular carrinho' : 'Simular transferência', icone: comCarrinho ? 'carrinho' : 'troca'}] : [])
   ];
   const ativa = abas.some(a => a.k === ultimaAbaRegras) ? ultimaAbaRegras : abas[0].k;
   d._abas = abas.map(a => a.k);
@@ -14015,11 +14054,11 @@ function abrirRegras(id, gatilho){
           ${c.de ? discoProg(c.de) + '<svg class="cp-seta"><use href="#i-seta-d"/></svg>' : ''}${discoProg(c.para)}
           <div class="dr-rota-txt">
             <h2 id="drTit">${c.de ? esc(prog(c.de).n) + ' para ' : ''}${esc(prog(c.para).n)}</h2>
-            <div class="dr-rotulo"><svg><use href="#i-info"/></svg>Regras Completas</div>
           </div>
         </div>
-        <button type="button" class="dr-x" onclick="document.getElementById('dlgRegras').close()" aria-label="Fechar">
-          <svg><use href="#i-x"/></svg></button>
+        <!-- No lugar do X: fechar já tem o botão do rodapé e a tecla Esc, e o canto
+             passa a dizer o que se está lendo. -->
+        <div class="dr-rotulo"><svg><use href="#i-info"/></svg>Regras Completas</div>
       </header>
 
       <div class="dr-resumo">
@@ -14039,10 +14078,6 @@ function abrirRegras(id, gatilho){
 
       <div class="dr-corpo">
         <div class="dr-paineis">
-          ${temSim ? `<div class="dr-aba-painel" role="tabpanel" id="drp-sim" aria-labelledby="drt-sim"${ativa === 'sim' ? '' : ' data-oculta'}>
-            ${simuladorCarrinho(c, d._sim)}</div>` : ''}
-          ${dg ? `<div class="dr-aba-painel" role="tabpanel" id="drp-clube" aria-labelledby="drt-clube"${ativa === 'clube' ? '' : ' data-oculta'}>
-            ${escadaClube(c, dg, temSim)}</div>` : ''}
           <div class="dr-aba-painel" role="tabpanel" id="drp-regras" aria-labelledby="drt-regras"${ativa === 'regras' || abas.length === 1 ? '' : ' data-oculta'}>
             <div class="dr-regras-grade">
             ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
@@ -14052,6 +14087,10 @@ function abrirRegras(id, gatilho){
               </section>`).join('')}
             </div>
           </div>
+          ${dg ? `<div class="dr-aba-painel" role="tabpanel" id="drp-clube" aria-labelledby="drt-clube"${ativa === 'clube' ? '' : ' data-oculta'}>
+            ${escadaClube(c, dg, temSim)}</div>` : ''}
+          ${temSim ? `<div class="dr-aba-painel" role="tabpanel" id="drp-sim" aria-labelledby="drt-sim"${ativa === 'sim' ? '' : ' data-oculta'}>
+            ${simuladorCarrinho(c, d._sim)}</div>` : ''}
         </div>
       </div>
 
@@ -14072,7 +14111,11 @@ function abrirRegras(id, gatilho){
       : (i + (e.key === 'ArrowRight' ? 1 : -1) + ks.length) % ks.length;
     drAba(ks[n], true);
   });
-  const x = d.querySelector('.dr-x'); if (x) x.focus();
+  /* Sem o X, o foco começa na aba aberta — ou no Fechar, quando não há abas. */
+  const foco = d.querySelector('.dr-abas [role=tab][aria-selected=true]') || d.querySelector('.dr-pe .sair');
+  /* focusVisible:false — quem abriu com o mouse não vê o contorno; quem navega
+     pelo teclado o vê assim que apertar a primeira tecla. */
+  if (foco) foco.focus({focusVisible:false});
 }
 
 function cartaoCampanha(c){
@@ -15714,7 +15757,12 @@ const MODELOS_CLUBE = {
     nome:'Clube LATAM Pass', criterio:'plano', naoCumulativo:true,
     bonusClube:25, bonusSemClube:25,
     planosClube:[{rot:'Pacote Acelere', total:25}, {rot:'Pacote Turbo', total:35}],
-    fonte:'Regulamento do Clube LATAM Pass e pacotes Acelere e Turbo, 2026'
+    fonte:'Regulamento do Clube LATAM Pass e pacotes Acelere e Turbo, 2026',
+    /* Os dois textos oficiais se contradizem, e a Torre não decide por eles: o
+       do Clube diz que prevalece o maior percentual; os das campanhas de 2026
+       dizem que só se credita o bônus da própria campanha. Até haver confirmação,
+       a escada mostra o cenário do Clube e avisa da divergência. */
+    aviso:'Os regulamentos divergem: o do Clube LATAM Pass diz que prevalece o maior percentual, mas os das campanhas de 2026 dizem que só se credita o bônus da campanha. Confirme no regulamento desta campanha antes de contar com o bônus do plano.'
   }
 };
 const modeloClube = c => (c && c.tipo !== 'clube' && MODELOS_CLUBE[c.para]) || null;
@@ -15848,7 +15896,8 @@ function editarCampanha(id, tipoPadrao){
       <div class="dica">O plano mínimo em pontos por mês liga a sua assinatura ao degrau certo. Deixe em branco quando o degrau não for um plano do catálogo.</div>`;
 
     cx.innerHTML = `<section class="cp-modelo">
-      <header><b>Condições do ${esc(m.nome)}</b><span>O campo Bônus acima é o de quem assina o Clube${m.criterio === 'plano' ? ' no plano mais alto' : ''}.</span></header>
+      <header><b>Condições do ${esc(m.nome)}</b><span>O campo Bônus acima é o de quem assina o Clube${m.criterio === 'plano' ? ' no plano mais alto' : ''}.</span>
+        ${m.aviso ? `<p class="dr-escada-aviso"><svg><use href="#i-alerta"/></svg><span>${esc(m.aviso)}</span></p>` : ''}</header>
       <div class="cp-modelo-grade">
         <div class="campo"><label>Bônus sem Clube (%)</label><input type="number" id="cpSemClube" value="${semClube}" step="5"></div>
         <div class="cp-degraus">${tabela}
