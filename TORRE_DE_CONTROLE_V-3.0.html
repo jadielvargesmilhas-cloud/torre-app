@@ -562,13 +562,13 @@ p:last-child{ margin-bottom:0; }
 .dr-sim-faixa{ margin-top:14px; }
 .dr-sim-faixa-tit{ display:block; font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); margin-bottom:7px; }
 .dr-sim-bonus{ display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:6px; }
-.dr-sim-bonus div{ position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
+.dr-sim-bonus > button{ position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
   padding:9px 4px 8px; border-radius:10px; background:var(--sup-1); border:1px solid var(--fio); }
 .dr-sim-bonus em{ font-style:normal; font-size:calc(12px * var(--esc)); color:var(--grafite-dim); font-variant-numeric:tabular-nums; }
 .dr-sim-bonus b{ font-size:calc(14.5px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
-.dr-sim-bonus div.eu{ background:color-mix(in oklab, var(--ouro) 14%, var(--sup-1));
+.dr-sim-bonus > button.eu{ background:color-mix(in oklab, var(--ouro) 14%, var(--sup-1));
   border-color:color-mix(in oklab, var(--ouro) 55%, transparent); }
-.dr-sim-bonus div.eu b{ color:var(--ouro); }
+.dr-sim-bonus > button.eu b{ color:var(--ouro); }
 .dr-sim-bonus small{ position:absolute; top:-9px; padding:1px 7px; border-radius:99px; background:var(--ouro);
   color:var(--sup-0); font-size:calc(10.5px * var(--esc)); font-weight:700; }
 .dr-sim + .dr-escada-bloco{ border-top:1px solid var(--fio); }
@@ -605,7 +605,116 @@ p:last-child{ margin-bottom:0; }
 .cp-degraus td input{ width:110px; }
 .cp-degraus td:last-child{ width:36px; }
 .cp-degraus #cpMaisDegrau{ margin-top:8px; }
+.cp-planos td:first-child{ width:auto; }
+.cp-planos td:first-child input{ width:340px; max-width:100%; }
+/* Opção, não título de campo: sem as maiúsculas espaçadas que os rótulos usam. */
+.cp-degraus > label.cp-naocum{ display:flex; align-items:center; gap:8px; margin:10px 0 0; cursor:pointer;
+  font-family:inherit; text-transform:none; letter-spacing:normal;
+  font-size:calc(13.5px * var(--esc)); color:var(--grafite); }
+.cp-naocum input{ accent-color:var(--ouro); width:16px; height:16px; }
+.cp-degraus .dica{ margin-top:6px; }
 @media (max-width:640px){ .cp-modelo-grade{ grid-template-columns:1fr; gap:12px; } }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   JANELA EM ABAS, SEM ROLAGEM
+   O resumo fica fixo em cima, numa faixa só. Abaixo, três abas. Os painéis
+   ficam todos montados e empilhados na mesma célula da grade: a janela assume
+   a altura do maior e não pula ao trocar — os ocultos só ficam invisíveis.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.dr-resumo{ gap:18px; padding:12px 16px; margin-top:14px; }
+.dr-num{ flex-direction:row; align-items:baseline; gap:8px; padding-right:18px; }
+.dr-num b{ font-size:calc(38px * var(--esc)); }
+.dr-meta{ flex-direction:row; flex-wrap:wrap; gap:6px 22px; align-items:baseline; }
+.dr-meta div{ flex-direction:column; gap:1px; }
+.dr-meta dt{ min-width:0; font-size:calc(11.5px * var(--esc)); }
+.dr-meta dd{ font-size:calc(13.5px * var(--esc)); }
+.dr-meta-lim{ flex-basis:100%; }
+.dr-sep{ margin:0 7px; color:var(--grafite-dim); }
+
+.dr-abas{ display:flex; gap:4px; margin:14px 22px 0 24px; padding:4px; border-radius:12px;
+  background:var(--sup-1); border:1px solid var(--fio); }
+.dr-abas [role=tab]{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  padding:9px 10px; border-radius:9px; border:0; background:transparent; cursor:pointer;
+  font:inherit; font-size:calc(13.5px * var(--esc)); font-weight:500; color:var(--grafite);
+  transition:background .15s var(--ease), color .15s var(--ease); }
+.dr-abas [role=tab] svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.9;
+  stroke-linecap:round; stroke-linejoin:round; }
+.dr-abas [role=tab]:hover{ color:var(--giz); }
+.dr-abas [role=tab][aria-selected=true]{ background:var(--sup-0); color:var(--giz); font-weight:600;
+  box-shadow:0 1px 3px rgba(0,0,0,.25), 0 0 0 1px var(--fio-forte); }
+.dr-abas [role=tab][aria-selected=true] svg{ color:var(--ouro); }
+.dr-abas [role=tab]:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:1px; }
+.dr-aba-n{ font-size:calc(11px * var(--esc)); padding:0 6px; border-radius:99px;
+  background:var(--sup-2, var(--fio)); color:var(--grafite); font-variant-numeric:tabular-nums; }
+
+.dr-corpo{ margin-top:4px; }
+.dr-paineis{ display:grid; }
+.dr-aba-painel{ grid-area:1 / 1; min-width:0; }
+.dr-aba-painel[data-oculta]{ visibility:hidden; pointer-events:none; }
+.dr-aba-painel > .dr-sim, .dr-aba-painel > .dr-escada-bloco{ padding-top:12px; }
+
+/* Regras em duas colunas quando cabe: é o que as deixa sem rolagem. */
+.dr-regras-grade{ columns:2 260px; column-gap:26px; padding-top:4px; }
+.dr-regras-grade .dr-grupo{ break-inside:avoid; border-top:0 !important; padding:10px 0 4px; }
+
+.dr-sim-rot{ font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
+.dr-sim-volta{ font:inherit; border:0; background:none; padding:0; cursor:pointer;
+  color:var(--anil-claro); text-decoration:underline; text-underline-offset:2px; }
+.dr-sim-bonus > button{ font:inherit; cursor:pointer; color:inherit; }
+.dr-sim-bonus > button:hover{ border-color:var(--fio-forte); }
+.dr-sim-bonus > button.sel{ outline:2px solid var(--anil-claro); outline-offset:-1px; }
+.dr-sim-bonus > button:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:1px; }
+
+.dr-escada-dica{ display:flex; align-items:center; gap:7px; margin:0 0 2px;
+  font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
+.dr-escada-dica svg{ width:15px; height:15px; fill:none; stroke:var(--anil-claro); stroke-width:1.9;
+  stroke-linecap:round; stroke-linejoin:round; }
+.dr-degrau.clica{ cursor:pointer; border-radius:12px; padding:0 3px 4px; transition:background .15s var(--ease); }
+.dr-degrau.clica:hover{ background:color-mix(in oklab, var(--anil-claro) 7%, transparent); }
+.dr-degrau.clica:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:2px; }
+.dr-degrau.escolhido .dr-deg-barra{ outline:2px solid var(--anil-claro); outline-offset:2px; }
+.dr-degrau.escolhido .dr-deg-rot{ color:var(--anil-claro); font-weight:600; }
+
+@media (max-width:640px){
+  .dr-abas{ margin:12px 16px 0 18px; }
+  .dr-abas [role=tab]{ flex-direction:column; gap:3px; padding:7px 4px; font-size:calc(12px * var(--esc)); }
+  .dr-aba-n{ display:none; }
+  .dr-num b{ font-size:calc(32px * var(--esc)); }
+  .dr-regras-grade{ columns:1; }
+}
+
+
+/* ── ajuste fino para caber sem rolagem a partir de 1366 × 768 ──────────────
+   A janela usa quase toda a altura da tela, e as partes fixas — cabeçalho,
+   resumo, abas, rodapé — ficam mais enxutas, para sobrar espaço para o que
+   muda de aba para aba. */
+.dr-painel{ width:min(780px, calc(100vw - 32px)); max-height:calc(100dvh - 28px); }
+.dr-cab{ padding:16px 20px 0 22px; }
+.dr-rota-txt h2{ font-size:calc(17px * var(--esc)); }
+.dr-rotulo{ margin-top:4px; }
+.dr-resumo{ margin:12px 20px 0 22px; padding:9px 14px; gap:16px; }
+.dr-num b{ font-size:calc(34px * var(--esc)); }
+.dr-meta-lim{ flex-basis:auto; }
+.dr-abas{ margin:12px 20px 0 22px; }
+.dr-abas [role=tab]{ padding:8px 10px; }
+.dr-corpo{ padding:2px 20px 4px 22px; margin-top:2px; }
+.dr-pe{ padding:11px 20px 13px 22px; }
+
+.dr-aba-painel > .dr-sim, .dr-aba-painel > .dr-escada-bloco{ padding-top:10px; padding-bottom:4px; }
+.dr-sim-cab{ margin-bottom:10px; }
+.dr-sim-bloco{ padding:9px 12px; }
+.dr-sim-bloco b{ font-size:calc(20px * var(--esc)); }
+.dr-sim-res{ margin-top:8px; padding:9px 14px; }
+.dr-sim-destaque b{ font-size:calc(26px * var(--esc)); }
+.dr-sim-saldo{ margin-top:8px; }
+.dr-sim-faixa{ margin-top:10px; }
+.dr-sim-faixa-tit{ margin-bottom:9px; }
+.dr-sim-bonus > button{ padding:7px 4px 6px; }
+.dr-escada{ padding-top:26px; }
+.dr-escada-leitura{ margin-top:10px; }
+.dr-escada-cta{ margin-top:10px; padding:10px 12px; }
+.dr-grupo li{ font-size:calc(14px * var(--esc)); line-height:1.5; }
 
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
@@ -7389,7 +7498,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 19:05';
+const BUILD = '2026-09-24 22:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13496,10 +13605,7 @@ function cpmProjetadoCampanha(c, bonusUsado){
        tem, ao custo médio deles, ou comprar no carrinho. O projetado é o mais
        barato dos dois — mostrar o caro ao lado do simulador, que usa o
        carrinho, dava dois números para a mesma pergunta. */
-    if (Number(c.carrinho) > 0){
-      const carr = contaCarrinho(c, 100000, false).comBonus(b).cpm;
-      return proprio != null ? Math.min(proprio, carr) : carr;
-    }
+    if (Number(c.carrinho) > 0) return contaCarrinho(c, 100000, usarSaldoPadrao(c)).comBonus(b).cpm;
     return proprio;
   }
   return null;
@@ -13552,6 +13658,55 @@ function mesesDesde(iso){
   return Math.max(0, m);
 }
 
+
+/* Os degraus de qualquer clube, no formato da escada: por tempo ou por plano.
+   Devolve null quando a campanha não tem estrutura de clube. */
+function degrausClube(c){
+  const base = Number(c.bonus) || 0;
+  const sem = c.bonusSemClube != null && c.bonusSemClube !== '' ? Number(c.bonusSemClube) : null;
+  if ((c.planosClube || []).length){
+    const nc = !!c.naoCumulativo;
+    return {criterio:'plano', naoCumulativo:nc, limite:c.limiteClube || 0, linha:null,
+      pts:[...(sem != null ? [{rot:'Sem Clube', total:sem, sem:true}] : []),
+           ...c.planosClube.map(p => ({rot:p.rot, qtdMin:p.qtdMin, proprio:p.total,
+             /* Não cumulativo: vale o maior entre a campanha e o bônus do plano. */
+             total: nc ? Math.max(base, p.total) : p.total}))]};
+  }
+  const tc = extrairTempoClube(c);
+  if (!tc) return null;
+  return {criterio:'tempo', limite:tc.limite, linha:tc.linha,
+    pts:[...(sem != null ? [{rot:'Sem Clube', meses:-1, total:sem, sem:true}] : []),
+         {rot:'Clube ativo', meses:0, extra:0, total:base, base:true},
+         ...tc.degraus.map(d => ({...d, total: base + d.extra}))]};
+}
+
+/* Onde a assinatura cadastrada coloca quem está usando a Torre. Por tempo, pelos
+   meses desde o início; por plano, pelos pontos mensais do plano assinado, lidos
+   do catálogo. */
+function posicaoNoClube(c, dg){
+  const ass = (DB.assinaturas || []).find(a => a.prog === c.para && a.status === 'ativa');
+  if (!ass || !dg) return {ass:null, atual:-1};
+  if (dg.criterio === 'tempo'){
+    if (!ass.inicio) return {ass, atual:-1};
+    const meses = mesesDesde(ass.inicio);
+    let atual = -1;
+    dg.pts.forEach((p, i) => { if (!p.sem && (p.base || meses > p.meses)) atual = i; });
+    return {ass, atual, meses};
+  }
+  const pl = ((catalogoDe(c.para) || {planos:[]}).planos || []).find(x => x.id === ass.planoId);
+  const qtd = pl ? (pl.qtd || pl.mensal || 0) : 0;
+  let atual = -1;
+  dg.pts.forEach((p, i) => { if (!p.sem && p.qtdMin && qtd >= p.qtdMin) atual = i; });
+  /* Assinatura que não cai em degrau nenhum — um plano abaixo do primeiro, ou
+     um pacote que o catálogo não tem — recebe o que vale para quem não tem o
+     plano: o degrau Sem Clube quando a campanha é não cumulativa, porque aí o
+     bônus da campanha é o mesmo para todos. */
+  const semIdx = dg.pts.findIndex(p => p.sem);
+  const foraDaEscada = atual < 0;
+  if (foraDaEscada && semIdx >= 0 && dg.naoCumulativo) atual = semIdx;
+  return {ass, atual, plano:pl, foraDaEscada};
+}
+
 /* Leva ao cadastro da assinatura já com o clube escolhido: fecha a janela, abre
    Fábrica em Assinatura de Clubes e abre o formulário preenchido. */
 function irParaCadastroClube(progId){
@@ -13560,65 +13715,71 @@ function irParaCadastroClube(progId){
   setTimeout(() => editarAssinatura(null, {prog:progId}), 380);
 }
 
-function escadaTempoClube(c, tc){
-  const base = Number(c.bonus) || 0;
-  const semClube = c.bonusSemClube != null && c.bonusSemClube !== '' ? Number(c.bonusSemClube) : null;
-  const pts = [
-    ...(semClube != null ? [{rot:'Sem Clube', meses:-1, extra:0, total:semClube, sem:true}] : []),
-    {rot:'Clube ativo', meses:0, extra:0, total:base, base:true},
-    ...tc.degraus.map(d => ({...d, total: base + d.extra}))
-  ];
+function escadaClube(c, dg, ligaSim){
+  const pts = dg.pts;
   const menor = Math.min(...pts.map(p => p.total)), maior = Math.max(...pts.map(p => p.total), 1);
   /* A altura parte do menor bônus da escada, não do zero: medidos do zero, 80% e
-     110% ficam quase iguais e a escada não sobe. O primeiro degrau tem altura
-     mínima para continuar sendo degrau, e não um fio. */
-  const alturaDegrau = t => Math.round(26 + ((t - menor) / Math.max(maior - menor, 1)) * 118);
-
-  /* "Acima de 6 meses" é mais de seis: com seis completos ainda se está no
-     degrau anterior. */
-  const ass = (DB.assinaturas || []).find(a => a.prog === c.para && a.status === 'ativa' && a.inicio);
-  const meses = ass ? mesesDesde(ass.inicio) : null;
-  let atual = -1;
-  if (meses !== null) pts.forEach((p, i) => { if (!p.sem && (p.base || meses > p.meses)) atual = i; });
-  const prox = atual >= 0 ? pts[atual + 1] : null;
+     110% ficam quase iguais e a escada não sobe. */
+  const alturaDegrau = t => Math.round(22 + ((t - menor) / Math.max(maior - menor, 1)) * 104);
+  const pos = posicaoNoClube(c, dg);
+  const atual = pos.atual;
   const nomeClube = (MODELOS_CLUBE[c.para] || {}).nome || `Clube ${prog(c.para).n}`;
+  const titulo = dg.criterio === 'tempo' ? 'Bônus por tempo de Clube' : 'Bônus por plano do Clube';
 
   let leitura;
-  if (meses === null){
+  if (!pos.ass){
     leitura = `<div class="dr-escada-cta">
       <p>Sem assinatura ativa do ${esc(nomeClube)} cadastrada na Torre. Com ela, a escada marca o seu degrau.</p>
       <button type="button" class="bt p primario" onclick="irParaCadastroClube('${c.para}')">
-        <svg><use href="#i-mais"/></svg>Cadastrar assinatura do ${esc(nomeClube)}</button>
+        <svg><use href="#i-mais"/></svg>Cadastrar assinatura</button>
     </div>`;
-  } else {
-    const anos = Math.floor(meses / 12), resto = meses % 12;
+  } else if (dg.criterio === 'tempo'){
+    const meses = pos.meses || 0, anos = Math.floor(meses / 12), resto = meses % 12;
     const tempo = meses < 12 ? `${meses} ${meses === 1 ? 'mês' : 'meses'}`
       : `${anos} ${anos === 1 ? 'ano' : 'anos'}${resto ? ` e ${resto} ${resto === 1 ? 'mês' : 'meses'}` : ''}`;
-    const falta = prox ? prox.meses + 1 - meses : 0;
+    const prox = atual >= 0 ? pts[atual + 1] : null, falta = prox ? prox.meses + 1 - meses : 0;
     leitura = `<p class="dr-escada-leitura">Com <b>${tempo}</b> de Clube, o seu bônus é <b>${nBRdec(pts[atual].total)}%</b>.` +
-      (prox ? ` Faltam <b>${falta} ${falta === 1 ? 'mês' : 'meses'}</b> para chegar a ${nBRdec(prox.total)}%.`
-            : ' É o degrau mais alto da campanha.') + `</p>`;
+      (prox ? ` Faltam <b>${falta} ${falta === 1 ? 'mês' : 'meses'}</b> para chegar a ${nBRdec(prox.total)}%.` : ' É o degrau mais alto da campanha.') + `</p>`;
+  } else {
+    const nomePlano = pos.plano ? pos.plano.n : 'plano não identificado';
+    if (pos.foraDaEscada){
+      leitura = `<p class="dr-escada-leitura">A sua assinatura (<b>${esc(nomePlano)}</b>) não corresponde a um degrau desta escada` +
+        (atual >= 0 ? `: vale o bônus da campanha, <b>${nBRdec(pts[atual].total)}%</b>.` : '.') + `</p>`;
+    } else {
+      const prox = pts[atual + 1];
+      leitura = `<p class="dr-escada-leitura">No <b>${esc(nomePlano)}</b>, o seu bônus é <b>${nBRdec(pts[atual].total)}%</b>.` +
+        (prox ? ` Em ${esc(prox.rot)}, seria ${nBRdec(prox.total)}%.` : ' É o degrau mais alto da campanha.') + `</p>`;
+    }
   }
 
-  return `<section class="dr-escada-bloco" aria-label="Bônus por tempo de Clube">
-    <h3><svg><use href="#i-relogio"/></svg>Bônus por tempo de Clube</h3>
+  /* O bônus que está no simulador agora, para marcar o degrau escolhido. */
+  const dlg = document.getElementById('dlgRegras');
+  const escolhido = dlg && dlg._sim && dlg._sim.bonus != null ? dlg._sim.bonus : null;
+  return `<section class="dr-escada-bloco" aria-label="${titulo}">
+    ${ligaSim ? `<p class="dr-escada-dica"><svg><use href="#i-carrinho"/></svg>Toque num degrau para simular o carrinho com o bônus dele.</p>` : ''}
     <div class="dr-escada" role="list">
       ${pts.map((p, i) => {
         const estado = atual < 0 ? (p.sem ? 'sem' : 'neutro') : i < atual ? 'passado' : i === atual ? 'atual' : 'futuro';
-        return `<div class="dr-degrau dr-${estado}" role="listitem"
-            aria-label="${p.rot}: ${nBRdec(p.total)}% de bônus${estado === 'atual' ? ', o seu degrau' : ''}">
+        const sub = p.sem ? 'sem Clube' : p.base ? 'base' : dg.criterio === 'tempo' ? '+' + nBRdec(p.extra) + '%'
+          : dg.naoCumulativo ? (p.proprio > Number(c.bonus) ? 'o do plano' : 'o da campanha') : 'do plano';
+        const rot = p.sem ? 'Sem Clube' : p.base ? 'Clube ativo' : dg.criterio === 'tempo' ? 'acima de ' + p.rot : p.rot;
+        const clica = ligaSim ? ` role="button" tabindex="0" onclick="drSimularBonus('${c.id}', ${p.total})"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drSimularBonus('${c.id}', ${p.total})}"` : ' role="listitem"';
+        return `<div class="dr-degrau dr-${estado}${ligaSim ? ' clica' : ''}${escolhido === p.total ? ' escolhido' : ''}"${clica}
+            aria-label="${esc(rot)}: ${nBRdec(p.total)}% de bônus${estado === 'atual' ? ', o seu degrau' : ''}${ligaSim ? '. Simular o carrinho com este bônus' : ''}">
           <div class="dr-deg-topo">
             ${estado === 'atual' ? '<span class="dr-voce">Você</span>' : ''}
             <b>${nBRdec(p.total)}%</b>
-            <small>${p.sem ? 'sem Clube' : p.base ? 'base' : '+' + nBRdec(p.extra) + '%'}</small>
+            <small>${sub}</small>
           </div>
           <div class="dr-deg-barra" style="height:${alturaDegrau(p.total)}px"></div>
-          <div class="dr-deg-rot">${p.sem ? 'Sem Clube' : p.base ? 'Clube ativo' : 'acima de ' + p.rot}</div>
+          <div class="dr-deg-rot">${esc(rot)}</div>
         </div>`;
       }).join('')}
     </div>
     ${leitura}
-    ${tc.limite ? `<p class="dr-escada-nota">O extra por tempo de Clube tem teto próprio: <b>${nBR(tc.limite)}</b> pontos por ano, à parte do limite da campanha.</p>` : ''}
+    ${dg.naoCumulativo ? `<p class="dr-escada-nota">Não se soma: vale o maior entre o bônus da campanha e o do seu plano do Clube.</p>` : ''}
+    ${dg.limite ? `<p class="dr-escada-nota">O extra por tempo de Clube tem teto próprio: <b>${nBR(dg.limite)}</b> pontos por ano, à parte do limite da campanha.</p>` : ''}
   </section>`;
 }
 
@@ -13638,13 +13799,19 @@ const QTDS_SIM = [50000, 100000, 200000, 300000];
 
 /* O bônus total de quem está usando a Torre, pela assinatura cadastrada. */
 function bonusDoUsuario(c){
-  const tc = extrairTempoClube(c);
-  const ass = (DB.assinaturas || []).find(a => a.prog === c.para && a.status === 'ativa' && a.inicio);
-  if (!ass) return null;
-  const meses = mesesDesde(ass.inicio);
-  let extra = 0;
-  if (tc) tc.degraus.forEach(d => { if (meses > d.meses) extra = d.extra; });
-  return (Number(c.bonus) || 0) + extra;
+  const dg = degrausClube(c);
+  if (!dg) return null;
+  const pos = posicaoNoClube(c, dg);
+  return pos.atual >= 0 ? dg.pts[pos.atual].total : null;
+}
+
+/* A simulação com que a janela abre — e a mesma que alimenta o milheiro
+   projetado do cartão e do resumo, para os três dizerem sempre o mesmo número.
+   Usa o saldo próprio quando ele existe, tem custo lançado e sai mais barato
+   que o carrinho: a janela começa na configuração mais barata para você. */
+function usarSaldoPadrao(c){
+  const meu = cpmPorPrograma()[c.de], saldo = saldoPorPrograma()[c.de] || 0;
+  return !!(saldo > 0 && meu && meu < Number(c.carrinho));
 }
 
 function contaCarrinho(c, qtd, usarSaldo){
@@ -13672,19 +13839,20 @@ function contaCarrinho(c, qtd, usarSaldo){
 function simuladorCarrinho(c, st){
   const r = contaCarrinho(c, st.qtd, st.usarSaldo);
   const bUser = bonusDoUsuario(c);
-  const bUso = bUser != null ? bUser : Number(c.bonus) || 0;
+  /* O bônus da conta: o escolhido na escada ou na faixa, senão o seu, senão o
+     da campanha. */
+  const bUso = st.bonus != null ? st.bonus : bUser != null ? bUser : Number(c.bonus) || 0;
   const res = r.comBonus(bUso);
-  const tc = extrairTempoClube(c);
+  const dgs = degrausClube(c);
   const bonuses = [...new Set([
-    ...(c.bonusSemClube != null ? [Number(c.bonusSemClube)] : []),
     Number(c.bonus) || 0,
-    ...(tc ? tc.degraus.map(d => (Number(c.bonus) || 0) + d.extra) : [])
+    ...(dgs ? dgs.pts.map(p => p.total) : [])
   ])].sort((a, b) => a - b);
   const nomeDe = esc(prog(c.de).n), nomePara = esc(prog(c.para).n);
 
   return `<section class="dr-sim" aria-label="Simulação da compra no carrinho">
     <div class="dr-sim-cab">
-      <h3><svg><use href="#i-carrinho"/></svg>Simular a compra no carrinho</h3>
+      <span class="dr-sim-rot">Quanto transferir</span>
       <div class="dr-sim-qtds" role="group" aria-label="Quanto transferir">
         ${QTDS_SIM.map(q => `<button type="button" class="${q === st.qtd ? 'on' : ''}" aria-pressed="${q === st.qtd}"
           onclick="simCarrinho('${c.id}', {qtd:${q}})">${nBR(q / 1000)} mil</button>`).join('')}
@@ -13710,7 +13878,7 @@ function simuladorCarrinho(c, st){
         <span>Chega na ${nomePara}</span>
         <b>${nBR(Math.round(res.chega))}</b>
         <em>${nBR(Math.round(r.base))} + ${nBR(Math.round(res.bonus))} de bônus</em>
-        <small>com ${nBRdec(bUso)}% de bônus${r.par !== 1 ? `, paridade ${paridadeTxt(r.par)}` : ''}</small>
+        <small>com ${nBRdec(bUso)}% de bônus${st.bonus != null && st.bonus !== bUser ? ' (simulado)' : ''}${r.par !== 1 ? `, paridade ${paridadeTxt(r.par)}` : ''}</small>
       </div>
     </div>
 
@@ -13720,19 +13888,22 @@ function simuladorCarrinho(c, st){
       <div><span>Milheiro ${nomeDe}</span><b>${brl2(r.cpmOrigem)}</b></div>
     </div>
 
-    ${r.faltaMinimo ? `<p class="dr-sim-aviso"><svg><use href="#i-alerta"/></svg>O carrinho exige ao menos
-      <b>${nBR(r.minimo)}</b> pontos ${nomeDe} próprios; hoje a Torre registra <b>${nBR(r.saldo)}</b>. A conta supõe o mínimo.</p>` : ''}
+    ${r.faltaMinimo ? `<p class="dr-sim-aviso"><svg><use href="#i-alerta"/></svg><span>O carrinho exige ao menos
+      <b>${nBR(r.minimo)}</b> pontos ${nomeDe} próprios; hoje a Torre registra <b>${nBR(r.saldo)}</b>. A conta supõe o mínimo.</span></p>` : ''}
 
     <label class="dr-sim-saldo"><input type="checkbox" ${st.usarSaldo ? 'checked' : ''}
       onchange="simCarrinho('${c.id}', {usarSaldo:this.checked})">
       Usar o meu saldo ${nomeDe} (${nBR(r.saldo)}) antes de comprar no carrinho</label>
 
     ${bonuses.length > 1 ? `<div class="dr-sim-faixa">
-      <span class="dr-sim-faixa-tit">Milheiro ${nomePara} conforme o bônus</span>
+      <span class="dr-sim-faixa-tit">Milheiro ${nomePara} conforme o bônus${
+        st.bonus != null && st.bonus !== bUser ? ` · <button type="button" class="dr-sim-volta" onclick="simCarrinho('${c.id}', {bonus:null})">${bUser != null ? 'voltar ao seu bônus' : 'voltar ao bônus da campanha'}</button>` : ''}</span>
       <div class="dr-sim-bonus">${bonuses.map(b => {
         const x = r.comBonus(b);
         const eu = bUser != null && b === bUser;
-        return `<div class="${eu ? 'eu' : ''}"><em>${nBRdec(b)}%</em><b>${brl2(x.cpm)}</b>${eu ? '<small>o seu</small>' : ''}</div>`;
+        const sel = b === bUso;
+        return `<button type="button" class="${eu ? 'eu' : ''}${sel ? ' sel' : ''}" aria-pressed="${sel}"
+          onclick="simCarrinho('${c.id}', {bonus:${b}})"><em>${nBRdec(b)}%</em><b>${brl2(x.cpm)}</b>${eu ? '<small>o seu</small>' : ''}</button>`;
       }).join('')}</div>
     </div>` : ''}
   </section>`;
@@ -13747,6 +13918,37 @@ function simCarrinho(id, mud){
   const velho = d.querySelector('.dr-sim'); if (!velho) return;
   const t = document.createElement('div'); t.innerHTML = simuladorCarrinho(c, d._sim);
   velho.replaceWith(t.firstElementChild);
+  /* A escada acompanha: o degrau do bônus escolhido fica marcado. */
+  const dg = degrausClube(c), velhaEsc = d.querySelector('.dr-escada-bloco');
+  if (dg && velhaEsc){
+    const e = document.createElement('div'); e.innerHTML = escadaClube(c, dg, true);
+    velhaEsc.replaceWith(e.firstElementChild);
+  }
+}
+
+let ultimaAbaRegras = 'sim';
+
+/* Troca de aba. Todas as abas ficam montadas, empilhadas no mesmo lugar: a
+   janela assume a altura da maior e não pula ao trocar. Só a visível recebe
+   foco e leitura de tela. */
+function drAba(k, focar){
+  const d = document.getElementById('dlgRegras'); if (!d) return;
+  ultimaAbaRegras = k;
+  d.querySelectorAll('.dr-abas [role=tab]').forEach(t => {
+    const on = t.id === 'drt-' + k;
+    t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+    if (on && focar) t.focus();
+  });
+  d.querySelectorAll('.dr-aba-painel').forEach(p => {
+    if (p.id === 'drp-' + k) p.removeAttribute('data-oculta'); else p.setAttribute('data-oculta', '');
+  });
+}
+
+/* Clicar num degrau da escada leva o bônus dele para o simulador: "e se eu
+   tivesse mais tempo de Clube?" vira uma conta pronta, sem digitar nada. */
+function drSimularBonus(id, total){
+  simCarrinho(id, {bonus:total});
+  drAba('sim');
 }
 
 function abrirRegras(id, gatilho){
@@ -13763,11 +13965,11 @@ function abrirRegras(id, gatilho){
     d.addEventListener('close', () => { if (d._volta) d._volta.focus(); });
   }
   d._volta = gatilho || null;
-  d._sim = {qtd:100000, usarSaldo:false};
+  d._sim = {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
 
-  const tc = extrairTempoClube(c);
+  const dg = degrausClube(c);
   const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean)
-    .filter(l => !tc || l !== tc.linha)
+    .filter(l => !dg || !dg.linha || l !== dg.linha)
     /* Com o simulador na tela, a frase do carrinho repetiria em texto o que ele
        mostra em números. */
     .filter(l => !(c.carrinho > 0 && /carrinho/i.test(l) && /R\$\s?\d/.test(l)));
@@ -13789,8 +13991,22 @@ function abrirRegras(id, gatilho){
     c.limite ? `Limite de <b>${nBR(c.limite)}</b> por CPF` : '',
     c.limiteClube ? `Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube` : '',
     c.minimo ? `Mínimo de <b>${nBR(c.minimo)}</b>` : '',
-    c.carrinho ? `Carrinho a <b>${brl2(c.carrinho)}</b> por mil` : ''
+    /* Com o simulador na janela, o preço do carrinho já aparece lá; repeti-lo no
+       resumo quebrava a faixa em duas linhas. */
+    c.carrinho && !(c.tipo === 'transferencia') ? `Carrinho a <b>${brl2(c.carrinho)}</b> por mil` : ''
   ].filter(Boolean);
+
+  /* Três partes, cada uma numa aba: o simulador (quando há carrinho), a escada
+     do Clube (quando há estrutura de clube) e as regras. Abre na aba usada por
+     último, se ela existir nesta campanha. */
+  const temSim = c.tipo === 'transferencia' && Number(c.carrinho) > 0;
+  const abas = [
+    ...(temSim ? [{k:'sim', rot:'Simular carrinho', icone:'carrinho'}] : []),
+    ...(dg ? [{k:'clube', rot: dg.criterio === 'tempo' ? 'Tempo de Clube' : 'Plano do Clube', icone: dg.criterio === 'tempo' ? 'relogio' : 'etiqueta'}] : []),
+    {k:'regras', rot:'Regras', icone:'info', n: linhas.length}
+  ];
+  const ativa = abas.some(a => a.k === ultimaAbaRegras) ? ultimaAbaRegras : abas[0].k;
+  d._abas = abas.map(a => a.k);
 
   d.innerHTML = `
     <div class="dr-painel dr-${urg}">
@@ -13810,19 +14026,33 @@ function abrirRegras(id, gatilho){
         <div class="dr-num"><b>${num}</b><span>${numRot}</span></div>
         <dl class="dr-meta">
           ${prazo ? `<div><dt>Prazo</dt><dd class="dr-prazo">${prazo}${c.fim ? ` <small>${dataBR(c.fim)}</small>` : ''}</dd></div>` : ''}
-          ${cpm != null ? `<div><dt>Milheiro</dt><dd>projetado em <b class="cp-${tomCpm}">${brl2(cpm)}</b>${bUser != null ? ` <small class="fraco">com o seu bônus de ${nBRdec(bUser)}%</small>` : ''}</dd></div>` : ''}
-          ${fatos.length ? `<div><dt>Limites</dt><dd>${fatos.join('<br>')}</dd></div>` : ''}
+          ${cpm != null ? `<div><dt>Milheiro projetado</dt><dd><b class="cp-${tomCpm}">${brl2(cpm)}</b>${bUser != null ? ` <small class="fraco">com ${nBRdec(bUser)}%</small>` : ''}</dd></div>` : ''}
+          ${fatos.length ? `<div class="dr-meta-lim"><dt>Limites</dt><dd>${fatos.join('<span class="dr-sep">·</span>')}</dd></div>` : ''}
         </dl>
       </div>
 
+      ${abas.length > 1 ? `<div class="dr-abas" role="tablist" aria-label="Partes da campanha">
+        ${abas.map(a => `<button type="button" role="tab" id="drt-${a.k}" aria-controls="drp-${a.k}"
+            aria-selected="${a.k === ativa}" tabindex="${a.k === ativa ? 0 : -1}" onclick="drAba('${a.k}')">
+          <svg><use href="#i-${a.icone}"/></svg>${a.rot}${a.n ? `<span class="dr-aba-n">${a.n}</span>` : ''}</button>`).join('')}
+      </div>` : ''}
+
       <div class="dr-corpo">
-        ${c.tipo === 'transferencia' && c.carrinho > 0 ? simuladorCarrinho(c, d._sim) : ''}
-        ${tc ? escadaTempoClube(c, tc) : ''}
-        ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
-          <section class="dr-grupo dr-${g.tom}">
-            <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
-            <ul>${grupos[g.k].map(l => `<li>${destacarNumeros(l)}</li>`).join('')}</ul>
-          </section>`).join('')}
+        <div class="dr-paineis">
+          ${temSim ? `<div class="dr-aba-painel" role="tabpanel" id="drp-sim" aria-labelledby="drt-sim"${ativa === 'sim' ? '' : ' data-oculta'}>
+            ${simuladorCarrinho(c, d._sim)}</div>` : ''}
+          ${dg ? `<div class="dr-aba-painel" role="tabpanel" id="drp-clube" aria-labelledby="drt-clube"${ativa === 'clube' ? '' : ' data-oculta'}>
+            ${escadaClube(c, dg, temSim)}</div>` : ''}
+          <div class="dr-aba-painel" role="tabpanel" id="drp-regras" aria-labelledby="drt-regras"${ativa === 'regras' || abas.length === 1 ? '' : ' data-oculta'}>
+            <div class="dr-regras-grade">
+            ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
+              <section class="dr-grupo dr-${g.tom}">
+                <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
+                <ul>${grupos[g.k].map(l => `<li>${destacarNumeros(l)}</li>`).join('')}</ul>
+              </section>`).join('')}
+            </div>
+          </div>
+        </div>
       </div>
 
       <footer class="dr-pe">
@@ -13833,6 +14063,15 @@ function abrirRegras(id, gatilho){
     </div>`;
 
   d.showModal();
+  const lista = d.querySelector('.dr-abas');
+  if (lista) lista.addEventListener('keydown', e => {
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const ks = d._abas, i = ks.indexOf(ultimaAbaRegras);
+    const n = e.key === 'Home' ? 0 : e.key === 'End' ? ks.length - 1
+      : (i + (e.key === 'ArrowRight' ? 1 : -1) + ks.length) % ks.length;
+    drAba(ks[n], true);
+  });
   const x = d.querySelector('.dr-x'); if (x) x.focus();
 }
 
@@ -15447,11 +15686,35 @@ function carregarCampanhasPublicadas(){
    costume; a pessoa só ajusta o que a campanha da vez mudou. Um clube novo entra
    acrescentando uma entrada nesta tabela, sem tocar no resto.
    ══════════════════════════════════════════════════════════════════════════════ */
+/* Três formatos convivem no mercado, e cada clube declara o seu:
+
+   · por TEMPO (Azul): bônus do Clube, mais um extra que cresce com os anos de
+     assinatura, com teto anual próprio;
+   · por PLANO (Smiles): o bônus total depende do plano assinado — Clube 1.000
+     leva menos que Clube 2.000 ou mais;
+   · por PLANO, NÃO CUMULATIVO (LATAM Pass): a campanha dá um percentual para
+     todos, o plano do Clube dá o dele, e vale o maior dos dois, nunca a soma.
+
+   Os percentuais aqui são os de costume em 2026, conferidos nos regulamentos
+   publicados; o formulário os traz preenchidos e deixa ajustar por campanha. */
 const MODELOS_CLUBE = {
   azul: {
-    nome:'Clube Azul',
+    nome:'Clube Azul', criterio:'tempo',
     bonusClube:80, bonusSemClube:50, limiteClube:100000,
-    tempoClube:[{meses:6, extra:5}, {meses:12, extra:10}, {meses:36, extra:20}, {meses:60, extra:30}]
+    tempoClube:[{meses:6, extra:5}, {meses:12, extra:10}, {meses:36, extra:20}, {meses:60, extra:30}],
+    fonte:'Regulamentos das campanhas de bancos da Azul, 2026'
+  },
+  smiles: {
+    nome:'Clube Smiles', criterio:'plano',
+    bonusClube:80, bonusSemClube:50,
+    planosClube:[{rot:'Clube 1.000', qtdMin:1000, total:70}, {rot:'Clube 2.000 ou mais, Diamante ou Magno', qtdMin:2000, total:80}],
+    fonte:'Regulamentos das campanhas de bancos da Smiles, 2026'
+  },
+  latampass: {
+    nome:'Clube LATAM Pass', criterio:'plano', naoCumulativo:true,
+    bonusClube:25, bonusSemClube:25,
+    planosClube:[{rot:'Pacote Acelere', total:25}, {rot:'Pacote Turbo', total:35}],
+    fonte:'Regulamento do Clube LATAM Pass e pacotes Acelere e Turbo, 2026'
   }
 };
 const modeloClube = c => (c && c.tipo !== 'clube' && MODELOS_CLUBE[c.para]) || null;
@@ -15523,51 +15786,91 @@ function editarCampanha(id, tipoPadrao){
      assinatura. Na primeira vez que aparece numa campanha nova, preenche bônus e
      limite com os valores de costume — só se ainda estiverem zerados, para não
      apagar o que a pessoa já digitou. */
-  let degrausForm = null;
+  let degrausForm = null, planosForm = null;
   const sincModelo = () => {
     const cx = $('#cpModelo'); if (!cx) return;
     const m = modeloClube({tipo:$('#cpTipo').value, para:$('#cpPara').value});
-    if (!m){ cx.innerHTML = ''; degrausForm = null; return; }
-    if (!degrausForm){
-      degrausForm = (c.para === $('#cpPara').value && (c.tempoClube || []).length)
-        ? c.tempoClube.map(d => ({...d}))
-        : (c.para === $('#cpPara').value && extrairTempoClube(c)) ? extrairTempoClube(c).degraus.map(d => ({meses:d.meses, extra:d.extra}))
-        : m.tempoClube.map(d => ({...d}));
-      if (!id || c.para !== $('#cpPara').value){
-        if (!Number($('#cpBonus').value)) $('#cpBonus').value = m.bonusClube;
-        if (!Number($('#cpLimClube').value)) $('#cpLimClube').value = m.limiteClube;
+    if (!m){
+      const ant = MODELOS_CLUBE[cx.dataset.preenchido];
+      if (ant && !id){
+        if (Number($('#cpBonus').value) === ant.bonusClube) $('#cpBonus').value = 0;
+        if (Number($('#cpLimClube').value) === ant.limiteClube) $('#cpLimClube').value = 0;
       }
+      delete cx.dataset.preenchido;
+      cx.innerHTML = ''; degrausForm = null; planosForm = null; return;
     }
-    const semClube = c.bonusSemClube != null && c.para === $('#cpPara').value ? c.bonusSemClube : m.bonusSemClube;
+    const mesmoDestino = c.para === $('#cpPara').value;
+    if (m.criterio === 'tempo' && !degrausForm){
+      degrausForm = (mesmoDestino && (c.tempoClube || []).length) ? c.tempoClube.map(d => ({...d}))
+        : (mesmoDestino && extrairTempoClube(c)) ? extrairTempoClube(c).degraus.map(d => ({meses:d.meses, extra:d.extra}))
+        : m.tempoClube.map(d => ({...d}));
+    }
+    if (m.criterio === 'plano' && !planosForm){
+      planosForm = (mesmoDestino && (c.planosClube || []).length) ? c.planosClube.map(d => ({...d}))
+        : m.planosClube.map(d => ({...d}));
+    }
+    /* Preenche com os valores de costume do clube — e, ao trocar de destino,
+       troca os do clube anterior pelos do novo. Só mexe em campo que ainda está
+       vazio ou com o valor padrão do clube anterior: número digitado à mão é da
+       pessoa e fica. Sem isso, o formulário novo abria na Azul, preenchia os 80%
+       dela, e ao escolher LATAM continuava com 80% em vez de 25%. */
+    if ((!id || !mesmoDestino) && cx.dataset.preenchido !== $('#cpPara').value){
+      const ant = MODELOS_CLUBE[cx.dataset.preenchido] || {};
+      const bAtual = Number($('#cpBonus').value) || 0;
+      if (!bAtual || bAtual === ant.bonusClube) $('#cpBonus').value = m.bonusClube;
+      const lAtual = Number($('#cpLimClube').value) || 0;
+      if (!lAtual || lAtual === ant.limiteClube) $('#cpLimClube').value = m.limiteClube || 0;
+      cx.dataset.preenchido = $('#cpPara').value;
+    }
+    const semClube = c.bonusSemClube != null && mesmoDestino ? c.bonusSemClube : m.bonusSemClube;
+    const naoCum = mesmoDestino && c.naoCumulativo != null ? c.naoCumulativo : !!m.naoCumulativo;
+
+    const tabela = m.criterio === 'tempo' ? `
+      <label>Extra por tempo de Clube</label>
+      <table><thead><tr><th>Acima de</th><th>Meses</th><th>Extra (%)</th><th></th></tr></thead>
+      <tbody>${degrausForm.map((d, i) => `<tr>
+        <td class="fraco">${rotMeses(d.meses)}</td>
+        <td><input type="number" min="1" step="1" value="${d.meses}" data-i="${i}" data-k="meses" aria-label="Meses do degrau ${i + 1}"></td>
+        <td><input type="number" min="0" step="1" value="${d.extra}" data-i="${i}" data-k="extra" aria-label="Extra do degrau ${i + 1}"></td>
+        <td><button type="button" class="bt p fantasma icone" data-tira="${i}" aria-label="Remover degrau"><svg><use href="#i-x"/></svg></button></td>
+      </tr>`).join('')}</tbody></table>`
+    : `
+      <label>Bônus por plano do Clube</label>
+      <table class="cp-planos"><thead><tr><th>Plano ou categoria</th><th>A partir de (pontos/mês)</th><th>Bônus total (%)</th><th></th></tr></thead>
+      <tbody>${planosForm.map((d, i) => `<tr>
+        <td><input type="text" value="${esc(d.rot)}" data-i="${i}" data-k="rot" aria-label="Nome do plano ${i + 1}"></td>
+        <td><input type="number" min="0" step="1000" value="${d.qtdMin || ''}" placeholder="—" data-i="${i}" data-k="qtdMin" aria-label="Plano mínimo ${i + 1}"></td>
+        <td><input type="number" min="0" step="5" value="${d.total}" data-i="${i}" data-k="total" aria-label="Bônus do plano ${i + 1}"></td>
+        <td><button type="button" class="bt p fantasma icone" data-tira="${i}" aria-label="Remover plano"><svg><use href="#i-x"/></svg></button></td>
+      </tr>`).join('')}</tbody></table>
+      <label class="cp-naocum"><input type="checkbox" id="cpNaoCum"${naoCum ? ' checked' : ''}>
+        Não se soma ao bônus do plano: vale o maior dos dois</label>
+      <div class="dica">O plano mínimo em pontos por mês liga a sua assinatura ao degrau certo. Deixe em branco quando o degrau não for um plano do catálogo.</div>`;
+
     cx.innerHTML = `<section class="cp-modelo">
-      <header><b>Condições do ${esc(m.nome)}</b><span>O campo Bônus acima é o de quem assina o Clube.</span></header>
+      <header><b>Condições do ${esc(m.nome)}</b><span>O campo Bônus acima é o de quem assina o Clube${m.criterio === 'plano' ? ' no plano mais alto' : ''}.</span></header>
       <div class="cp-modelo-grade">
         <div class="campo"><label>Bônus sem Clube (%)</label><input type="number" id="cpSemClube" value="${semClube}" step="5"></div>
-        <div class="cp-degraus">
-          <label>Extra por tempo de Clube</label>
-          <table><thead><tr><th>Acima de</th><th>Meses</th><th>Extra (%)</th><th></th></tr></thead>
-          <tbody>${degrausForm.map((d, i) => `<tr>
-            <td class="fraco">${rotMeses(d.meses)}</td>
-            <td><input type="number" min="1" step="1" value="${d.meses}" data-i="${i}" data-k="meses" aria-label="Meses do degrau ${i + 1}"></td>
-            <td><input type="number" min="0" step="1" value="${d.extra}" data-i="${i}" data-k="extra" aria-label="Extra do degrau ${i + 1}"></td>
-            <td><button type="button" class="bt p fantasma icone" data-tira="${i}" aria-label="Remover degrau"><svg><use href="#i-x"/></svg></button></td>
-          </tr>`).join('')}</tbody></table>
-          <button type="button" class="bt p fantasma" id="cpMaisDegrau"><svg><use href="#i-mais"/></svg>Adicionar degrau</button>
+        <div class="cp-degraus">${tabela}
+          <button type="button" class="bt p fantasma" id="cpMaisDegrau"><svg><use href="#i-mais"/></svg>${m.criterio === 'tempo' ? 'Adicionar degrau' : 'Adicionar plano'}</button>
         </div>
       </div>
     </section>`;
-    cx.querySelectorAll('.cp-degraus input').forEach(inp => inp.addEventListener('input', () => {
-      degrausForm[inp.dataset.i][inp.dataset.k] = Number(inp.value) || 0;
-      const r = inp.closest('tr').querySelector('td'); if (inp.dataset.k === 'meses') r.textContent = rotMeses(Number(inp.value) || 0);
+    const lista = m.criterio === 'tempo' ? degrausForm : planosForm;
+    cx.querySelectorAll('.cp-degraus input[data-k]').forEach(inp => inp.addEventListener('input', () => {
+      lista[inp.dataset.i][inp.dataset.k] = inp.dataset.k === 'rot' ? inp.value : (Number(inp.value) || 0);
+      if (inp.dataset.k === 'meses'){ const r = inp.closest('tr').querySelector('td'); r.textContent = rotMeses(Number(inp.value) || 0); }
     }));
-    cx.querySelectorAll('[data-tira]').forEach(bt => bt.onclick = () => { degrausForm.splice(Number(bt.dataset.tira), 1); sincModelo(); });
+    cx.querySelectorAll('[data-tira]').forEach(bt => bt.onclick = () => { lista.splice(Number(bt.dataset.tira), 1); sincModelo(); });
     $('#cpMaisDegrau').onclick = () => {
-      const ult = degrausForm[degrausForm.length - 1];
-      degrausForm.push({meses: ult ? ult.meses + 12 : 6, extra: ult ? ult.extra + 5 : 5}); sincModelo();
+      const ult = lista[lista.length - 1];
+      if (m.criterio === 'tempo') lista.push({meses: ult ? ult.meses + 12 : 6, extra: ult ? ult.extra + 5 : 5});
+      else lista.push({rot:'Novo plano', qtdMin:0, total: ult ? ult.total + 5 : 50});
+      sincModelo();
     };
   };
-  $('#cpTipo').addEventListener('change', () => { degrausForm = null; sincModelo(); });
-  $('#cpPara').addEventListener('change', () => { degrausForm = null; sincModelo(); });
+  $('#cpTipo').addEventListener('change', () => { degrausForm = null; planosForm = null; sincModelo(); });
+  $('#cpPara').addEventListener('change', () => { degrausForm = null; planosForm = null; sincModelo(); });
   sincModelo();
 
   $('#btSalvarCampanha').onclick = () => {
@@ -15583,10 +15886,16 @@ function editarCampanha(id, tipoPadrao){
       carrinho:rgNum((($('#cpCarrinho')||{}).value) || 0),
       titulo:$('#cpTit').value.trim() || 'Campanha sem título', regra:$('#cpRegra').value.trim(), link:$('#cpLink').value.trim()
     };
-    if (degrausForm && $('#cpSemClube')){
-      novo.bonusSemClube = Number($('#cpSemClube').value) || 0;
+    delete novo.tempoClube; delete novo.planosClube; delete novo.bonusSemClube; delete novo.naoCumulativo;
+    if ($('#cpSemClube')) novo.bonusSemClube = Number($('#cpSemClube').value) || 0;
+    if (degrausForm && $('#cpSemClube'))
       novo.tempoClube = degrausForm.filter(d => d.meses > 0 && d.extra > 0).sort((x, y) => x.meses - y.meses);
-    } else { delete novo.tempoClube; delete novo.bonusSemClube; }
+    if (planosForm && $('#cpSemClube')){
+      novo.planosClube = planosForm.filter(d => String(d.rot || '').trim() && d.total > 0)
+        .map(d => ({rot:String(d.rot).trim(), total:Number(d.total) || 0, ...(Number(d.qtdMin) > 0 ? {qtdMin:Number(d.qtdMin)} : {})}))
+        .sort((x, y) => x.total - y.total);
+      novo.naoCumulativo = !!($('#cpNaoCum') || {}).checked;
+    }
     if (id) DB.campanhas[DB.campanhas.findIndex(x => x.id === id)] = novo; else DB.campanhas.push(novo);
     salvar(); fecharFolha(); abaCampanha = novo.tipo;
     $$('#segCampanha button').forEach(b => b.classList.toggle('on', b.dataset.t === abaCampanha));
