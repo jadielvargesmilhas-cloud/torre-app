@@ -433,6 +433,56 @@ p:last-child{ margin-bottom:0; }
 @keyframes drSobe{ from{ transform:translateY(24px); opacity:0; } to{ transform:none; opacity:1; } }
 @media (prefers-reduced-motion:reduce){ .dr-painel{ animation:none; } }
 
+
+/* ── escada de tempo de Clube ──────────────────────────────────────────────
+   Degraus que sobem da esquerda para a direita. A altura é o bônus total, com
+   piso para que o primeiro degrau não vire um fio. Passado em ouro esmaecido,
+   o seu degrau em ouro cheio com a etiqueta "Você", o que falta em contorno
+   tracejado — três estados que se leem sem legenda. */
+.dr-escada-bloco{ padding:16px 0 12px; }
+.dr-escada-bloco h3{ display:flex; align-items:center; gap:8px; margin:0 0 14px;
+  font-size:calc(14px * var(--esc)); font-weight:600; color:var(--ouro); }
+.dr-escada-bloco h3 svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round; }
+.dr-escada{ display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:8px;
+  align-items:end; padding:30px 2px 0; }
+.dr-degrau{ display:flex; flex-direction:column; justify-content:flex-end; min-width:0; }
+.dr-deg-topo{ display:flex; flex-direction:column; align-items:center; gap:1px; margin-bottom:7px; position:relative; }
+.dr-deg-topo b{ font-family:var(--f-d); font-weight:700; letter-spacing:-.03em; line-height:1;
+  font-size:calc(22px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.dr-deg-topo small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); font-variant-numeric:tabular-nums; }
+.dr-deg-barra{ border-radius:10px 10px 4px 4px;
+  background:var(--sup-2, var(--sup-1)); border:1px solid var(--fio-forte); }
+.dr-deg-rot{ margin-top:8px; text-align:center; font-size:calc(12px * var(--esc)); color:var(--grafite);
+  line-height:1.25; min-height:2.5em; }
+
+.dr-passado .dr-deg-barra{ background:color-mix(in oklab, var(--ouro) 26%, var(--sup-1));
+  border-color:color-mix(in oklab, var(--ouro) 30%, transparent); }
+.dr-atual .dr-deg-barra{ background:linear-gradient(180deg, var(--ouro), color-mix(in oklab, var(--ouro) 70%, #000));
+  border-color:transparent; box-shadow:0 10px 28px -10px color-mix(in oklab, var(--ouro) 70%, transparent); }
+.dr-atual .dr-deg-topo b{ color:var(--ouro); font-size:calc(26px * var(--esc)); }
+.dr-atual .dr-deg-rot{ color:var(--giz); font-weight:600; }
+.dr-futuro .dr-deg-barra{ background:transparent; border:1.5px dashed var(--fio-forte); }
+.dr-futuro .dr-deg-topo b{ color:var(--grafite); }
+.dr-neutro .dr-deg-barra{ background:linear-gradient(180deg,
+  color-mix(in oklab, var(--ouro) 42%, var(--sup-1)), color-mix(in oklab, var(--ouro) 14%, var(--sup-1)));
+  border-color:transparent; }
+.dr-voce{ position:absolute; bottom:calc(100% + 4px); padding:2px 8px; border-radius:99px;
+  background:var(--ouro); color:var(--sup-0); font-size:calc(11.5px * var(--esc)); font-weight:700; white-space:nowrap; }
+
+.dr-escada-leitura{ margin:14px 0 0; font-size:calc(14px * var(--esc)); line-height:1.5; color:var(--grafite); }
+.dr-escada-leitura b{ color:var(--giz); }
+.dr-escada-nota{ margin:6px 0 0; font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
+.dr-escada-nota b{ color:var(--grafite); }
+.dr-escada-bloco + .dr-grupo{ border-top:1px solid var(--fio); }
+
+@media (max-width:640px){
+  .dr-escada{ gap:5px; }
+  .dr-deg-topo b{ font-size:calc(17px * var(--esc)); }
+  .dr-atual .dr-deg-topo b{ font-size:calc(19px * var(--esc)); }
+  .dr-deg-rot{ font-size:calc(11px * var(--esc)); }
+}
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -7214,7 +7264,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 15:50';
+const BUILD = '2026-09-24 16:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13320,6 +13370,99 @@ function cpmProjetadoCampanha(c){
   return null;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ESCADA DE TEMPO DE CLUBE
+   ──────────────────────────────────────────────────────────────────────────────
+   "+5% acima de 6 meses, +10% acima de 1 ano…" é uma sequência, e sequência se
+   entende melhor como degraus do que como frase: cada patamar mais alto que o
+   anterior, com o bônus TOTAL em cada um — que é o número que se usa na conta,
+   não o extra solto.
+
+   E há o que só a Torre sabe: há quanto tempo você assina. Com a assinatura
+   cadastrada, a escada marca o seu degrau e diz quanto falta para o próximo.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function extrairTempoClube(c){
+  const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim());
+  const linha = linhas.find(l => /tempo de clube/i.test(l) && /\+\d/.test(l));
+  if (!linha) return null;
+  const degraus = [];
+  const re = /\+(\d+(?:[.,]\d+)?)%\s*acima de\s*(\d+)\s*(m[eê]s(?:es)?|anos?)/gi;
+  let m;
+  while ((m = re.exec(linha))){
+    const n = Number(m[2]);
+    const meses = /^ano/i.test(m[3]) ? n * 12 : n;
+    degraus.push({meses, extra:Number(m[1].replace(',', '.')),
+      rot: meses < 12 ? `${meses} meses` : meses === 12 ? '1 ano' : `${meses / 12} anos`});
+  }
+  if (!degraus.length) return null;
+  degraus.sort((a, b) => a.meses - b.meses);
+  const lm = linha.match(/limitad[oa] a ([\d.,]+)\s*(mil)?/i);
+  const limite = c.limiteClube || (lm ? Number(lm[1].replace(/\./g, '').replace(',', '.')) * (lm[2] ? 1000 : 1) : 0);
+  return {linha, degraus, limite};
+}
+
+/* Meses completos entre duas datas ISO. */
+function mesesDesde(iso){
+  if (!iso) return null;
+  const a = new Date(iso + 'T12:00:00'), h = new Date(hojeISO() + 'T12:00:00');
+  let m = (h.getFullYear() - a.getFullYear()) * 12 + (h.getMonth() - a.getMonth());
+  if (h.getDate() < a.getDate()) m--;
+  return Math.max(0, m);
+}
+
+function escadaTempoClube(c, tc){
+  const base = Number(c.bonus) || 0;
+  const pts = [{rot:'Clube', meses:0, extra:0, base:true}, ...tc.degraus]
+    .map(d => ({...d, total: base + d.extra}));
+  const maior = Math.max(...pts.map(p => p.total), 1);
+  /* A altura parte do bônus base, não do zero. Medidos do zero, 80% e 110%
+     ficavam visualmente quase iguais e a escada não subia; medidos a partir da
+     base, cada degrau sobe o quanto o extra acrescenta. O primeiro degrau tem
+     altura mínima para continuar sendo um degrau, e não um fio. */
+  const alturaDegrau = t => Math.round(26 + ((t - base) / Math.max(maior - base, 1)) * 118);
+
+  /* O degrau de quem assina. "Acima de 6 meses" é mais de seis: com seis
+     completos ainda se está no degrau anterior. */
+  const ass = (DB.assinaturas || []).find(a => a.prog === c.para && a.status === 'ativa' && a.inicio);
+  const meses = ass ? mesesDesde(ass.inicio) : null;
+  let atual = -1;
+  if (meses !== null) pts.forEach((p, i) => { if (p.base || meses > p.meses) atual = i; });
+  const prox = atual >= 0 ? pts[atual + 1] : null;
+
+  let leitura;
+  if (meses === null){
+    leitura = `Sem assinatura ativa do Clube ${esc(prog(c.para).n)} cadastrada na Torre. Cadastre em Fábrica, Assinatura de Clubes, e esta escada passa a mostrar o seu degrau.`;
+  } else {
+    const tempo = meses < 12 ? `${meses} ${meses === 1 ? 'mês' : 'meses'}` :
+      `${Math.floor(meses / 12)} ${Math.floor(meses / 12) === 1 ? 'ano' : 'anos'}${meses % 12 ? ` e ${meses % 12} ${meses % 12 === 1 ? 'mês' : 'meses'}` : ''}`;
+    leitura = `Com <b>${tempo}</b> de Clube, o seu bônus é <b>${nBRdec(pts[atual].total)}%</b>.` +
+      (prox ? ` Faltam <b>${prox.meses + 1 - meses} ${prox.meses + 1 - meses === 1 ? 'mês' : 'meses'}</b> para chegar a ${nBRdec(prox.total)}%.`
+            : ' É o degrau mais alto da campanha.');
+  }
+
+  return `<section class="dr-escada-bloco" aria-label="Bônus por tempo de Clube">
+    <h3><svg><use href="#i-relogio"/></svg>Bônus por tempo de Clube</h3>
+    <div class="dr-escada" role="list">
+      ${pts.map((p, i) => {
+        const estado = atual < 0 ? 'neutro' : i < atual ? 'passado' : i === atual ? 'atual' : 'futuro';
+        return `<div class="dr-degrau dr-${estado}" role="listitem"
+            aria-label="${p.rot}: ${nBRdec(p.total)}% de bônus${estado === 'atual' ? ', o seu degrau' : ''}">
+          <div class="dr-deg-topo">
+            ${estado === 'atual' ? '<span class="dr-voce">Você</span>' : ''}
+            <b>${nBRdec(p.total)}%</b>
+            <small>${p.base ? 'base' : '+' + nBRdec(p.extra) + '%'}</small>
+          </div>
+          <div class="dr-deg-barra" style="height:${alturaDegrau(p.total)}px"></div>
+          <div class="dr-deg-rot">${p.base ? 'Clube ativo' : 'acima de ' + p.rot}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="dr-escada-leitura">${leitura}</p>
+    ${tc.limite ? `<p class="dr-escada-nota">O extra por tempo de Clube tem teto próprio: <b>${nBR(tc.limite)}</b> pontos por ano, à parte do limite da campanha.</p>` : ''}
+  </section>`;
+}
+
 function abrirRegras(id, gatilho){
   const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
   let d = document.getElementById('dlgRegras');
@@ -13335,7 +13478,9 @@ function abrirRegras(id, gatilho){
   }
   d._volta = gatilho || null;
 
-  const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean);
+  const tc = extrairTempoClube(c);
+  const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean)
+    .filter(l => !tc || l !== tc.linha);
   const grupos = {};
   linhas.forEach(l => { const k = classificarRegra(l); (grupos[k] = grupos[k] || []).push(l); });
 
@@ -13380,6 +13525,7 @@ function abrirRegras(id, gatilho){
       </div>
 
       <div class="dr-corpo">
+        ${tc ? escadaTempoClube(c, tc) : ''}
         ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
           <section class="dr-grupo dr-${g.tom}">
             <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
