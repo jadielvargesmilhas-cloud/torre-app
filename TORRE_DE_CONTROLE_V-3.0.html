@@ -192,6 +192,126 @@ p:last-child{ margin-bottom:0; }
   backdrop-filter:blur(14px) saturate(140%);
   border-right:1px solid var(--fio);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CARTÃO DE CAMPANHA
+   ──────────────────────────────────────────────────────────────────────────────
+   Ordem de leitura de painel financeiro: veredito, contexto, detalhe. O número
+   que decide é o maior da tela; ao lado, a régua diz se ele é bom PARA ESTA
+   ROTA; embaixo, os fatos que mudam a conta; por último, as regras, recolhidas.
+
+   O ousado mora num lugar só — número e régua. O resto é contido de propósito:
+   se tudo chama atenção, nada chama.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.cp{
+  position:relative; background:var(--sup-0);
+  border:1px solid var(--fio); border-radius:var(--r);
+  padding:18px 20px 16px 24px; margin-bottom:14px; overflow:hidden;
+}
+/* O trilho de urgência: a única cor que muda com o prazo. */
+.cp::before{
+  content:''; position:absolute; inset:0 auto 0 0; width:4px; background:var(--fio-forte);
+}
+.cp-urgente::before{ background:var(--brasa); }
+.cp-atencao::before{ background:var(--ouro); }
+.cp-folga::before{ background:var(--jade); }
+
+.cp-cab{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.cp-rota{ display:flex; align-items:center; gap:7px; flex:1 1 280px; min-width:0; }
+.cp-seta{ width:14px; height:14px; fill:none; stroke:var(--grafite-dim); stroke-width:1.8; flex-shrink:0; }
+.cp-rota-txt{ display:flex; flex-direction:column; min-width:0; margin-left:5px; }
+.cp-rota-txt b{ font-size:calc(15.5px * var(--esc)); color:var(--giz); font-weight:600; }
+.cp-rota-txt span{ font-size:calc(13px * var(--esc)); color:var(--grafite-dim);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.cp-prazo{ display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+.cp-fecha{ display:inline-flex; align-items:center; gap:6px; font-weight:600;
+  font-size:calc(14px * var(--esc)); color:var(--giz); }
+.cp-urgente .cp-fecha{ color:var(--brasa); }
+.cp-atencao .cp-fecha{ color:var(--ouro); }
+.cp-data{ font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); }
+.cp-acoes{ display:flex; gap:4px; }
+
+/* ── miolo: número e régua ─────────────────────────────────────────────────── */
+.cp-miolo{
+  display:grid; grid-template-columns:minmax(150px, auto) minmax(0, 1fr);
+  gap:26px; align-items:center; margin:18px 0 14px;
+}
+.cp-hero{ padding-right:24px; border-right:1px solid var(--fio); }
+/* Numeral grande em Bricolage apertado: é a assinatura do cartão. Largura
+   tabular para que 80% e 120% ocupem colunas comparáveis quando empilhados. */
+.cp-num{
+  font-family:var(--f-d); font-weight:700; line-height:.9;
+  font-size:calc(64px * var(--esc)); letter-spacing:-.045em; color:var(--ouro);
+  font-variant-numeric:tabular-nums;
+}
+.cp-num-rot{ margin-top:6px; font-size:calc(13.5px * var(--esc)); color:var(--grafite); }
+
+.cp-veredito{ margin:0 0 14px; font-size:calc(15px * var(--esc)); line-height:1.45;
+  font-weight:500; max-width:68ch; }
+.cp-sem-hist{ margin:0; font-size:calc(13.5px * var(--esc)); color:var(--grafite-dim); }
+.cp-jade{ color:var(--jade); }
+.cp-ouro{ color:var(--ouro); }
+.cp-brasa{ color:var(--brasa); }
+.cp-anil{ color:var(--anil-claro); }
+
+/* A régua. As marcas das janelas ficam em cima da trilha, com o nome embaixo; o
+   valor desta campanha flutua acima, em destaque. */
+.cp-regua{ position:relative; height:52px; margin:22px 4px 6px; }
+.cp-trilha{ position:absolute; left:0; right:0; top:18px; height:8px;
+  background:var(--sup-2, var(--sup-1)); border-radius:99px; overflow:hidden; }
+.cp-cheio{ height:100%; background:linear-gradient(90deg,
+  color-mix(in oklab, var(--ouro) 45%, transparent), var(--ouro)); border-radius:99px; }
+.cp-marca{ position:absolute; top:12px; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; pointer-events:auto; }
+.cp-marca i{ display:block; width:2px; height:20px; background:var(--giz-2, var(--giz)); opacity:.75; }
+.cp-marca em{ font-style:normal; margin-top:3px; white-space:nowrap;
+  font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); }
+.cp-atual{ position:absolute; top:-20px; transform:translateX(-50%); }
+.cp-atual b{ display:inline-block; padding:2px 8px; border-radius:6px;
+  background:var(--ouro); color:var(--sup-0); font-size:calc(12.5px * var(--esc));
+  font-variant-numeric:tabular-nums; }
+.cp-atual::after{ content:''; position:absolute; left:50%; top:100%;
+  transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--ouro); }
+
+.cp-janelas{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:4px; }
+.cp-jan{ display:flex; flex-direction:column; gap:2px; padding-left:10px;
+  border-left:2px solid var(--fio); }
+.cp-jan span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); }
+.cp-jan b{ font-size:calc(17px * var(--esc)); color:var(--giz); font-weight:600;
+  font-variant-numeric:tabular-nums; }
+.cp-jan b small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); font-weight:400; }
+.cp-jan em{ font-style:normal; font-size:calc(12.5px * var(--esc)); font-weight:600; }
+
+/* ── fatos, restrições e regras ────────────────────────────────────────────── */
+.cp-fatos{ display:flex; flex-wrap:wrap; gap:6px 18px; padding-top:12px;
+  border-top:1px solid var(--fio); font-size:calc(13.5px * var(--esc)); color:var(--grafite); }
+.cp-fato b{ color:var(--giz); font-variant-numeric:tabular-nums; }
+.cp-fato.cp-jade b{ color:var(--jade); }
+.cp-fato.cp-ouro b{ color:var(--ouro); }
+.cp-fato.cp-brasa b{ color:var(--brasa); }
+.cp-criticas{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.cp-regras{ margin-top:10px; }
+.cp-regras summary{ cursor:pointer; font-size:calc(13.5px * var(--esc));
+  color:var(--anil-claro); list-style:none; display:inline-flex; align-items:center; gap:6px; }
+.cp-regras summary::-webkit-details-marker{ display:none; }
+.cp-regras summary::before{ content:'▸'; transition:transform .15s; }
+.cp-regras[open] summary::before{ transform:rotate(90deg); }
+.cp-regras summary:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:3px; border-radius:4px; }
+.cp-regras > .pilha{ margin-top:8px; }
+
+/* ── celular: empilha, e a régua ganha a largura toda ──────────────────────── */
+@media (max-width:640px){
+  .cp{ padding:16px 14px 14px 18px; }
+  .cp-miolo{ grid-template-columns:1fr; gap:14px; }
+  .cp-hero{ border-right:0; padding-right:0; display:flex; align-items:baseline; gap:10px; }
+  .cp-num{ font-size:calc(52px * var(--esc)); }
+  .cp-prazo{ align-items:flex-start; }
+  .cp-janelas{ gap:6px; }
+  .cp-jan b{ font-size:calc(15px * var(--esc)); }
+}
+@media (prefers-reduced-motion:reduce){ .cp-regras summary::before{ transition:none; } }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -214,7 +334,10 @@ p:last-child{ margin-bottom:0; }
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   padding:9px var(--pad); border-bottom:1px solid var(--fio);
   background:var(--sup-0); font-size:calc(13px * var(--esc));
-  position:sticky; top:0; z-index:52;
+  /* Rola com a página. Fixa no topo, ela ficava por cima do cabeçalho — que
+     também é fixo no topo — e escondia o título, deixando aparecer só o
+     subtítulo por baixo. */
+  position:relative;
 }
 .fm-ponto{
   width:7px; height:7px; border-radius:50%; background:var(--jade); flex-shrink:0;
@@ -6970,7 +7093,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-24 11:30';
+const BUILD = '2026-09-24 12:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12919,6 +13042,206 @@ function renderCampanhasClube(){
   finally { ctxCamp = guarda.ctx; abaCampanha = guarda.aba; janelaRadar = guarda.jan; }
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CAMPANHA CONTRA O PRÓPRIO HISTÓRICO
+   ──────────────────────────────────────────────────────────────────────────────
+   Um bônus de 80% não diz nada sozinho. Diz muito se a mesma rota pagou 120% em
+   junho, e diz outra coisa se nunca passou de 60%. O cartão responde a pergunta
+   que decide a transferência — "isso é bom para esta rota?" — comparando com o
+   melhor que a rota ofereceu em três janelas: 30 dias, 6 meses e 12 meses.
+
+   A comparação é sempre da mesma rota: bônus de Livelo para Azul não se mede
+   contra bônus de Esfera para Iberia, porque a paridade e o preço do ponto são
+   outros. Em compra, a medida é o desconto efetivo — desconto e bônus somados
+   num número só, porque 50% de desconto sem bônus e 30% com 40% de bônus são a
+   mesma conversa em moedas diferentes.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const JANELAS_REF = [
+  {dias:30,  rot:'30 dias'},
+  {dias:182, rot:'6 meses'},
+  {dias:365, rot:'12 meses'}
+];
+const MES_CURTO = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const mesAnoCurto = iso => {
+  const [a, m] = String(iso || '').split('-');
+  return a && m ? `${MES_CURTO[Number(m) - 1]}/${a.slice(2)}` : '';
+};
+
+/* A medida comparável de cada campanha. */
+function medidaCampanha(c){
+  if (c.tipo === 'compra'){
+    const d = (Number(c.desconto) || 0) / 100, b = (Number(c.bonus) || 0) / 100;
+    return Math.round((1 - (1 - d) / (1 + b)) * 1000) / 10;
+  }
+  return Number(c.bonus) || 0;
+}
+
+function referenciasCampanha(c){
+  const hoje = hojeISO();
+  const mesmaRota = x => x.id !== c.id && x.tipo === c.tipo && x.para === c.para
+    && (c.tipo === 'compra' || x.de === c.de);
+  const irmas = (DB.campanhas || []).filter(mesmaRota);
+
+  return JANELAS_REF.map(j => {
+    /* Entra quem esteve aberta dentro da janela: terminou depois do começo dela,
+       ou ainda está aberta. */
+    const inicio = somaDias(-j.dias);
+    const dentro = irmas.filter(x => x.fim && x.fim >= inicio && x.fim <= somaDias(400));
+    /* Em empate, vale a mais recente: "igual a setembro" orienta melhor que
+       "igual a abril" quando as duas pagaram o mesmo. */
+    const melhor = dentro.reduce((m, x) => {
+      if (!m) return x;
+      const vx = medidaCampanha(x), vm = medidaCampanha(m);
+      return vx > vm || (vx === vm && x.fim > m.fim) ? x : m;
+    }, null);
+    return {...j, n:dentro.length, melhor, valor: melhor ? medidaCampanha(melhor) : null};
+  });
+}
+
+/* Uma frase que diz a conclusão por extenso. Cor nunca é o único sinal: a
+   palavra carrega o mesmo sentido para quem não distingue os tons. */
+function vereditoCampanha(atual, refs){
+  const [r30, r6, r12] = refs;
+  /* Campanha do histórico costuma ser registrada pelo teto — "até 165%" —, que
+     em geral exige clube e tempo de assinatura. Dizer "pagou 165%" exageraria a
+     comparação; "chegou a oferecer até" diz o que de fato se sabe. */
+  const ate = m => (m.mesApenas || /até/i.test(m.titulo || '')) ? 'até ' : '';
+  if (!r12.melhor) return {tom:'anil', txt:'Primeira campanha registrada nesta rota no último ano. Ainda não há com o que comparar.'};
+  const rec = `${ate(r12.melhor)}${nBRdec(r12.valor)}% em ${mesAnoCurto(r12.melhor.fim)}`;
+  if (atual > r12.valor) return {tom:'jade', txt:`Maior bônus desta rota em 12 meses. O recorde anterior era ${rec}.`};
+  if (atual === r12.valor) return {tom:'jade', txt:`Empata com o melhor dos últimos 12 meses: ${rec}.`};
+  const dif = Math.round((r12.valor - atual) * 10) / 10;
+  if (r6.melhor && atual >= r6.valor)
+    return {tom:'ouro', txt:`A melhor dos últimos 6 meses, mas ${nBRdec(dif)} pontos abaixo do recorde de 12 meses: ${rec}.`};
+  if (!r6.melhor)
+    return {tom:'ouro', txt:`Sem outra campanha nesta rota em 6 meses. O recorde de 12 meses foi ${rec}.`};
+  return {tom:'brasa', txt:`${nBRdec(dif)} pontos abaixo do recorde de 12 meses: esta rota chegou a oferecer ${rec}.`};
+}
+
+/* O título cadastrado costuma repetir a rota e o bônus, que o cartão já mostra
+   grande. Só aparece quando diz algo a mais — "e compra no carrinho",
+   "upgrade", "Pink Friday". */
+function extraTitulo(c){
+  const t = String(c.titulo || '');
+  /* Tira cada palavra dos dois nomes de programa, e não o nome inteiro: o título
+     costuma dizer "Azul" onde o cadastro diz "Azul Fidelidade". */
+  const palavras = [prog(c.de).n, prog(c.para).n].join(' ').split(/\s+/)
+    .filter(w => w && w.length >= 2 && w !== '—');
+  let resto = t;
+  palavras.forEach(w => { resto = resto.split(w).join(' '); });
+  resto = resto
+    .replace(/\b(para|com|até|de|do|da|e|bônus|bonus|na|no|transferência|transferencia|todos|os|bancos)\b/gi, ' ')
+    .replace(/[+\d%,.:·\-–—]/g, ' ').replace(/\s+/g, ' ').trim();
+  return resto.length > 3 ? t : '';
+}
+
+function cartaoCampanha(c){
+  const dias = diasAte(c.fim);
+  const urg = dias === null ? 'folga' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'folga';
+  const atual = medidaCampanha(c);
+  const refs = referenciasCampanha(c);
+  const ver = vereditoCampanha(atual, refs);
+
+  /* Hero: o número que decide. Compra mostra desconto quando há; o resto,
+     bônus. */
+  const hero = c.tipo === 'compra' && c.desconto
+    ? {num:`${nBRdec(c.desconto)}%`, rot: c.bonus ? `de desconto e ${nBRdec(c.bonus)}% de bônus` : 'de desconto'}
+    : {num:`${nBRdec(c.bonus || 0)}%`, rot:'de bônus'};
+
+  /* Régua: de zero até um pouco além do maior valor visto, para que nem o
+     recorde encoste na borda. */
+  const teto = Math.max(atual, ...refs.map(r => r.valor || 0), 1) * 1.08;
+  const pos = v => Math.max(0, Math.min(100, v / teto * 100));
+  /* Janelas com o mesmo melhor valor viram uma marca só, com os nomes juntos:
+     duas marcas no mesmo ponto sobrepunham os rótulos e nenhum se lia. */
+  const grupos = {};
+  refs.filter(r => r.melhor).forEach(r => { (grupos[r.valor] = grupos[r.valor] || []).push(r.rot.replace(' meses', '').replace(' dias', ' dias')); });
+  const marcas = Object.entries(grupos).map(([v, rots]) => {
+    const nome = rots.length === 1 ? (rots[0].includes('dias') ? rots[0] : rots[0] + ' meses')
+      : rots.slice(0, -1).join(', ') + ' e ' + rots[rots.length - 1] + (rots[rots.length - 1].includes('dias') ? '' : ' meses');
+    return `<span class="cp-marca" style="left:${pos(Number(v))}%" title="Melhor em ${esc(nome)}: ${nBRdec(Number(v))}%"><i></i><em>${esc(nome)}</em></span>`;
+  }).join('');
+
+  let cpm = null;
+  if (c.tipo === 'compra' && tabelaDe(c.para)) cpm = tabelaDe(c.para) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
+  else if (c.tipo === 'transferencia'){
+    const par = PARIDADES.find(x => x.de === c.de && x.para === c.para);
+    const co = cpmPorPrograma()[c.de] ?? custoMarginal(c.de).cpm;
+    if (par && co) cpm = co * par.p / (1 + (c.bonus || 0) / 100);
+  }
+  const f = faixasDe(c.para);
+  const tomCpm = cpm == null ? '' : cpm <= f.alvo ? 'jade' : cpm <= f.razoavel ? 'ouro' : 'brasa';
+
+  /* Restrições que custam dinheiro se ignoradas ficam à vista, no máximo duas.
+     O resto das regras espera num recolhível: são para consulta, não decisão. */
+  const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean);
+  const criticas = linhas.filter(l => GATILHOS_RESTRICAO.some(r => r.test(l))).slice(0, 2);
+
+  const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
+    : dias === 0 ? 'Fecha hoje' : dias === 1 ? 'Fecha amanhã' : `Fecha em ${dias} dias`;
+
+  return `<article class="cp cp-${urg}">
+    <header class="cp-cab">
+      <div class="cp-rota">
+        ${c.de ? discoProg(c.de) + '<svg class="cp-seta"><use href="#i-seta-d"/></svg>' : ''}${discoProg(c.para)}
+        <div class="cp-rota-txt">
+          <b>${c.de ? esc(prog(c.de).n) + ' para ' : ''}${esc(prog(c.para).n)}</b>
+          ${extraTitulo(c) ? `<span>${esc(extraTitulo(c))}</span>` : ''}
+        </div>
+      </div>
+      <div class="cp-prazo">
+        ${prazo ? `<span class="cp-fecha">${dias !== null && dias <= 1 ? '<i class="ponto pulsa"></i>' : ''}${prazo}</span>` : ''}
+        ${c.fim ? `<span class="cp-data">${dataBR(c.fim)}</span>` : ''}
+      </div>
+      <div class="cp-acoes">
+        ${c.link ? `<a class="bt p fantasma icone" href="${esc(c.link)}" target="_blank" rel="noopener" data-dica="Abrir a página da campanha" aria-label="Abrir a página da campanha"><svg><use href="#i-link"/></svg></a>` : ''}
+        <button class="bt p fantasma icone" onclick="editarCampanha('${c.id}')" data-dica="Editar" aria-label="Editar campanha"><svg><use href="#i-lapis"/></svg></button>
+        <button class="bt p fantasma icone" onclick="apagar('campanhas','${c.id}','a campanha')" data-dica="Apagar" aria-label="Apagar campanha"><svg><use href="#i-lixo"/></svg></button>
+      </div>
+    </header>
+
+    <div class="cp-miolo">
+      <div class="cp-hero">
+        <div class="cp-num">${hero.num}</div>
+        <div class="cp-num-rot">${hero.rot}</div>
+      </div>
+      <div class="cp-ref">
+        <p class="cp-veredito cp-${ver.tom}">${esc(ver.txt)}</p>
+        ${refs[2].melhor ? `<div class="cp-regua" role="img" aria-label="${esc(ver.txt)}">
+          <div class="cp-trilha"><div class="cp-cheio" style="width:${pos(atual)}%"></div></div>
+          ${marcas}
+          <span class="cp-atual" style="left:${pos(atual)}%"><b>${nBRdec(atual)}%</b></span>
+        </div>
+        <div class="cp-janelas">
+          ${refs.map(r => {
+            if (!r.melhor) return `<div class="cp-jan"><span>${r.rot}</span><b class="fraco">sem outra</b></div>`;
+            const d = Math.round((atual - r.valor) * 10) / 10;
+            const sinal = d > 0 ? `+${nBRdec(d)}` : d < 0 ? `−${nBRdec(Math.abs(d))}` : '=';
+            const tom = d > 0 ? 'jade' : d < 0 ? 'brasa' : 'ouro';
+            return `<div class="cp-jan"><span>Melhor em ${r.rot}</span>
+              <b>${nBRdec(r.valor)}% <small>${mesAnoCurto(r.melhor.fim)}</small></b>
+              <em class="cp-${tom}">${sinal === '=' ? 'igual a esta' : sinal + ' pts'}</em></div>`;
+          }).join('')}
+        </div>` : `<p class="cp-sem-hist">Cada campanha nova desta rota que você cadastrar passa a servir de régua para as próximas.</p>`}
+      </div>
+    </div>
+
+    <div class="cp-fatos">
+      ${cpm != null ? `<span class="cp-fato cp-${tomCpm}">Milheiro projetado <b>${brl2(cpm)}</b></span>` : ''}
+      ${c.limite ? `<span class="cp-fato">Limite de <b>${nBR(c.limite)}</b> por CPF</span>` : ''}
+      ${c.minimo ? `<span class="cp-fato">Mínimo de <b>${nBR(c.minimo)}</b></span>` : ''}
+      ${c.carrinho ? `<span class="cp-fato">Carrinho a <b>${brl2(c.carrinho)}</b> por mil</span>` : ''}
+    </div>
+
+    ${criticas.length ? `<div class="cp-criticas">${criticas.map(l =>
+      `<div class="regra-limite"><svg><use href="#i-alerta"/></svg><span>${esc(l)}</span></div>`).join('')}</div>` : ''}
+
+    ${linhas.length ? `<details class="cp-regras"><summary>Regras completas</summary>
+      <div class="pilha" style="gap:4px">${regrasComDestaque(c.regra)}</div></details>` : ''}
+  </article>`;
+}
+
 function renderCampanhas(){
   /* contagem por tipo no próprio alternador: assim dá para ver que existe
      campanha na outra aba antes de clicar nela */
@@ -12955,6 +13278,9 @@ function renderCampanhas(){
     .sort((a, b) => (b.fim || '').localeCompare(a.fim || ''));
 
   const cartoes = vivas.map(c => {
+    /* Transferência e compra ganham o cartão com referência histórica. Clube
+       segue com o painel de planos, que compara faixas e não percentuais. */
+    if (c.tipo !== 'clube') return cartaoCampanha(c);
     const dias = diasAte(c.fim);
     const morta = dias !== null && dias < 0;
     /* clube não tem bônus percentual: o número da direita é o milheiro da
