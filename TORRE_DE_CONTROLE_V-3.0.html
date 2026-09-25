@@ -7858,7 +7858,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 20:00';
+const BUILD = '2026-09-26 21:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14637,6 +14637,7 @@ function abrirRegras(id, gatilho){
     });
   }
   d._volta = gatilho || null;
+  d._id = id;
   d._sim = c.tipo === 'compra' ? {qtd:QTD_COMPRA_PADRAO} : {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
 
   const dg = degrausClube(c);
@@ -27103,6 +27104,8 @@ function ligarObservadorDeTabelas(){
   });
   obs.observe(palco, {childList:true, subtree:true});
   montarColunaMenu();
+  /* F5: volta à tela, às abas e à janela em que se estava. */
+  setTimeout(restaurarEstadoTela, 300);
   /* Leitura vinda do botão de favoritos do Rota 360, se houver. */
   setTimeout(receberDoFavorito, 400);
   rotularTabelas(document);
@@ -32294,6 +32297,94 @@ coletar(extrair,${JSON.stringify(destino)});})()`;
 
 /* A Torre recebe a leitura pelo endereço — ao abrir, ou já aberta, quando o
    favorito reaproveita a aba. */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   F5 VOLTA PARA ONDE VOCÊ ESTAVA
+   ──────────────────────────────────────────────────────────────────────────────
+   Recarregar a página levava sempre ao Painel e apagava o trabalho em andamento:
+   a rota e os valores da calculadora, o período do radar, a janela de regras
+   aberta e a aba dela, o ponto da rolagem. Agora o estado da tela é guardado ao
+   sair e devolvido ao voltar.
+
+   Guardado na sessão do navegador (sessionStorage), não no banco: vale para a
+   aba em que se estava — F5 volta ao mesmo ponto; a Torre aberta numa aba nova
+   começa do Painel, como sempre. Os dados da conta não passam por aqui.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const CHAVE_TELA = 'torre:tela';
+
+function capturarEstadoTela(){
+  const abas = {};
+  document.querySelectorAll('.vista').forEach(v => { const pa = v.querySelector('.painel-aba.on'); if (pa) abas[v.id.slice(2)] = pa.id.slice(2); });
+  const dr = document.getElementById('dlgRegras'), gm = document.getElementById('dlgGuia');
+  /* Campos da calculadora digitados à mão: voltam travados, senão o
+     preenchimento automático escreveria por cima deles ao reabrir. */
+  const tocados = [...document.querySelectorAll('[id^="ct_"][data-tocado]')].map(e => e.id.slice(3));
+  return {v:1, em:Date.now(), vista:vistaAtual, abas,
+    abaCampanha, janelaRadar, janelaRadarClube,
+    ct:{tipo:ctTipo, modo:ctModo, vals:ctVals, tocados},
+    regras: dr && dr.open && dr._id ? {id:dr._id, aba:ultimaAbaRegras, sim:dr._sim || null} : null,
+    guia: gm && gm.open ? {aba:gm._aba || 'instalar'} : null,
+    rolagem: Math.round(window.scrollY || 0)};
+}
+
+function guardarEstadoTela(){
+  try { sessionStorage.setItem(CHAVE_TELA, JSON.stringify(capturarEstadoTela())); } catch(e){}
+}
+window.addEventListener('beforeunload', guardarEstadoTela);
+window.addEventListener('pagehide', guardarEstadoTela);
+
+function restaurarEstadoTela(){
+  let e = null;
+  try { e = JSON.parse(sessionStorage.getItem(CHAVE_TELA) || 'null'); } catch(_){}
+  if (!e || e.v !== 1) return;
+  /* Leitura chegando pelo favorito do Rota 360: ela decide para onde ir. */
+  if (/#mercado=/.test(location.hash)) return;
+  /* Estado de mais de 12 horas é de outro momento de trabalho: abre no Painel. */
+  if (Date.now() - (e.em || 0) > 12 * 3600e3) return;
+
+  if (e.abaCampanha) abaCampanha = e.abaCampanha;
+  if (e.janelaRadar) janelaRadar = e.janelaRadar;
+  if (e.janelaRadarClube) janelaRadarClube = e.janelaRadarClube;
+  if (e.ct && e.ct.tipo){
+    ctTipo = e.ct.tipo; ctModo = e.ct.modo || ctModo; ctVals = e.ct.vals || {}; ctFeitos = {};
+    ctTravados = new Set(e.ct.tocados || []);
+  }
+  if (!e.vista || !TITULOS[e.vista]) return;
+  irPara(e.vista);
+  /* A troca de tela é animada: abas, rolagem e janela esperam ela terminar. */
+  setTimeout(() => {
+    const aba = (e.abas || {})[e.vista];
+    if (aba && document.getElementById('p-' + aba)) irParaAba(e.vista, aba);
+    /* Os seletores de tipo de campanha e de período do radar só mudam de cor no
+       clique e não leem a escolha guardada: a Torre clica neles, e rótulos,
+       lista e radar se atualizam pelo mesmo caminho de um clique de verdade. */
+    const clicar = (sel, casa) => { const bt = [...document.querySelectorAll(sel)].find(casa); if (bt && !bt.classList.contains('on')) bt.click(); };
+    /* Abrir a tela CTP tem regra de entrada: com campanha de transferência no ar,
+       ela abre em Transferência. Certo para quem chega de outra tela; num F5, o
+       certo é a escolha que se tinha — aplicada aqui, DEPOIS da regra de entrada,
+       que roda durante a troca de tela e desfazia a restauração. */
+    if (e.abaCampanha) clicar('#segCampanha button', bt => bt.dataset.t === e.abaCampanha);
+    if (e.janelaRadar) clicar('#segRadar button', bt => Number(bt.dataset.d) === Number(e.janelaRadar));
+    if (e.janelaRadarClube) clicar('#clSegRadar button', bt => Number(bt.dataset.d) === Number(e.janelaRadarClube));
+    if (e.vista === 'comprar'){
+      if (typeof renderCampanhas === 'function') renderCampanhas();
+      renderComprarTransferir();
+    }
+    setTimeout(() => {
+      window.scrollTo(0, e.rolagem || 0);
+      if (e.regras && (DB.campanhas || []).some(c => c.id === e.regras.id)){
+        if (e.regras.aba) ultimaAbaRegras = e.regras.aba;
+        abrirRegras(e.regras.id);
+        const d = document.getElementById('dlgRegras');
+        if (d && e.regras.sim){ d._sim = {...d._sim, ...e.regras.sim}; simCarrinho(e.regras.id, {}); }
+        if (e.regras.aba) drAba(e.regras.aba);
+      } else if (e.guia){
+        abrirGuiaFavorito(e.guia.aba);
+      }
+    }, 380);
+  }, 420);
+}
+
 function receberDoFavorito(){
   const m = String(location.hash || '').match(/#mercado=([\w-]+)/);
   if (!m) return false;
