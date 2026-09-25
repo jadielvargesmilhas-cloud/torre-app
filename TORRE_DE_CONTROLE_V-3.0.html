@@ -82,6 +82,8 @@
      que precisam acompanhá-la. Trocado pelo botão Aa no topo. */
   --esc:1;
   --trilho:calc(72px * var(--esc));
+  /* Barra fixa da direita: vendas, financeiro e conta (tema, atalhos, sair). */
+  --trilho-dir:calc(68px * var(--esc));
   --menu:calc(212px * var(--esc));
   --topo-h:calc(62px * var(--esc));
   --ease:cubic-bezier(.22,.68,.32,1);
@@ -180,7 +182,7 @@ p:last-child{ margin-bottom:0; }
   display:grid;
   /* Trilho de ícones, coluna de menu em texto, conteúdo. No celular as duas
      primeiras desaparecem e a navegação volta para o rodapé. */
-  grid-template-columns:var(--trilho) var(--menu) minmax(0,1fr);
+  grid-template-columns:var(--trilho) var(--menu) minmax(0,1fr) var(--trilho-dir);
   min-height:100dvh;
   position:relative;
   z-index:1;
@@ -1162,6 +1164,78 @@ p:last-child{ margin-bottom:0; }
 /* Só o balão se desloca; o ponto dourado fica exatamente no valor. */
 .rc-atual.na-esq b{ transform:translateX(calc(50% - 16px)); }
 .rc-atual.na-dir b{ transform:translateX(calc(-50% + 16px)); }
+
+
+/* ── cartão de compra bonificada ───────────────────────────────────────────── */
+.bf-parceiro{ display:inline-grid; place-items:center; width:calc(40px * var(--esc)); height:calc(40px * var(--esc)); border-radius:50%;
+  font-family:var(--f-m); font-weight:700; font-size:calc(13px * var(--esc)); color:var(--giz);
+  background:var(--sup-2, var(--sup-1)); border:1.5px solid var(--fio-forte); flex-shrink:0; }
+.bf-miolo{ display:grid; grid-template-columns:auto minmax(0, 1fr); gap:24px; align-items:center; margin-top:14px; }
+.bf .cp-hero{ border-right:1px solid var(--fio); padding-right:22px; }
+.bf-escada{ display:flex; flex-direction:column; gap:7px; }
+/* Colunas fixas para o número e a observação: com "auto", "4,5 pontos" e
+   "4 pontos" davam larguras diferentes e cada barra começava num lugar. */
+.bf-degrau{ display:grid; grid-template-columns:minmax(170px, 1.3fr) minmax(80px, 2fr) 92px; gap:12px; align-items:center;
+  padding:5px 10px; border-radius:9px; }
+.bf-escada.com-obs .bf-degrau{ grid-template-columns:minmax(170px, 1.3fr) minmax(80px, 2fr) 92px 120px; }
+.bf-degrau b{ text-align:right; }
+.bf-pe{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; }
+.bf-degrau.seu{ background:var(--sel-fundo, color-mix(in oklab, var(--anil-claro) 12%, transparent)); box-shadow:0 0 0 1px var(--sel-borda, var(--anil-claro)); }
+.bf-rot{ font-size:calc(13.5px * var(--esc)); color:var(--grafite); }
+.bf-rot em{ font-style:normal; margin-left:6px; padding:1px 7px; border-radius:99px; background:var(--ouro); color:var(--sup-0); font-size:calc(11px * var(--esc)); font-weight:700; }
+.bf-barra{ height:8px; border-radius:99px; background:var(--fio); overflow:hidden; }
+.bf-barra i{ display:block; height:100%; border-radius:99px; background:linear-gradient(90deg, color-mix(in oklab, var(--ouro) 55%, var(--sup-1)), var(--ouro)); }
+.bf-degrau b{ font-size:calc(14px * var(--esc)); color:var(--giz); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.bf-degrau small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); white-space:nowrap; }
+@media (max-width:640px){
+  .bf-miolo{ grid-template-columns:1fr; gap:14px; }
+  .bf .cp-hero{ border-right:0; padding-right:0; display:flex; align-items:baseline; gap:10px; }
+  .bf-degrau, .bf-escada.com-obs .bf-degrau{ grid-template-columns:1fr auto; }
+  .bf-degrau small{ grid-column:1 / -1; }
+  .bf-barra{ grid-column:1 / -1; order:3; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BARRA FIXA DA DIREITA — vendas, financeiro e conta
+   O mesmo desenho do trilho da esquerda, espelhado.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.trilho-dir{
+  position:fixed; inset:0 0 0 auto; width:var(--trilho-dir); z-index:60;
+  display:flex; flex-direction:column; align-items:center;
+  padding:18px 0 14px;
+  background:color-mix(in oklab, var(--sup-0) 88%, transparent);
+  backdrop-filter:blur(14px) saturate(140%);
+  border-left:1px solid var(--fio);
+}
+.trilho-dir .trilho-nav{ flex:1; }
+.trilho-dir .trilho-rodape{ display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:auto; }
+.trilho-dir .tb.on::before{ left:auto; right:-1px; border-radius:3px 0 0 3px; }
+.trilho-dir .tb-min.tb-sair{ color:var(--brasa); }
+.trilho-dir .tb-min.tb-sair:hover{ background:color-mix(in oklab, var(--brasa) 12%, transparent); color:var(--brasa); }
+.tb-min svg{ fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+@media (min-width:861px){ .so-celular{ display:none !important; } }
+/* Os avisos do canto de baixo se afastam da barra. Preso ao id: a regra base
+   dos avisos vem depois no arquivo e, com o mesmo peso, vencia esta. */
+#avisos.avisos{ right:calc(20px + var(--trilho-dir)); }
+
+
+/* Três tipos de campanha no seletor: em tela estreita ele quebra em duas linhas
+   em vez de empurrar a página para o lado. */
+#segCampanha{ max-width:100%; flex-wrap:wrap; }
+
+
+/* Rodapé das janelas no celular: três botões lado a lado não cabem em 390px, e o
+   primeiro — o Fechar — era empurrado para fora da tela, à esquerda. Como a
+   janela só fecha por ele, isso a deixava sem saída. Agora os botões quebram em
+   linhas e ocupam a largura, com o Fechar sempre visível. */
+.dr-pe{ flex-wrap:wrap; }
+@media (max-width:640px){
+  .dr-pe{ gap:8px; }
+  .dr-pe > .bt{ flex:1 1 auto; justify-content:center; min-width:0; }
+  .dr-pe > .bt.sair{ flex:0 0 auto; }
+  .dr-pe > .bt.primario{ flex-basis:100%; order:-1; }
+}
 
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
@@ -6180,7 +6254,10 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
 /* ── mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width:860px){
-  :root{ --trilho:0px; --menu:0px; --pad:14px; }
+  :root{ --trilho:0px; --menu:0px; --trilho-dir:0px; --pad:14px; }
+  /* No celular a barra da direita não cabe: Balcão e Cartões seguem na barra de
+     baixo, como sempre estiveram. */
+  .trilho-dir{ display:none; }
   .casco{ grid-template-columns:1fr; }
   /* No celular a navegação é o rodapé de ícones, e só ele. */
   .coluna-menu{ display:none; }
@@ -6305,7 +6382,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 <symbol id="i-baixo" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
 <symbol id="i-seta-e" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
 <symbol id="i-imagem" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5-9 9"/></symbol>
-<symbol id="i-chave" viewBox="0 0 24 24"><circle cx="8" cy="8" r="4.5"/><path d="M11.5 11.5L20 20M17 17l2-2M14.5 14.5l2-2"/></symbol>
+<symbol id="i-sair" viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H4"/></symbol><symbol id="i-teclado" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></symbol><symbol id="i-chave" viewBox="0 0 24 24"><circle cx="8" cy="8" r="4.5"/><path d="M11.5 11.5L20 20M17 17l2-2M14.5 14.5l2-2"/></symbol>
 </defs></svg>
 
 <div class="abertura" id="abertura">
@@ -6356,21 +6433,34 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
       <button class="tb" data-vista="radar" data-dica="Radar, busca e vigilância" data-dica-lado="direita"><svg><use href="#i-radar"/></svg><span class="sg">RDR</span></button>
       <button class="tb" data-vista="rota" data-dica="Rota, roteiros e metas" data-dica-lado="direita"><svg><use href="#i-rota"/></svg><span class="sg">ROT</span></button>
 
-      <div class="trilho-grupo" data-dica="Operações de solo: atendimento, reserva e venda" data-dica-lado="direita">SOL</div>
+      <div class="trilho-grupo" data-dica="Operações de solo: emissões e cota de CPF" data-dica-lado="direita">SOL</div>
       <!-- Emissões antes do Balcão: primeiro se emite, depois se cobra. A ordem do
            menu acompanha a ordem da operação, e as dicas descrevem o que cada um
            virou depois da reorganização. -->
       <button class="tb" data-vista="emissoes" data-dica="Emissões: o que consome milha, cotações e cota de CPF" data-dica-lado="direita"><svg><use href="#i-bilhete"/></svg><span class="sg">EMS</span></button>
-      <button class="tb" data-vista="balcao" data-dica="Balcão: clientes, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">BLC</span></button>
-      
-      <button class="tb" data-vista="cartoes" data-dica="Cartões: faturas e limites" data-dica-lado="direita"><svg><use href="#i-cartao"/></svg><span class="sg">CRD</span></button>
+      <!-- Balcão e Cartões moram na barra da direita, no computador. Aqui ficam só
+           para o celular, onde a barra de baixo é a única navegação. -->
+      <button class="tb so-celular" data-vista="balcao" data-dica="Balcão: clientes, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">BLC</span></button>
+      <button class="tb so-celular" data-vista="cartoes" data-dica="Cartões: faturas e limites" data-dica-lado="direita"><svg><use href="#i-cartao"/></svg><span class="sg">CRD</span></button>
 
       <div class="trilho-grupo" data-dica="Hangar: manutenção do sistema" data-dica-lado="direita">HAN</div>
       <button class="tb" data-vista="ajustes" data-dica="Sistema: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">SIS</span></button>
     </nav>
+  </aside>
+  <!-- ═══ barra da direita ═══════════════════════════════════════════════════
+       Vendas e financeiro no alto; no pé, o que é da conta de quem usa: tema,
+       atalhos e sair. Fixa como o trilho da esquerda. -->
+  <aside class="trilho-dir" aria-label="Vendas, financeiro e conta">
+    <nav class="trilho-nav">
+      <div class="trilho-grupo" data-dica="Vendas: clientes, vendas e imposto de renda" data-dica-lado="esquerda">VEN</div>
+      <button class="tb" data-vista="balcao" data-dica="Balcão: clientes, vendas e imposto de renda" data-dica-lado="esquerda"><svg><use href="#i-balcao"/></svg><span class="sg">BLC</span></button>
+      <div class="trilho-grupo" data-dica="Financeiro: faturas, limites e o que a operação compromete" data-dica-lado="esquerda">FIN</div>
+      <button class="tb" data-vista="cartoes" data-dica="Cartões: faturas e limites" data-dica-lado="esquerda"><svg><use href="#i-cartao"/></svg><span class="sg">CRD</span></button>
+    </nav>
     <div class="trilho-rodape">
-      <button class="tb-min" id="btTema" data-dica="Alternar tema" data-dica-lado="direita"><svg><use href="#i-lua"/></svg></button>
-      <button class="tb-min" id="btAjuda" data-dica="Atalhos" data-dica-lado="direita"><svg><use href="#i-info"/></svg></button>
+      <button class="tb-min" id="btTema" data-dica="Mudar a cor: tema claro ou escuro" data-dica-lado="esquerda"><svg><use href="#i-lua"/></svg></button>
+      <button class="tb-min" id="btAjuda" data-dica="Atalhos do teclado" data-dica-lado="esquerda"><svg><use href="#i-teclado"/></svg></button>
+      <button class="tb-min tb-sair" id="btSair" data-dica="Sair da conta" data-dica-lado="esquerda"><svg><use href="#i-sair"/></svg></button>
     </div>
   </aside>
 
@@ -6552,6 +6642,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
               <div class="seg" id="segCampanha">
                 <button class="on" data-t="transferencia">Transferência Bonificada <span class="cont-disco" id="cnTra">0</span></button>
                 <button data-t="compra">Compra de Pontos/Milhas <span class="cont-disco" id="cnCom">0</span></button>
+                <button data-t="bonificada">Compra Bonificada <span class="cont-disco" id="cnBon">0</span></button>
               </div>
             </div>
 
@@ -7967,7 +8058,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 04:00';
+const BUILD = '2026-09-27 07:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11920,8 +12011,7 @@ function renderFita(){
   /* Na fita é "melhores opções": o número é a soma do que cada programa rende na
      sua melhor rota, e são várias — no cartão da Mesa, que fala de um estoque só,
      "melhor saída" continua certo. */
-  cels.push({ r:'Vale hoje', v:'R$ ' + nBR(Math.round(valorEstoque())), s:'melhores opções', d:true,
-    dicaTab:detalheValorPontos() });
+  /* "Vale hoje" saiu da fita a pedido: o valor continua no cartão da Mesa. */
 
   ['smiles','azul','latampass'].forEach(p => {
     const c = cpms[p], f = faixasDe(p);
@@ -11963,12 +12053,7 @@ function renderFita(){
         : `\nSem saldo em ${prog(melhorC.de).n} para aproveitar agora.`) });
   }
 
-  cels.push({ r:'Avisos', v:String(av.length), s:urg ? `${urg} a decidir` : 'nada urgente', cor:urg ? 'var(--brasa)' : '',
-    acao:'abrirAvisos()',
-    dicaTit: urg ? `${urg} ${urg > 1 ? 'exigem' : 'exige'} decisão hoje` : 'Nada exige decisão hoje',
-    dica: (av.length
-      ? `${av.length} ${av.length > 1 ? 'itens' : 'item'} na fila, do prazo mais curto ao mais longo.`
-      : 'A fila está vazia.') + '\nClique para abrir a central.' });
+  /* "Avisos" saiu da fita a pedido: a central segue no sino do topo. */
 
   const prox = DB.reservas.filter(r => r.status !== 'realizada' && r.status !== 'cancelada' && diasAte(r.data) >= 0)
     .sort((a, b) => a.data.localeCompare(b.data))[0];
@@ -13565,14 +13650,17 @@ function renderRadarBonus(){
      porcentagem na transferência, milheiro em reais na compra e no clube */
   const tit = $(alvoCamp().titulo);
   if (tit) tit.textContent = tipo === 'transferencia' ? 'Radar de bônus'
-    : tipo === 'compra' ? 'Radar de compra' : 'Radar de clube';
+    : tipo === 'compra' ? 'Radar de compra' : tipo === 'bonificada' ? 'Radar de compra bonificada' : 'Radar de clube';
   const cab = $(alvoCamp().texto);
-  if (cab) cab.innerHTML = tipo === 'transferencia'
+  if (cab) cab.innerHTML = tipo === 'bonificada'
+    ? 'Quantos pontos por real cada programa já pagou em compras nas lojas parceiras, no melhor degrau de clube. Aqui maior é melhor.'
+    : tipo === 'transferencia'
     ? 'O que cada destino andou pagando de bônus. A régua é por programa: 39% na LATAM é excelente, 39% na Azul é fraco.'
     : tipo === 'compra'
       ? 'O milheiro que cada campanha de compra produziu. Aqui menor é melhor, e porcentagem não serve de medida: 365% de bônus e 63% de desconto não se comparam.'
       : 'O melhor milheiro que cada campanha de clube ofereceu, já com o desconto do cartão. Menor é melhor.';
 
+  if (tipo === 'bonificada') return renderRadarBonificada(nomeJanela);
   if (tipo !== 'transferencia') return renderRadarMilheiro(tipo, nomeJanela);
 
   /* Programa com campanha no ar já tem o cartão lá em cima: projetar a próxima
@@ -14917,6 +15005,12 @@ function radarCampanhaCorpo(c, jan){
     </div>`;
 }
 
+/* Sair: a Torre ainda não tem contas de acesso — os dados vivem neste navegador.
+   O botão já ocupa o seu lugar e diz isso, em vez de fingir que desconectou. */
+function sairDaConta(){
+  avisar('A Torre ainda não tem contas de acesso: seus dados ficam só neste navegador. O Sair passa a funcionar quando houver login, na etapa de vários clientes.', 'info', 8000);
+}
+
 function abrirRadarCampanha(id, gatilho){
   const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
   let d = document.getElementById('dlgRadarCamp');
@@ -14958,7 +15052,27 @@ function abrirRadarCampanha(id, gatilho){
     <footer class="dr-pe"><button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRadarCamp').close()">Fechar</button></footer>
   </div>`;
   if (!d.open){ d.showModal(); travarFundo(true); }
+  fixarAlturaRadarCampanha(d, c);
   const f = d.querySelector('.rc-periodo button.on'); if (f) f.focus({focusVisible:false});
+}
+
+/* A janela não muda de tamanho ao trocar de período: mede o conteúdo dos quatro
+   períodos, fica com o maior, e o menor conteúdo apenas sobra espaço embaixo.
+   Mede-se já aberta, porque o tamanho depende da largura real da tela. */
+function fixarAlturaRadarCampanha(d, c){
+  const corpo = d.querySelector('.rc-corpo'); if (!corpo) return;
+  const atual = corpo.innerHTML;
+  corpo.style.minHeight = '';
+  let maior = 0;
+  JANELAS_RADAR.forEach(j => {
+    corpo.innerHTML = radarCampanhaCorpo(c, j.k);
+    maior = Math.max(maior, corpo.scrollHeight);
+  });
+  corpo.innerHTML = atual;
+  /* Limitado ao que cabe na tela: acima disso a janela rola por dentro, como já
+     fazia no celular. */
+  const teto = window.innerHeight - 28 - (d.querySelector('.dr-painel').offsetHeight - corpo.offsetHeight);
+  corpo.style.minHeight = Math.min(maior, teto) + 'px';
 }
 
 function radarCampanhaPeriodo(jan){
@@ -14970,6 +15084,91 @@ function radarCampanhaPeriodo(jan){
   d.querySelector('.rc-corpo').innerHTML = radarCampanhaCorpo(c, jan);
   /* Escolheu o período à mão: o aviso de ampliação deixa de valer. */
   const av = d.querySelector('.rc-ampliado'); if (av) av.remove();
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COMPRA BONIFICADA — pontos por real gasto numa loja parceira
+   ──────────────────────────────────────────────────────────────────────────────
+   Uber, Magalu e afins não são transferência nem compra de pontos: o gasto é
+   uma compra que se faria de qualquer jeito, e o que a campanha muda é quantos
+   pontos cada real rende. A medida é pontos por real, maior é melhor, e ela
+   depende do plano de clube — por isso o cartão mostra a escada e marca o
+   degrau de quem assina.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function seuDegrauBonificada(c){
+  const a = (DB.assinaturas || []).find(x => x.prog === c.para && x.status === 'ativa');
+  if (!a) return (c.faixas || []).find(f => f.clube === false || f.qtdMin === 0) || null;
+  const pl = ((catalogoDe(c.para) || {}).planos || []).find(x => x.id === a.planoId);
+  const qtd = pl ? Number(pl.qtd || pl.pontos || 0) : 0;
+  const porQtd = (c.faixas || []).filter(f => f.qtdMin != null && qtd >= f.qtdMin).sort((x, y) => y.qtdMin - x.qtdMin)[0];
+  return porQtd || (c.faixas || []).find(f => f.clube === true) || null;
+}
+const ptsReal = v => nBRdec(v) + (Number(v) === 1 ? ' ponto' : ' pontos');
+
+function cartaoBonificada(c){
+  const dias = diasAte(c.fim);
+  const prazo = dias === null ? '' : dias <= 0 ? 'Fecha hoje' : dias === 1 ? 'Fecha amanhã' : `Fecha em ${dias} dias`;
+  const urg = dias !== null && dias <= 1 ? 'brasa' : dias !== null && dias <= 5 ? 'ouro' : 'jade';
+  const meu = seuDegrauBonificada(c);
+  const topo = Math.max(...(c.faixas || [{v:c.ptsPorReal}]).map(f => Number(f.v) || 0), 1);
+  const sigla = String(c.parceiro || '?').slice(0, 2).toUpperCase();
+  return `<article class="cp cp-${urg} bf">
+    <header class="cp-cab">
+      <div class="cp-rota">
+        <span class="bf-parceiro" aria-hidden="true">${esc(sigla)}</span><svg class="cp-seta"><use href="#i-seta-d"/></svg>${discoProg(c.para)}
+        <div class="cp-rota-txt"><span class="cp-rota-nome"><b>${esc(c.parceiro || '')} para ${esc(prog(c.para).n)}</b></span>
+          <span>${esc(c.titulo || '')}</span></div>
+      </div>
+      <div class="cp-prazo"><span class="cp-fecha cp-${urg}">${prazo}</span><small>${c.fim ? dataBR(c.fim) : ''}</small></div>
+    </header>
+    <div class="bf-miolo">
+      <div class="cp-hero">
+        <div class="cp-num">${nBRdec(c.ptsPorReal || topo)}</div>
+        <div class="cp-num-rot">pontos por real,<br>no melhor degrau</div>
+      </div>
+      <div class="bf-escada${(c.faixas || []).some(f => f.obs) ? ' com-obs' : ''}" role="list" aria-label="Pontos por real em cada degrau">
+        ${(c.faixas || []).map(f => `<div class="bf-degrau${meu === f ? ' seu' : ''}" role="listitem">
+          <span class="bf-rot">${esc(f.rot)}${meu === f ? ' <em>o seu</em>' : ''}</span>
+          <span class="bf-barra"><i style="width:${Math.max(4, Number(f.v) / topo * 100)}%"></i></span>
+          <b>${ptsReal(f.v)}</b>${(c.faixas || []).some(x => x.obs) ? `<small>${f.obs ? esc(f.obs) : ''}</small>` : ''}
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="cp-fatos">
+      ${meu ? `<span class="cp-fato">No seu degrau, <b>${brl2(1000 / Number(meu.v))}</b> em compras rendem 1.000 pontos</span>` : ''}
+      <span class="cp-fato">No melhor degrau, <b>${brl2(1000 / topo)}</b> para 1.000 pontos</span>
+    </div>
+    <div class="bf-pe">
+      ${c.link ? `<a class="bt p fantasma" href="${esc(c.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Página da oferta</a>` : '<span></span>'}
+      <button type="button" class="bt p fantasma cp-regras-bt" onclick="abrirRegras('${c.id}', this)"><svg><use href="#i-info"/></svg>Regras Completas</button>
+    </div>
+  </article>`;
+}
+
+/* Radar de compra bonificada: o melhor pontos-por-real que cada programa já
+   pagou no período. Mesma regra dos outros radares: programa com campanha no
+   ar fica de fora, com aviso. */
+function renderRadarBonificada(nomeJanela){
+  const alvo = $(alvoCamp().radar); if (!alvo) return;
+  const limite = new Date(); limite.setDate(limite.getDate() - janelaRadar);
+  const hist = (DB.campanhas || []).filter(c => c.tipo === 'bonificada' && c.fim && new Date(c.fim + 'T12:00:00') >= limite);
+  const noAr = new Set(campanhasVivas('bonificada').map(c => c.para));
+  const progs = [...new Set(hist.map(c => c.para))];
+  const ocultos = progs.filter(p => noAr.has(p)), ver = progs.filter(p => !noAr.has(p));
+  const nota = ocultos.length ? `<p class="radar-ocultos"><svg><use href="#i-info"/></svg>Fora do radar por estarem com campanha no ar, nos cartões acima: ${ocultos.map(p => esc(prog(p).n)).join(', ')}.</p>` : '';
+  if (!ver.length){
+    alvo.innerHTML = `${nota}<div class="vazio" style="border:0;padding:18px 24px"><p>${ocultos.length
+      ? 'Todos os programas com histórico de compra bonificada estão com campanha no ar agora.'
+      : `Nenhuma compra bonificada registrada em ${esc(nomeJanela)}.`}</p></div>`;
+    return;
+  }
+  alvo.innerHTML = `${nota}<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:13px">
+    ${ver.map(p => { const cs = hist.filter(c => c.para === p); const melhor = Math.max(...cs.map(c => Number(c.ptsPorReal) || 0));
+      return `<div class="cartao" style="background:var(--sup-0)"><div class="linha" style="gap:9px;margin-bottom:10px">${discoProg(p, 'p')}<b>${esc(prog(p).n)}</b></div>
+        <div class="num" style="font-size:calc(18px * var(--esc));color:var(--ouro)">${ptsReal(melhor)} por real</div>
+        <div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:6px">${cs.length} oferta${cs.length > 1 ? 's' : ''} no período: ${cs.map(c => esc(c.parceiro || '')).join(', ')}.</div></div>`; }).join('')}
+  </div>`;
 }
 
 function abrirRegras(id, gatilho){
@@ -15247,12 +15446,13 @@ function renderCampanhas(){
   if ($('#cnTra')) $('#cnTra').textContent = conta('transferencia');
   if ($('#cnCom')) $('#cnCom').textContent = conta('compra');
   if ($('#cnClu')) $('#cnClu').textContent = conta('clube');
+  if ($('#cnBon')) $('#cnBon').textContent = conta('bonificada');
   const A = alvoCamp();
 
   /* O contador da aba conta o que a aba mostra. Como as de clube passaram para
      Fábrica, somá-las aqui anunciaria oferta que não está nesta tela. */
   const cc = $('#contCampanhas');
-  if (cc) cc.textContent = campanhasVivas('transferencia').length + campanhasVivas('compra').length;
+  if (cc) cc.textContent = campanhasVivas('transferencia').length + campanhasVivas('compra').length + campanhasVivas('bonificada').length;
   const lista = DB.campanhas.filter(c => c.tipo === abaCampanha)
     .sort((a, b) => { const va = diasAte(a.fim) ?? 9999, vb = diasAte(b.fim) ?? 9999;
       if ((va < 0) !== (vb < 0)) return va < 0 ? 1 : -1; return va - vb; });
@@ -15278,6 +15478,7 @@ function renderCampanhas(){
   const cartoes = vivas.map(c => {
     /* Transferência e compra ganham o cartão com referência histórica. Clube
        segue com o painel de planos, que compara faixas e não percentuais. */
+    if (c.tipo === 'bonificada') return cartaoBonificada(c);
     if (c.tipo !== 'clube') return cartaoCampanha(c);
     const dias = diasAte(c.fim);
     const morta = dias !== null && dias < 0;
@@ -16542,7 +16743,45 @@ const CAMPANHAS_PUBLICADAS = [
     bonus:0, desconto:57.14, limite:0, minimo:0, carrinho:0, fim:'2026-09-24',
     titulo:'Turbo Livelo com até 57% de desconto',
     regra:'Turbina pontos já recebidos em até 25 vezes: do cartão de crédito, de compras bonificadas e de transferências de outros programas. Vale para transações de 1 a 400 mil pontos feitas no último ano. R$ 30,00 por mil para assinantes do Clube Livelo; pagando no PIX o desconto aumenta e o milheiro sai a R$ 29,40. Quem não tem pontos pode comprar alguns para reserva: o carrinho das transferências exige 1% próprio, e de 1 a 3 mil pontos costuma bastar.',
-    link:'https://www.livelo.com.br/turbo-livelo/turbinar' }
+    link:'https://www.livelo.com.br/turbo-livelo/turbinar' },
+  { id:'pub-tb-esfera-connect-260930', tipo:'transferencia', de:'esfera', para:'connect',
+    bonus:55, desconto:0, limite:500000, minimo:30000, carrinho:0, fim:'2026-09-30',
+    titulo:'Esfera para ConnectMiles com 55% de bônus',
+    regra:'55% de bônus para todos os clientes. Cadastro no ConnectMiles antes de transferir. Paridade de 3 : 1: 30 mil Esfera viram 10 mil ConnectMiles mais o bônus. Transferência mínima de 30 mil pontos, a depender do clube. Bonificação máxima de 500 mil. Milhas creditadas em até 30 dias depois do fim da promoção, com validade de 2 anos.',
+    link:'https://www.esfera.com.vc/p/copa-airlines/e000100695' },
+  { id:'pub-cl-esfera-pro-260925', tipo:'clube', de:'', para:'esfera', plano:'pro',
+    bonus:16.67, desconto:0, limite:0, fim:'2026-09-25',
+    titulo:'Clube Esfera Pro com 2.000 pontos de bônus em 12 meses',
+    regra:'Pro: 14.000 pontos em 12 meses, sendo 2.000 de bônus. Assinatura nova ou upgrade do Clube Esfera: bônus dividido e creditado mês a mês, com os pontos do clube, durante 12 meses. Upgrade vale só na modalidade atualização imediata. Só para quem nunca assinou o Clube ou cancelou há mais de 12 meses. O Clube Premium (10.000) não participa. Preços na modalidade mensal, pela oferta: Pro R$ 526,80 no ano, Master R$ 1.282,80, VIP R$ 2.542,80, Exclusive R$ 9.598,80.',
+    link:'https://www.esfera.com.vc/clube' },
+  { id:'pub-cl-esfera-master-260925', tipo:'clube', de:'', para:'esfera', plano:'master',
+    bonus:16.67, desconto:0, limite:0, fim:'2026-09-25',
+    titulo:'Clube Esfera Master com 5.000 pontos de bônus em 12 meses',
+    regra:'Master: 35.000 pontos em 12 meses, sendo 5.000 de bônus. Assinatura nova ou upgrade do Clube Esfera: bônus dividido e creditado mês a mês, com os pontos do clube, durante 12 meses. Upgrade vale só na modalidade atualização imediata. Só para quem nunca assinou o Clube ou cancelou há mais de 12 meses. O Clube Premium (10.000) não participa. Preços na modalidade mensal, pela oferta: Pro R$ 526,80 no ano, Master R$ 1.282,80, VIP R$ 2.542,80, Exclusive R$ 9.598,80.',
+    link:'https://www.esfera.com.vc/clube' },
+  { id:'pub-cl-esfera-vip-260925', tipo:'clube', de:'', para:'esfera', plano:'vip',
+    bonus:25, desconto:0, limite:0, fim:'2026-09-25',
+    titulo:'Clube Esfera VIP com 15.000 pontos de bônus em 12 meses',
+    regra:'VIP: 75.000 pontos em 12 meses, sendo 15.000 de bônus. Assinatura nova ou upgrade do Clube Esfera: bônus dividido e creditado mês a mês, com os pontos do clube, durante 12 meses. Upgrade vale só na modalidade atualização imediata. Só para quem nunca assinou o Clube ou cancelou há mais de 12 meses. O Clube Premium (10.000) não participa. Preços na modalidade mensal, pela oferta: Pro R$ 526,80 no ano, Master R$ 1.282,80, VIP R$ 2.542,80, Exclusive R$ 9.598,80.',
+    link:'https://www.esfera.com.vc/clube' },
+  { id:'pub-cl-esfera-exclusive-260925', tipo:'clube', de:'', para:'esfera', plano:'exclusive',
+    bonus:25, desconto:0, limite:0, fim:'2026-09-25',
+    titulo:'Clube Esfera Exclusive com 60.000 pontos de bônus em 12 meses',
+    regra:'Exclusive: 300.000 pontos em 12 meses, sendo 60.000 de bônus. Assinatura nova ou upgrade do Clube Esfera: bônus dividido e creditado mês a mês, com os pontos do clube, durante 12 meses. Upgrade vale só na modalidade atualização imediata. Só para quem nunca assinou o Clube ou cancelou há mais de 12 meses. O Clube Premium (10.000) não participa. Preços na modalidade mensal, pela oferta: Pro R$ 526,80 no ano, Master R$ 1.282,80, VIP R$ 2.542,80, Exclusive R$ 9.598,80.',
+    link:'https://www.esfera.com.vc/clube' },
+  { id:'pub-bf-uber-smiles-260927', tipo:'bonificada', parceiro:'Uber', de:'', para:'smiles', ptsPorReal:4.5,
+    bonus:0, desconto:0, limite:0, fim:'2026-09-27',
+    faixas:[{rot:'Clube 20.000 ou Diamante', v:4.5, qtdMin:20000}, {rot:'Clubes 7.000 e 10.000', v:4, qtdMin:7000},
+            {rot:'Clubes 2.000, 3.000 e 5.000', v:3.5, qtdMin:2000}, {rot:'Clube 1.000', v:3, qtdMin:1000}, {rot:'Demais clientes', v:1, qtdMin:0}],
+    titulo:'Créditos Uber pela Smiles com até 4,5 pontos por real',
+    regra:'Compre crédito do Uber pelo site ou app da Smiles e pague com cartão de crédito: as milhas caem na hora. O voucher chega por e-mail em até 72 horas. No app do Uber, vá em Conta, Pagamentos, Adicionar saldo, Gift card, e cole o código. Na hora de pagar a corrida, escolha Uber Cash.',
+    link:'https://www.smiles.com.br/portal/campanhas/clubesmiles-day/uber-2209' },
+  { id:'pub-bf-magalu-azul-260928', tipo:'bonificada', parceiro:'Magalu', de:'', para:'azul', ptsPorReal:13,
+    bonus:0, desconto:0, limite:0, fim:'2026-09-28',
+    faixas:[{rot:'Assinantes do Clube Azul', v:13, obs:'12 em telefonia', clube:true}, {rot:'Demais clientes', v:9, obs:'6 em telefonia', clube:false}],
+    titulo:'Magalu com até 13 pontos Azul por real',
+    regra:'Vale só para produtos vendidos e entregues pela Magazine Luiza; itens de marketplace rendem 1 ponto por real. Não pontuam embalagem para presente, frete, pagamentos com cupom, gift card ou vale-compra, juros e serviços como garantia estendida. Pontos creditados em até 30 dias úteis depois da entrega do pedido.',
+    link:'https://clube.magazineluiza.com.br/tudoazul' }
 ];
 
 /* ── o histórico que estava escrito e não entrava ─────────────────────────────
@@ -16802,7 +17041,8 @@ function editarCampanha(id, tipoPadrao){
       <div class="campo"><label>Tipo</label><select id="cpTipo">
         <option value="transferencia"${c.tipo === 'transferencia' ? ' selected' : ''}>Transferência bonificada</option>
         <option value="compra"${c.tipo === 'compra' ? ' selected' : ''}>Compra de pontos</option>
-        <option value="clube"${c.tipo === 'clube' ? ' selected' : ''}>Clube</option></select></div>
+        <option value="clube"${c.tipo === 'clube' ? ' selected' : ''}>Clube</option>
+        <option value="bonificada"${c.tipo === 'bonificada' ? ' selected' : ''}>Compra bonificada</option></select></div>
       <div class="campo"><label>Origem dos pontos</label><select id="cpDe"><option value="">— não se aplica —</option>${optProg(c.de)}</select></div>
       <div class="campo"><label>Programa de destino</label><select id="cpPara">${optProg(c.para)}</select></div>
       <!-- Campanha de clube costuma valer para um plano só: a Livelo bonifica o
@@ -29796,6 +30036,9 @@ function posicionarDica(el){
 
   if (lado === 'direita' && b.right + resp + d.width + folga <= W){
     x = b.right + resp; y = b.top + b.height / 2 - d.height / 2;
+  } else if (lado === 'esquerda' && b.left - resp - d.width - folga >= 0){
+    /* Barra da direita: a dica abre para dentro da tela. */
+    x = b.left - resp - d.width; y = b.top + b.height / 2 - d.height / 2;
   } else {
     x = b.left + b.width / 2 - d.width / 2;
     const cabeAcima = b.top - resp - d.height >= folga;
@@ -29924,6 +30167,7 @@ function ligarEventos(){
   document.addEventListener('focusin', e => ordenarSelect(e.target));
 
   $$('.tb[data-vista]').forEach(b => b.onclick = () => irPara(b.dataset.vista));
+  if ($('#btSair')) $('#btSair').onclick = sairDaConta;
   $$('.abas').forEach(cx => $$('.aba', cx).forEach(b => b.onclick = () => irParaAba(cx.dataset.grupo, b.dataset.aba)));
   $('#btTema').onclick = alternarTema;
   if ($('#btTemaTopo')) $('#btTemaTopo').onclick = alternarTema;
@@ -30090,7 +30334,8 @@ function ligarEventos(){
     $$('#segCampanha button').forEach(x => x.classList.toggle('on', x === b));
     const rot = $('#rotuloLista');
     if (rot) rot.textContent = b.dataset.t === 'transferencia' ? 'Transferências Bonificadas'
-      : b.dataset.t === 'compra' ? 'Compras de Pontos/Milhas' : 'Campanhas de Clube';
+      : b.dataset.t === 'compra' ? 'Compras de Pontos/Milhas'
+      : b.dataset.t === 'bonificada' ? 'Compras Bonificadas' : 'Campanhas de Clube';
     renderPainelCampanhas();
   });
   $('#btNovoCartao').onclick = () => editarCartao();
