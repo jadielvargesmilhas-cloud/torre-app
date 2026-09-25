@@ -8199,7 +8199,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 13:20';
+const BUILD = '2026-09-27 13:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15707,8 +15707,22 @@ function renderCampanhas(){
     </div>`;
   }).join('');
 
+  /* Sem campanha no ar: dizer quais acabaram de fechar. Quatro cartões que
+     somem de um dia para o outro parecem defeito; "fecharam ontem" explica. */
+  const recentes = mortas.filter(c => c.fim && c.fim >= somaDias(-7));
+  let fecharam = '';
+  if (recentes.length){
+    const porProg = {};
+    recentes.forEach(c => { (porProg[c.para] = porProg[c.para] || []).push(c); });
+    const quando = f => { const d = diasAte(f); return d === -1 ? 'ontem' : `em ${dataBR(f).slice(0, 5)}`; };
+    fecharam = ' ' + Object.entries(porProg).map(([p, cs]) => {
+      const ult = cs.map(c => c.fim).sort().pop();
+      const nome = cs[0].tipo === 'clube' ? `do Clube ${esc(prog(p).n)}` : `de ${esc(prog(p).n)}`;
+      return `${cs.length === 1 ? 'A campanha' : 'As ' + cs.length + ' campanhas'} ${nome} ${cs.length === 1 ? 'fechou' : 'fecharam'} ${quando(ult)}`;
+    }).join('; ') + '.';
+  }
   $(A.lista).innerHTML = cartoes ||
-    `<div class="nota" style="margin:0"><svg><use href="#i-info"/></svg><div>Nenhuma campanha aberta deste tipo agora.${
+    `<div class="nota" style="margin:0"><svg><use href="#i-info"/></svg><div>Nenhuma campanha aberta deste tipo agora.${fecharam}${
       mortas.length ? ' O histórico está na tabela abaixo do radar.' : ''}</div></div>`;
   if (caixaEnc) caixaEnc.innerHTML = tabelaEncerradas(mortas);
 }
@@ -15880,6 +15894,9 @@ function voltaPct(l){ return retornoLoja(l).valor * 100; }
 
 function renderLojasParceiras(){
   const alvo = $('#ljVitrine'); if (!alvo) return;
+  /* O guia "Como ler a aba de lojas parceiras" era desenhado pela vitrine
+     antiga; ao refazê-la, a chamada se perdeu e o guia sumiu. */
+  if (typeof renderGuiaLojas === 'function') renderGuiaLojas();
   const hoje = hojeISO();
   const vivas = ofertasVitrine();
   const mortas = (DB.lojas || []).filter(l => l.fim && l.fim < hoje);
