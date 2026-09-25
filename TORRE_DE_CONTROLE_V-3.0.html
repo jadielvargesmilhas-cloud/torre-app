@@ -1260,6 +1260,14 @@ p:last-child{ margin-bottom:0; }
   .seg-na-coluna, .linha-so-seg{ display:none !important; }
 }
 
+
+/* Marca próxima de outra: o rótulo vai para cima da barra. Embaixo não havia
+   altura — descendo, ele encostava no texto das janelas. */
+.cp-marca.baixo em{ position:absolute; bottom:calc(100% + 1px); left:50%; transform:translateX(-50%); margin:0; }
+.cp-marca.sem-rotulo em{ display:none; }
+/* No celular a barra é estreita demais para dois andares de rótulo. */
+@media (max-width:640px){ .cp-marca.baixo em{ display:none; } }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -8085,7 +8093,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 09:40';
+const BUILD = '2026-09-27 10:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14099,6 +14107,13 @@ const mesAnoCurto = iso => {
    Sem preço de tabela do programa, a compra cai no desconto efetivo. */
 const precoCheioDe = c => Number(c.precoCheio) > 0 ? Number(c.precoCheio) : (tabelaDe(c.para) || 0);
 function metricaCampanha(c){
+  /* Clube: o milheiro do ano de assinatura, a mesma medida do Radar de clube.
+     Percentual de pontos extras não compara planos de tamanhos diferentes. */
+  if (c.tipo === 'clube'){
+    const v = cpmDaCampanhaClube(c);
+    if (v != null) return {v:Math.round(v * 100) / 100, menor:true, reais:true};
+    return {v:Number(c.bonus) || 0, menor:false, reais:false};
+  }
   if (c.tipo === 'compra'){
     const d = (Number(c.desconto) || 0) / 100, b = (Number(c.bonus) || 0) / 100;
     const cheio = precoCheioDe(c);
@@ -14142,7 +14157,9 @@ function vereditoCampanha(atual, refs, c){
   if (m.menor){
     /* Compra: milheiro em reais, menor é melhor. */
     const nome = c ? esc(prog(c.para).n) : 'este programa';
-    if (!r12.melhor) return {tom:'anil', txt:`Primeira campanha de compra de ${nome} registrada no último ano. Ainda não há com o que comparar.`};
+    const oque = c && c.tipo === 'clube' ? 'de clube' : 'de compra';
+    const saiu = c && c.tipo === 'clube' ? 'já teve clube a' : 'já vendeu a';
+    if (!r12.melhor) return {tom:'anil', txt:`Primeira campanha ${oque} de ${nome} registrada no último ano. Ainda não há com o que comparar.`};
     const rec = `${brl2(r12.valor)} em ${mesAnoCurto(r12.melhor.fim)}`;
     if (atual < r12.valor) return {tom:'jade', txt:`Menor milheiro de ${nome} em 12 meses. O recorde anterior era ${rec}.`};
     if (atual === r12.valor) return {tom:'jade', txt:`Empata com o melhor milheiro dos últimos 12 meses: ${rec}.`};
@@ -14150,8 +14167,8 @@ function vereditoCampanha(atual, refs, c){
     if (r6.melhor && atual <= r6.valor)
       return {tom:'ouro', txt:`O melhor milheiro dos últimos 6 meses, mas ${brl2(dif)} por mil acima do recorde de 12 meses: ${rec}.`};
     if (!r6.melhor)
-      return {tom:'ouro', txt:`Sem outra campanha de compra de ${nome} em 6 meses. O recorde de 12 meses foi ${rec}.`};
-    return {tom:'brasa', txt:`${brl2(dif)} por mil acima do recorde de 12 meses: ${nome} já vendeu a ${rec}.`};
+      return {tom:'ouro', txt:`Sem outra campanha ${oque} de ${nome} em 6 meses. O recorde de 12 meses foi ${rec}.`};
+    return {tom:'brasa', txt:`${brl2(dif)} por mil acima do recorde de 12 meses: ${nome} ${saiu} ${rec}.`};
   }
   /* Campanha do histórico costuma ser registrada pelo teto — "até 165%" —, que
      em geral exige clube e tempo de assinatura. Dizer "pagou 165%" exageraria a
@@ -14240,6 +14257,7 @@ const destacarNumeros = txt => esc(txt).replace(
    cálculos separados acabariam discordando em alguma casa decimal. */
 function cpmProjetadoCampanha(c, bonusUsado){
   const b = bonusUsado != null ? bonusUsado : (Number(c.bonus) || 0);
+  if (c.tipo === 'clube') return cpmDaCampanhaClube(c);
   if (c.tipo === 'compra' && precoCheioDe(c) > 0)
     return precoCheioDe(c) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
   if (c.tipo === 'transferencia'){
@@ -14934,13 +14952,13 @@ function travarFundo(liga){
 const dataDiaMes = iso => String(iso).slice(0, 4) === hojeISO().slice(0, 4) ? dataBR(iso).slice(0, 5) : dataBR(iso).slice(0, 6) + String(iso).slice(2, 4);
 
 function dadosRadarCampanha(c, jan){
-  const p = c.para, compra = c.tipo === 'compra';
+  const p = c.para, compra = c.tipo === 'compra' || c.tipo === 'clube';
   if (compra){
-    const r = radarMilheiro(p, 'compra', jan);
+    const r = radarMilheiro(p, c.tipo, jan);
     const vals = r.campanhas.map(x => ({v:x.cpm, c:x.c}));
     const minha = vals.find(x => x.c.id === c.id);
     return {r, vals, atual: minha ? minha.v : medidaCampanha(c), maior:false,
-      fmt: v => brl2(v), nomeMedida:'milheiro', cartao: cartaoRadarMilheiro(p, r, 'compra', jan)};
+      fmt: v => brl2(v), nomeMedida:'milheiro', cartao: cartaoRadarMilheiro(p, r, c.tipo, jan)};
   }
   const r = radarBonus(p, jan);
   const vals = r.campanhas.map(x => ({v:Number(x.bonus) || 0, c:x}));
@@ -15059,7 +15077,7 @@ function abrirRadarCampanha(id, gatilho){
   const nPref = dadosRadarCampanha(c, pref).vals.length;
   const nomeJ = k => (JANELAS_RADAR.find(j => j.k === k) || {}).n;
   d._aviso = d._jan !== pref ? `Ampliado para ${nomeJ(d._jan)}: em ${nomeJ(pref)} havia ${nPref === 1 ? 'só esta campanha' : nPref + ' campanhas'}.` : '';
-  const titulo = c.tipo === 'compra' ? 'Radar de compra' : 'Radar de bônus';
+  const titulo = c.tipo === 'compra' ? 'Radar de compra' : c.tipo === 'clube' ? 'Radar de clube' : 'Radar de bônus';
   d.innerHTML = `<div class="dr-painel rc-painel">
     <header class="dr-cab">
       <div class="dr-rota">${discoProg(c.para)}
@@ -15356,7 +15374,11 @@ function cartaoCampanha(c){
      bônus. */
   const hero = c.tipo === 'compra' && c.desconto
     ? {num:`${nBRdec(c.desconto)}%`, rot: c.bonus ? `de desconto e ${nBRdec(c.bonus)}% de bônus` : 'de desconto'}
-    : {num:`${nBRdec(c.bonus || 0)}%`, rot:'de bônus'};
+    : c.tipo === 'clube' && !(Number(c.bonus) > 0) && met.reais
+      ? {num:brl2(met.v), rot:'o milheiro do ano'}
+      : c.tipo === 'clube'
+        ? {num:`${nBRdec(Math.round((c.bonus || 0) * 10) / 10)}%`, rot:'de pontos extras'}
+        : {num:`${nBRdec(c.bonus || 0)}%`, rot:'de bônus'};
 
   /* Régua: de zero até um pouco além do maior valor visto, para que nem o
      recorde encoste na borda. */
@@ -15366,10 +15388,21 @@ function cartaoCampanha(c){
      duas marcas no mesmo ponto sobrepunham os rótulos e nenhum se lia. */
   const grupos = {};
   refs.filter(r => r.melhor).forEach(r => { (grupos[r.valor] = grupos[r.valor] || []).push(r.rot.replace(' meses', '').replace(' dias', ' dias')); });
-  const marcas = Object.entries(grupos).map(([v, rots]) => {
+  /* Marcas de valores próximos (R$ 25,71 e R$ 27,36) tinham os rótulos um em
+     cima do outro — "6 e 12 mese30 dias". Da esquerda para a direita, a marca
+     que cai a menos de 16% da anterior desce o rótulo para uma segunda linha. */
+  let ultimaPos = -100, linhaAnterior = 0;
+  const marcas = Object.entries(grupos).sort((a, b) => pos(Number(a[0])) - pos(Number(b[0]))).map(([v, rots]) => {
     const nome = rots.length === 1 ? (rots[0].includes('dias') ? rots[0] : rots[0] + ' meses')
       : rots.slice(0, -1).join(', ') + ' e ' + rots[rots.length - 1] + (rots[rots.length - 1].includes('dias') ? '' : ' meses');
-    return `<span class="cp-marca" style="left:${pos(Number(v))}%" title="Melhor em ${esc(nome)}: ${fmtMedida(met, Number(v))}"><i></i><em>${esc(nome)}</em></span>`;
+    const px = pos(Number(v));
+    const linha = px - ultimaPos < 16 ? 1 - linhaAnterior : 0;
+    ultimaPos = px; linhaAnterior = linha;
+    /* Em cima da barra também mora o balão do valor atual: perto dele não há
+       lugar, e o nome some — o valor segue nas janelas abaixo e ao passar o
+       mouse na marca. */
+    const semLugar = linha && Math.abs(px - pos(atual)) < 22;
+    return `<span class="cp-marca${linha ? ' baixo' : ''}${semLugar ? ' sem-rotulo' : ''}" style="left:${px}%" title="Melhor em ${esc(nome)}: ${fmtMedida(met, Number(v))}"><i></i><em>${esc(nome)}</em></span>`;
   }).join('');
 
   const cpm = cpmProjetadoCampanha(c);
@@ -15403,7 +15436,9 @@ function cartaoCampanha(c){
       <div class="cp-rota">
         ${c.de ? discoProg(c.de) + '<svg class="cp-seta"><use href="#i-seta-d"/></svg>' : ''}${discoProg(c.para)}
         <div class="cp-rota-txt">
-          <span class="cp-rota-nome"><b>${c.de ? esc(prog(c.de).n) + ' para ' : ''}${esc(prog(c.para).n)}</b>
+          <span class="cp-rota-nome"><b>${c.tipo === 'clube'
+              ? 'Clube ' + esc(prog(c.para).n) + (c.plano ? ' ' + esc((((catalogoDe(c.para) || {}).planos || []).find(x => x.id === c.plano) || {n:''}).n) : '')
+              : (c.de ? esc(prog(c.de).n) + ' para ' : '') + esc(prog(c.para).n)}</b>
             <button type="button" class="cp-olho" onclick="abrirRadarCampanha('${c.id}', this)"
               aria-label="Ver ${esc(prog(c.para).n)} como o Radar mostraria" data-dica="Ver como o Radar mostraria este programa"><svg><use href="#i-olho"/></svg></button></span>
           ${extraTitulo(c) ? `<span>${esc(extraTitulo(c))}</span>` : ''}
@@ -15506,7 +15541,8 @@ function renderCampanhas(){
     /* Transferência e compra ganham o cartão com referência histórica. Clube
        segue com o painel de planos, que compara faixas e não percentuais. */
     if (c.tipo === 'bonificada') return cartaoBonificada(c);
-    if (c.tipo !== 'clube') return cartaoCampanha(c);
+    /* Clube passou a usar o mesmo cartão das transferências, medido em milheiro. */
+    return cartaoCampanha(c);
     const dias = diasAte(c.fim);
     const morta = dias !== null && dias < 0;
     /* clube não tem bônus percentual: o número da direita é o milheiro da
