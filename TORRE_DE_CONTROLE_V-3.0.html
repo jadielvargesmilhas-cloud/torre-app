@@ -1054,6 +1054,14 @@ p:last-child{ margin-bottom:0; }
 .dr-abas{ margin-top:10px; }
 .dr-pe{ padding-top:9px; padding-bottom:11px; }
 
+
+/* "Recalcule o valor do milheiro!" em verde, dentro da caixa azul: a ação que
+   se pede, destacada do conselho. */
+.dr-sim-avisos .dr-aviso-anil span.dr-recalc{ color:var(--jade); }
+
+
+.dr{ overscroll-behavior:contain; }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -7858,7 +7866,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 21:30';
+const BUILD = '2026-09-26 22:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14395,7 +14403,7 @@ function simuladorCarrinho(c, st, soCorpo){
          obrigatório". -->
     <div class="cp-criticas dr-sim-avisos" role="note">
       <div class="regra-limite dr-aviso-brasa"><svg><use href="#i-alerta"/></svg><span>Valores sujeitos a alterações!</span></div>
-      <div class="regra-limite dr-aviso-anil"><svg><use href="#i-info"/></svg><span>Confira sempre os valores na hora da transferência. Recalcule o valor do milheiro!</span></div>
+      <div class="regra-limite dr-aviso-anil"><svg><use href="#i-info"/></svg><span>Confira sempre os valores na hora da transferência. <span class="dr-recalc">Recalcule o valor do milheiro!</span></span></div>
     </div>
     <div class="dr-sim-res">
       <div><span>${r.comCarrinho ? 'Você paga' : 'Custo dos pontos'}</span><b>${brl2(r.total)}</b></div>
@@ -14528,7 +14536,7 @@ function simuladorCompra(c, st, soCorpo){
   const nomePara = esc(prog(c.para).n);
   const avisos = `<div class="cp-criticas dr-sim-avisos" role="note">
       <div class="regra-limite dr-aviso-brasa"><svg><use href="#i-alerta"/></svg><span>Valores sujeitos a alterações!</span></div>
-      <div class="regra-limite dr-aviso-anil"><svg><use href="#i-info"/></svg><span>Confira sempre os valores na hora da compra. Recalcule o valor do milheiro!</span></div>
+      <div class="regra-limite dr-aviso-anil"><svg><use href="#i-info"/></svg><span>Confira sempre os valores na hora da compra. <span class="dr-recalc">Recalcule o valor do milheiro!</span></span></div>
     </div>`;
   let corpo;
   if (!(r.preco > 0)){
@@ -14618,17 +14626,66 @@ function comprarAgora(id){
   }, 60);
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   JANELAS QUE SÓ FECHAM PELO BOTÃO
+   ──────────────────────────────────────────────────────────────────────────────
+   Esc e clique fora não fecham mais as janelas de Regras Completas e do Passo a
+   Passo: um toque sem querer fazia perder a simulação que se estava montando.
+   Fecha-se pelo botão Fechar, e só por ele.
+
+   Barrar o pedido de fechar não basta: o Chrome fecha no SEGUNDO Esc mesmo
+   quando o site recusa o primeiro. Por isso a própria tecla é barrada, antes de
+   virar pedido.
+
+   Enquanto a janela está aberta, a página de trás não rola — nem pela roda,
+   nem pelo dedo. Ao fechar, volta a rolar do mesmo ponto.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function prepararJanelaFixa(d){
+  if (d._fixa) return;
+  d._fixa = true;
+  d.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Esc'){ e.preventDefault(); e.stopPropagation(); } }, true);
+  d.addEventListener('cancel', e => e.preventDefault());
+  d.addEventListener('close', () => travarFundo(false));
+  /* Rolagem sobre a área escura em volta do painel morre ali. Dentro do painel
+     segue normal: no celular a janela rola por dentro. */
+  const foraDoPainel = e => !e.target.closest('.dr-painel');
+  d.addEventListener('wheel', e => { if (foraDoPainel(e)) e.preventDefault(); }, {passive:false});
+  d.addEventListener('touchmove', e => { if (foraDoPainel(e)) e.preventDefault(); }, {passive:false});
+}
+
+let fundoTravado = 0, fundoPosicao = 0;
+/* A mesma trava das folhas de formulário: a página é FIXADA na posição em que
+   estava, e não só impedida de rolar. Esconder a barra (overflow) não bastou —
+   a roda do mouse ainda levava a página de 600 para 1.443px por trás da janela.
+   Fixada, ela não se move por nada; ao fechar, volta ao ponto exato. */
+function travarFundo(liga){
+  const corpo = document.body;
+  if (liga){
+    if (fundoTravado++) return;
+    fundoPosicao = window.scrollY;
+    corpo.style.top = `-${fundoPosicao}px`;
+    corpo.classList.add('folha-aberta');
+  } else {
+    if (fundoTravado === 0) return;
+    if (--fundoTravado) return;
+    corpo.classList.remove('folha-aberta');
+    corpo.style.top = '';
+    window.scrollTo({top:fundoPosicao, behavior:'instant'});
+  }
+}
+
 function abrirRegras(id, gatilho){
   const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
   let d = document.getElementById('dlgRegras');
   if (!d){
     d = document.createElement('dialog');
     d.id = 'dlgRegras'; d.className = 'dr';
+    prepararJanelaFixa(d);
     d.setAttribute('aria-labelledby', 'drTit');
     document.body.appendChild(d);
     /* Clique fora do painel fecha. O alvo é o próprio <dialog> quando se clica
        no fundo escurecido, porque o painel ocupa só o miolo. */
-    d.addEventListener('click', e => { if (e.target === d) d.close(); });
     d.addEventListener('close', () => {
       /* O preço do carrinho pode ter mudado lá dentro: o cartão da campanha e a
          calculadora usam o mesmo número. */
@@ -14747,7 +14804,7 @@ function abrirRegras(id, gatilho){
       </footer>
     </div>`;
 
-  d.showModal();
+  if (!d.open){ d.showModal(); travarFundo(true); }
   const lista = d.querySelector('.dr-abas');
   if (lista) lista.addEventListener('keydown', e => {
     if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -32324,7 +32381,11 @@ function capturarEstadoTela(){
     ct:{tipo:ctTipo, modo:ctModo, vals:ctVals, tocados},
     regras: dr && dr.open && dr._id ? {id:dr._id, aba:ultimaAbaRegras, sim:dr._sim || null} : null,
     guia: gm && gm.open ? {aba:gm._aba || 'instalar'} : null,
-    rolagem: Math.round(window.scrollY || 0)};
+    /* Com uma janela aberta a página está fixada e o navegador diz rolagem 0: a
+       posição de verdade é a que a trava guardou ao fixar. */
+    rolagem: Math.round(fundoTravado ? fundoPosicao
+      : document.body.classList.contains('folha-aberta') && typeof scrollTravado === 'number' ? scrollTravado
+      : (window.scrollY || 0))};
 }
 
 function guardarEstadoTela(){
@@ -32480,9 +32541,9 @@ function abrirGuiaFavorito(aba){
   if (!d){
     d = document.createElement('dialog');
     d.id = 'dlgGuia'; d.className = 'dr gm';
+    prepararJanelaFixa(d);
     d.setAttribute('aria-labelledby', 'gmTit');
     document.body.appendChild(d);
-    d.addEventListener('click', e => { if (e.target === d) d.close(); });
   }
   const favReal = `<a class="bt p fantasma mk-favorito gm-fav-real" href="${codigoFavoritoR360()}" draggable="true"
       onclick="event.preventDefault(); avisar('Arraste — clique, segure e solte na barra de favoritos.', 'ok')"><svg><use href="#i-link"/></svg>Enviar para a Torre</a>`;
@@ -32558,7 +32619,7 @@ function abrirGuiaFavorito(aba){
     </div>
     <footer class="dr-pe"><button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgGuia').close()">Fechar</button></footer>
   </div>`;
-  d.showModal();
+  if (!d.open){ d.showModal(); travarFundo(true); }
   const t = d.querySelector('[role=tab][aria-selected=true]'); if (t) t.focus({focusVisible:false});
   d.querySelector('.dr-abas').addEventListener('keydown', e => {
     if (!['ArrowRight', 'ArrowLeft'].includes(e.key)) return;
