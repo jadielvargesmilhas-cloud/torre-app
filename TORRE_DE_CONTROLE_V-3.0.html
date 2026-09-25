@@ -7886,7 +7886,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-26 23:30';
+const BUILD = '2026-09-27 00:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14400,7 +14400,7 @@ function simuladorCarrinho(c, st, soCorpo){
         <span>Seus pontos ${nomeDe}</span>
         <b>${nBR(r.proprios)}</b>
         <em>${brl2(r.custoProprio)}</em>
-        <small>a ${brl2(r.cpmProprio)}/mil, ${r.cpmMeu ? 'seu custo médio' : 'custo estimado de reposição'}</small>
+        <small>a ${brl2(r.cpmProprio)}/mil, ${r.cpmMeu ? 'seu custo médio' : 'custo estimado'}</small>
       </div>
       ${r.comCarrinho ? `<div class="dr-sim-op" aria-hidden="true">+</div>
       <div class="dr-sim-bloco">
@@ -14440,7 +14440,10 @@ function simuladorCarrinho(c, st, soCorpo){
     ${r.faltaSaldo ? `<p class="dr-sim-aviso"><svg><use href="#i-alerta"/></svg><span>Hoje a Torre registra
       <b>${nBR(r.saldo)}</b> pontos ${nomeDe}; para transferir ${nBR(st.qtd)} faltam <b>${nBR(st.qtd - r.saldo)}</b>.</span></p>` : ''}
 
-    ${r.comCarrinho ? `<label class="dr-sim-saldo"><input type="checkbox" ${st.usarSaldo ? 'checked' : ''}
+    ${/* Com saldo zero a opção não serve para nada — não há o que usar. Some, e
+         o espaço dela vai para o aviso de pontos mínimos, que aparece justamente
+         nesse caso: a janela não passa a rolar por causa dele. */ ''}
+    ${r.comCarrinho && r.saldo > 0 ? `<label class="dr-sim-saldo"><input type="checkbox" ${st.usarSaldo ? 'checked' : ''}
       onchange="simCarrinho('${c.id}', {usarSaldo:this.checked})">
       Usar o meu saldo ${nomeDe} (${nBR(r.saldo)}) antes de comprar no carrinho</label>` : ''}
 
@@ -14742,8 +14745,8 @@ function abrirRegras(id, gatilho){
   const fx = faixasDe(c.para);
   const tomCpm = cpm == null ? '' : cpm <= fx.alvo ? 'jade' : cpm <= fx.razoavel ? 'ouro' : 'brasa';
   const fatos = [
-    c.limite ? `Limite de <b>${nBR(c.limite)}</b> por CPF` : '',
-    c.limiteClube ? `Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube` : '',
+    c.limite ? `Limite de <b>${nBR(c.limite)}</b> por <b>CPF</b>` : '',
+    c.limiteClube ? `Limite anual de <b>${nBR(c.limiteClube)}</b> por <b>Tempo de Clube</b>` : '',
     c.minimo ? `Mínimo de <b>${nBR(c.minimo)}</b>` : '',
     /* Com o simulador na janela, o preço do carrinho já aparece lá; repeti-lo no
        resumo quebrava a faixa em duas linhas. */
