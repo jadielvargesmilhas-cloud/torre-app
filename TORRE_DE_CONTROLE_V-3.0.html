@@ -8080,7 +8080,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 09:10';
+const BUILD = '2026-09-27 09:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15598,6 +15598,23 @@ const GUIA_ABA = {
           'Em 11 de agosto de 2026 as duas estavam abertas: a Smiles vendia milha a R$ 16,84, e o carrinho da Livelo com transferência bonificada entregava a mesma milha por R$ 15,68. Antes de comprar direto, confira a aba ao lado.']}
     ]
   },
+  bonificada: {
+    t:'Como ler a aba de compra bonificada',
+    blocos:[
+      {i:'i-sacola', n:'O que é',
+       p:['Você compra algo que já compraria, numa loja parceira, e o programa dá pontos por real gasto. Aqui não se compra ponto: o dinheiro vira o produto ou o serviço, e os pontos vêm junto.',
+          'Crédito do Uber comprado pela Smiles rende 3 milhas por real para quem tem o Clube 1.000: R$ 100 de corridas viram 300 milhas.']},
+      {i:'i-grafico', n:'Como se lê o número',
+       p:['O número é pontos por real, e aqui maior é melhor. Ele depende do seu plano de clube: no Uber vai de 1 ponto por real, sem clube, a 4,5 no Clube 20.000 ou Diamante. O cartão marca o seu degrau e diz quanto é preciso gastar para ganhar 1.000 pontos.',
+          'Não compare com o milheiro das outras abas. Lá o dinheiro compra só ponto; aqui ele compra a corrida ou o produto, e o ponto é o que sobra.']},
+      {i:'i-alerta', n:'O que tira os seus pontos',
+       p:['As exclusões. Na Magalu, só pontuam os produtos vendidos e entregues pela própria Magazine Luiza: item de marketplace rende 1 ponto por real. Frete, embalagem para presente, pagamento com cupom ou gift card e garantia estendida não pontuam.',
+          'E o prazo: os pontos da Magalu caem em até 30 dias úteis depois da entrega. Entre sempre pela página da oferta e guarde o print do pedido até o crédito aparecer.']},
+      {i:'i-alvo', n:'Quando vale a pena',
+       p:['Só quando a compra já ia acontecer. Comprar o que não precisa para ganhar pontos é pagar caro por milha: no Uber, com o Clube 1.000, são R$ 333,33 gastos para cada 1.000 milhas.',
+          'Vale para gasto planejado: o crédito de corridas que você usaria de qualquer jeito, ou uma compra grande que pode esperar a próxima campanha de pontuação alta.']}
+    ]
+  },
   clube: {
     t:'Como ler a aba de clube',
     blocos:[
@@ -15809,7 +15826,7 @@ function renderGuiaCampanha(){
    A página é guardada por TIPO de campanha, porque trocar de transferência para
    clube é entrar noutra lista — voltar na página 4 de uma lista de 3 páginas é
    a forma mais fácil de a tabela parecer vazia. */
-let pagEncerradas = {transferencia:1, compra:1, clube:1};
+let pagEncerradas = {transferencia:1, compra:1, clube:1, bonificada:1};
 function porPagina(){ return Number(DB.cfg.porPaginaEncerradas) || 10; }
 function irPaginaEncerradas(p){
   pagEncerradas[abaCampanha] = Math.max(1, p);
@@ -15817,7 +15834,7 @@ function irPaginaEncerradas(p){
 }
 function mudarPorPagina(v){
   DB.cfg.porPaginaEncerradas = Number(v) || 10;
-  pagEncerradas = {transferencia:1, compra:1, clube:1};
+  pagEncerradas = {transferencia:1, compra:1, clube:1, bonificada:1};
   salvar(); renderCampanhas();
 }
 /* Números de página com reticências: com 20 páginas, mostrar as 20 é pior que
