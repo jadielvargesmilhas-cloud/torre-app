@@ -7256,6 +7256,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
         <div class="painel-aba" id="p-fb-compras">
           <div class="pilha" style="gap:18px">
+            <div id="fcGuia"></div>
             <div class="grade g4" id="fbComprasResumo"></div>
 
             <div class="cartao" style="padding:0;overflow:hidden">
@@ -8227,7 +8228,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 16:10';
+const BUILD = '2026-09-27 16:25';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16444,6 +16445,26 @@ function htmlGuia(g){
   </details>`;
 }
 
+
+/* ── guia da aba Compras Inteligentes ─────────────────────────────────────── */
+const GUIA_COMPRAS = {
+  t:'Como ler a aba de compras inteligentes',
+  blocos:[
+    {i:'i-sacola', n:'O que é',
+     p:['É o planejamento das compras que você já faria, para que elas rendam pontos: a lista do que você quer comprar e por qual retorno, o radar das lojas parceiras em promoção e o registro das compras feitas.',
+        'Cada compra registrada vira pontos a custo zero — é o acúmulo que puxa o seu milheiro médio para baixo.']},
+    {i:'i-grafico', n:'Como se lê o número',
+     p:['O número de cada loja é o multiplicador: pontos por real gasto. O radar ordena as lojas por quanto o multiplicador de hoje supera o de sempre — 12× numa loja que costuma pagar 4× é três vezes o normal.',
+        'Em dinheiro, a volta é o multiplicador vezes o valor do seu milheiro: 12 pontos por real, com o milheiro a R$ 20, voltam R$ 0,24 a cada real — 24%.']},
+    {i:'i-alerta', n:'O erro que anula tudo',
+     p:['Comprar fora do caminho do programa. Os pontos só contam se a compra começa pelo link do shopping do programa; entrar direto na loja, mesmo com o mesmo cartão, não pontua, e cupom de outro site costuma anular os pontos.',
+        'E confiar no multiplicador genérico de blog: o print da vitrine logada traz o SEU multiplicador, que pode mudar com o clube. Por isso "Atualizar vitrine" pede o print, não o texto.']},
+    {i:'i-alvo', n:'Quando vale a pena',
+     p:['Quando a compra já ia acontecer. Ponha na lista de compras o item e o retorno que você quer; quando a vitrine chegar no seu alvo, a Torre move o item de lado e ele aparece no Painel, pronto para registrar.',
+        'Compra planejada que espera a promoção certa rende várias vezes mais do que a mesma compra feita no dia errado.']}
+  ]
+};
+
 function renderGuiaLojas(){
   const alvo = $('#ljGuia'); if (!alvo) return;
   alvo.innerHTML = `<details class="guia-aba">
@@ -19482,6 +19503,7 @@ function ordenarLojas(campo){
 }
 
 function renderCompras(){
+  if ($('#fcGuia') && !$('#fcGuia').innerHTML) $('#fcGuia').innerHTML = htmlGuia(GUIA_COMPRAS);
   const vivas = lojasVivas();
   const ptsTotal = soma(DB.compras.map(c => c.pts));
   const gasto = soma(DB.compras.map(c => c.valor));
