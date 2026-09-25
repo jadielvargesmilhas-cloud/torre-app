@@ -1359,6 +1359,30 @@ p:last-child{ margin-bottom:0; }
 
 .dr-num-ate{ font-size:.42em; font-weight:700; letter-spacing:0; margin-right:6px; vertical-align:.35em; }
 
+
+/* ── mural ────────────────────────────────────────────────────────────────── */
+.mr-magos{ font-size:calc(13px * var(--esc)); letter-spacing:-2px; white-space:nowrap; }
+.mr-voto{ display:inline-flex; gap:2px; }
+.mr-voto .bt{ font-size:calc(11px * var(--esc)); min-width:28px; }
+/* Presos ao contêiner: o estilo base dos botões vencia e o voto não aparecia. */
+.mural-cartao .mr-voto .bt.on-quente{ color:var(--brasa); border-color:var(--brasa); background:color-mix(in oklab, var(--brasa) 14%, transparent); }
+.mural-cartao .mr-voto .bt.on-frio{ color:var(--anil-claro); border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 14%, transparent); }
+.mr-autos{ padding:12px 14px; border-radius:14px; background:var(--sup-1); border:1px solid var(--fio); }
+.mr-auto{ display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--fio); }
+.mr-auto:first-of-type{ border-top:0; }
+.mr-auto svg{ width:16px; height:16px; flex-shrink:0; fill:none; stroke-width:2; }
+.mr-auto-hoje svg{ stroke:var(--brasa); } .mr-auto-recorde svg{ stroke:var(--jade); }
+.mr-auto > div{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; font-size:calc(13.5px * var(--esc)); }
+.mr-auto > div b{ color:var(--giz); font-weight:600; }
+.mr-auto > div span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.mr-previas{ margin-top:12px; }
+.mr-previa{ display:flex; gap:12px; align-items:flex-start; padding:10px 12px; margin-bottom:8px; border-radius:12px; background:var(--sup-1); border:1px solid var(--fio); }
+.mr-inclui{ display:flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); white-space:nowrap; padding-top:8px; }
+.mr-previa-corpo{ flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
+.mr-previa-tit{ font-weight:600; }
+.mr-previa-linha{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; font-size:calc(12.5px * var(--esc)); }
+.mr-previa-linha select{ width:auto !important; min-width:0 !important; }
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -7290,6 +7314,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
         </div>
         <div class="painel-aba on" id="p-fb-clubes">
           <div class="pilha" style="gap:18px">
+            <div id="ccGuia"></div>
             <div class="grade g4" id="fbClubesResumo"></div>
 
             
@@ -7405,16 +7430,19 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
         <div class="painel-aba" id="p-fb-mural">
           <div class="pilha" style="gap:14px">
+            <div id="mrGuia"></div>
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="seg" id="segMural"></div>
               <div class="esticar"></div>
+              <button class="bt" id="btColarMural"><svg><use href="#i-copiar"/></svg>Colar anúncios</button>
               <button class="bt primario" id="btNovoMural"><svg><use href="#i-mais"/></svg>Nova Oportunidade</button>
             </div>
             <div class="linha" style="flex-wrap:wrap;gap:9px">
               <label class="ck"><input type="checkbox" id="mrAtivas" checked> Só as que ainda valem</label>
               <div class="seg" id="segOrdemMural">
-                <button class="on" data-o="prazo">Vencendo primeiro</button>
-                <button data-o="pontuacao">Maior pontuação</button>
+                <button class="on" data-o="quente">Mais quentes</button>
+                <button data-o="prazo">Vencendo primeiro</button>
+                <button data-o="recentes">Mais recentes</button>
               </div>
             </div>
             <div class="pilha" style="gap:14px" id="mrLista"></div>
@@ -8199,7 +8227,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 13:50';
+const BUILD = '2026-09-27 16:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -8690,6 +8718,14 @@ function destinosComHistorico(tipo, dias){
 
    Sem plano escolhido, vale o plano mais barato do programa: é o piso que a
    campanha alcança, e é assim que o radar dos outros tipos também mede. */
+/* Milheiro de clube que nunca derruba a tela. Toda campanha de clube é comparada
+   com as outras do mesmo programa — o veredito, a régua, as janelas —, então uma
+   só campanha com dado fora do padrão fazia TODOS os cartões falharem ao
+   comparar, e o radar junto. Com erro, ela vale como "sem milheiro" e segue. */
+function cpmClubeSeguro(c){
+  try { return cpmDaCampanhaClube(c); }
+  catch(e){ console.warn('Campanha de clube com dado fora do padrão:', c && c.id, e); return null; }
+}
 function cpmDaCampanhaClube(c){
   const cat = catalogoDe(c.para);
   if (!cat || !cat.planos || !cat.planos.length) return null;
@@ -8724,7 +8760,7 @@ function radarMilheiro(destino, tipo, dias){
     if (tipo === 'compra' && tabelaDe(c.para))
       cpm = tabelaDe(c.para) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
     else if (tipo === 'clube')
-      cpm = cpmDaCampanhaClube(c);
+      cpm = cpmClubeSeguro(c);
     if (cpm != null && isFinite(cpm)) vals.push({cpm, c});
   });
   vals.sort((a, b) => (a.c.fim || '').localeCompare(b.c.fim || ''));
@@ -8932,6 +8968,8 @@ function muralDaCategoria(cat, soAtivas, ordem){
   if (soAtivas) l = l.filter(m => { const d = diasAte(m.fim); return d === null || d >= 0; });
   const pont = m => Number(m.pontuacao) || 0;
   if (ordem === 'pontuacao') l.sort((a, b) => pont(b) - pont(a));
+  else if (ordem === 'quente') l.sort((a, b) => temperaturaMural(b) - temperaturaMural(a) || String(a.fim || '9').localeCompare(String(b.fim || '9')));
+  else if (ordem === 'recentes') l.sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
   else l.sort((a, b) => {
     /* vencendo primeiro; sem data por último */
     const da = diasAte(a.fim), db = diasAte(b.fim);
@@ -14021,10 +14059,188 @@ function painelPlanos(c, f){
 }
 
 /* ── mural ───────────────────────────────────────────────────────────────── */
-let catMural = 'alerta', ordemMural = 'prazo', soAtivasMural = true;
+/* Abre em "Mais quentes", o botão que já vem marcado na tela. */
+let catMural = 'alerta', ordemMural = 'quente', soAtivasMural = true;
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   MURAL — a caixa de entrada das oportunidades
+   ──────────────────────────────────────────────────────────────────────────────
+   O que os melhores murais de promoção fazem (Pelando, Promobit), trazido para
+   uma pessoa só e para o jeito como as oportunidades chegam: texto pronto de
+   grupo. "Colar anúncios" lê esse texto — um ou vários de uma vez — e tira
+   título, prazo, links, a classificação em magos, o destaque e as condições.
+   "Mais quentes" junta a classificação do anúncio, o voto de quem usa
+   (esquentar/esfriar) e o prazo. Anúncio de transferência vira campanha com um
+   clique. E os alertas importantes trazem o que a Torre percebe sozinha.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function temperaturaMural(m){
+  const d = diasAte(m.fim);
+  const urg = d === null ? 0 : d < 0 ? -10 : d <= 1 ? 3 : d <= 3 ? 2 : d <= 7 ? 1 : 0;
+  return (Number(m.magos) || 0) * 2 + (Number(m.voto) || 0) * 3 + urg + (m.lida ? -1 : 0);
+}
+function votarMural(id, v){
+  const m = (DB.mural || []).find(x => x.id === id); if (!m) return;
+  m.voto = (Number(m.voto) || 0) === v ? 0 : v;
+  salvar(); renderMural();
+}
+
+/* ── leitura de anúncios de grupo ─────────────────────────────────────────── */
+const SEM_EMOJI = t => String(t).replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u2640\u2642\uFE0F\u200D\u20E3]/gu, '').replace(/[*_~]/g, '').replace(/\s+/g, ' ').trim();
+const RUIDO_ANUNCIO = /^(leia o regulamento|grave a operaç[ãa]o|confira o regulamento.*|link da (promoç[ãa]o|oferta):?|passo a passo:?|regras e informaç[õo]es importantes:?|detalhes da promoç[ãa]o:?|classificaç[ãa]o.*)$/i;
+
+function lerAnuncios(texto){
+  const linhas = String(texto || '').replace(/\r/g, '').split('\n');
+  const blocos = []; let atual = [];
+  linhas.forEach(l => {
+    const t = l.trim();
+    /* Novo anúncio começa numa linha de sirene ou alto-falante, o jeito dos grupos
+       abrirem uma oferta — desde que o bloco atual já tenha conteúdo. */
+    if (/^(🚨|🔊|📣|📢)/u.test(t) && atual.some(x => x.trim())) { blocos.push(atual); atual = []; }
+    atual.push(l);
+  });
+  if (atual.some(x => x.trim())) blocos.push(atual);
+  return blocos.map(lerUmAnuncio).filter(a => a && a.titulo);
+}
+
+function lerUmAnuncio(bloco){
+  const brutas = bloco.map(l => l.trim()).filter(Boolean);
+  if (!brutas.length) return null;
+  const texto = brutas.join('\n');
+  const titulo = SEM_EMOJI(brutas[0]).replace(/[!.:]+$/, '');
+  const ano = hojeISO().slice(0, 4);
+  let fim = '';
+  const mf = texto.match(/(?:até|ate|válid[oa]s?\s+até|validade:?)\s*(?:o\s+)?(?:dia\s+)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
+  if (mf){ const a = mf[3] ? (mf[3].length === 2 ? '20' + mf[3] : mf[3]) : ano; fim = `${a}-${mf[2].padStart(2, '0')}-${mf[1].padStart(2, '0')}`; }
+  const links = [...new Set((texto.match(/https?:\/\/[^\s)]+/g) || []).map(u => u.replace(/[.,;]+$/, '')))];
+  /* Magos: a maior contagem numa linha — anúncio com classificação por plano
+     traz várias; vale a do melhor plano. */
+  const magos = Math.min(5, Math.max(0, ...brutas.map(l => (l.match(/🧙/gu) || []).length)));
+  const baixo = texto.toLowerCase();
+  let destaque = '';
+  const md = [/até\s*([\d.,]+)\s*%\s*de\s*b[oô]nus/i, /([\d.,]+)\s*%\s*de\s*b[oô]nus/i, /até\s*([\d.,]+)\s*(milhas|pontos)\s*por\s*real/i,
+              /até\s*([\d.,]+)\s*%\s*de\s*desconto/i, /até\s*([\d.]+)\s*pontos\s*b[oô]nus/i];
+  for (const r of md){ const x = texto.match(r); if (x){ destaque = SEM_EMOJI(x[0]).toLowerCase(); break; } }
+  const cat = /cashback/.test(baixo) ? 'cashback'
+    : /(milhas|pontos)\s*por\s*real|acumule|cr[eé]ditos?\s+uber|magalu|shopping|loja parceira/.test(baixo) ? 'compras'
+    : /passage(m|ns)\s+(a[eé]rea|para|a partir)|ida e volta|trechos?\s|voos?\s+(para|a partir)/.test(baixo) ? 'passagens' : 'alerta';
+  /* Tira só o marcador do passo ("2️⃣ Cadastre-se") — um dígito solto no começo
+     é conteúdo: "80% de bônus para assinantes" perdia o 80. E linha de prazo
+     ("Ofertas válidas até 28/09/2026") já virou o prazo, não é condição. */
+  const condicoes = brutas.slice(1).filter(l => !/^https?:\/\//.test(l))
+    .map(l => SEM_EMOJI(l.replace(/^\s*\d\uFE0F?\u20E3\s*/u, '')).replace(/^[-•·]+\s*/, '').trim())
+    .filter(l => l && !RUIDO_ANUNCIO.test(l) && !/https?:\/\//.test(l)
+      && !(/(até|válid[oa]s?)/i.test(l) && /\d{1,2}\/\d{1,2}/.test(l) && l.length < 60))
+    .filter(l => l.length > 3).slice(0, 14);
+  /* Transferência bonificada reconhecível vira sugestão de campanha. */
+  let sugestao = null;
+  const mt = SEM_EMOJI(texto).match(/transfer[eê]ncia\s+de\s+pontos\s+(.+?)\s+para\s+(?:a\s+|o\s+)?([A-Za-zÀ-ú&. ]+?)(?:\s*$|\s*[\n(]|\s+at[eé]|\s+com)/im);
+  const mb = texto.match(/([\d.,]+)\s*%\s*de\s*b[oô]nus/i);
+  if (mt && mb){
+    const acha = n => { const t = SEM_EMOJI(n).toLowerCase().replace(/\(.*\)/, '').trim();
+      return progDoMercado(t) || progDoMercado(t.split(' ')[0]) || Object.keys(PROGRAMAS).find(k => t.includes(prog(k).n.toLowerCase())) || null; };
+    const de = acha(mt[1]), para = acha(mt[2]);
+    if (de && para && de !== para) sugestao = {tipo:'transferencia', de, para, bonus:Number(mb[1].replace(',', '.'))};
+  }
+  return {titulo, fim, links, link:links[0] || '', magos, destaque, cat, condicoes, sugestao};
+}
+
+let anunciosLidos = [];
+function abrirColarMural(){
+  anunciosLidos = [];
+  abrirFolha({
+    titulo:'Colar Anúncios', largura:'larga',
+    corpo:`<div class="campo rotulo-inteiro"><label>Texto dos anúncios</label>
+        <textarea id="mrColar" rows="10" placeholder="Cole aqui o texto como veio do grupo — um anúncio ou vários de uma vez."></textarea>
+        <div class="dica">Cada anúncio que começa com 🚨 ou 🔊 vira uma oportunidade separada. A Torre tira título, prazo, links, a classificação em magos, o destaque e as condições; você confere antes de gravar.</div></div>
+      <div id="mrPrevias" class="mr-previas"></div>`,
+    pe:`<button class="bt fantasma sair" onclick="fecharFolha()">Fechar</button>
+        <button class="bt" id="btLerAnuncios" onclick="previaAnuncios()"><svg><use href="#i-busca"/></svg>Ler anúncios</button>
+        <button class="bt primario" id="btGravarAnuncios" onclick="gravarAnuncios()" disabled><svg><use href="#i-ok"/></svg>Gravar</button>`
+  });
+  const ta = $('#mrColar');
+  if (ta) ta.addEventListener('input', () => { clearTimeout(ta._t); ta._t = setTimeout(previaAnuncios, 350); });
+}
+
+function previaAnuncios(){
+  const ta = $('#mrColar'), box = $('#mrPrevias'), bt = $('#btGravarAnuncios');
+  if (!ta || !box) return;
+  anunciosLidos = lerAnuncios(ta.value);
+  if (!anunciosLidos.length){ box.innerHTML = ta.value.trim() ? '<p class="fraco">Não achei anúncio neste texto.</p>' : ''; if (bt) bt.disabled = true; return; }
+  box.innerHTML = `<div class="olho anil" style="margin:6px 0 10px">${anunciosLidos.length} ${anunciosLidos.length === 1 ? 'anúncio encontrado' : 'anúncios encontrados'}</div>` +
+    anunciosLidos.map((a, i) => `<div class="mr-previa">
+      <label class="mr-inclui"><input type="checkbox" checked data-i="${i}"> Incluir</label>
+      <div class="mr-previa-corpo">
+        <input type="text" class="mr-previa-tit" data-i="${i}" data-k="titulo" value="${esc(a.titulo)}" aria-label="Título">
+        <div class="mr-previa-linha">
+          <select data-i="${i}" data-k="cat" aria-label="Categoria">${Object.entries(CATEGORIAS_MURAL).map(([k, c]) => `<option value="${k}"${k === a.cat ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select>
+          <span class="etq ${a.fim ? 'jade' : ''}">${a.fim ? 'até ' + dataBR(a.fim) : 'sem prazo'}</span>
+          ${a.destaque ? `<span class="etq ouro">${esc(a.destaque)}</span>` : ''}
+          ${a.magos ? `<span class="mr-magos" title="Classificação do anúncio">${'🧙'.repeat(a.magos)}</span>` : ''}
+          <span class="fraco">${a.condicoes.length} condições · ${a.links.length} link${a.links.length === 1 ? '' : 's'}</span>
+          ${a.sugestao ? `<span class="etq anil">vira campanha: ${esc(prog(a.sugestao.de).n)} → ${esc(prog(a.sugestao.para).n)}, ${nBRdec(a.sugestao.bonus)}%</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => { anunciosLidos[Number(el.dataset.i)][el.dataset.k] = el.value; }));
+  box.querySelectorAll('select[data-k]').forEach(el => el.addEventListener('change', () => { anunciosLidos[Number(el.dataset.i)][el.dataset.k] = el.value; }));
+  if (bt){ bt.disabled = false; bt.innerHTML = `<svg><use href="#i-ok"/></svg>Gravar ${anunciosLidos.length}`; }
+}
+
+function gravarAnuncios(){
+  const marcados = [...document.querySelectorAll('#mrPrevias .mr-inclui input')].filter(x => x.checked).map(x => Number(x.dataset.i));
+  if (!marcados.length) return avisar('Nenhum anúncio marcado para gravar.', 'alerta');
+  DB.mural = DB.mural || [];
+  const agora = new Date().toISOString();
+  let novos = 0, repetidos = 0;
+  marcados.forEach(i => {
+    const a = anunciosLidos[i];
+    /* O mesmo anúncio colado duas vezes não duplica: mesmo título e mesmo prazo. */
+    if (DB.mural.some(m => SEM_EMOJI(m.titulo).toLowerCase() === SEM_EMOJI(a.titulo).toLowerCase() && (m.fim || '') === (a.fim || ''))) { repetidos++; return; }
+    DB.mural.push({id:uid(), cat:a.cat, titulo:a.titulo, fim:a.fim, link:a.link, links:a.links, pontuacao:a.destaque,
+      magos:a.magos, voto:0, texto:a.condicoes.join('\n'), imagem:'', lida:false, origem:'colado', criadoEm:agora, sugestao:a.sugestao});
+    novos++;
+  });
+  salvar(); fecharFolha();
+  const alvoCat = anunciosLidos[marcados[0]].cat;
+  if (novos) { catMural = alvoCat; }
+  renderMural(); if (typeof renderMesa === 'function') renderMesa();
+  avisar(`${novos} ${novos === 1 ? 'oportunidade gravada' : 'oportunidades gravadas'} no mural.${repetidos ? ` ${repetidos} já estava${repetidos > 1 ? 'm' : ''} lá.` : ''}`, 'ok', 6000);
+}
+
+/* ── anúncio de transferência → campanha cadastrada ───────────────────────── */
+function virarCampanha(id){
+  const m = (DB.mural || []).find(x => x.id === id); if (!m || !m.sugestao) return;
+  const sg = m.sugestao;
+  editarCampanha(null, sg.tipo);
+  setTimeout(() => {
+    const val = (sel, v) => { const el = $(sel); if (el && v != null){ el.value = v; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
+    val('#cpTipo', sg.tipo); val('#cpDe', sg.de); val('#cpPara', sg.para);
+    setTimeout(() => {
+      val('#cpBonus', String(sg.bonus).replace('.', ','));
+      val('#cpFim', m.fim); val('#cpLink', m.link); val('#cpTit', m.titulo);
+      val('#cpRegra', String(m.texto || '').split('\n').filter(Boolean).map(l => /[.!?]$/.test(l) ? l : l + '.').join(' '));
+      avisar('Campanha preenchida a partir do anúncio. Confira e salve.', 'ok', 5000);
+    }, 80);
+  }, 60);
+}
+
+/* ── alertas que a Torre percebe sozinha ──────────────────────────────────── */
+function alertasAutomaticosMural(){
+  const hoje = hojeISO(), out = [];
+  ['transferencia', 'compra', 'clube', 'bonificada'].forEach(t => campanhasVivas(t).forEach(c => {
+    if (c.fim === hoje) out.push({tipo:'hoje', c, txt:`Fecha hoje: ${c.titulo || prog(c.para).n}`});
+    if (t !== 'bonificada'){
+      let v = null; try { v = vereditoCampanha(medidaCampanha(c), referenciasCampanha(c), c); } catch(e){}
+      if (v && v.tom === 'jade' && /^(Maior|Menor)/.test(v.txt)) out.push({tipo:'recorde', c, txt:`Recorde: ${c.titulo || prog(c.para).n}`, sub:v.txt});
+    }
+  }));
+  return out;
+}
 
 function renderMural(){
   const alvo = $('#mrLista'); if (!alvo) return;
+  if ($('#mrGuia') && !$('#mrGuia').innerHTML) $('#mrGuia').innerHTML = htmlGuia(GUIA_MURAL);
 
   const seg = $('#segMural');
   if (seg) seg.innerHTML = Object.entries(CATEGORIAS_MURAL).map(([k, c]) => {
@@ -14034,7 +14250,12 @@ function renderMural(){
   if ($('#contMural')) $('#contMural').textContent = soma(Object.keys(CATEGORIAS_MURAL).map(muralNaoLidas));
 
   const l = muralDaCategoria(catMural, soAtivasMural, ordemMural);
-  alvo.innerHTML = l.length ? l.map(m => {
+  const autos = catMural === 'alerta' ? alertasAutomaticosMural() : [];
+  const htmlAutos = autos.length ? `<div class="mr-autos"><div class="olho anil" style="margin:0 0 8px">A Torre percebeu</div>${autos.map(a => `
+    <div class="mr-auto mr-auto-${a.tipo}"><svg><use href="#i-${a.tipo === 'hoje' ? 'relogio' : 'faisca'}"/></svg>
+      <div><b>${esc(a.txt)}</b>${a.sub ? `<span>${esc(a.sub)}</span>` : ''}</div>
+      <button type="button" class="bt p fantasma" onclick="abrirRegras('${a.c.id}', this)">Ver campanha</button></div>`).join('')}</div>` : '';
+  alvo.innerHTML = htmlAutos + (l.length ? l.map(m => {
     const d = diasAte(m.fim);
     const morta = d !== null && d < 0;
     const zPrazo = morta ? '' : d === 0 ? 'brasa' : d !== null && d <= 3 ? 'brasa' : d !== null && d <= 7 ? 'ouro' : 'jade';
@@ -14042,7 +14263,13 @@ function renderMural(){
       <div class="mural-topo">
         <b class="mural-tit">${esc(m.titulo)}</b>
         ${m.pontuacao ? `<span class="etq ouro">${esc(m.pontuacao)}</span>` : ''}
+        ${m.magos ? `<span class="mr-magos" title="Classificação do anúncio: ${m.magos} de 5">${'🧙'.repeat(m.magos)}</span>` : ''}
         <div class="esticar"></div>
+        <span class="mr-voto" role="group" aria-label="Sua avaliação">
+          <button class="bt p fantasma icone${Number(m.voto) === 1 ? ' on-quente' : ''}" onclick="votarMural('${m.id}', 1)" data-dica="Esquentar: serve para mim">▲</button>
+          <button class="bt p fantasma icone${Number(m.voto) === -1 ? ' on-frio' : ''}" onclick="votarMural('${m.id}', -1)" data-dica="Esfriar: não serve para mim">▼</button>
+        </span>
+        ${m.sugestao ? `<button class="bt p" onclick="virarCampanha('${m.id}')" data-dica="Cadastrar como campanha, já preenchida"><svg><use href="#i-troca"/></svg>Virar campanha</button>` : ''}
         <button class="bt p fantasma icone" onclick="marcarLida('${m.id}')" data-dica="${m.lida ? 'Marcar como não lida' : 'Marcar como lida'}">
           <svg style="${m.lida ? 'stroke:var(--jade)' : ''}"><use href="#i-ok"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarMural('${m.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -14057,7 +14284,7 @@ function renderMural(){
       ${m.texto ? `<div class="mural-texto">${listaCat(m.texto)}</div>` : ''}
     </div>`;
   }).join('')
-    : `<div class="vazio"><p>Nada em ${esc(CATEGORIAS_MURAL[catMural].n.toLowerCase())}${soAtivasMural ? ' com prazo aberto' : ''}. Cadastre o que chegar pelo canal e o prazo passa a avisar sozinho.</p></div>`;
+    : `<div class="vazio"><p>Nada em ${esc(CATEGORIAS_MURAL[catMural].n.toLowerCase())}${soAtivasMural ? ' com prazo aberto' : ''}. Cadastre o que chegar pelo canal e o prazo passa a avisar sozinho.</p></div>`);
 }
 
 function marcarLida(id){
@@ -14163,9 +14390,27 @@ let janelaRadarClube = 30;
    dois, e quem esquecia deixava o radar com o resultado do tipo anterior: a aba
    de transferência mostrando os cartões da de compra, porque só a lista havia
    sido redesenhada. */
+/* Radar e lista desenhados de forma independente. Antes, um erro no radar —
+   provocado por qualquer dado da conta, um plano sem preço, uma campanha antiga
+   de formato diferente — interrompia a sequência e a lista nunca era
+   desenhada: os cartões simplesmente sumiam. Agora cada parte falha sozinha e
+   diz na tela o que houve. */
+function falhaNaTela(sel, oque, e){
+  console.error(e);
+  const el = $(sel); if (!el) return;
+  el.innerHTML = `<div class="nota" style="margin:0;border-color:var(--brasa)"><svg style="stroke:var(--brasa)"><use href="#i-alerta"/></svg><div>Não consegui desenhar ${oque}: <b>${esc(e && e.message || String(e))}</b>. Mande um print desta mensagem para corrigir.</div></div>`;
+}
 function renderPainelCampanhas(){
-  renderRadarBonus();
-  renderCampanhas();
+  try { renderRadarBonus(); } catch(e){ falhaNaTela(alvoCamp().radar, 'o radar', e); }
+  try { renderCampanhas(); } catch(e){ falhaNaTela(alvoCamp().lista, 'a lista de campanhas', e); }
+}
+/* Um cartão com dado problemático aparece como aviso, e os outros seguem. */
+function cartaoSeguro(c, fn){
+  try { return fn(c); }
+  catch(e){
+    console.error(e);
+    return `<div class="nota" style="margin:0;border-color:var(--brasa)"><svg style="stroke:var(--brasa)"><use href="#i-alerta"/></svg><div><b>${esc(c.titulo || c.id)}</b>: não consegui desenhar este cartão (${esc(e.message)}). Mande um print desta mensagem.</div></div>`;
+  }
 }
 
 function renderCampanhasClube(){
@@ -14216,7 +14461,7 @@ function metricaCampanha(c){
   /* Clube: o milheiro do ano de assinatura, a mesma medida do Radar de clube.
      Percentual de pontos extras não compara planos de tamanhos diferentes. */
   if (c.tipo === 'clube'){
-    const v = cpmDaCampanhaClube(c);
+    const v = cpmClubeSeguro(c);
     if (v != null) return {v:Math.round(v * 100) / 100, menor:true, reais:true};
     return {v:Number(c.bonus) || 0, menor:false, reais:false};
   }
@@ -14363,7 +14608,7 @@ const destacarNumeros = txt => esc(txt).replace(
    cálculos separados acabariam discordando em alguma casa decimal. */
 function cpmProjetadoCampanha(c, bonusUsado){
   const b = bonusUsado != null ? bonusUsado : (Number(c.bonus) || 0);
-  if (c.tipo === 'clube') return cpmDaCampanhaClube(c);
+  if (c.tipo === 'clube') return cpmClubeSeguro(c);
   if (c.tipo === 'compra' && precoCheioDe(c) > 0)
     return precoCheioDe(c) * (1 - (c.desconto || 0) / 100) / (1 + (c.bonus || 0) / 100);
   if (c.tipo === 'transferencia'){
@@ -15659,9 +15904,9 @@ function renderCampanhas(){
   const cartoes = vivas.map(c => {
     /* Transferência e compra ganham o cartão com referência histórica. Clube
        segue com o painel de planos, que compara faixas e não percentuais. */
-    if (c.tipo === 'bonificada') return cartaoBonificada(c);
+    if (c.tipo === 'bonificada') return cartaoSeguro(c, cartaoBonificada);
     /* Clube passou a usar o mesmo cartão das transferências, medido em milheiro. */
-    return cartaoCampanha(c);
+    return cartaoSeguro(c, cartaoCampanha);
     const dias = diasAte(c.fim);
     const morta = dias !== null && dias < 0;
     /* clube não tem bônus percentual: o número da direita é o milheiro da
@@ -16148,6 +16393,56 @@ const GUIA_LOJA = {
         'Compare o preço do produto na loja parceira com o da concorrência antes. Multiplicador alto em loja cara costuma ser desconto embutido no sentido contrário.']}
   ]
 };
+
+
+/* ── guia da aba de assinatura de clubes ──────────────────────────────────────
+   Mesmo desenho e mesmo tom dos guias das campanhas: quatro perguntas, com
+   exemplos tirados do que está cadastrado na Torre. */
+const GUIA_ASSINATURA = {
+  t:'Como ler a aba de assinatura de clubes',
+  blocos:[
+    {i:'i-cartao', n:'O que é',
+     p:['Clube é assinatura: você paga todo mês e o programa deposita pontos todo mês. Aqui ficam as suas assinaturas e a calculadora que diz a quanto sai o milheiro de cada plano.',
+        'No catálogo da Torre, o Clube Esfera Pro custa R$ 45 por mês e rende 1.000 pontos por mês.']},
+    {i:'i-grafico', n:'Como se lê o número',
+     p:['O número que decide é o milheiro do plano: o que você paga no período dividido pelos pontos que recebe, vezes mil. R$ 45 por 1.000 pontos dá R$ 45 o milheiro.',
+        'Com uma campanha de 16,7% de pontos extras, os mesmos R$ 45 rendem 1.167 pontos, e o milheiro cai para R$ 38,57. A régua ao lado compara com o alvo do programa.']},
+    {i:'i-alerta', n:'O que costuma dar errado',
+     p:['O bônus de adesão costuma vir parcelado com as mensalidades: na campanha do Clube Esfera, os pontos extras caem mês a mês durante 12 meses. Cancelar antes do fim pode deixar parte dele para trás.',
+        'E assinar sem destino para os pontos: ponto parado é dinheiro parado, e ponto também tem validade.']},
+    {i:'i-alvo', n:'Quando vale a pena',
+     p:['Quando o milheiro do plano fica abaixo do seu alvo para aquele programa e você tem onde usar os pontos.',
+        'O clube também rende fora da mensalidade: na transferência bonificada para a Azul, quem assina o Clube Azul levou 80% de bônus, contra 50% de quem não assina — e o bônus cresce com o tempo de assinatura.']}
+  ]
+};
+const GUIA_MURAL = {
+  t:'Como ler a aba do mural',
+  blocos:[
+    {i:'i-sino', n:'O que é',
+     p:['O mural é a caixa de entrada das oportunidades que chegam pelos grupos e canais: alertas, compras bonificadas, passagens e cashback. Em vez de ficarem perdidas no celular, ficam aqui, com prazo e link.',
+        'Os alertas importantes também trazem o que a própria Torre percebe sozinha: campanhas que fecham hoje e campanhas que bateram recorde.']},
+    {i:'i-mais', n:'Como cadastrar sem digitar',
+     p:['Use "Colar anúncios": cole o texto do grupo, um anúncio ou vários de uma vez. A Torre separa cada um e tira título, prazo, links, a classificação em magos e as condições. Você confere a prévia e grava.',
+        'Anúncio de transferência bonificada vira campanha com um clique, em "Virar campanha", já com bônus, prazo, link e regras preenchidos.']},
+    {i:'i-faisca', n:'Como se lê a temperatura',
+     p:['"Mais quentes" junta três coisas: a classificação em magos que veio no anúncio, o seu voto — esquentar ou esfriar — e o prazo, porque o que fecha hoje pede atenção antes.',
+        'A classificação do anúncio é de quem o publicou. O seu voto é o que você achou dele para a sua carteira.']},
+    {i:'i-alvo', n:'O que fazer com cada uma',
+     p:['Leu e não serve: marque como lida, e ela sai do contador. Serve: esquente, abra o link e, se for transferência, vire campanha para a Torre calcular o milheiro.',
+        'O que passa do prazo sai sozinho da vista, com "Só as que ainda valem" marcado.']}
+  ]
+};
+function htmlGuia(g){
+  return `<details class="guia-aba">
+    <summary class="resumo-dobra">${esc(g.t)}</summary>
+    <div class="guia-grade">
+      ${g.blocos.map(b => `<div class="guia-bloco">
+        <div class="guia-cab"><svg><use href="#${esc(b.i)}"/></svg><span>${esc(b.n)}</span></div>
+        ${b.p.map(t => `<p>${esc(t)}</p>`).join('')}
+      </div>`).join('')}
+    </div>
+  </details>`;
+}
 
 function renderGuiaLojas(){
   const alvo = $('#ljGuia'); if (!alvo) return;
@@ -18436,6 +18731,7 @@ function abrirFichaAssinatura(id){
 }
 
 function renderClubes(){
+  if ($('#ccGuia') && !$('#ccGuia').innerHTML) $('#ccGuia').innerHTML = htmlGuia(GUIA_ASSINATURA);
   iniciarCalcCPM();
   const ativas = DB.assinaturas.filter(a => a.status === 'ativa');
   $('#contClubes').textContent = ativas.length;
@@ -30853,6 +31149,7 @@ function ligarEventos(){
   });
   $('#btNovoCartao').onclick = () => editarCartao();
   if ($('#btNovoMural')) $('#btNovoMural').onclick = () => editarMural();
+  if ($('#btColarMural')) $('#btColarMural').onclick = () => abrirColarMural();
   if ($('#mrAtivas')) $('#mrAtivas').onchange = e => { soAtivasMural = e.target.checked; renderMural(); };
   /* o segmentado de categorias é redesenhado a cada render, então o clique vai
      delegado no contêiner e não em cada botão */
