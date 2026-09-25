@@ -1104,7 +1104,9 @@ p:last-child{ margin-bottom:0; }
 .rc-periodo > span{ font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
 .rc-periodo .dr-sim-qtds button.on{ background:var(--sel-fundo); color:var(--anil-claro); box-shadow:0 0 0 1px var(--sel-borda); }
 .rc-corpo{ padding-top:14px; padding-bottom:14px; }
-.rc-grade{ display:grid; grid-template-columns:minmax(300px, 360px) minmax(0, 1fr); gap:24px; align-items:start; }
+/* Metade e metade: com 12 meses o cartão do Radar tem oito barras, e numa coluna
+   de 360px elas ficavam espremidas. */
+.rc-grade{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:26px; align-items:start; }
 .rc-rot{ display:flex; align-items:center; gap:10px; margin:0 0 10px; font-size:calc(13px * var(--esc)); font-weight:600; color:var(--grafite); }
 .rc-rot::after{ content:''; flex:1; height:1px; background:var(--fio); }
 .rc-col-radar > .cartao{ margin:0; }
@@ -1116,7 +1118,7 @@ p:last-child{ margin-bottom:0; }
 .rc-kpi small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); }
 .rc-esta{ background:color-mix(in oklab, var(--ouro) 12%, var(--sup-1)); border-color:color-mix(in oklab, var(--ouro) 45%, transparent); }
 .rc-esta b{ color:var(--ouro); }
-.rc-prox b{ font-size:calc(16px * var(--esc)); color:var(--anil-claro); }
+.rc-prox b{ color:var(--anil-claro); }
 .rc-veredito{ margin:12px 0 0; font-size:calc(14px * var(--esc)); line-height:1.5; font-weight:500; }
 
 /* Mapa de pontos: um trilho, as campanhas do período como pontos discretos, a
@@ -1148,6 +1150,18 @@ p:last-child{ margin-bottom:0; }
 
 .rc-ampliado{ display:inline-flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--esc)); color:var(--anil-claro); }
 .rc-ampliado svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; }
+
+
+.rc-tipico.embaixo{ top:30px; bottom:auto; height:20px; }
+.rc-tipico.embaixo em{ top:22px; }
+.rc-mapa{ margin-bottom:10px; }
+
+
+.rc-tipico.na-esq em{ transform:translateX(-6px); }
+.rc-tipico.na-dir em{ left:auto; right:0; transform:translateX(6px); }
+/* Só o balão se desloca; o ponto dourado fica exatamente no valor. */
+.rc-atual.na-esq b{ transform:translateX(calc(50% - 16px)); }
+.rc-atual.na-dir b{ transform:translateX(calc(-50% + 16px)); }
 
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
@@ -7953,7 +7967,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 03:10';
+const BUILD = '2026-09-27 04:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14836,7 +14850,8 @@ function radarCampanhaCorpo(c, jan){
   else if (!outras.some(x => melhorQue(x.v, d.atual)) && !iguais){ tom = 'jade'; veredito = 'A melhor do período: nenhuma outra campanha deste programa chegou aqui.'; }
   else if (!outras.some(x => melhorQue(x.v, d.atual))){ tom = 'jade'; veredito = 'Empata com a melhor do período.'; }
   else if (!temPadrao){ tom = 'ouro'; veredito = `Abaixo do melhor do período (${d.fmt(r.melhor)}). Com ${r.n} campanhas no período, ainda não há um típico para comparar.`; }
-  else if (d.maior ? d.atual >= r.mediana : d.atual <= r.mediana){ tom = 'ouro'; veredito = `Acima do típico do programa, mas abaixo do melhor do período (${d.fmt(r.melhor)}).`; }
+  else if (Math.abs(d.atual - r.mediana) < 1e-9){ tom = 'ouro'; veredito = `Igual ao típico do programa, abaixo do melhor do período (${d.fmt(r.melhor)}).`; }
+  else if (d.maior ? d.atual > r.mediana : d.atual < r.mediana){ tom = 'ouro'; veredito = `Acima do típico do programa (${d.fmt(r.mediana)}), mas abaixo do melhor do período (${d.fmt(r.melhor)}).`; }
   else { tom = 'brasa'; veredito = `Abaixo do típico do programa (${d.fmt(r.mediana)}). O melhor do período foi ${d.fmt(r.melhor)}.`; }
 
   /* Mapa de pontos: cada campanha do período numa régua; esta, em ouro. Em
@@ -14844,9 +14859,14 @@ function radarCampanhaCorpo(c, jan){
   const todos = d.vals.map(x => x.v).concat([d.atual]);
   const mn = Math.min(...todos), mx = Math.max(...todos), amp = Math.max(mx - mn, 1e-6);
   const pos = v => { const t = (v - mn) / amp; return 4 + (d.maior ? t : 1 - t) * 92; };
+  /* Perto das bordas o rótulo centralizado passaria da régua ("ípico +25%"):
+     ali ele se alinha pelo começo ou pelo fim. */
   const pontos = outras.map(x => `<i class="rc-ponto" style="left:${pos(x.v)}%" title="${esc(x.c.titulo || '')} — ${d.fmt(x.v)}, ${dataBR(x.c.fim)}"></i>`).join('');
+  /* Perto do balão desta campanha, o rótulo do típico some atrás dele: nesse
+     caso desce para baixo da régua. */
+  const tipicoPerto = temPadrao && Math.abs(pos(r.mediana) - pos(d.atual)) < 14;
   const marcaTipico = temPadrao
-    ? `<span class="rc-tipico" style="left:${pos(r.mediana)}%"><em>típico ${d.fmt(r.mediana)}</em></span>` : '';
+    ? `<span class="rc-tipico${tipicoPerto ? ' embaixo' : ''}${pos(r.mediana) < 14 ? ' na-esq' : pos(r.mediana) > 86 ? ' na-dir' : ''}" style="left:${pos(r.mediana)}%"><em>típico ${d.fmt(r.mediana)}</em></span>` : '';
 
   /* Ritmo: intervalo entre os fins das campanhas do período. A próxima estimada
      é o fim desta mais o intervalo típico — estimativa, e dita como tal. */
@@ -14879,7 +14899,7 @@ function radarCampanhaCorpo(c, jan){
         <div class="rc-mapa" role="img" aria-label="${esc(`Esta campanha é melhor que ${piores} de ${outras.length} campanhas do período`)}">
           <div class="rc-trilho"></div>
           ${marcaTipico}${pontos}
-          <span class="rc-atual" style="left:${pos(d.atual)}%"><b>${d.fmt(d.atual)}</b></span>
+          <span class="rc-atual${pos(d.atual) < 14 ? ' na-esq' : pos(d.atual) > 86 ? ' na-dir' : ''}" style="left:${pos(d.atual)}%"><b>${d.fmt(d.atual)}</b></span>
         </div>
         <div class="rc-mapa-leg"><span>${d.maior ? 'menor bônus' : 'milheiro mais caro'}</span><span>${d.maior ? 'maior bônus' : 'milheiro mais barato'}</span></div>
         ${outras.length ? `<p class="rc-posicao">Melhor que <b>${piores}</b> de <b>${outras.length}</b> outra${outras.length > 1 ? 's' : ''} campanha${outras.length > 1 ? 's' : ''} deste programa no período${iguais ? `, e igual a ${iguais}` : ''}.</p>` : ''}
@@ -14887,8 +14907,8 @@ function radarCampanhaCorpo(c, jan){
         <div class="rc-rot" style="margin-top:18px">Ritmo do programa</div>
         <div class="rc-ritmo">
           <div class="rc-kpi"><span>Intervalo típico</span><b>${gapTip ? gapTip + ' dias' : '—'}</b></div>
-          <div class="rc-kpi"><span>Anterior a esta</span><b>${anterior ? dataDiaMes(anterior) : '—'}</b>${diasAntes != null ? `<small>${diasAntes} dias antes</small>` : ''}</div>
-          <div class="rc-kpi rc-prox"><span>Próxima provável</span><b>${proxima ? 'por volta de ' + dataDiaMes(proxima) : '—'}</b></div>
+          <div class="rc-kpi"><span>Anterior a esta</span><b>${anterior ? dataDiaMes(anterior) : '—'}</b>${diasAntes != null ? `<small>${diasAntes} ${diasAntes === 1 ? 'dia' : 'dias'} antes</small>` : ''}</div>
+          <div class="rc-kpi rc-prox"><span>Próxima provável</span><b>${proxima ? dataDiaMes(proxima) : '—'}</b>${proxima ? '<small>por volta desta data</small>' : ''}</div>
         </div>
         <p class="rc-nota">${gapTip
           ? `Estimativa pelo intervalo típico entre as campanhas do período, contado a partir do fim desta. É tendência, não garantia: campanhas mudam de data sem aviso.`
