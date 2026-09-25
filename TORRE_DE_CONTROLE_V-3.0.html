@@ -84,7 +84,7 @@
   --trilho:calc(72px * var(--esc));
   /* Barra fixa da direita: vendas, financeiro e conta (tema, atalhos, sair). */
   --trilho-dir:calc(68px * var(--esc));
-  --menu:calc(212px * var(--esc));
+  --menu:calc(244px * var(--esc));  /* 244: cabe "Transferência Bonificada 79" como sub-item, numa linha */
   --topo-h:calc(62px * var(--esc));
   --ease:cubic-bezier(.22,.68,.32,1);
   --mola:linear(0,.25 8%,.64 18%,.91 27%,1.03 36%,1.05 46%,1.01 62%,1);
@@ -1237,6 +1237,24 @@ p:last-child{ margin-bottom:0; }
   .dr-pe > .bt.primario{ flex-basis:100%; order:-1; }
 }
 
+
+/* ── sub-itens da coluna de menu ──────────────────────────────────────────── */
+.cm-sub{ display:flex; flex-direction:column; gap:1px; margin:2px 0 8px 10px; padding-left:8px;
+  border-left:1px solid var(--fio); }
+.cm-subitem{ display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+  padding:6px 10px; border:0; border-radius:8px; background:transparent; cursor:pointer; text-align:left;
+  font-family:inherit; font-size:calc(13.5px * var(--esc)); color:var(--grafite); appearance:none; }
+.cm-subitem:hover{ background:var(--sup-1); color:var(--giz); }
+.cm-subitem.on{ color:var(--anil-claro); background:var(--sel-fundo, color-mix(in oklab, var(--anil-claro) 12%, transparent)); font-weight:600; }
+.cm-subitem.on::before{ content:''; position:absolute; margin-left:-19px; width:3px; height:18px; border-radius:2px; background:var(--anil-claro); }
+.cm-subitem{ position:relative; }
+.cm-subitem > span:first-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cm-subcont{ font-family:var(--f-m); font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); font-variant-numeric:tabular-nums; }
+.cm-subitem.on .cm-subcont{ color:var(--anil-claro); }
+@media (min-width:861px){
+  .seg-na-coluna, .linha-so-seg{ display:none !important; }
+}
+
 /* ── coluna de menu ──────────────────────────────────────────────────────────
    Nome por extenso ao lado da sigla. As três letras do trilho são boas para
    quem já conhece o caminho; para quem está aprendendo, ou volta depois de
@@ -2260,7 +2278,9 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
   grid-template-columns:minmax(0, 3fr) minmax(var(--card-milheiro-l), 1fr);
 }
 .calc-corpo > div:first-child{ display:flex; flex-direction:column; }
-@media (max-width:1180px){
+/* 1280: com a barra da direita e a coluna de menu em 244px, abaixo disso os três
+   números ao lado da régua ficavam com 114px e cortavam o texto. */
+@media (max-width:1280px){
   .calc-corpo{ grid-template-columns:1fr; }
   .calc-regua{ width:100%; max-width:var(--card-milheiro-l); }
 }
@@ -2405,8 +2425,10 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
    Era 1340, calculado antes da coluna de seções (212px) ao lado do trilho: com
    ela, em 1366 px os campos ficavam com 161px e cortavam o nome do programa.
    Régua (300) + tabela (460) + campos (360, o mínimo legível) + trilho, coluna
-   e margens dão cerca de 1540. */
-@media (max-width:1540px){
+   e margens dão cerca de 1540. Com a coluna de menu em 244px (sub-itens) e a
+   barra fixa da direita (68px), medido: os campos só têm 360px a partir de
+   1665px de tela — daí 1680. */
+@media (max-width:1680px){
   .ct-topo{ grid-template-columns:minmax(0, 1fr); }
   .ct-leitura{ grid-template-columns:var(--card-milheiro-l) minmax(0, 1fr); }
 }
@@ -8058,7 +8080,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 07:50';
+const BUILD = '2026-09-27 09:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -27638,6 +27660,100 @@ function pintarFaixaModulo(v){
   res.textContent = resumo[v] ? resumo[v]() : '';
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SUB-ITENS NA COLUNA DE MENU
+   ──────────────────────────────────────────────────────────────────────────────
+   Algumas seções tinham uma segunda camada de abas dentro da página — as que
+   escolhem O QUE se vê: Transferência, Compra ou Bonificada; Simples ou Hack do
+   Carrinho. No computador elas passam para a coluna da esquerda, como sub-itens
+   sob a seção, sempre visíveis: um clique leva direto a "Transferir Pontos ›
+   Hack do Carrinho". Filtros, ordenação e período ficam na página, perto do que
+   filtram. No celular, sem coluna, as abas continuam na página.
+
+   Cada sub-item é um atalho para o botão da própria página: clicar nele aperta
+   o botão de lá. Um estado só, sem cópia para sair de sincronia.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const SUBMENUS = {
+  'ct-campanhas':  {seg:'#segCampanha'},
+  'ct-comprar':    {ct:'compra'},
+  'ct-transferir': {ct:'transferencia'},
+  'fb-campanhas':  {seg:'#segCampClube'},
+  'fb-mural':      {seg:'#segMural'},
+  'rd-arsenal':    {seg:'#segArsenal'},
+  'em-controle':   {seg:'#segCtrVista'}
+};
+
+/* As opções de uma seção, lidas da própria página (ou dos modos da calculadora,
+   cujo seletor é um só para Comprar e Transferir). */
+function opcoesSubmenu(aba){
+  const cfg = SUBMENUS[aba]; if (!cfg) return [];
+  const abaAtiva = !!document.querySelector('#p-' + aba + '.on');
+  if (cfg.ct){
+    return (CT_MODOS[cfg.ct] || []).map(m => ({rot:m.n, cont:'', on: abaAtiva && ctTipo === cfg.ct && ctModo === m.k, chave:m.k}));
+  }
+  const seg = document.querySelector(cfg.seg); if (!seg) return [];
+  return [...seg.querySelectorAll('button')].map((b, i) => {
+    const c = b.querySelector('.cont-disco');
+    const rot = [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() || b.textContent.trim();
+    return {rot, cont: c ? c.textContent.trim() : '', on: abaAtiva && b.classList.contains('on'), chave:i};
+  });
+}
+
+function htmlSubmenu(grupo, aba){
+  const ops = opcoesSubmenu(aba); if (!ops.length) return '';
+  return `<div class="cm-sub" data-sub="${aba}" role="group">${ops.map(o =>
+    `<button type="button" class="cm-subitem${o.on ? ' on' : ''}" data-chave="${o.chave}"
+      onclick="irParaSubmenu('${grupo}','${aba}','${o.chave}')"><span>${esc(o.rot)}</span>${o.cont !== '' ? `<span class="cm-subcont">${esc(o.cont)}</span>` : ''}</button>`).join('')}</div>`;
+}
+
+function irParaSubmenu(grupo, aba, chave){
+  irParaAba(grupo, aba);
+  const cfg = SUBMENUS[aba];
+  setTimeout(() => {
+    if (cfg.ct){
+      const b = document.querySelector(`#segCtModo button[data-m="${chave}"]`);
+      if (b && !b.classList.contains('on')) b.click();
+    } else {
+      const b = (document.querySelector(cfg.seg) || {querySelectorAll:() => []}).querySelectorAll('button')[Number(chave)];
+      if (b && !b.classList.contains('on')) b.click();
+    }
+    marcarColunaMenu();
+  }, 0);
+}
+
+/* Atualiza marcação e contadores dos sub-itens sem refazer a coluna. */
+function atualizarSubmenus(){
+  document.querySelectorAll('.cm-sub[data-sub]').forEach(box => {
+    const ops = opcoesSubmenu(box.dataset.sub);
+    box.querySelectorAll('.cm-subitem').forEach((b, i) => {
+      const o = ops[i]; if (!o) return;
+      b.classList.toggle('on', o.on);
+      const c = b.querySelector('.cm-subcont'); if (c && c.textContent !== o.cont) c.textContent = o.cont;
+    });
+  });
+}
+
+/* A página muda a escolha por vários caminhos — clique, "Transferir Agora",
+   F5, paleta. Em vez de lembrar de avisar a coluna em cada um, a coluna olha os
+   próprios seletores da página. */
+let tempoSubmenu = null;
+function ligarSubmenus(){
+  const obs = new MutationObserver(() => { clearTimeout(tempoSubmenu); tempoSubmenu = setTimeout(atualizarSubmenus, 30); });
+  const vistos = new Set();
+  Object.values(SUBMENUS).forEach(cfg => {
+    const sel = cfg.seg || '#segCtModo';
+    if (vistos.has(sel)) return; vistos.add(sel);
+    const seg = document.querySelector(sel); if (!seg) return;
+    obs.observe(seg, {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['class']});
+    /* No computador o seletor sai da página; se estava sozinho na linha, a linha
+       sai junto, para não deixar um vão. */
+    seg.classList.add('seg-na-coluna');
+    const linha = seg.parentElement;
+    if (linha && linha.classList.contains('linha') && [...linha.children].every(c => c === seg)) linha.classList.add('linha-so-seg');
+  });
+}
+
 function montarColunaMenu(){
   const nav = document.querySelector('.cm-nav');
   const tit = document.querySelector('.cm-titulo');
@@ -27676,6 +27792,8 @@ function montarColunaMenu(){
       (selo && selo.textContent.trim() ? '<span class="cm-selo">' + esc(selo.textContent.trim()) + '</span>' : '');
     b.onclick = () => { irParaAba(grupo, aba.dataset.aba); marcarColunaMenu(); };
     nav.appendChild(b);
+    const sub = htmlSubmenu(grupo, aba.dataset.aba);
+    if (sub) nav.insertAdjacentHTML('beforeend', sub);
   });
 }
 
@@ -27686,6 +27804,7 @@ function marcarColunaMenu(){
   document.querySelectorAll('.cm-item[data-aba]').forEach(b => {
     b.classList.toggle('on', !!ativa && b.dataset.aba === ativa.dataset.aba);
   });
+  atualizarSubmenus();
 }
 
 function ligarObservadorDeTabelas(){
@@ -27715,6 +27834,7 @@ function ligarObservadorDeTabelas(){
   });
   obs.observe(palco, {childList:true, subtree:true});
   montarColunaMenu();
+  ligarSubmenus();
   /* F5: volta à tela, às abas e à janela em que se estava. */
   setTimeout(restaurarEstadoTela, 300);
   /* Leitura vinda do botão de favoritos do Rota 360, se houver. */
