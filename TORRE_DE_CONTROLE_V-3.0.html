@@ -8228,7 +8228,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 16:25';
+const BUILD = '2026-09-27 16:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15967,9 +15967,10 @@ function renderCampanhas(){
       return `${cs.length === 1 ? 'A campanha' : 'As ' + cs.length + ' campanhas'} ${nome} ${cs.length === 1 ? 'fechou' : 'fecharam'} ${quando(ult)}`;
     }).join('; ') + '.';
   }
-  $(A.lista).innerHTML = cartoes ||
+  const dg = diagnosticoLista(abaCampanha, vivas.length);
+  $(A.lista).innerHTML = dg.aviso + (cartoes ||
     `<div class="nota" style="margin:0"><svg><use href="#i-info"/></svg><div>Nenhuma campanha aberta deste tipo agora.${fecharam}${
-      mortas.length ? ' O histórico está na tabela abaixo do radar.' : ''}</div></div>`;
+      mortas.length ? ' O histórico está na tabela abaixo do radar.' : ''}${dg.diag}</div></div>`);
   if (caixaEnc) caixaEnc.innerHTML = tabelaEncerradas(mortas);
 }
 
@@ -17683,6 +17684,35 @@ function revisarCampanhasPublicadas(){
   }
   if (mudou) salvar();
   return mudou;
+}
+
+/* Campanhas publicadas entram UMA vez e ficam anotadas como carregadas. Se depois
+   saírem do banco — apagadas sem querer, ou trocadas por uma cópia mais antiga ao
+   sincronizar —, a anotação impedia que voltassem, e a lista ficava vazia num
+   computador e cheia no outro. Aqui a Torre acha as que ainda estão no ar e
+   faltam, e oferece trazê-las de volta. Não traz sozinha: quem apagou de
+   propósito não quer vê-las voltar. */
+function publicadasFaltando(tipo){
+  const hoje = hojeISO();
+  return CAMPANHAS_PUBLICADAS.filter(c => c.tipo === tipo && c.fim && c.fim >= hoje && !(DB.campanhas || []).some(x => x.id === c.id));
+}
+function restaurarPublicadas(tipo){
+  const faltam = publicadasFaltando(tipo);
+  faltam.forEach(c => DB.campanhas.push({...c}));
+  if (faltam.length){ salvar(); revisarCampanhasPublicadas(); }
+  if (tipo === 'clube' && typeof renderCampanhasClube === 'function') renderCampanhasClube(); else renderPainelCampanhas();
+  avisar(`${faltam.length} ${faltam.length === 1 ? 'campanha restaurada' : 'campanhas restauradas'}.`, 'ok');
+}
+function diagnosticoLista(tipo, vivas){
+  const noBanco = (DB.campanhas || []).filter(c => c.tipo === tipo).length;
+  const faltam = publicadasFaltando(tipo);
+  const aviso = faltam.length ? `<div class="nota" style="margin:0 0 10px;border-color:var(--ouro)"><svg style="stroke:var(--ouro)"><use href="#i-alerta"/></svg><div>
+      <b>${faltam.length} ${faltam.length === 1 ? 'campanha publicada, ainda no ar, não está' : 'campanhas publicadas, ainda no ar, não estão'} no seu banco</b>:
+      ${faltam.slice(0, 4).map(c => esc(c.titulo)).join('; ')}${faltam.length > 4 ? ` e mais ${faltam.length - 4}` : ''}.
+      Elas saíram depois de carregadas — apagadas ou substituídas ao sincronizar.
+      <button type="button" class="bt p primario" style="margin-top:8px" onclick="restaurarPublicadas('${tipo}')"><svg><use href="#i-atualizar"/></svg>Restaurar</button></div></div>` : '';
+  const diag = !vivas ? `<p class="fraco" style="margin:8px 0 0;font-size:calc(12.5px * var(--esc))">Diagnóstico: para esta Torre, hoje é <b>${dataBR(hojeISO())}</b>; há <b>${noBanco}</b> campanha${noBanco !== 1 ? 's' : ''} deste tipo no banco e nenhuma no ar.</p>` : '';
+  return {aviso, diag};
 }
 
 function carregarCampanhasPublicadas(){
