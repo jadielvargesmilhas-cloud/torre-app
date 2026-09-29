@@ -4580,6 +4580,13 @@ table.tb-dados .c{ text-align:center; }
 table.tb-dados td.c .etq{ justify-content:center; }
 table.tb-dados td.c > .fraco{ text-align:center; }
 table.tb-dados th.n{ text-align:right; }
+/* Relatório mês a mês: cada coluna de valor reserva a largura de 00.000,00,
+   para a tabela não mudar de forma ao trocar de ano; a do mês acompanha o
+   nome mais longo. O mês corrente ganha o fio dourado à esquerda. */
+table.tb-mes{ width:100%; }
+table.tb-mes td.n, table.tb-mes th.n{ min-width:10ch; }
+table.tb-mes td:first-child{ white-space:nowrap; }
+table.tb-mes tr.mes-atual td:first-child{ box-shadow:inset 3px 0 0 var(--ouro); font-weight:600; }
 .acoes-cel{ display:flex; gap:4px; justify-content:flex-end; }
 
 /* ── tabela de campanhas encerradas ──────────────────────────────────────────
@@ -7729,7 +7736,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
             <div class="cartao" style="padding:0">
               <div style="padding:16px 20px 12px;border-bottom:1px solid var(--fio-suave)">
                 <div class="olho anil" style="margin:0">Mês a mês, por categoria</div>
-                <p class="fraco" style="font-size:calc(13px * var(--esc));margin:6px 0 0">Cada coluna é um mês do ano escolhido. A linha mostra de onde veio o gasto.</p>
+                <p class="fraco" style="font-size:calc(13px * var(--esc));margin:6px 0 0">Cada linha é um mês do ano escolhido. As colunas mostram de onde veio o gasto, em reais.</p>
               </div>
               <div class="rolo" style="margin:0;padding:0" id="rlMeses"></div>
             </div>
@@ -8236,7 +8243,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-27 19:00';
+const BUILD = '2026-09-28 23:55';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -8735,7 +8742,27 @@ function cpmClubeSeguro(c){
   try { return cpmDaCampanhaClube(c); }
   catch(e){ console.warn('Campanha de clube com dado fora do padrão:', c && c.id, e); return null; }
 }
+/* Campanha de clube com saída depois da carência. Quando o bônus cai inteiro na
+   adesão, ficar os doze meses só dilui o milheiro: a conta certa é pagar a
+   carência e sair. A campanha declara quantos meses (mesesSaida), quantas milhas
+   de bônus (bonusQtd) e os preços da oferta: precoMes, o mais barato, e
+   precoMensal, o da recorrência mensal. O cartão vivo usa o mais barato, o
+   arquivo usa o mensal, como nas demais campanhas de clube. */
+function cpmClubeComSaida(c, modo){
+  const m = Number(c.mesesSaida);
+  if (!(m > 0) || c.bonusQtd == null) return null;
+  const cat = catalogoDe(c.para);
+  const pl = cat && (cat.planos || []).find(x => x.id === c.plano);
+  if (!pl || !(pl.qtd > 0)) return null;
+  const precos = [Number(c.precoMes), Number(c.precoMensal)].filter(v => v > 0);
+  if (!precos.length) return null;
+  const preco = modo === 'mensal' ? (Number(c.precoMensal) || Math.min(...precos)) : Math.min(...precos);
+  const pontos = pl.qtd * m + Number(c.bonusQtd);
+  return pontos > 0 ? preco * m * (1 - (c.desconto || 0) / 100) / pontos * 1000 : null;
+}
 function cpmDaCampanhaClube(c){
+  const saida = cpmClubeComSaida(c);
+  if (saida != null) return saida;
   const cat = catalogoDe(c.para);
   if (!cat || !cat.planos || !cat.planos.length) return null;
 
@@ -16621,6 +16648,7 @@ function projecaoEncerrada(c){
      Na modalidade mensal, que é a de maior preço: ela é o piso de comparação, e
      projetar pelo anual à vista faria a campanha parecer melhor do que quem paga
      mês a mês veria. */
+  if (c.tipo === 'clube' && cpmClubeComSaida(c, 'mensal') != null) return cpmClubeComSaida(c, 'mensal');
   if (c.tipo === 'clube' && c.plano){
     const cat = catalogoDe(c.para);
     const pl = cat && (cat.planos || []).find(x => x.id === c.plano);
@@ -17570,7 +17598,19 @@ const CAMPANHAS_PUBLICADAS = [
     bonus:40.83, pontosExtrasAno:40000, desconto:0, limite:0, fim:'2026-09-27',
     titulo:'Upgrade para o Clube Livelo Top com até 98.000 pontos extras',
     regra:'Válida só para upgrade para o Clube Livelo Top, de 20 mil pontos por mês, nas modalidades mensal ou anual. 98 mil pontos extras no pagamento anual; 94 mil no mensal. Em 12 meses, na anual: 378 mil pontos, sendo 240 mil do clube, 98 mil de bônus e 40 mil por tempo de clube; na mensal, 374 mil. Os pontos de permanência caem a cada 3 meses. As bonificações são divididas e creditadas em 12 meses, junto com os pontos do clube. Quem já assinou o Clube Livelo e cancelou fica fora das campanhas do clube por 365 dias contados do cancelamento. Investimento em 12 meses: R$ 9.598,80 no mensal, R$ 9.118,80 no anual parcelado e R$ 8.638,92 no anual à vista.',
-    link:'https://www.livelo.com.br/ofertas-clube' }
+    link:'https://www.livelo.com.br/ofertas-clube' },
+  { id:'pub-cl-smiles-1000-18k-260928', tipo:'clube', de:'', para:'smiles', plano:'s1000',
+    /* 17 mil de bônus na adesão e 6 meses de carência: a conta é pagar seis
+       mensalidades e sair. Preços da oferta, conferidos em 28/09: R$ 46 na
+       recorrência mensal; R$ 496,80 no anual, R$ 41,40 por mês. Seis meses no
+       anual parcelado: R$ 248,40 por 23 mil milhas, R$ 10,80 o milheiro. Seis no
+       mensal: R$ 276,00, R$ 12,00. O catálogo ainda traz os preços antigos do
+       plano (R$ 42, 39,90 e 35,70), por isso a campanha leva os seus. */
+    bonus:142, bonusQtd:17000, mesesSaida:6, precoMes:41.40, precoMensal:46,
+    desconto:0, limite:0, fim:'2026-09-28',
+    titulo:'Clube Smiles 1.000 com 18.000 milhas na hora',
+    regra:'Só para novas adesões ao Clube Smiles 1.000, feitas pela página da promoção, nas modalidades mensal ou anual. Na adesão entram 18.000 milhas: 1.000 do plano e 17.000 de bônus. Permanência mínima de 6 meses: no mensal, cancelar antes estorna o bônus; no anual, cobra as mensalidades que faltam. Em 6 meses são 23.000 milhas. No anual parcelado, cancelando as parcelas depois do 6º mês: R$ 248,40, milheiro de R$ 10,80. No mensal: 6 × R$ 46,00 = R$ 276,00, milheiro de R$ 12,00. Quem cancelou o Clube nos últimos 365 dias não recebe o bônus. Válida até as 10h de 28/09/2026. Milhas com validade de 10 anos.',
+    link:'https://www.smiles.com.br/portal/campanhas/clubesmiles-18k-20260916' }
 ];
 
 /* ── o histórico que estava escrito e não entrava ─────────────────────────────
@@ -24532,18 +24572,28 @@ function renderRelatorio(){
       (() => { const t = CATS_FATURA.map((k, i) => soma(porMes.map(x => x.cats[i]))); const mx = Math.max(...t);
         return mx ? brl(mx) : 'Sem gasto'; })(), '')}`;
 
-  /* mês a mês: colunas fixas em 12 para a tabela não mudar de forma ao trocar
-     de ano, mesmo que só três meses tenham movimento */
-  $('#rlMeses').innerHTML = `<table class="tb-dados" style="table-layout:fixed;min-width:900px">
-    <colgroup><col style="width:190px">${meses.map(() => '<col>').join('')}<col style="width:110px"></colgroup>
-    <thead><tr><th>Categoria</th>${meses.map(m => `<th class="n">${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][Number(m.slice(5)) - 1]}</th>`).join('')}<th class="n">Ano</th></tr></thead>
-    <tbody>${CATS_FATURA.map((k, i) => {
-      const linha = porMes.map(x => x.cats[i]); const t = soma(linha);
-      return `<tr><td><b>${esc(k)}</b></td>${linha.map(v => `<td class="n">${v ? brl(v) : '<span class="fraco">—</span>'}</td>`).join('')}<td class="n"><b>${t ? brl(t) : '—'}</b></td></tr>`;
-    }).join('')}
-      <tr><td><b>Total</b></td>${porMes.map(x => `<td class="n"><b>${x.total ? brl(x.total) : '—'}</b></td>`).join('')}
-        <td class="n"><b style="color:var(--ouro)">${brl(totalAno)}</b></td></tr>
-    </tbody></table>`;
+  /* Mês a mês: um mês por linha e uma categoria por coluna. Com os doze meses em
+     colunas não havia largura que coubesse um valor em reais em cada uma, e os
+     números se sobrepunham. Na vertical as doze linhas estão sempre lá, com ou
+     sem movimento, e a tabela não muda de forma ao trocar de ano. Os cabeçalhos
+     são curtos para a tabela caber inteira; o nome completo fica na dica. */
+  const CURTO = {'Assinaturas de clubes':'Clubes', 'Parcelamentos':'Parcelas',
+    'Compras e transferências':'Compras', 'Emissões e resgates':'Emissões'};
+  const NOMES_MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const mesHoje = mesAtual();
+  /* Sem o R$ em cada célula: são 78 valores, e o prefixo repetido só alargava a
+     tabela. O subtítulo avisa que tudo está em reais. */
+  const num = v => brl(v).replace(/^R\$\s*/, '');
+  const valor = v => v ? num(v) : '<span class="fraco">—</span>';
+  const totCat = CATS_FATURA.map((k, i) => soma(porMes.map(x => x.cats[i])));
+  $('#rlMeses').innerHTML = `<table class="tb-dados tb-mes">
+    <thead><tr><th>Mês</th>${CATS_FATURA.map(k => `<th class="n" title="${esc(k)}">${esc(CURTO[k] || k)}</th>`).join('')}<th class="n">Total</th></tr></thead>
+    <tbody>${porMes.map(x => `<tr${x.m === mesHoje ? ' class="mes-atual"' : ''}>
+      <td>${NOMES_MES[Number(x.m.slice(5)) - 1]}</td>${x.cats.map(v => `<td class="n">${valor(v)}</td>`).join('')}
+      <td class="n"><b>${valor(x.total)}</b></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Ano</td>${totCat.map(t => `<td class="n">${t ? num(t) : '—'}</td>`).join('')}
+      <td class="n"><b style="color:var(--ouro)">${num(totalAno)}</b></td></tr></tfoot>
+  </table>`;
 
   /* por cartão */
   const linhas = cs.map(c => {
