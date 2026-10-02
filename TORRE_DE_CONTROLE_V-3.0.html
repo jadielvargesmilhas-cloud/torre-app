@@ -8295,7 +8295,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-02 22:20';
+const BUILD = '2026-10-02 23:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15031,8 +15031,8 @@ function simCabecalho(c, st){
         por mil</label>
       <span class="dr-sim-meta" id="drCarrinhoMeta">${meta}</span>
       <div class="dr-sim-qtds" role="group" aria-label="Quanto transferir">
-        ${QTDS_SIM.map(q2 => `<button type="button" class="${q2 === st.qtd ? 'on' : ''}" aria-pressed="${q2 === st.qtd}"
-          onclick="simCarrinho('${c.id}', {qtd:${q2}})">${nBR(q2 / 1000)} mil</button>`).join('')}
+        ${qtdsDaCampanha(QTDS_SIM, c).map(q2 => `<button type="button" class="${q2 === st.qtd ? 'on' : ''}" aria-pressed="${q2 === st.qtd}"
+          onclick="simCarrinho('${c.id}', {qtd:${q2}})"${q2 === Number(c.limite) ? ' data-dica="Limite da campanha"' : ''}>${rotuloQtd(q2)}</button>`).join('')}
       </div>
     </div>`;
 }
@@ -15231,6 +15231,16 @@ function drSimularBonus(id, total){
    gravado na campanha com a hora em que foi informado.
    ══════════════════════════════════════════════════════════════════════════════ */
 const QTDS_COMPRA = [10000, 20000, 50000, 100000];
+/* Os botões de quantidade terminam sempre no limite da campanha: o teto é a
+   simulação que mais interessa, porque é o máximo que a oferta permite. As
+   quantidades padrão acima do limite saem, já que não dá para comprar ou
+   transferir tanto nesta campanha. Sem limite, ficam as padrão. */
+function qtdsDaCampanha(base, c){
+  const lim = Number(c && c.limite) || 0;
+  if (!(lim > 0)) return base;
+  return base.filter(q => q < lim).concat([lim]);
+}
+const rotuloQtd = q => q >= 1000000 && q % 1000000 === 0 ? `${nBR(q / 1000000)} ${q === 1000000 ? 'milhão' : 'milhões'}` : `${nBRdec(q / 1000)} mil`;
 const QTD_COMPRA_PADRAO = 50000;
 
 function contaCompra(c, qtd){
@@ -15248,7 +15258,7 @@ function quandoPrecoCheio(c){
     return hoje ? {txt:`informado hoje às ${hora}`, velho:false}
       : {txt:`informado em ${dataBR(isoLocalMin(em).slice(0, 10)).slice(0, 5)} às ${hora} — confira de novo`, velho:true};
   }
-  if (tabelaDe(c.para)) return {txt:'preço de tabela da Torre — confira no site', velho:false};
+  if (tabelaDe(c.para)) return {txt:'preço de tabela da Torre; confira no site', velho:false};
   return null;
 }
 
@@ -15262,8 +15272,8 @@ function simCabecalhoCompra(c, st){
         por mil</label>
       <span class="dr-sim-meta" id="drPrecoMeta">${q ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span>` : 'digite o preço cheio que o site mostra'}</span>
       <div class="dr-sim-qtds" role="group" aria-label="Quanto comprar">
-        ${QTDS_COMPRA.map(q2 => `<button type="button" class="${q2 === st.qtd ? 'on' : ''}" aria-pressed="${q2 === st.qtd}"
-          onclick="simCarrinho('${c.id}', {qtd:${q2}})">${nBR(q2 / 1000)} mil</button>`).join('')}
+        ${qtdsDaCampanha(QTDS_COMPRA, c).map(q2 => `<button type="button" class="${q2 === st.qtd ? 'on' : ''}" aria-pressed="${q2 === st.qtd}"
+          onclick="simCarrinho('${c.id}', {qtd:${q2}})"${q2 === Number(c.limite) ? ' data-dica="Limite da campanha"' : ''}>${rotuloQtd(q2)}</button>`).join('')}
       </div>
     </div>`;
 }
@@ -15721,7 +15731,9 @@ function abrirRegras(id, gatilho){
   }
   d._volta = gatilho || null;
   d._id = id;
-  d._sim = c.tipo === 'compra' ? {qtd:QTD_COMPRA_PADRAO} : {qtd:100000, usarSaldo:usarSaldoPadrao(c)};
+  /* A quantidade inicial nunca passa do limite da campanha. */
+  const teto = q => Number(c.limite) > 0 ? Math.min(q, Number(c.limite)) : q;
+  d._sim = c.tipo === 'compra' ? {qtd:teto(QTD_COMPRA_PADRAO)} : {qtd:teto(100000), usarSaldo:usarSaldoPadrao(c)};
 
   const dg = degrausClube(c);
   const linhas = String(c.regra || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/).map(l => l.trim()).filter(Boolean)
@@ -15821,7 +15833,7 @@ function abrirRegras(id, gatilho){
             ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
               <section class="dr-grupo dr-${g.tom}">
                 <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
-                <ul>${grupos[g.k].map(l => `<li>${destacarNumeros(l)}</li>`).join('')}</ul>
+                <ul>${grupos[g.k].map(l => `<li>${destacarNumeros(l).replace(/\n/g, '<br>')}</li>`).join('')}</ul>
               </section>`).join('')}
             </div>
           </div>
@@ -15923,7 +15935,9 @@ function cartaoCampanha(c){
     .slice(0, 2);
   const linhaDestaque = (l, tipo) => {
     const alerta = tipo === 'obrig' || GATILHOS_RESTRICAO.some(r => r.test(l));
-    return `<div class="${alerta ? 'regra-limite' : 'regra-livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg><span>${esc(l)}</span></div>`;
+    /* Quebra de linha escrita na regra vira quebra na tela: um destaque com
+       duas ofertas e as notas de rodapé lê melhor em linhas próprias. */
+    return `<div class="${alerta ? 'regra-limite' : 'regra-livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg><span>${esc(l).replace(/\n/g, '<br>')}</span></div>`;
   };
 
   const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
@@ -17702,7 +17716,7 @@ const CAMPANHAS_PUBLICADAS = [
     cartaoDesconto:{banco:'itau', termo:'latam', desconto:65, nome:'LATAM Pass Itaú'},
     bonus:0, desconto:62, limite:200000, fim:'2026-10-02',
     titulo:'LATAM Pass com até 65% de desconto na compra de milhas',
-    regra:'De 29/09 às 23h59 de 02/10/2026, logado no app ou no site do programa. 62% para todos os clientes, milheiro a R$ 26,60; 65% para titulares do cartão LATAM Pass Itaú ativo que já pagaram a primeira fatura, a R$ 24,50, sobre a tabela de R$ 70. Lotes de 1.000 milhas, até 200.000 por cliente na campanha; o que passar disso sai pelo preço normal, em compra separada. Milhas creditadas em até 48 horas e válidas por 3 anos. Os dois descontos não se somam entre si nem com outras ofertas. Compra Presente suspensa no período.',
+    regra:'De 29/09 às 23h59 de 02/10/2026, logado no app ou no site do programa. 62% para todos os clientes, milheiro a R$ 26,60**\n65% para titulares do cartão LATAM Pass Itaú ativo*, a R$ 24,50**\n*que já pagaram a primeira fatura\n**sobre a tabela de R$ 70,00. Lotes de 1.000 milhas, até 200.000 por cliente na campanha; o que passar disso sai pelo preço normal, em compra separada. Milhas creditadas em até 48 horas e válidas por 3 anos. Os dois descontos não se somam entre si nem com outras ofertas. Compra Presente suspensa no período.',
     link:'https://latampass.com/facilidades/compra-milhas/lp?pt=pp' }
 ];
 
@@ -17848,7 +17862,9 @@ const REVISOES_PUBLICADAS = {
   'pub-tb-esfera-latampass-260925': [["Cadastro na página da LATAM Pass antes de transferir.", "Cadastro na LATAM Pass antes de transferir."], ["25% para todos, sem exigir clube.", "25% para todos, sem clube."], ["Limite de 300 mil milhas de bônus.", "Limite de 300 mil de bônus."], ["Não participa quem teve bloqueio na conta LATAM nos últimos 12 meses.", "Não participa conta LATAM com bloqueio em 12 meses."]],
   'pub-tb-banriclube-latampass-260924': [["Cadastro do CPF na página da LATAM Pass antes de transferir.", "Cadastro do CPF na LATAM Pass antes de transferir."], ["25% para todos, sem exigir clube.", "25% para todos, sem clube."], ["Não participa quem teve bloqueio na conta LATAM nos últimos 12 meses.", "Não participa conta LATAM com bloqueio em 12 meses."]],
   'pub-tb-azul-accor-260925': [["Paridade promocional de 7,5 : 1 só para elegíveis: Clube Azul, Azul One, Diamante, Diamante Unique e Cartão Azul Itaú.", "Paridade de 7,5 : 1 só para Clube Azul, Azul One, Diamante, Unique e Cartão Azul Itaú."]],
-  'pub-tb-livelo-latampass-260922': [["25% para todos, sem exigir clube Livelo ou LATAM Pass.", "25% para todos, sem clube."]]
+  'pub-tb-livelo-latampass-260922': [["25% para todos, sem exigir clube Livelo ou LATAM Pass.", "25% para todos, sem clube."]],
+  /* Os dois descontos em linhas próprias, com as condições em nota. */
+  'pub-cp-latam-65-261002': [["62% para todos os clientes, milheiro a R$ 26,60; 65% para titulares do cartão LATAM Pass Itaú ativo que já pagaram a primeira fatura, a R$ 24,50, sobre a tabela de R$ 70.", "62% para todos os clientes, milheiro a R$ 26,60**\n65% para titulares do cartão LATAM Pass Itaú ativo*, a R$ 24,50**\n*que já pagaram a primeira fatura\n**sobre a tabela de R$ 70,00."]]
 };
 
 /* Campos acrescentados depois que a campanha já tinha entrado no banco. Só
