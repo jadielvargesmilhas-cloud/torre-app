@@ -2628,12 +2628,19 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
    desalinhava a base. */
 .ct-ad-nota{
   flex:0 0 auto;
-  height:78px; min-height:78px; max-height:78px;
-  align-items:flex-start; box-sizing:border-box; overflow:hidden;
+  min-height:78px;
+  align-items:flex-start; box-sizing:border-box;
 }
 /* Vazia é contorno e nada mais: com fundo, a caixa parecia conter algo que não
    apareceu; sem ele, lê-se como o espaço reservado que é. */
 .ct-ad-nota.vazia{ background:transparent; border-color:var(--fio); }
+/* No celular a caixa empilha e não há fileira para saltar: travada em 78px ela
+   cortava a segunda frase no meio. Lá a altura acompanha o texto. As colunas
+   de valor também deixam de ter 110px fixos e ficam do tamanho do número, para
+   o rótulo da linha não ser espremido em 35px e quebrar em três linhas. */
+@media (max-width:600px){
+  .ct-ad-nota{ height:auto; max-height:none; overflow:visible; }
+}
 .ct-ad-l{
   display:grid; grid-template-columns:minmax(0, 1fr) 110px 110px; gap:10px; align-items:center;
 }
@@ -2643,6 +2650,16 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 }
 .ct-ad-cols{ display:grid; grid-template-columns:minmax(0, 1fr) 110px 110px; gap:10px; }
 .ct-ad-cols .ct-ad-col:first-child{ grid-column:2; }
+/* Quando o quadro fica estreito, seja no celular ou no tablet com as duas
+   colunas lado a lado, o rótulo sobe para uma linha própria e os dois valores
+   ficam embaixo, cada um com metade da largura. Antes o rótulo era espremido
+   num resto de 35px e quebrava em três linhas. */
+#ctAntesDepois{ container-type:inline-size; }
+@container (max-width:420px){
+  .ct-ad-l, .ct-ad-cols{ grid-template-columns:1fr 1fr; row-gap:2px; }
+  .ct-ad-l > .ct-ad-r{ grid-column:1 / -1; white-space:nowrap; }
+  .ct-ad-cols .ct-ad-col:first-child{ grid-column:1; }
+}
 /* O título é o que nomeia a tabela inteira, e cresce até destacar-se das linhas
    que ela contém — em corpo de rótulo, competia com elas. */
 .ct-ad-tit{ font-size:calc(15px * var(--esc)); font-weight:600; color:var(--giz-2); line-height:1.2; white-space:nowrap; }
@@ -8247,7 +8264,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-09-30 07:20';
+const BUILD = '2026-10-02 20:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -29337,16 +29354,14 @@ function pintarAntesDepoisCT(){
   const saldos = saldoPorPrograma();
   const cpms = cpmPorPrograma();
 
-  /* Milheiro médio depois: o custo e a quantidade da operação entram na conta do
-     programa. É a mesma fórmula do cpmPorPrograma, com a linha nova somada. */
-  const acumulado = p => {
-    let qtd = 0, custo = 0;
-    (DB.lancamentos || []).forEach(l => {
-      if (l.prog !== p) return;
-      qtd += Number(l.qtd) || 0; custo += Number(l.custo) || 0;
-    });
-    return {qtd, custo};
-  };
+  /* Milheiro médio depois: o custo e a quantidade da operação entram no estoque
+     do programa. A base é o mesmo estoque médio do cpmPorPrograma, o que o topo
+     da tela mostra. A conta antiga somava todas as quantidades, inclusive as
+     saídas negativas, mas mantinha o custo de tudo que já entrou: num programa
+     com muita milha já emitida, isso dividia o custo inteiro por um resto pequeno
+     e produzia um médio absurdo, como R$ 153 por mil na LATAM. */
+  const estoque = estoqueMedio(DB.lancamentos);
+  const acumulado = p => ({qtd:(estoque[p] || {}).qtd || 0, custo:(estoque[p] || {}).custo || 0});
 
   const linhas = [];
   const dest = r ? r.prog : 'smiles';
@@ -29371,7 +29386,7 @@ function pintarAntesDepoisCT(){
   const sd = saldos[dest] || 0;
   linhas.push({g:prog(dest).n, disco:discoProg(dest, 'p'), itens:[
     {r:'Saldo', a:nBR(sd), d:nBR(sd + Math.round(r ? r.qtd : 0)), bom:true},
-    {r:'Custo acumulado', a:brl(ac.custo), d:brl(custoD)},
+    {r:'Custo do estoque', a:brl(ac.custo), d:brl(custoD)},
     {r:'Milheiro médio', a:cpmAntes !== null ? brl2(cpmAntes) : '—',
      d:cpmDepois !== null ? brl2(cpmDepois) : '—',
      bom:melhora, pior:cpmAntes !== null && cpmDepois !== null && cpmDepois > cpmAntes,
