@@ -3283,6 +3283,37 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
    coluna que não há faria o navegador inventar uma — o campo sairia da caixa.
    Abaixo do corte, ele toma a fileira inteira, que é a única forma que sobra. */
 .campo-resto{ grid-column:3 / -1; }
+/* Formulário do cartão: cinco colunas fixas, no mesmo esquema da folha de
+   emissão (até 1.180px; 900px e três colunas abaixo de 1.100px de tela; uma coluna
+   no celular). Na segunda fileira a isenção vem logo depois da anuidade;
+   fechamento e vencimento descem para a terceira, os pontos por dólar para a
+   quarta, e os benefícios ocupam a direita das duas. */
+.folha.larga.cd-folha{ max-width:1180px; }
+/* As duas primeiras colunas guardam o rótulo mais longo do formulário,
+   "Pontos por dólar, mínimo", que pede 208px; as outras dividem o resto. */
+.cd-grade{ grid-template-columns:repeat(2, minmax(calc(210px * var(--esc)), 1fr)) repeat(3, minmax(0, 1fr)); }
+.cd-grade .cd-fecha{ grid-column:1; grid-row:3; }
+.cd-grade .cd-vence{ grid-column:2; grid-row:3; }
+.cd-grade .cd-ptsmin{ grid-column:1; grid-row:4; }
+.cd-grade .cd-ptsmax{ grid-column:2; grid-row:4; }
+.cd-grade .cd-benef{ grid-column:3 / -1; grid-row:3 / span 2; display:flex; flex-direction:column; }
+.cd-grade .cd-benef textarea{ flex:1; min-height:96px; resize:vertical; }
+/* A caixa de marcar ganha o mesmo contorno, altura e fundo de um campo, para
+   alinhar com a fileira. */
+.cd-caixa{ height:calc(36px * var(--esc)); padding:0 calc(11px * var(--esc)); border-radius:9px;
+  background:var(--sup-1); border:1px solid var(--fio); box-sizing:border-box; white-space:nowrap; }
+/* Dentro de .campo todo label vira rótulo de caixa alta; este é o texto da
+   caixa, e precisa da letra de um campo preenchido. */
+.campo > label.cd-caixa{ font-family:var(--f-b); font-size:calc(14.5px * var(--esc)); text-transform:none;
+  letter-spacing:normal; color:var(--giz); margin:0; }
+.cd-grade select:disabled{ opacity:.5; cursor:not-allowed; }
+@media (max-width:1100px){
+  .folha.larga.cd-folha{ max-width:900px; }
+  .cd-grade{ grid-template-columns:repeat(3, minmax(0, 1fr)); }
+  .cd-grade .cd-fecha, .cd-grade .cd-vence, .cd-grade .cd-ptsmin, .cd-grade .cd-ptsmax{ grid-column:auto; grid-row:auto; }
+  .cd-grade .cd-benef{ grid-column:1 / -1; grid-row:auto; order:1; }
+}
+@media (max-width:640px){ .cd-grade{ grid-template-columns:1fr; } }
 .campo-resto textarea{ height:100%; min-height:96px; resize:vertical; }
 @media (max-width:720px){ .campo-resto{ grid-column:1 / -1; } }
 /* Em tela estreita 240px de base ainda disputam espaço com o número e os dois
@@ -8264,7 +8295,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-02 20:00';
+const BUILD = '2026-10-02 21:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15953,6 +15984,7 @@ function cartaoCampanha(c){
 
     <div class="cp-fatos">
       ${cpm != null ? `<span class="cp-fato cp-${tomCpm}">Milheiro projetado <b>${brl2(cpm)}</b></span>` : ''}
+      ${c.cartaoUsado ? `<span class="cp-fato cp-jade">Com o seu cartão <b>${esc(c.cartaoUsado)}</b>: ${pct(c.desconto, 0)} de desconto</span>` : ''}
       ${c.limite ? `<span class="cp-fato">Limite de <b>${nBR(c.limite)}</b> por CPF</span>` : ''}
       ${c.limiteClube ? `<span class="cp-fato">Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube</span>` : ''}
       ${c.minimo ? `<span class="cp-fato">Mínimo de <b>${nBR(c.minimo)}</b></span>` : ''}
@@ -15968,6 +16000,7 @@ function cartaoCampanha(c){
 }
 
 function renderCampanhas(){
+  aplicarCondicoesCampanhas();
   /* contagem por tipo no próprio alternador: assim dá para ver que existe
      campanha na outra aba antes de clicar nela */
   const conta = t => DB.campanhas.filter(c => c.tipo === t).length;
@@ -17662,8 +17695,10 @@ const CAMPANHAS_PUBLICADAS = [
     regra:'Exclusiva para assinantes do Clube Livelo, logados no site ou no app, até as 23h59 de 30/09/2026. 53% até 50.000 pontos, milheiro a R$ 32,90; 55% até 100.000, a R$ 31,50; 57% até 400.000, a R$ 30,10. Teto de 400.000 pontos com transações ilimitadas; o desconto segue a quantidade total comprada na campanha. Acumula com a campanha de pagamento com cartão Elo. Pontos creditados em até 48 horas depois do pagamento, parcelamento no cartão de crédito.',
     link:'https://www.livelo.com.br/compra-de-pontos' },
   /* 62% é o desconto de todo cliente; 65% exige cartão LATAM Pass Itaú ativo e
-     com a primeira fatura já paga. Grava-se o 62%, como em agosto. */
+     com a primeira fatura já paga. A Torre aplica o 65% sozinha quando há esse
+     cartão em Meus cartões (cartaoDesconto). */
   { id:'pub-cp-latam-65-261002', tipo:'compra', de:'', para:'latampass',
+    cartaoDesconto:{banco:'itau', termo:'latam', desconto:65, nome:'LATAM Pass Itaú'},
     bonus:0, desconto:62, limite:200000, fim:'2026-10-02',
     titulo:'LATAM Pass com até 65% de desconto na compra de milhas',
     regra:'De 29/09 às 23h59 de 02/10/2026, logado no app ou no site do programa. 62% para todos os clientes, milheiro a R$ 26,60; 65% para titulares do cartão LATAM Pass Itaú ativo que já pagaram a primeira fatura, a R$ 24,50, sobre a tabela de R$ 70. Lotes de 1.000 milhas, até 200.000 por cliente na campanha; o que passar disso sai pelo preço normal, em compra separada. Milhas creditadas em até 48 horas e válidas por 3 anos. Os dois descontos não se somam entre si nem com outras ofertas. Compra Presente suspensa no período.',
@@ -17823,8 +17858,37 @@ const CAMPOS_PUBLICADOS = {
   'pub-tb-livelo-azul-260927': {limiteClube:100000, bonusSemClube:50, tempoClube:TEMPO_CLUBE_AZUL},
   'pub-tb-esfera-azul-260927': {limiteClube:100000, bonusSemClube:50, tempoClube:TEMPO_CLUBE_AZUL},
   'pub-tb-atomos-azul-260927': {limiteClube:100000, bonusSemClube:50, tempoClube:TEMPO_CLUBE_AZUL},
-  'pub-tb-uau-azul-260927':    {limiteClube:100000, bonusSemClube:50, tempoClube:TEMPO_CLUBE_AZUL}
+  'pub-tb-uau-azul-260927':    {limiteClube:100000, bonusSemClube:50, tempoClube:TEMPO_CLUBE_AZUL},
+  /* As duas campanhas de compra LATAM com 65% para o cartão Itaú: a regra vale
+     para as duas, e o histórico precisa medir com a mesma régua. */
+  'pub-cp-latam-65-260828': {cartaoDesconto:{banco:'itau', termo:'latam', desconto:65, nome:'LATAM Pass Itaú'}},
+  'pub-cp-latam-65-261002': {cartaoDesconto:{banco:'itau', termo:'latam', desconto:65, nome:'LATAM Pass Itaú'}}
 };
+
+/* Desconto que depende de um cartão. Algumas campanhas dão mais a quem tem um
+   cartão específico (65% na LATAM para o LATAM Pass Itaú, contra 62% para os
+   demais). A campanha declara o cartão em cartaoDesconto; aqui a Torre procura
+   em Meus cartões um cartão ativo daquele banco com o termo no produto ou no
+   clube, e troca o desconto. Sem o cartão, volta o desconto de todos.
+   descontoBase guarda o desconto geral; se a pessoa editar o desconto à mão para
+   outro valor, esse passa a ser o geral. */
+function cartaoQueAtende(cond){
+  const termo = semAcento(cond.termo).replace(/\s+/g, '');
+  return (DB.cartoes || []).find(k => k.ativo !== false
+    && (!cond.banco || semAcento(k.banco).includes(semAcento(cond.banco)))
+    && semAcento((k.produto || '') + ' ' + (k.clube || '')).replace(/\s+/g, '').includes(termo)) || null;
+}
+function aplicarCondicoesCampanhas(){
+  (DB.campanhas || []).forEach(c => {
+    const cond = c.cartaoDesconto;
+    if (!cond) return;
+    const atual = Number(c.desconto) || 0;
+    if (c.descontoBase == null || (atual !== Number(c.descontoBase) && atual !== Number(cond.desconto))) c.descontoBase = atual;
+    const k = cartaoQueAtende(cond);
+    c.desconto = k ? Number(cond.desconto) : Number(c.descontoBase);
+    c.cartaoUsado = k ? (cond.nome || (k.banco + ' ' + k.produto)) : null;
+  });
+}
 
 function revisarCampanhasPublicadas(){
   let mudou = 0;
@@ -17842,6 +17906,7 @@ function revisarCampanhasPublicadas(){
       if (c.regra.includes(antes)){ c.regra = c.regra.split(antes).join(depois); mudou++; }
     }
   }
+  aplicarCondicoesCampanhas();
   if (mudou) salvar();
   return mudou;
 }
@@ -24540,7 +24605,9 @@ function alertasCartoes(){
     /* Anuidade contra retorno: 12 meses de gasto no ritmo atual, convertidos em
        pontos pela pontuação do cartão e avaliados pelo milheiro do clube. Não é
        exato, mas responde se o cartão se paga. */
-    const anual = Number(c.anuidade) || 0;
+    /* Cartão com isenção não tem anuidade a pagar: sem isso a Torre cobrava
+       retorno de uma anuidade que não existe. */
+    const anual = c.isento ? 0 : (Number(c.anuidade) || 0);
     if (anual > 0){
       const gastoMes = totalFatura(c.id, m);
       const pts = Number(c.ptsMax) || Number(c.ptsMin) || 0;
@@ -24990,7 +25057,7 @@ function renderMeusCartoes(){
       </div>
     </div>
     <div class="crd-campos">
-      <div><span>Anuidade</span><b>${brl(c.anuidade || 0)}</b></div>
+      <div><span>Anuidade</span><b>${c.isento ? `<span class="n-jade">Isenta</span>${c.isencaoTipo ? ` <small class="fraco">${esc(c.isencaoTipo)}</small>` : ''}` : brl(c.anuidade || 0)}</b></div>
       <div><span>Clube</span><b>${esc(c.clube || '—')}</b></div>
       <div><span>Limite</span><b>${brl(c.limite || 0)}</b></div>
       <div><span>Pontos por dólar</span><b>${c.ptsMin || 0} – ${c.ptsMax || 0}</b></div>
@@ -25001,12 +25068,16 @@ function renderMeusCartoes(){
   </div>`).join('') : `<div class="vazio" style="grid-column:1/-1"><p>Nenhum cartão cadastrado.</p></div>`;
 }
 
+/* Nomes curtos de propósito: o seletor tem a largura de uma coluna da folha, e
+   o rótulo acima já diz que é o tipo de isenção. */
+const ISENCOES_ANUIDADE = ['Relacionamento', 'Gasto no mês', 'Investimentos', 'Negociada', 'Outra'];
+
 function editarCartao(id){
   const c = id ? cartao(id) : {banco:'', produto:'', bandeira:'Visa', final:'', titular:'Titular',
     anuidade:0, limite:0, fechamento:1, vencimento:10, clube:'', ptsMin:1, ptsMax:2, beneficios:'', ativo:true};
   abrirFolha({
-    titulo:id ? 'Editar Cartão' : 'Novo Cartão', largura:'larga',
-    corpo:`<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))">
+    titulo:id ? 'Editar Cartão' : 'Novo Cartão', largura:'larga cd-folha',
+    corpo:`<div class="grade cd-grade" data-grade-fixa>
       <div class="campo"><label>Banco</label><input type="text" id="cdBanco" value="${esc(c.banco)}" placeholder="Itaú"></div>
       <div class="campo"><label>Produto</label><input type="text" id="cdProduto" value="${esc(c.produto)}" placeholder="Azul Visa Infinite"></div>
       <div class="campo"><label>Bandeira</label><select id="cdBandeira">${BANDEIRAS.map(b => `<option${b === c.bandeira ? ' selected' : ''}>${b}</option>`).join('')}</select></div>
@@ -25014,13 +25085,17 @@ function editarCartao(id){
       <div class="campo"><label>Titular</label><input type="text" id="cdTitular" value="${esc(c.titular || '')}"></div>
       <div class="campo"><label>Clube de benefícios</label><input type="text" id="cdClube" value="${esc(c.clube || '')}" placeholder="TudoAzul"></div>
       <div class="campo"><label>Anuidade (R$)</label><input type="text" inputmode="decimal" data-moeda id="cdAnuidade" value="${moedaTxt(c.anuidade || 0)}"></div>
+      <div class="campo"><label for="cdIsento">Isenção de anuidade</label>
+        <label class="ck cd-caixa"><input type="checkbox" id="cdIsento"${c.isento ? ' checked' : ''}> Tenho isenção</label></div>
+      <div class="campo"><label for="cdIsencaoTipo">Tipo de isenção</label><select id="cdIsencaoTipo"${c.isento ? '' : ' disabled'}>
+        <option value="">Escolha</option>${ISENCOES_ANUIDADE.map(t => `<option${t === c.isencaoTipo ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
       <div class="campo"><label>Limite (R$)</label><input type="text" inputmode="decimal" data-moeda id="cdLimite" value="${moedaTxt(c.limite || 0)}"></div>
-      <div class="campo"><label>Fecha no dia</label><input type="number" id="cdFecha" value="${c.fechamento || 1}" min="1" max="31"></div>
-      <div class="campo"><label>Vence no dia</label><input type="number" id="cdVence" value="${c.vencimento || 10}" min="1" max="31"></div>
-      <div class="campo"><label>Pontos por dólar, mínimo</label><input type="number" id="cdPtsMin" value="${c.ptsMin || 0}" step="0.1"></div>
-      <div class="campo"><label>Pontos por dólar, máximo</label><input type="number" id="cdPtsMax" value="${c.ptsMax || 0}" step="0.1"></div>
-      <div class="campo campo-resto"><label>Outros benefícios</label>
+      <div class="campo cd-fecha"><label>Fecha no dia</label><input type="number" id="cdFecha" value="${c.fechamento || 1}" min="1" max="31"></div>
+      <div class="campo cd-vence"><label>Vence no dia</label><input type="number" id="cdVence" value="${c.vencimento || 10}" min="1" max="31"></div>
+      <div class="campo cd-benef"><label>Outros benefícios</label>
         <textarea id="cdBenef" rows="4" placeholder="Uma frase por linha">${esc(c.beneficios || '')}</textarea></div>
+      <div class="campo cd-ptsmin"><label>Pontos por dólar, mínimo</label><input type="number" id="cdPtsMin" value="${c.ptsMin || 0}" step="0.1"></div>
+      <div class="campo cd-ptsmax"><label>Pontos por dólar, máximo</label><input type="number" id="cdPtsMax" value="${c.ptsMax || 0}" step="0.1"></div>
     </div>`,
     pe:`${id ? `<button class="bt perigo" onclick="fecharFolha();apagar('cartoes','${id}','o cartão')">Remover</button>` : ''}<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarCartao">Salvar</button>`
   });
@@ -25028,6 +25103,9 @@ function editarCartao(id){
      outro cru criaria, na mesma fileira, R$ 12.000,00 ao lado de 959.88. */
   ligarCampoMoeda('#cdLimite');
   ligarCampoMoeda('#cdAnuidade');
+  /* O tipo só faz sentido com a isenção marcada: desmarcada, o seletor fica
+     apagado e o valor dele não é gravado. */
+  $('#cdIsento').onchange = () => { $('#cdIsencaoTipo').disabled = !$('#cdIsento').checked; };
 
   $('#btSalvarCartao').onclick = () => {
     const novo = {...c, id:c.id || uid(), banco:$('#cdBanco').value.trim() || 'Banco',
@@ -25036,11 +25114,15 @@ function editarCartao(id){
       anuidade:rgNum($('#cdAnuidade').value), limite:rgNum($('#cdLimite').value),
       fechamento:Number($('#cdFecha').value) || 1, vencimento:Number($('#cdVence').value) || 10,
       ptsMin:Number($('#cdPtsMin').value) || 0, ptsMax:Number($('#cdPtsMax').value) || 0,
+      isento:$('#cdIsento').checked, isencaoTipo:$('#cdIsento').checked ? $('#cdIsencaoTipo').value : '',
       beneficios:$('#cdBenef').value.trim(), ativo:true};
     DB.cartoes = DB.cartoes || [];
     const i = DB.cartoes.findIndex(x => x.id === novo.id);
     if (i >= 0) DB.cartoes[i] = novo; else DB.cartoes.push(novo);
+    /* Cartão novo pode destravar desconto de campanha (o 65% da LATAM). */
+    aplicarCondicoesCampanhas();
     salvar(); fecharFolha(); renderCartoes();
+    if (typeof renderCampanhas === 'function') renderCampanhas();
     avisar('Cartão salvo.', 'ok');
   };
 }
@@ -31001,6 +31083,7 @@ function importar(arquivo){
 const RENDER = { mesa:() => { renderMesa(); renderVender(); }, radar:renderRadar, fabrica:renderFabrica,
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 function aplicarTudo(){
+  aplicarCondicoesCampanhas();
   document.documentElement.dataset.theme = DB.cfg.tema || 'breu';
   aplicarEscala(DB.cfg.escala || 1);
   /* Mesma regra na primeira pintura: o ícone é o do tema para onde se vai. */
