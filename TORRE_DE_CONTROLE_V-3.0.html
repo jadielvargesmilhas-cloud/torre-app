@@ -8295,7 +8295,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-02 21:30';
+const BUILD = '2026-10-02 22:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15356,6 +15356,7 @@ function comprarAgora(id){
     ? {prog:c.para, quantidade:qtd, valorCheio:Math.round(r.cheio * 100) / 100, percentual:Number(c.desconto) || 0}
     : {prog:c.para, quantidadeBase:qtd, valorPago:Math.round(r.paga * 100) / 100, percentual:Number(c.bonus) || 0};
   ctTravados = new Set(Object.keys(ctVals).filter(k => k !== 'prog'));
+  ctProgEscolhido = true;
   irPara('comprar');
   irParaAba('comprar', 'ct-comprar');
   setTimeout(() => {
@@ -28266,6 +28267,22 @@ function calcularCT(tipo, modo, v){
    a cada troca de operação, e o que já foi digitado nos campos que continuam
    existindo não deve se perder. */
 let ctTipo = 'compra', ctModo = 'desconto', ctVals = {}, ctFeitos = {};
+/* Programa da compra escolhido pela pessoa (no seletor, num atalho de campanha
+   ou vindo da janela da campanha). Enquanto ninguém escolheu, a Torre abre no
+   programa da campanha de compra que está no ar. */
+let ctProgEscolhido = false;
+
+/* Programa da campanha de compra no ar que combina com o modo: no Com Desconto,
+   a que tem desconto; no Com Bônus, a que tem bônus. Havendo mais de uma, a de
+   melhor milheiro. Sem campanha no modo, qualquer compra no ar; sem nenhuma,
+   null, e o seletor fica no primeiro programa da lista. */
+function progCampanhaCompra(modo){
+  const vivas = campanhasVivas('compra');
+  const doModo = vivas.filter(c => modo === 'bonus' ? Number(c.bonus) > 0 : Number(c.desconto) > 0);
+  const base = doModo.length ? doModo : vivas;
+  if (!base.length) return null;
+  return base.slice().sort((a, b) => (medidaCampanha(a) || 9e9) - (medidaCampanha(b) || 9e9))[0].para;
+}
 /* Campos que chegaram prontos da janela de uma campanha ("Transferir Agora").
    Nascem marcados como tocados, para que nenhum preenchimento automático —
    milheiro da origem, saldo, teto do carrinho, bônus — escreva por cima do que
@@ -28700,8 +28717,10 @@ function irParaSubmenu(grupo, aba, chave){
   const cfg = SUBMENUS[aba];
   setTimeout(() => {
     if (cfg.ct){
+      /* No Comprar e Transferir o clique vale mesmo no modo já aberto: é o gesto
+         de voltar ao começo, e a compra reabre no programa da campanha no ar. */
       const b = document.querySelector(`#segCtModo button[data-m="${chave}"]`);
-      if (b && !b.classList.contains('on')) b.click();
+      if (b) b.click();
     } else {
       const b = (document.querySelector(cfg.seg) || {querySelectorAll:() => []}).querySelectorAll('button')[Number(chave)];
       if (b && !b.classList.contains('on')) b.click();
@@ -29161,7 +29180,7 @@ function renderComprarTransferir(){
   $('#segCtModo').innerHTML = modos.map(m =>
     `<button class="${m.k === ctModo ? 'on' : ''}" data-m="${m.k}">${m.n}</button>`).join('');
   $$('#segCtModo button').forEach(b => b.onclick = () => {
-    ctModo = b.dataset.m; ctFeitos = {}; ctTravados.clear(); renderComprarTransferir();
+    ctModo = b.dataset.m; ctFeitos = {}; ctTravados.clear(); ctProgEscolhido = false; renderComprarTransferir();
   });
 
   const modo = modos.find(m => m.k === ctModo);
@@ -29174,7 +29193,10 @@ function renderComprarTransferir(){
     const val = ctVals[c.k] !== undefined ? ctVals[c.k] : (c.v !== undefined ? c.v : '');
     if (c.t === 'prog' || c.t === 'progDestino'){
       const lista = c.t === 'progDestino' ? PROG_RESGATE : PROG_IDS;
-      const sel = val || (c.t === 'progDestino' ? 'smiles' : 'livelo');
+      const daCampanha = c.t === 'prog' && ctTipo === 'compra' && !ctProgEscolhido ? progCampanhaCompra(ctModo) : null;
+      const sel = c.t === 'prog' && ctTipo === 'compra' && !ctProgEscolhido
+        ? (daCampanha || lista[0])
+        : (val || (c.t === 'progDestino' ? 'smiles' : 'livelo'));
       return `<div class="campo"><label>${esc(c.r)}</label>
         <select id="ct_${c.k}">${lista.map(p =>
           `<option value="${p}"${p === sel ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>`;
@@ -29275,6 +29297,7 @@ function renderComprarTransferir(){
          estava lá era o do programa anterior, e mantê-lo é pior que apagá-lo. */
       /* Rota nova, preenchimento automático de novo: o bônus e os números que
          vieram da janela eram da rota anterior. */
+      if (c.k === 'prog') ctProgEscolhido = true;
       if (c.k === 'progOrigem' || c.k === 'progDestino' || c.k === 'prog'){
         ctTravados.clear();
         const pc = $('#ct_percentual'); if (pc) delete pc.dataset.tocado;
