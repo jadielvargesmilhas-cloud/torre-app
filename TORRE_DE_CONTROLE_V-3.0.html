@@ -3594,6 +3594,8 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 @keyframes lpVarre{ 0%{ top:-30%; } 100%{ top:100%; } }
 .lp-passos{ display:flex; flex-direction:column; gap:10px; font-size:calc(14px * var(--esc)); color:var(--grafite-dim); min-width:240px; }
 .lp-passos > div{ display:flex; align-items:center; gap:10px; }
+.lp-tempo{ font-family:var(--f-m); font-weight:400; font-size:calc(12px * var(--esc)); color:var(--grafite); margin-left:6px; }
+.lp-dica{ margin-top:4px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 .lp-passos .feito{ color:var(--giz-2); } .lp-passos .agora{ color:var(--giz); font-weight:600; }
 .lp-bola{ width:20px; height:20px; border-radius:50%; border:2px solid var(--fio); display:grid; place-items:center; flex-shrink:0; }
 .lp-passos .feito .lp-bola{ background:var(--jade); border-color:var(--jade); }
@@ -8589,7 +8591,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 03:20';
+const BUILD = '2026-10-04 03:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24284,23 +24286,39 @@ async function arquivoParaImagemIA(arquivo){
   /* Prints de celular costumam ser leves; os grandes são reduzidos para caber no
      limite da API sem perder a leitura dos números. */
   const url = await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = () => err(new Error('não deu para ler o arquivo')); fr.readAsDataURL(arquivo); });
-  if (arquivo.size <= 3.5 * 1048576) return {mime:arquivo.type === 'image/jpg' ? 'image/jpeg' : arquivo.type, data:url.split(',')[1], url};
+  /* Toda imagem vai com o lado maior em até 1568 px, que é o tamanho com que a
+     IA trabalha por dentro: mandar maior só aumenta o envio e a espera. */
   const img = await new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = url; });
-  const esc2 = Math.min(1, 2000 / Math.max(img.width, img.height));
+  if (Math.max(img.width, img.height) <= 1568 && arquivo.size <= 1.5 * 1048576) return {mime:arquivo.type === 'image/jpg' ? 'image/jpeg' : arquivo.type, data:url.split(',')[1], url};
+  const esc2 = Math.min(1, 1568 / Math.max(img.width, img.height));
   const c = document.createElement('canvas'); c.width = Math.round(img.width * esc2); c.height = Math.round(img.height * esc2);
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
   const u2 = c.toDataURL('image/jpeg', 0.85);
   return {mime:'image/jpeg', data:u2.split(',')[1], url:u2};
 }
+const TEMPO_LIMITE_LEITURA = 120000;
 async function chamarIAComImagens(imagens, prompt, sistema){
   const k = (DB.cfg.chaveIA || '').trim();
   if (!k) throw new Error('Cadastre a chave da API em Ajustes → Provedores para ler prints.');
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
+  /* Sem resposta em dois minutos, a leitura é interrompida com um aviso claro,
+     em vez de ficar girando para sempre. */
+  const ctl = new AbortController();
+  const limite = window.TEMPO_LEITURA_TESTE || TEMPO_LIMITE_LEITURA;
+  const relogio = setTimeout(() => ctl.abort(), limite);
+  let r;
+  try{
+  r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', signal:ctl.signal,
     headers:{'content-type':'application/json', 'x-api-key':k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
     body:JSON.stringify({model:DB.cfg.modeloIA || 'claude-sonnet-5', max_tokens:2000, system:sistema,
       messages:[{role:'user', content:imagens.map(i => ({type:'image', source:{type:'base64', media_type:i.mime, data:i.data}})).concat([{type:'text', text:prompt}])}]})
   });
+  }catch(e){
+    clearTimeout(relogio);
+    if (e.name === 'AbortError') throw new Error(`A leitura passou de ${Math.round(limite / 1000)} segundos sem resposta. Pode ser a conexão ou a IA sobrecarregada. Tente de novo, ou com menos imagens.`);
+    throw new Error('Sem conexão com a IA. Confira a internet e tente de novo.');
+  }
+  clearTimeout(relogio);
   if (!r.ok){
     let m = r.statusText, tipo = '';
     try{ const j = await r.json(); m = (j.error && j.error.message) || m; tipo = (j.error && j.error.type) || ''; }catch(e){}
@@ -24324,29 +24342,48 @@ async function lerPrintsTrecho(arquivos){
     corpo:`<div id="lpCorpo"></div>`,
     pe:`<button class="bt fantasma" onclick="fecharLeituraPrints()">Fechar</button><button class="bt primario" id="btLpOk" disabled>Preencher o formulário</button>`});
   const passos = ['Abrindo as imagens', 'Lendo voos, datas e valores', 'Comparando dinheiro e milhas', 'Montando o preenchimento'];
-  const desenharEspera = (i, urls) => { $('#lpCorpo').innerHTML = `<div class="lp-espera">
+  /* As etapas acendem quando acontecem de verdade. A leitura pela IA é a parte
+     longa (com várias imagens, costuma levar de 20 a 60 segundos), e um
+     cronômetro mostra que ela está andando. */
+  const desenharEspera = (i, urls) => { if (!$('#lpCorpo')) return; $('#lpCorpo').innerHTML = `<div class="lp-espera">
       <div class="lp-miniaturas">${(urls || lista.map(() => '')).map(u => `<div class="lp-mini${u ? '' : ' vazia'}">${u ? `<img src="${u}" alt="">` : ''}<span class="lp-varredura"></span></div>`).join('')}</div>
-      <div class="lp-passos">${passos.map((p, k) => `<div class="${k < i ? 'feito' : k === i ? 'agora' : ''}"><span class="lp-bola">${k < i ? '<svg><use href="#i-ok"/></svg>' : ''}</span>${p}</div>`).join('')}</div>
+      <div class="lp-passos">${passos.map((p, k) => `<div class="${k < i ? 'feito' : k === i ? 'agora' : ''}"><span class="lp-bola">${k < i ? '<svg><use href="#i-ok"/></svg>' : ''}</span>${p}${k === 1 && i === 1 ? ' <span class="lp-tempo" id="lpTempo">0 s</span>' : ''}</div>`).join('')}
+        ${i === 1 ? `<div class="lp-dica">Com ${lista.length} ${lista.length === 1 ? 'imagem' : 'imagens'}, a leitura costuma levar de 20 a 60 segundos.</div>` : ''}</div>
     </div>`; };
   desenharEspera(0);
+  let cron = null;
   try{
     _leitura.imagens = await Promise.all(lista.map(arquivoParaImagemIA));
     desenharEspera(1, _leitura.imagens.map(i => i.url));
+    const t0 = Date.now();
+    cron = setInterval(() => { const e = $('#lpTempo'); if (e) e.textContent = `${Math.round((Date.now() - t0) / 1000)} s`; else clearInterval(cron); }, 1000);
     const prompt = `São ${lista.length} imagem(ns) da mesma compra. Hoje é ${hojeISO()}. Responda só o JSON.`;
-    const t = setTimeout(() => _leitura && desenharEspera(2, _leitura.imagens.map(i => i.url)), 2500);
     const bruto = await chamarIAComImagens(_leitura.imagens, prompt, SISTEMA_TRECHO.replace('PROGRAMAS_VALIDOS', PROG_IDS.filter(k => prog(k).tipo === 'milhas').join(', ')));
-    clearTimeout(t);
+    clearInterval(cron);
+    if (!_leitura) return;
+    desenharEspera(2, _leitura.imagens.map(i => i.url));
+    await new Promise(ok => setTimeout(ok, 250));
     desenharEspera(3, _leitura.imagens.map(i => i.url));
     let d; try{ d = JSON.parse(bruto.replace(/```json|```/g, '').trim()); }
     catch(e){ throw new Error('A leitura não veio num formato que a Torre entenda. Tente de novo, ou com menos imagens.'); }
     _leitura.dados = d;
     desenharRevisaoPrints();
   }catch(e){
-    if (!$('#lpCorpo')) return;
+    if (cron) clearInterval(cron);
+    if (!$('#lpCorpo') || !_leitura) return;
+    _leitura.arquivos = lista;
     $('#lpCorpo').innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">
       <div><b>Não deu para ler os prints.</b></div><div>${esc(e.message || String(e))}</div>
-      <div>Você pode fechar e preencher o trecho à mão: nada do que estava no formulário se perdeu.</div></div></div>`;
+      <div>Você pode tentar de novo, ou fechar e preencher o trecho à mão: nada do que estava no formulário se perdeu.</div>
+      <div style="margin-top:8px"><button type="button" class="bt p primario" onclick="tentarLeituraDeNovo()"><svg><use href="#i-atualizar"/></svg>Tentar de novo</button></div></div></div>`;
   }
+}
+/* Tentar de novo: devolve o formulário e lê as mesmas imagens outra vez. */
+function tentarLeituraDeNovo(){
+  const l = _leitura; if (!l || !l.arquivos) return;
+  const arquivos = l.arquivos; const pai = l.pai; _leitura = null;
+  devolverFolhaGuardada(pai);
+  lerPrintsTrecho(arquivos);
 }
 function fecharLeituraPrints(){ const pai = _leitura && _leitura.pai; _leitura = null; if (pai) devolverFolhaGuardada(pai); else fecharFolha(); }
 
