@@ -8341,7 +8341,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 08:00';
+const BUILD = '2026-10-03 08:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -20518,6 +20518,21 @@ function editarLancamento(id, pre){
   let custoTravado = !!(pre && pre.custoDeSimulacao);
   const custoSeguePorConta = !!(pre && pre.custoDeSimulacao && !pre.custoEhDinheiroNovo);
   let entradaTravada = !!(pre && pre.custoDeSimulacao && pre.qtd);
+  /* A linha de saída de uma transferência não se edita sozinha: ela é a metade
+     de baixo de um lançamento só. Abrir o formulário nela mostrava a origem
+     vazia e as quantidades zeradas, porque quem guarda origem, quantidade que
+     saiu e quantidade que entrou é a linha de entrada. Então abre-se a
+     transferência inteira, e salvar atualiza as duas pontas juntas. */
+  const lAlvo = id ? DB.lancamentos.find(x => x.id === id) : null;
+  if (lAlvo && lAlvo.saidaDe){
+    const pai = DB.lancamentos.find(x => x.id === lAlvo.saidaDe);
+    if (pai){
+      avisar(`Esta linha é a saída de uma transferência para ${prog(pai.prog).n}. Abri a transferência inteira: o que mudar aqui vale para as duas pontas.`, 'ok', 7000);
+      return editarLancamento(pai.id, pre);
+    }
+    avisar('Esta saída ficou sem a transferência que a criou. Para corrigir, apague esta linha e lance a transferência de novo.', 'alerta', 9000);
+    return;
+  }
   const l = id ? DB.lancamentos.find(x => x.id === id)
               : {data:hojeISO(), contaId:(pre && pre.contaId) || (DB.contas[0] || {}).id,
                  prog:(pre && pre.prog) || 'smiles', tipo:(pre && pre.tipo) || 'transferencia',
@@ -20953,7 +20968,11 @@ function editarLancamento(id, pre){
     }
     const saiu = rgNum($('#lcSaiu').value);
     const par = paridadeDaRota();
-    const saldoOrig = soma(DB.saldos.filter(x => x.prog === origem && x.contaId === conta).map(x => x.qtd));
+    /* Editando uma transferência, a saída que ela já fez está descontada do
+       saldo de hoje: soma-se de volta, senão a Torre acusava falta de pontos
+       que a própria transferência tinha tirado. */
+    const jaSaiu = id ? soma(DB.lancamentos.filter(x => x.saidaDe === id && x.prog === origem && x.contaId === conta).map(x => Math.abs(Number(x.qtd) || 0))) : 0;
+    const saldoOrig = soma(DB.saldos.filter(x => x.prog === origem && x.contaId === conta).map(x => x.qtd)) + jaSaiu;
     const curto = saiu > saldoOrig;
     /* Zerar a origem não é erro, mas é o tipo de coisa que se quer ver antes de
        confirmar: o programa fica sem saldo e qualquer emissão pendente ali deixa
@@ -21151,6 +21170,23 @@ function editarLancamento(id, pre){
     if (!conferirAntesDeSalvar('lancamentos', novo, 'um lançamento')) return;
     if (id) DB.lancamentos[DB.lancamentos.findIndex(x => x.id === id)] = novo; else DB.lancamentos.push(novo);
 
+    /* Editar uma transferência atualiza também a linha de saída: data, titular,
+       origem, quantidade e custo acompanham a entrada. Se a origem foi retirada,
+       a saída sai junto. O saldo das duas pontas é refeito pelo Diário logo
+       abaixo, em acertarSaldoDe. */
+    const saidaAntiga = id ? DB.lancamentos.find(x => x.saidaDe === id) : null;
+    const pontasAntigas = saidaAntiga ? [[saidaAntiga.contaId, saidaAntiga.prog]] : [];
+    if (id && saidaAntiga && !(origem && saiu > 0)){
+      DB.lancamentos = DB.lancamentos.filter(x => x !== saidaAntiga);
+    } else if (id && origem && saiu > 0){
+      const cpmO = cpmPorPrograma()[origem];
+      const custoS = novo.forma === 'cpm' && novo.custo ? novo.custo : (cpmO ? Math.round(cpmO * saiu / 1000 * 100) / 100 : 0);
+      const dados = {data:novo.data, contaId:novo.contaId, prog:origem, qtd:-saiu, custo:-custoS, nota:`Saída para ${prog(novo.prog).n}`};
+      if (saidaAntiga) Object.assign(saidaAntiga, dados);
+      else DB.lancamentos.push({id:uid(), criadoEm:Date.now(), tipo:'transferencia', cartaoId:'', parcelas:1,
+        mexeuSaldo:!!novo.mexeuSaldo, saidaDe:novo.id, ...dados});
+    }
+
     /* A saída entra como lançamento de sinal trocado: o custo médio é média
        ponderada por quantidade, então tirar quantidade e custo na mesma
        proporção deixa o milheiro da origem intacto e devolve o dinheiro ao
@@ -21221,6 +21257,10 @@ function editarLancamento(id, pre){
        antes de ser mexido. */
     acertarSaldoDe(novo.contaId, novo.prog);
     if (origem) acertarSaldoDe(novo.contaId, origem);
+    if (id){
+      pontasAntigas.forEach(([c, p]) => acertarSaldoDe(c, p));
+      if (l && (l.contaId !== novo.contaId || l.prog !== novo.prog)) acertarSaldoDe(l.contaId, l.prog);
+    }
 
     salvar(); fecharFolha(); renderLancamentos(); renderMesa(); renderFita(); renderSaldo(); renderVender();
     avisar(origem ? `Lançado nas duas pontas: entrou em ${prog(novo.prog).n}, saiu de ${prog(origem).n}.` : 'Lançado. O termômetro já foi recalibrado.', 'ok', 5000);
