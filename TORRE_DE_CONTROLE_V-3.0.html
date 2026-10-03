@@ -8732,7 +8732,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 20:20';
+const BUILD = '2026-10-04 23:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12165,6 +12165,24 @@ function estoqueMedio(lancamentos){
   return acc;
 }
 
+/* O custo de cada saída no Diário: as milhas que saíram, ao custo médio do
+   programa naquele momento (a mesma conta do estoque). A saída não é grátis:
+   ela leva o custo do que estava na conta. */
+function custosDasSaidas(){
+  const acc = {}, out = {};
+  [...(DB.lancamentos || [])].filter(jaAconteceu)
+    .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0))
+    .forEach(l => {
+      const p = l.prog; if (!p) return;
+      const e = acc[p] = acc[p] || {qtd:0, custo:0};
+      const q = Number(l.qtd) || 0;
+      if (q >= 0){ e.qtd += q; e.custo += Number(l.custo) || 0; return; }
+      const sai = Math.min(Math.abs(q), e.qtd), medio = e.qtd > 0 ? e.custo / e.qtd : 0;
+      out[l.id] = {custo:-(medio * sai), milheiro:medio * 1000};
+      e.qtd -= sai; e.custo = Math.max(0, e.custo - medio * sai);
+    });
+  return out;
+}
 function cpmPorPrograma(){
   const acc = estoqueMedio(DB.lancamentos);
   const saida = {};
@@ -15137,7 +15155,7 @@ function cartaoSeguro(c, fn){
   try { return fn(c); }
   catch(e){
     console.error(e);
-    return `<div class="nota" style="margin:0;border-color:var(--brasa)"><svg style="stroke:var(--brasa)"><use href="#i-alerta"/></svg><div><b>${esc(c.titulo || c.id)}</b>: não consegui desenhar este cartão (${esc(e.message)}). Mande um print desta mensagem.</div></div>`;
+    return `<div class="nota" style="margin:0;border-color:var(--brasa)"><svg style="stroke:var(--brasa)"><use href="#i-alerta"/></svg><div><b>${esc(c.titulo || c.id)}</b>: não consegui desenhar este cartão (${e.message}). Mande um print desta mensagem.</div></div>`;
   }
 }
 
@@ -20823,6 +20841,7 @@ function aplicarFiltroLanc(ls){
 let paginaLanc = 1, porPaginaLanc = 10;
 
 function renderLancamentos(){
+  const custosSaida = custosDasSaidas();
   /* Mais recente no topo, e dentro do mesmo dia o mais recente também. A data
      sozinha empata sempre que se lança duas vezes num dia — o caso comum de uma
      transferência, que grava a entrada e a saída juntas.
@@ -20908,8 +20927,15 @@ function renderLancamentos(){
              números de sete dígitos linha a linha. -->
         <td class="n"><span class="lanc-qtd">${nBR(l.qtd)}</span>
           <span class="lanc-barra"><i class="z-${zona}" style="width:${larg}%"></i></span></td>
-        <td class="n">${l.custo ? brl(l.custo) : '<span class="jade">grátis</span>'}</td>
-        <td class="n"><span class="lanc-cpm z-${zona}">${l.custo ? brl2(cpm) : '—'}</span></td>
+        ${(() => {
+          /* saída sem custo gravado (resgate, venda, diária): mostra o custo das milhas que saíram, ao custo médio */
+          const cs = !l.custo && Number(l.qtd) < 0 && custosSaida[l.id];
+          if (cs && cs.custo) return `<td class="n" data-dica="Custo das milhas que saíram, ao custo médio do programa"><span class="brasa">−${brl(Math.abs(cs.custo))}</span></td>
+            <td class="n"><span class="lanc-cpm z-${zona}" data-dica="Custo médio do programa na data">${brl2(cs.milheiro)}</span></td>`;
+          if (!l.custo && Number(l.qtd) < 0) return `<td class="n"><span class="fraco" data-dica="${jaAconteceu(l) ? 'Sem custo de entrada lançado no programa' : 'Entra no custo quando a data chegar'}">—</span></td><td class="n"><span class="fraco">—</span></td>`;
+          return `<td class="n">${l.custo ? brl(l.custo) : '<span class="jade">grátis</span>'}</td>
+            <td class="n"><span class="lanc-cpm z-${zona}">${l.custo ? brl2(cpm) : '—'}</span></td>`;
+        })()}
         <td><div class="acoes-cel">
           <button class="bt p fantasma icone" onclick="duplicarLancamento('${l.id}')" data-dica="Duplicar: abre um novo já preenchido"><svg><use href="#i-copiar"/></svg></button>
           <button class="bt p fantasma icone" onclick="editarLancamento('${l.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -25066,16 +25092,16 @@ function dataDoTexto(t, ref){
   const u = linhas.join('\n');
   let m = u.match(/\b(\d{2})\/(\d{2})\/(20\d{2})\b/); if (m) return ok(m[3], +m[2], +m[1]);
   m = u.match(/\b(\d{2})\/(\d{2})\/(\d{2})\b/); if (m) return ok('20' + m[3], +m[2], +m[1]);
-  m = u.match(/\b(\d{1,2})\s?([A-Za-zçÇ]{3,9})\.?\s?(20\d{2})\b/);
-  if (m && MESES_LEITURA[semAcento(m[2])]) return ok(m[3], MESES_LEITURA[semAcento(m[2])], +m[1]);
+  /* todas as ocorrências, na mesma linha (sem pular para a de baixo), até achar um mês de verdade */
+  for (const x of u.matchAll(/\b(\d{1,2})[ \t]?([A-Za-zçÇ]{3,9})\.?[ \t]?(20\d{2})\b/g)) if (MESES_LEITURA[semAcento(x[2])]) return ok(x[3], MESES_LEITURA[semAcento(x[2])], +x[1]);
   /* sem ano: "SEG 05 JULHO", "Seg, Jul 5" -> o ano vem da referência (a data do trecho) ou da próxima ocorrência */
-  m = u.match(/\b(\d{1,2})\s+([A-Za-zçÇ]{3,9})\b/); let dia, mes;
-  if (m && MESES_LEITURA[semAcento(m[2])]){ dia = +m[1]; mes = MESES_LEITURA[semAcento(m[2])]; }
-  else { m = u.match(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2})\b/); if (m && MESES_LEITURA[semAcento(m[1])]){ mes = MESES_LEITURA[semAcento(m[1])]; dia = +m[2]; } }
+  let dia, mes;
+  for (const x of u.matchAll(/\b(\d{1,2})[ \t]+([A-Za-zçÇ]{3,9})\b/g)) if (MESES_LEITURA[semAcento(x[2])]){ dia = +x[1]; mes = MESES_LEITURA[semAcento(x[2])]; break; }
+  if (!mes) for (const x of u.matchAll(/\b([A-Za-z]{3,9})\.?[ \t]+(\d{1,2})\b/g)) if (MESES_LEITURA[semAcento(x[1])]){ mes = MESES_LEITURA[semAcento(x[1])]; dia = +x[2]; break; }
   if (mes){
     let ano = ref ? Number(String(ref).slice(0, 4)) : new Date().getFullYear();
     let iso = ok(ano, mes, dia);
-    if (!ref && iso < hojeISO()) iso = ok(ano + 1, mes, dia);
+    if (iso < hojeISO()) iso = ok(ano + 1, mes, dia);
     return iso;
   }
   return null;
@@ -25091,6 +25117,14 @@ function valoresReais(t){
   return out;
 }
 function interpretarTextosPrints(textos, ref){
+  /* Milhar escrito com espaço ("1 565,76") ou sem separador ("1565,76", como o
+     leitor costuma devolver) vira o formato com ponto, que as regras entendem. */
+  textos = textos.map(t => String(t || '')
+    .replace(/(\d)[ \u00a0\u202f](?=\d{3}(?:[,.]\d{2})?\b)/g, '$1')
+    .replace(/\b(\d{1,3})(\d{3}),(\d{2})\b/g, '$1.$2,$3')
+    .replace(/\b(\d{1,3})(\d{3})(\d{3}),(\d{2})\b/g, '$1.$2.$3,$4')
+    /* letra O lida no lugar de zero ao lado de um número ("SEG O5 JULHO") */
+    .replace(/\b[Oo](\d)\b/g, '0$1').replace(/\b(\d)[Oo]\b/g, '$10'));
   const tudo = textos.join('\n');
   const d = {voos:[], avisos:[]};
   const ehAero = c => !!AEROPORTOS[c];
@@ -25134,6 +25168,9 @@ function interpretarTextosPrints(textos, ref){
   const contaLoc = {}; locs.filter(x => /[A-Z]/.test(x) && /\d/.test(x)).forEach(x => contaLoc[x] = (contaLoc[x] || 0) + 1);
   const melhorLoc = Object.keys(contaLoc).sort((a, b) => contaLoc[b] - contaLoc[a])[0];
   if (melhorLoc) d.localizador = melhorLoc;
+  /* dois códigos quase iguais (8MHXU3 e 2MHXU3) são o mesmo lido de dois jeitos: avisa */
+  const parecidos = Object.keys(contaLoc).filter(x => x !== melhorLoc && x.length === melhorLoc.length && [...x].filter((ch, i) => ch !== melhorLoc[i]).length === 1);
+  if (melhorLoc && parecidos.length) d.avisos.push(`O localizador apareceu como ${[melhorLoc].concat(parecidos).join(' e ')} em documentos diferentes. Confira qual é o certo.`);
   const bilhetes = [...new Set([...tudo.matchAll(/(?:Ticket number|bilhete electr[óo]nico|bilhete eletr[ôo]nico)[^0-9]{0,20}(\d{3}[\s-]?\d{10})/gi)].map(m => m[1].replace(/\D/g, '')))];
   const pax = tudo.match(/(\d+)\s*passageiros?/i);
   d.passageiros = Math.max(pax ? Number(pax[1]) : 0, bilhetes.length) || undefined;
@@ -25184,7 +25221,8 @@ function interpretarTextosPrints(textos, ref){
       return;
     }
     const total = reais(/Total a pagar\s*R\$\s*([\d.]+,\d{2})/i) || reais(/Total\s*\d+\s*passageiros[\s\S]{0,40}?R\$\s*([\d.]+,\d{2})/i)
-      || (/total para todos|total a pagar|pre[çc]o detalhado/i.test(t) ? Math.max(0, ...valores.filter(v => v > 0)) || null : null);
+      || reais(/Pre[çc]o total(?! por)\s*:?\s*(?:R\$|BRL)?\s*([\d.]+,\d{2})/i)
+      || (/total para todos|total a pagar|pre[çc]o detalhado|detalhamento de pre[çc]os/i.test(t) ? Math.max(0, ...valores.filter(v => v > 0)) || null : null);
     if (total){
       const dn = d.dinheiro || {};
       dn.total = Math.max(dn.total || 0, total);
@@ -25205,7 +25243,17 @@ function interpretarTextosPrints(textos, ref){
       if (!d.milhas){ d.milhas = {programa:cia ? cia.pg : ''}; }
       if (!d.milhas.taxas && taxasBilhetes) d.milhas.taxas = Math.round(taxasBilhetes * 100) / 100;
     }
-  } else if (d.pagamento && !d.pagamento.forma) d.pagamento.forma = d.pagamento.pontos ? 'milhas' : (resgate ? 'milhas' : 'dinheiro');
+  } else if (d.pagamento && !d.pagamento.forma){
+    /* Pagamento sem pontos, mas bem abaixo do preço em dinheiro da mesma tela:
+       é o que se paga de taxas numa emissão com milhas. */
+    const pago = Number(d.pagamento.dinheiro) || 0, cheio = d.dinheiro && Number(d.dinheiro.total) || 0;
+    const pareceResgate = !d.pagamento.pontos && pago > 0 && cheio > 0 && pago < cheio * 0.5;
+    d.pagamento.forma = d.pagamento.pontos || resgate || pareceResgate ? 'milhas' : 'dinheiro';
+    if (pareceResgate){
+      d.milhas = d.milhas || {programa:cia ? cia.pg : ''}; if (!d.milhas.taxas) d.milhas.taxas = pago;
+      d.avisos.push(`O pagamento (${brl(pago)}) é bem menor que o preço em dinheiro (${brl(cheio)}): parece emissão com milhas, pagando só as taxas. Confira e informe as milhas.`);
+    }
+  }
   if (d.pagamento && d.pagamento.pontos == null && resgate && d.milhas && d.milhas.pontos) d.pagamento.pontos = d.milhas.pontos;
   if (/cortesia/i.test(tudo)){
     d.cortesia = {qtd:1, valor:(d.dinheiro && d.dinheiro.tarifa) || 0};
@@ -27275,7 +27323,7 @@ Devolva o JSON com todas as paradas dos ${pedido.dias} dias, na ordem.`;
       nasceu:{fonte:DB.cfg.modeloIA, perfis:pedido.perfis, ritmo:pedido.ritmo}},
       `por ${DB.cfg.modeloIA}`);
   }catch(e){
-    $('#rtRoteiroSaida').innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>A IA não respondeu: ${esc(e.message)}<br><span class="fraco">Confira a chave em Ajustes. O motor local continua no botão <b>Compor</b>.</span></div></div>`;
+    $('#rtRoteiroSaida').innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>A IA não respondeu: ${e.message}<br><span class="fraco">Confira a chave em Ajustes. O motor local continua no botão <b>Compor</b>.</span></div></div>`;
   }
 }
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -28661,6 +28709,26 @@ function mexerSaldo(contaId, prog, delta){
   else if (delta > 0) DB.saldos.push({id:uid(), contaId, prog, qtd:delta});
 }
 
+/* As milhas saem da conta no dia da emissão, não no dia do voo. Com a data do
+   voo, o resgate ficava como "ainda vai acontecer" por meses: o saldo já tinha
+   baixado, mas o custo médio e o Diário fingiam que não. */
+function dataDaSaidaDaEmissao(r){
+  if (r.criada) return String(r.criada).slice(0, 10);
+  const h = hojeISO();
+  return r.data && r.data <= h ? r.data : h;
+}
+/* Corrige as saídas já gravadas com a data do voo. Roda ao abrir; é seguro de
+   repetir. */
+function corrigirDatasDasSaidasDeEmissao(){
+  let mudou = false;
+  (DB.lancamentos || []).forEach(l => {
+    if (!l.daEmissao) return;
+    const r = (DB.reservas || []).find(x => x.id === l.daEmissao); if (!r) return;
+    const d = dataDaSaidaDaEmissao(r);
+    if (l.data !== d){ l.data = d; mudou = true; }
+  });
+  if (mudou) salvar();
+}
 function sincronizarSaidaDaEmissao(r){
   DB.lancamentos = DB.lancamentos || [];
   const i = DB.lancamentos.findIndex(l => l.daEmissao === r.id);
@@ -28682,7 +28750,7 @@ function sincronizarSaidaDaEmissao(r){
 
   const base = {
     daEmissao: r.id,
-    data: r.data || hojeISO(),
+    data: dataDaSaidaDaEmissao(r),
     contaId: r.contaId || (DB.contas[0] || {}).id || '',
     prog: r.prog,
     tipo: TIPO_SAIDA_DA_EMISSAO[r.tipo] || 'resgatePass',
@@ -33055,9 +33123,9 @@ function blocoItinerario(pref, valor, dica){
       placeholder="1 TP1058Y 31MAY 4 NATLIS HK1 2245 1215+1">${esc(valor || '')}</textarea>
   </div>
   <div class="linha" style="gap:10px;margin-top:8px">
-    <span class="fraco" style="font-size:calc(12.5px * var(--esc))">Ou cole um print do itinerário aqui mesmo, arraste a imagem, ou</span>
+    <span class="fraco" style="font-size:calc(12.5px * var(--esc))">Ou cole um print do itinerário aqui mesmo, arraste imagens ou PDFs, ou</span>
     <button type="button" class="bt p fantasma" id="${pref}ItinFoto"><svg><use href="#i-imagem"/></svg>escolha o arquivo</button>
-    <input type="file" accept="image/*" id="${pref}ItinArq" style="display:none">
+    <input type="file" accept="image/*,application/pdf,.pdf" multiple id="${pref}ItinArq" style="display:none">
   </div>
   <div id="${pref}ItinPrev" style="margin-top:11px"></div>`;
 }
@@ -33066,42 +33134,88 @@ function blocoItinerario(pref, valor, dica){
    para a IA, que devolve as linhas no formato que o leitor local já entende — daí
    em diante o caminho é o mesmo do texto colado, com a mesma prévia e as mesmas
    checagens. Sem chave cadastrada, o campo diz isso em vez de não fazer nada. */
+/* Itinerário a partir de prints e PDFs, sem custo: o mesmo leitor do trecho da
+   jornada (no navegador) encontra a rota, os voos e a data; os horários vêm da
+   tela de itinerário (ou do bilhete em PDF), dois por voo, na ordem em que
+   aparecem. O resultado é escrito no campo no formato que o leitor de
+   itinerário já entende, e dali segue o caminho de sempre. */
+function segmentosDoTexto(textos, ref){
+  const d = interpretarTextosPrints(textos, ref);
+  const rota = d.voos.length ? [d.voos[0].origem].concat(d.voos.map(v => v.destino)) : (d.origem && d.destino ? [d.origem, d.destino] : []);
+  if (rota.length < 2) return {linhas:[], d};
+  const n = rota.length - 1;
+  const HORA = /\b([01]?\d|2[0-3]):([0-5]\d)\b/g;
+  let horas = [];
+  /* bilhete eletrônico: os dois horários que vêm depois de cada número de voo */
+  textos.forEach(t => {
+    if (horas.length || !/RECIBO DE BILHETE|ELECTRONIC TICKET/i.test(t)) return;
+    const hs = [];
+    for (const m of t.matchAll(/\b[A-Z][A-Z0-9]\s?\d{2,4}\s+(\d{2}:\d{2})[\s\S]{0,40}?(\d{2}:\d{2})/g)) hs.push(m[1], m[2]);
+    if (hs.length >= 2 * n) horas = hs;
+  });
+  /* tela de itinerário: o texto com mais aeroportos entre parênteses; os
+     horários a partir da linha de cima do primeiro aeroporto, sem a barra de
+     status do celular nem a linha de resumo ("SSA - OPO • 15:35 - 08:50") */
+  if (!horas.length){
+    const melhor = textos.map(t => ({t, q:(t.match(/\(([A-Z]{3})\)/g) || []).length})).sort((a, b) => b.q - a.q)[0];
+    if (melhor && melhor.q){
+      const L = melhor.t.split('\n');
+      const resumo = l => /\b[A-Z]{3}\s*[-–—>→]\s*[A-Z]{3}\b/.test(l) && HORA.test(l);
+      const iAero = L.findIndex(l => /\(([A-Z]{3})\)/.test(l));
+      let ini = iAero;
+      if (iAero > 0){ HORA.lastIndex = 0; const ant = L[iAero - 1]; HORA.lastIndex = 0; if (/\b([01]?\d|2[0-3]):([0-5]\d)\b/.test(ant) && !resumo(ant)) ini = iAero - 1; }
+      L.slice(Math.max(0, ini)).forEach(l => { if (resumo(l)) return; for (const m of l.matchAll(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g)) horas.push(m[0]); });
+    }
+  }
+  /* telas sem códigos entre parênteses (TAP: "TP 06:00 → 08:45"): os horários
+     na ordem, menos a hora da barra de status do celular, na primeira linha */
+  if (horas.length < 2 * n){
+    const hs = [];
+    textos.forEach(t => t.split('\n').forEach((l, k) => {
+      if (k === 0 && /^\s*\d{1,2}:\d{2}\b/.test(l)) return;
+      for (const m of l.matchAll(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g)) if (hs[hs.length - 1] !== m[0] || hs.length % 2 === 1) hs.push(m[0]);
+    }));
+    if (hs.length >= 2 * n) horas = hs;
+  }
+  /* sem data nos documentos, vale a data já preenchida no formulário */
+  if (!d.data && ref) d.data = ref;
+  if (horas.length < 2 * n || !d.data) return {linhas:[], d, faltou:!d.data ? 'a data do voo (preencha a data no formulário e anexe de novo)' : 'os horários'};
+  const cia2 = Object.keys(PREFIXO_CIA).find(k => PREFIXO_CIA[k][0] === d.cia) || '';
+  const linhas = []; let dia = d.data, ultimaChegada = null;
+  for (let i = 0; i < n; i++){
+    const dep = horas[2 * i].padStart(5, '0'), arr = horas[2 * i + 1].padStart(5, '0');
+    if (ultimaChegada && dep < ultimaChegada) dia = somaDias(1, dia);
+    const vira = arr < dep;
+    const v = (d.voos[i] && d.voos[i].voo) || '';
+    const voo = /^[A-Z][A-Z0-9]\s?\d+$/.test(v) ? v.replace(/\s/g, '') : (cia2 && v ? cia2 + v : (v || (cia2 ? cia2 + '0000' : 'XX0000')));
+    linhas.push(`${voo} ${dia} ${rota[i]} ${rota[i + 1]} ${dep.replace(':', '')} ${arr.replace(':', '')}${vira ? '+1' : ''}`);
+    if (vira) dia = somaDias(1, dia);
+    ultimaChegada = vira ? '00:00' : arr;
+  }
+  return {linhas, d};
+}
 async function lerItinerarioDaImagem(arquivo, campo, alvo, ler){
-  if (!(DB.cfg.chaveIA || '').trim()){
-    alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">
-      <div>Para ler print é preciso uma chave da API.</div>
-      <div>Cadastre em <b>Ajustes → Provedores</b>, ou digite o itinerário como texto.</div></div></div>`;
-    return;
-  }
-  if (arquivo.size > 4 * 1024 * 1024){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>A imagem tem mais de 4 MB. Recorte só a parte do itinerário e cole de novo.</div></div>`;
-    return;
-  }
-  alvo.innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Lendo o print…</div></div>`;
+  const lista = (arquivo instanceof FileList || Array.isArray(arquivo) ? [...arquivo] : [arquivo]).filter(f => f && ((f.type || '').startsWith('image/') || ehPDF(f)));
+  if (!lista.length){ alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>Escolha uma imagem ou um PDF.</div></div>`; return; }
+  alvo.innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Lendo ${lista.length === 1 ? 'o arquivo' : lista.length + ' arquivos'} no seu navegador, sem custo… Na primeira vez o leitor é baixado (uns 4 MB).</div></div>`;
   try{
-    const b64 = await new Promise((ok, erro) => {
-      const fr = new FileReader();
-      fr.onload = () => ok(String(fr.result).split(',')[1]);
-      fr.onerror = () => erro(new Error('Não deu para ler a imagem.'));
-      fr.readAsDataURL(arquivo);
-    });
-    const txt = await chamarIAComImagem(b64, arquivo.type || 'image/png',
-      'Transcreva o itinerário desta imagem, uma linha por trecho, neste formato exato:\n'
-      + 'NUMERO_DO_VOO DDMMM AEROPORTO_ORIGEM AEROPORTO_DESTINO HHMM HHMM\n'
-      + 'Exemplo: TP1058 31MAY NAT LIS 2245 1215+1\n'
-      + 'Use os códigos IATA de três letras. Horários em 24h sem dois-pontos. '
-      + 'Marque +1 no horário de chegada quando o voo chega no dia seguinte. '
-      + 'Responda só com as linhas, sem comentário nenhum.',
-      'Você transcreve itinerários aéreos de imagens. Responde apenas com as linhas pedidas.');
-    const limpo = txt.replace(/^```[a-z]*|```$/gm, '').trim();
-    if (!limpo){
-      alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>Não consegui ler o itinerário nessa imagem. Tente um recorte mais fechado, ou digite como texto.</div></div>`;
+    const w = await prepararLeitorOCR();
+    const textos = [];
+    for (const f of lista) textos.push(await textoDoArquivo(f, w));
+    window._ultimaLeituraItin = textos;
+    const campoData = document.getElementById(String(campo.id || '').replace(/Itin$/, 'Data'));
+    /* a data do formulário só vale se a pessoa mexeu nela (o padrão é hoje, que não é data de voo) */
+    const r = segmentosDoTexto(textos, campoData && /^\d{4}-\d{2}-\d{2}$/.test(campoData.value) && campoData.value !== hojeISO() ? campoData.value : '');
+    if (!r.linhas.length){
+      const achou = [r.d.origem && r.d.destino ? `rota ${r.d.origem} → ${r.d.destino}` : '', r.d.data ? `data ${dataBR(r.d.data)}` : '', (r.d.voos || []).map(v => v.voo).filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+      alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div>Não consegui montar o itinerário${r.faltou ? `: faltou ${r.faltou}` : ''}.</div>
+        ${achou ? `<div>O que deu para ler: ${esc(achou)}.</div>` : ''}<div>Anexe junto a tela do itinerário (com os horários e a data), ou digite como texto.</div></div></div>`;
       return;
     }
-    campo.value = limpo;
+    campo.value = r.linhas.join('\n');
     ler();
   }catch(e){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(e.message)}</div></div>`;
+    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(e.message || String(e))}</div></div>`;
   }
 }
 
@@ -33136,16 +33250,16 @@ function ligarItinerario(pref, aoLer){
   campo.addEventListener('dragleave', () => campo.classList.remove('recebendo'));
   campo.addEventListener('drop', ev => {
     campo.classList.remove('recebendo');
-    const f = [...(ev.dataTransfer.files || [])].find(x => x.type.startsWith('image/'));
-    if (!f) return;
+    const fs = [...(ev.dataTransfer.files || [])].filter(x => x.type.startsWith('image/') || ehPDF(x));
+    if (!fs.length) return;
     ev.preventDefault();
-    lerItinerarioDaImagem(f, campo, alvo, ler);
+    lerItinerarioDaImagem(fs, campo, alvo, ler);
   });
   const botao = $('#' + pref + 'ItinFoto'), entrada = $('#' + pref + 'ItinArq');
   if (botao && entrada){
     botao.onclick = () => entrada.click();
     entrada.onchange = () => {
-      if (entrada.files[0]) lerItinerarioDaImagem(entrada.files[0], campo, alvo, ler);
+      if (entrada.files.length) lerItinerarioDaImagem([...entrada.files], campo, alvo, ler);
       entrada.value = '';
     };
   }
@@ -33362,7 +33476,7 @@ async function testarProvedor(k){
       alvo.innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Chegou até o provedor, que respondeu <b>${r.status}</b>. A conexão está de pé; o erro é do pedido em si.</div></div>`;
     }
   }catch(e){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div><b>O navegador bloqueou a chamada</b> antes de qualquer resposta, é o comportamento típico de uma API que não libera CORS. Este provedor <b>só funciona atrás de um servidor</b> seu, que faça a chamada e devolva o resultado. <span class="fraco">(${esc(e.message)})</span></div></div>`;
+    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div><b>O navegador bloqueou a chamada</b> antes de qualquer resposta, é o comportamento típico de uma API que não libera CORS. Este provedor <b>só funciona atrás de um servidor</b> seu, que faça a chamada e devolva o resultado. <span class="fraco">(${e.message})</span></div></div>`;
   }
   bt.disabled = false; bt.textContent = 'Testar alcance';
 }
@@ -34015,6 +34129,7 @@ const RENDER = { mesa:() => { renderMesa(); renderVender(); renderLancamentos();
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 function aplicarTudo(){
   aplicarCondicoesCampanhas();
+  corrigirDatasDasSaidasDeEmissao();
   sincronizarJornadas();
   setTimeout(ajustarLarguraMenu, 0);
   document.documentElement.dataset.theme = DB.cfg.tema || 'breu';
@@ -34975,7 +35090,7 @@ async function conferirReal(voId){
           <td class="n">${meu ? brl(x.milhas / 1000 * meu + (x.taxas || 0)) : '<span class="fraco">sem milheiro seu neste programa</span>'}</td></tr>`;
       }).join('')}</tbody></table>`;
   }catch(e){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>A consulta falhou: ${esc(e.message)}<br><span class="fraco">Se o navegador bloqueou a chamada, use "Testar alcance" em Ajustes para confirmar.</span></div></div>`;
+    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>A consulta falhou: ${e.message}<br><span class="fraco">Se o navegador bloqueou a chamada, use "Testar alcance" em Ajustes para confirmar.</span></div></div>`;
   }
 }
 
@@ -35548,7 +35663,7 @@ async function puxarPublicado(){
     renderVigia();
     avisar(`${(d.achados || []).length} achado${(d.achados || []).length !== 1 ? 's' : ''} no arquivo publicado.`, 'ok');
   }catch(e){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>Não deu para ler o arquivo: ${esc(e.message)}<br><span class="fraco">Confira se o endereço é o do arquivo cru e se o repositório é público.</span></div></div>`;
+    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>Não deu para ler o arquivo: ${e.message}<br><span class="fraco">Confira se o endereço é o do arquivo cru e se o repositório é público.</span></div></div>`;
   }
 }
 
@@ -35816,7 +35931,7 @@ async function lerProdutoPrint(id, arquivo){
     salvar(); renderDesejos(); abrirFicha(id);
     avisar('Ficha lida do print.', 'ok');
   }catch(e){
-    if (alvo) alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(e.message)}</div></div>`;
+    if (alvo) alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${e.message}</div></div>`;
   }
 }
 
@@ -35855,7 +35970,7 @@ async function buscarProduto(id){
     salvar(); renderDesejos(); abrirFicha(id);
     avisar('Ficha preenchida pela busca.' + avisoImg, avisoImg ? 'alerta' : 'ok', avisoImg ? 6000 : 3600);
   }catch(e){
-    if (alvo) alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(e.message)}</div></div>`;
+    if (alvo) alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${e.message}</div></div>`;
   }
 }
 
@@ -36341,7 +36456,7 @@ async function lerVitrine(arquivo){
     renderFilaVitrine();
     avisar(n ? `${n} loja${n > 1 ? 's' : ''} na fila de conferência.` : 'Nada novo: os números lidos já são os que estão no radar.', n ? 'ok' : 'info');
   }catch(e){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(e.message)}</div></div>`;
+    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${e.message}</div></div>`;
   }
 }
 
@@ -36360,7 +36475,7 @@ async function varrerVitrines(silencioso){
     renderFilaVitrine();
     if (!silencioso) avisar(n ? `${n} loja${n > 1 ? 's' : ''} na fila de conferência.` : 'Nada novo nesta varredura.', n ? 'ok' : 'info');
   }catch(e){
-    if (!silencioso && alvo) alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(e.message)}</div></div>`;
+    if (!silencioso && alvo) alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${e.message}</div></div>`;
   }
 }
 
@@ -36381,7 +36496,7 @@ async function puxarVitrinePublicada(){
     renderFilaVitrine();
     avisar(n ? `${n} loja${n > 1 ? 's' : ''} na fila de conferência.` : 'O arquivo não trouxe nada além do que já está no radar.', n ? 'ok' : 'info');
   }catch(e){
-    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>Não deu para ler o arquivo: ${esc(e.message)}<br><span class="fraco">Confira se o endereço é o do arquivo cru e se o repositório é público.</span></div></div>`;
+    alvo.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>Não deu para ler o arquivo: ${e.message}<br><span class="fraco">Confira se o endereço é o do arquivo cru e se o repositório é público.</span></div></div>`;
   }
 }
 
