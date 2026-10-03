@@ -84,7 +84,10 @@
   --trilho:calc(72px * var(--esc));
   /* Barra fixa da direita: vendas, financeiro e conta (tema, atalhos, sair). */
   --trilho-dir:calc(68px * var(--esc));
-  --menu:calc(234px * var(--esc));  /* 234: medido. Mínimo em que os sub-itens cabem inteiros mesmo selecionados (negrito) e com contador de três dígitos (188), nas três escalas de letra, com o contador colado ao texto */
+  /* A largura da coluna de menu é medida pela própria Torre (ajustarLarguraMenu):
+     o maior texto de todas as telas, com o contador, e nada mais. O valor fixo
+     fica só como ponto de partida, antes da primeira medição. */
+  --menu:var(--menu-medido, calc(234px * var(--esc)));
   --topo-h:calc(62px * var(--esc));
   --ease:cubic-bezier(.22,.68,.32,1);
   --mola:linear(0,.25 8%,.64 18%,.91 27%,1.03 36%,1.05 46%,1.01 62%,1);
@@ -1247,13 +1250,16 @@ p:last-child{ margin-bottom:0; }
   border-left:1px solid var(--fio); }
 /* Folga interna um pouco menor desde que o contador virou balão: com 10px de
    cada lado, "Transferência Bonificada" perdia 7px e ganhava reticências. */
-.cm-subitem{ display:flex; align-items:center; justify-content:flex-start; gap:6px; width:100%;
+.cm-subitem{ display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%;
   padding:6px 4px 6px 7px; border:0; border-radius:8px; background:transparent; cursor:pointer; text-align:left;
   font-family:inherit; font-size:calc(13.5px * var(--esc)); color:var(--grafite); appearance:none; }
 .cm-subitem:hover{ background:var(--sup-1); color:var(--giz); }
 .cm-subitem.on{ color:var(--anil-claro); background:var(--sel-fundo, color-mix(in oklab, var(--anil-claro) 12%, transparent)); font-weight:600; }
 .cm-subitem.on::before{ content:''; position:absolute; margin-left:-13px; width:3px; height:18px; border-radius:2px; background:var(--anil-claro); }
 .cm-subitem{ position:relative; }
+/* Durante a medição, todo item fica em negrito: a largura considera o item
+   selecionado, que é o mais largo. */
+.coluna-menu.medindo .cm-subitem, .coluna-menu.medindo .cm-item{ font-weight:600; }
 .cm-subitem > span:first-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* O contador num balãozinho — o mesmo do "4" da aba Regras, na janela de
    Regras Completas: um estilo só para os contadores da Torre. */
@@ -8352,7 +8358,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 13:20';
+const BUILD = '2026-10-03 13:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -29283,6 +29289,45 @@ function ligarSubmenus(){
   });
 }
 
+/* Coluna de menu justa: mede, tela por tela, o título e cada item com o seu
+   contador, todos em negrito (o estado selecionado, que é o mais largo), e usa
+   a maior medida de todas. Assim a coluna tem a mesma largura em todas as telas,
+   não sobra espaço à direita do maior contador, e nada é cortado. É refeita
+   quando a letra muda e quando os contadores mudam. */
+function ajustarLarguraMenu(){
+  const col = document.querySelector('.coluna-menu');
+  if (!col || getComputedStyle(col).display === 'none') return;
+  const raiz = document.documentElement;
+  const guardaVista = vistaAtual;
+  raiz.style.setProperty('--menu-medido', '480px');
+  col.classList.add('medindo');
+  const cl = col.getBoundingClientRect().left;
+  const nav = col.querySelector('.cm-nav');
+  const navPadR = nav ? parseFloat(getComputedStyle(nav).paddingRight) || 0 : 0;
+  let maior = 0;
+  const larguraTexto = el => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; };
+  Object.keys(TITULOS).forEach(v => {
+    if (!document.getElementById('v-' + v)) return;
+    vistaAtual = v;
+    montarColunaMenu();
+    const t = col.querySelector('.cm-tit-nome');
+    if (t){ const ps = getComputedStyle(t.parentElement); maior = Math.max(maior, t.getBoundingClientRect().left - cl + larguraTexto(t) + (parseFloat(ps.paddingRight) || 0)); }
+    col.querySelectorAll('.cm-item, .cm-subitem').forEach(it => {
+      const st = getComputedStyle(it);
+      const filhos = [...it.children];
+      const gap = parseFloat(st.columnGap || st.gap) || 0;
+      const conteudo = filhos.reduce((a, f) => a + (f.children.length ? f.getBoundingClientRect().width : Math.max(larguraTexto(f), f.getBoundingClientRect().width * (f.className ? 1 : 0))), 0) + gap * Math.max(0, filhos.length - 1);
+      const precisa = it.getBoundingClientRect().left - cl + (parseFloat(st.paddingLeft) || 0) + conteudo + (parseFloat(st.paddingRight) || 0) + (parseFloat(st.borderRightWidth) || 0) + navPadR;
+      maior = Math.max(maior, precisa);
+    });
+  });
+  col.classList.remove('medindo');
+  vistaAtual = guardaVista;
+  raiz.style.setProperty('--menu-medido', Math.ceil(maior + 2) + 'px');
+  montarColunaMenu();
+  marcarColunaMenu();
+}
+
 function montarColunaMenu(){
   const nav = document.querySelector('.cm-nav');
   const tit = document.querySelector('.cm-titulo');
@@ -31147,6 +31192,7 @@ function marcarPaleta(){
    ══════════════════════════════════════════════════════════════════════════════ */
 function aplicarEscala(e){
   document.documentElement.style.setProperty('--esc', e);
+  setTimeout(ajustarLarguraMenu, 0);
   DB.cfg.escala = e; salvar();
   $$('#segEscala button').forEach(b => b.classList.toggle('on', Number(b.dataset.e) === Number(e)));
   /* A largura de que cada tabela precisa é medida uma vez e guardada, senão a
@@ -31631,6 +31677,7 @@ const RENDER = { mesa:() => { renderMesa(); renderVender(); renderLancamentos();
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 function aplicarTudo(){
   aplicarCondicoesCampanhas();
+  setTimeout(ajustarLarguraMenu, 0);
   document.documentElement.dataset.theme = DB.cfg.tema || 'breu';
   /* O tamanho do meio era 1.14 e ficou grande demais; passou a 1.07. Quem tinha
      escolhido o antigo continua no tamanho do meio. */
