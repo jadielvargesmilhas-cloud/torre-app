@@ -8324,8 +8324,9 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                 <div>A chave fica no armazenamento local <b>deste</b> navegador e é enviada direto do seu computador para a Anthropic. Isso é seguro numa máquina só sua.</div>
                 <div>Se um dia você publicar a Torre num servidor, esta chave precisa sair do navegador e ir para o servidor; do contrário qualquer visitante gasta o seu crédito.</div>
               </div></div>
-              <div class="grade" style="grid-template-columns:1fr auto;align-items:end;gap:10px">
+              <div class="grade" style="grid-template-columns:minmax(0, 2fr) minmax(0, 1fr) auto;align-items:end;gap:10px">
                 <div class="campo"><label>Chave da API</label><input type="password" id="ajChaveIA" placeholder="sk-ant-..."></div>
+                <div class="campo"><label>ID do workspace (se pedir)</label><input type="text" id="ajWorkspaceIA" placeholder="wrkspc_..."></div>
                 <button class="bt" id="btSalvarIA">Salvar</button>
               </div>
               <div class="linha" style="margin-top:10px">
@@ -8591,7 +8592,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 03:50';
+const BUILD = '2026-10-04 04:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24309,7 +24310,7 @@ async function chamarIAComImagens(imagens, prompt, sistema){
   try{
   r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST', signal:ctl.signal,
-    headers:{'content-type':'application/json', 'x-api-key':k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+    headers:cabecalhosIA(k),
     body:JSON.stringify({model:DB.cfg.modeloIA || 'claude-sonnet-5', max_tokens:2000, system:sistema,
       messages:[{role:'user', content:imagens.map(i => ({type:'image', source:{type:'base64', media_type:i.mime, data:i.data}})).concat([{type:'text', text:prompt}])}]})
   });
@@ -24373,7 +24374,7 @@ async function lerPrintsTrecho(arquivos){
     if (!$('#lpCorpo') || !_leitura) return;
     _leitura.arquivos = lista;
     $('#lpCorpo').innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">
-      <div><b>Não deu para ler os prints.</b></div><div>${esc(e.message || String(e))}</div>
+      <div><b>Não deu para ler os prints.</b></div><div>${e.message || esc(String(e))}</div>
       <div>Você pode tentar de novo, ou fechar e preencher o trecho à mão: nada do que estava no formulário se perdeu.</div>
       <div style="margin-top:8px"><button type="button" class="bt p primario" onclick="tentarLeituraDeNovo()"><svg><use href="#i-atualizar"/></svg>Tentar de novo</button></div></div></div>`;
   }
@@ -26127,8 +26128,22 @@ function renderRoteirosSalvos(){
 /* A API responde em inglês e por código. Cada um desses erros pede uma ação
    diferente, e confundi-los custa tempo: chave errada e falta de crédito
    parecem "não funcionou", mas só um dos dois se resolve mexendo na chave. */
+/* Os cabeçalhos de toda chamada à IA. Chave que não é de um workspace só (as
+   chaves novas do Console, ligadas à pessoa) exige o ID do workspace no
+   cabeçalho anthropic-workspace-id; sem ele, a API recusa com erro 400. Fonte:
+   platform.claude.com/docs/manage-claude/authentication. */
+function cabecalhosIA(k){
+  const h = {'content-type':'application/json', 'x-api-key':k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'};
+  const w = (DB.cfg.workspaceIA || '').trim();
+  if (w) h['anthropic-workspace-id'] = w;
+  return h;
+}
 function traduzirErroIA(status, tipo, original){
   const cru = ` <span class="fraco">(${status}${tipo ? ' · ' + tipo : ''})</span>`;
+  if (/anthropic-workspace-id|scoped to a workspace|workspace id/i.test(original))
+    return (/valid workspace ID/i.test(original)
+      ? 'O ID do workspace informado não é válido. Ele começa com wrkspc_ e aparece na página do workspace no Console (platform.claude.com → Settings → Workspaces).'
+      : 'A chave está certa, mas é do tipo que vale para mais de um workspace, e a API pede para saber em qual trabalhar. Duas saídas: em SIS → Provedores, preencha o <b>ID do workspace</b> (começa com wrkspc_, fica em platform.claude.com → Settings → Workspaces); ou crie no Console uma chave nova presa a um workspace (Settings → API keys → Create key, escolhendo o workspace) e cole aqui.') + cru;
   if (/credit balance is too low/i.test(original) || tipo === 'billing_error')
     return 'A chave está correta, mas a conta do Console está sem crédito. A API é pré-paga e não usa a assinatura do Claude.ai: em platform.claude.com → Settings → Billing, cadastre um cartão e compre crédito. US$ 5 já bastam para centenas de roteiros.' + cru;
   if (status === 401 || tipo === 'authentication_error')
@@ -26141,7 +26156,7 @@ function traduzirErroIA(status, tipo, original){
     return 'Limite de uso atingido. Espere um minuto e tente de novo; contas com crédito têm limites bem mais altos.' + cru;
   if (status >= 500)
     return 'A Anthropic está com instabilidade no momento. Não é problema da sua chave; tente de novo em alguns minutos.' + cru;
-  return original + cru;
+  return esc(String(original || '')) + cru;
 }
 
 /* Chamada com imagem: o corpo da mensagem deixa de ser texto puro e vira uma
@@ -26153,12 +26168,7 @@ async function chamarIAComImagem(base64, mime, prompt, sistema){
   if (!k) throw new Error('Sem chave da API. Cadastre em Ajustes → Provedores.');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{
-      'content-type':'application/json',
-      'x-api-key':k,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
+    headers:cabecalhosIA(k),
     body: JSON.stringify({
       model: DB.cfg.modeloIA || 'claude-sonnet-5',
       max_tokens: 2000,
@@ -26183,12 +26193,7 @@ async function chamarIA(prompt, sistema){
   if (!k) throw new Error('Sem chave da API. Cadastre em Ajustes → Provedores.');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{
-      'content-type':'application/json',
-      'x-api-key':k,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
+    headers:cabecalhosIA(k),
     body: JSON.stringify({
       model: DB.cfg.modeloIA || 'claude-sonnet-5',
       max_tokens: 3000,
@@ -32224,6 +32229,7 @@ function renderAjustes(){
   });
 
   $('#ajChaveIA').value = DB.cfg.chaveIA || '';
+  if ($('#ajWorkspaceIA')) $('#ajWorkspaceIA').value = DB.cfg.workspaceIA || '';
   /* modelo salvo pode ter sido aposentado: se não estiver mais na lista, cai no
      padrão atual em vez de deixar o seletor em branco e a chamada quebrar */
   const sel = $('#ajModeloIA');
@@ -33575,10 +33581,10 @@ function ligarEventos(){
   };
 
   /* ajustes */
-  $('#btSalvarIA').onclick = () => { DB.cfg.chaveIA = $('#ajChaveIA').value.trim(); salvar(); atualizarEtqIA(); atualizarEtqIACot(); avisar('Chave guardada neste navegador.', 'ok'); };
+  $('#btSalvarIA').onclick = () => { DB.cfg.chaveIA = $('#ajChaveIA').value.trim(); DB.cfg.workspaceIA = $('#ajWorkspaceIA').value.trim(); salvar(); atualizarEtqIA(); atualizarEtqIACot(); avisar('Chave guardada neste navegador.', 'ok'); };
   $('#ajModeloIA').onchange = () => { DB.cfg.modeloIA = $('#ajModeloIA').value; salvar(); atualizarEtqIA(); estimarCustoIA(); };
   $('#btTestarIA').onclick = async () => {
-    DB.cfg.chaveIA = $('#ajChaveIA').value.trim(); salvar(); atualizarEtqIA();
+    DB.cfg.chaveIA = $('#ajChaveIA').value.trim(); DB.cfg.workspaceIA = $('#ajWorkspaceIA').value.trim(); salvar(); atualizarEtqIA();
     const alvo = $('#resIA');
     alvo.innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Testando…</div></div>`;
     try{
@@ -33707,12 +33713,7 @@ async function chamarIAVisao(base64, tipoMime, prompt, sistema){
   if (!k) throw new Error('Cadastre a chave da API em Ajustes → Provedores para ler prints.');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{
-      'content-type':'application/json',
-      'x-api-key':k,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
+    headers:cabecalhosIA(k),
     body: JSON.stringify({
       model: DB.cfg.modeloIA || 'claude-sonnet-5',
       max_tokens: 2000,
@@ -34506,8 +34507,7 @@ async function chamarIABusca(prompt, sistema){
   if (!k) throw new Error('Cadastre a chave da API em Ajustes → Provedores para usar o vigia.');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{'content-type':'application/json', 'x-api-key':k, 'anthropic-version':'2023-06-01',
-             'anthropic-dangerous-direct-browser-access':'true'},
+    headers:cabecalhosIA(k),
     body: JSON.stringify({
       model: DB.cfg.modeloIA || 'claude-sonnet-5',
       max_tokens: 3000, system: sistema,
