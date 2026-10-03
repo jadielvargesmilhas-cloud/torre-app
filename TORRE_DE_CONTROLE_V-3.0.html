@@ -8655,7 +8655,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 11:20';
+const BUILD = '2026-10-04 13:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -9925,7 +9925,30 @@ function itensDaFatura(cartaoId, mes){
     }
   });
 
+  /* 5. Trechos de jornada pagos no cartão. Dinheiro: o valor pago; milhas: as
+     taxas; milhas mais dinheiro: os dois. Trecho com milhas que já foi lançado
+     no Diário tem as taxas cobradas pela emissão (regra 4) e não entra de novo.
+     As parcelas contam a partir do mês da compra. */
+  (DB.planos || []).forEach(p => trechosDe(p).filter(t => t.cartaoId === cartaoId).forEach(t => {
+    const v = valorNoCartaoTrecho(t); if (!(v > 0)) return;
+    const ini = mesDe(t.dataCompra || t.data); if (!ini) return;
+    const n = Number(t.parcelas) > 0 ? Number(t.parcelas) : 1;
+    const [a0, m0] = ini.split('-').map(Number);
+    for (let i = 0; i < n; i++){
+      const d = new Date(a0, m0 - 1 + i, 1);
+      const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (m !== mes) continue;
+      itens.push({cat:'Passagens', desc:`${rotuloTrecho(t)} · ${p.nome}` + (n > 1 ? ` ${i + 1}/${n}` : ''), valor:v / n});
+    }
+  }));
+
   return itens;
+}
+/* O que o trecho cobrou no cartão. */
+function valorNoCartaoTrecho(t){
+  if (t.forma === 'dinheiro') return Number(t.pago) || 0;
+  if (t.reservaId && (DB.reservas || []).some(r => r.id === t.reservaId)) return t.forma === 'misto' ? Number(t.pago) || 0 : 0;
+  return (Number(t.taxas) || 0) + (t.forma === 'misto' ? Number(t.pago) || 0 : 0);
 }
 function totalFatura(cartaoId, mes){ return soma(itensDaFatura(cartaoId, mes).map(i => i.valor)); }
 
@@ -24137,9 +24160,23 @@ function economiaTrecho(t){
    passageiros), e o resultado volta por print, lido no navegador. A economia
    contra o mercado é o preço da opção mais barata menos o que a viagem custou
    (compra mais upgrade). */
+/* O link usa o parâmetro tfs, o mesmo dos links de compartilhamento do Google
+   Flights: um pacote em protobuf com data, origem, destino, passageiros, cabine
+   e tipo de viagem, codificado em base64. Ele abre a busca exata, sem depender
+   de o Google interpretar uma frase. O formato segue a biblioteca aberta
+   fast-flights (pypi.org/project/fast-flights), e os bytes foram conferidos
+   contra ela. Cabine: 1 econômica, 2 premium, 3 executiva, 4 primeira. Viagem:
+   2 só ida. Cada passageiro adulto é o valor 1. */
 function linkGoogleFlights(t, cabine, pax){
-  const partes = [`Flights from ${t.origem} to ${t.destino} on ${t.data}`, 'one way', cabine === 'executiva' ? 'business class' : cabine === 'primeira' ? 'first class' : '', `${pax || 1} adults`].filter(Boolean);
-  return 'https://www.google.com/travel/flights?q=' + encodeURIComponent(partes.join(' ')).replace(/%20/g, '+') + '&hl=pt-BR&gl=BR&curr=BRL';
+  const txt = v => [...new TextEncoder().encode(v)];
+  const campo = (tag, bytes) => [tag, bytes.length].concat(bytes);
+  const aeroporto = cod => campo(0x12, txt(String(cod || '').toUpperCase()));
+  const voo = campo(0x12, txt(t.data)).concat(campo(0x6a, aeroporto(t.origem)), campo(0x72, aeroporto(t.destino)));
+  const n = Math.max(1, Math.min(9, Number(pax) || 1));
+  const assento = {economica:1, premium:2, executiva:3, primeira:4}[cabine] || 1;
+  const bytes = campo(0x1a, voo).concat([0x42, n], Array(n).fill(1), [0x48, assento, 0x98, 0x01, 0x02]);
+  const b64 = btoa(String.fromCharCode(...bytes));
+  return 'https://www.google.com/travel/flights/search?tfs=' + encodeURIComponent(b64) + '&hl=pt-BR&curr=BRL';
 }
 function economiaMercado(t){
   const voouCab = t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica');
@@ -24278,7 +24315,8 @@ function renderTrechos(p){
           <div class="up-cab">${t.upgrade ? `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span><svg><use href="#i-seta"/></svg><span class="etq jade">${CABINES_TRECHO[t.upgrade.cabine]}</span>`
             : `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span>`}</div></td>
         <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq">dinheiro</span> ${brl(t.pago || 0)}`
-          : `<span class="etq aco">${esc(prog(t.prog).n)}</span> ${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}`}</td>
+          : `<span class="etq aco">${esc(prog(t.prog).n)}</span> ${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}`}
+          ${(c => c ? `<div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:3px">${(Number(t.parcelas) || 1) > 1 ? `${t.parcelas}x de ${brl(valorNoCartaoTrecho(t) / t.parcelas)}` : 'à vista'} no ${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · ' + esc(c.final) : ''}</div>` : '')((DB.cartoes || []).find(c => c.id === t.cartaoId))}</td>
         <td class="c" data-r="Situação"><button type="button" class="etq ${sit === 'voado' ? 'jade' : sit === 'emitido' ? 'ouro' : ''} rt-sit" onclick="avancarTrecho('${t.id}')" data-dica="Tocar para avançar a situação">${SITUACOES_TRECHO[sit]}</button></td>
         <td class="n" data-r="Economia">${e.valor == null ? `<span class="fraco" data-dica="${esc(e.nota)}">—</span>` : `<span class="${e.valor >= 0 ? 'jade' : 'brasa'}">${e.valor >= 0 ? '' : '−'}${brl(Math.abs(e.valor))}</span><div class="fraco" style="font-size:calc(11.5px * var(--esc))">${esc(e.nota)}</div>`}
           ${t.upgrade ? (eb => eb.valor != null ? `<div class="up-antes">antes ${eb.valor >= 0 ? '' : '−'}${brl(Math.abs(eb.valor))}</div>` : '')(economiaTrechoBase(t)) : ''}
@@ -24572,6 +24610,9 @@ function editarTrecho(id){
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
       <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
       <div class="campo tr-sem"><label for="trSemAlt">Opção em milhas</label><label class="ck cd-caixa"><input type="checkbox" id="trSemAlt"${t.semAlt ? ' checked' : ''}> Não havia</label></div>
+      <div class="campo"><label>Cartão que pagou</label><select id="trCartao" data-ordem="natural"><option value="">Não foi no cartão</option>${(DB.cartoes || []).filter(c => c.ativo !== false || c.id === t.cartaoId).map(c => `<option value="${c.id}"${c.id === t.cartaoId ? ' selected' : ''}>${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · final ' + esc(c.final) : ''}</option>`).join('')}</select></div>
+      ${campoParcelas('trParcelas', t.parcelas || 1)}
+      <div class="campo"><label>Data da compra</label><input type="date" id="trDataCompra" value="${t.dataCompra || ''}"></div>
       <div class="campo"><label>Passagens cortesia</label><select id="trCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === (Number(t.cortesiaQtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
       <div class="campo tr-cort"><label>Tarifa coberta por pessoa (R$)</label><input type="text" inputmode="decimal" data-moeda id="trCortValor" value="${moedaTxt(t.cortesiaValor || 0)}"></div>
       <div class="campo"><label>Milhas valem</label><select id="trBase" data-ordem="natural"></select></div>
@@ -24625,6 +24666,8 @@ function editarTrecho(id){
   };
   ['#trProg', '#trAltProg', '#trBase'].forEach(sel => $(sel).addEventListener('change', montarBase));
   ligarCampoMoeda('#trCortValor');
+  const verCartao = () => { const tem = !!$('#trCartao').value; $('#trParcelas').disabled = !tem; $$('.parc-bt[data-parc="trParcelas"]').forEach(b => b.disabled = !tem); if (!tem) $('#trParcelas').value = 1; };
+  $('#trCartao').addEventListener('change', verCartao); verCartao();
   const verCort = () => $$('.tr-cort').forEach(e => e.style.display = Number($('#trCortQtd').value) > 0 ? '' : 'none');
   $('#trCortQtd').addEventListener('change', verCort); verCort();
   $('#trForma').onchange = () => { aplicar(); montarBase(); }; $('#trSemAlt').onchange = aplicar; aplicar(); montarBase();
@@ -24636,11 +24679,13 @@ function editarTrecho(id){
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
+      cartaoId:$('#trCartao').value, parcelas:$('#trCartao').value ? (Number($('#trParcelas').value) || 1) : 1, dataCompra:$('#trDataCompra').value,
       cortesiaQtd:Number($('#trCortQtd').value) || 0, cortesiaValor:Number($('#trCortQtd').value) ? moedaNum($('#trCortValor').value) : 0,
       baseMilheiro:$('#trBase').value, milheiroOutro:$('#trBase').value === 'outro' ? moedaNum($('#trOutro').value) : 0,
       altMilhas:f === 'dinheiro' && !$('#trSemAlt').checked ? rgNum($('#trAltMilhas').value) : 0, altProg:$('#trAltProg').value,
       altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
     if (!novo.origem || !novo.destino){ avisar('Informe a origem e o destino do trecho.', 'alerta'); return; }
+    if (novo.cartaoId && !novo.dataCompra){ avisar('Informe a data da compra: é dela que a Torre conta as parcelas na fatura do cartão.', 'alerta', 7000); $('#trDataCompra').focus(); return; }
     if (novo.cortesiaQtd && !(novo.cortesiaValor > 0)){ avisar('Informe o valor da tarifa que a cortesia cobriu, por pessoa.', 'alerta', 7000); return; }
     if (novo.baseMilheiro === 'outro'){
       const pgC = f === 'dinheiro' ? novo.altProg : novo.prog, custoR = milheiroDaBase('custo', pgC);
@@ -25064,6 +25109,7 @@ function aplicarLeituraPrints(){
     alt:rgNum($('#lpAltMilhas').value), altTaxas:$('#lpAltTaxas').value, loc:$('#lpLoc').value.toUpperCase().trim()};
   const progAlt = $('#lpProg').value || (_leitura.pre && _leitura.pre.prog) || '';
   const base = _leitura.base || 'custo', outro = _leitura.outro || 0;
+  const pgLido = (_leitura.dados || {}).pagamento || null;
   const pai = _leitura.pai; _leitura = null;
   devolverFolhaGuardada(pai);
   const set = (sel, val) => { const e = $(sel); if (e && val !== undefined && val !== null) e.value = val; };
@@ -25077,6 +25123,11 @@ function aplicarLeituraPrints(){
     $('#trSemAlt').dispatchEvent(new Event('change'));
   }
   $('#trBase').value = base; $('#trBase').dispatchEvent(new Event('change'));
+  /* Pagamento lido: o cartão pelo final e as parcelas. */
+  if (pgLido && pgLido.cartao_final){
+    const c = (DB.cartoes || []).find(x => String(x.final || '') === String(pgLido.cartao_final));
+    if (c){ $('#trCartao').value = c.id; $('#trCartao').dispatchEvent(new Event('change')); if (pgLido.parcelas) $('#trParcelas').value = Math.min(PARC_MAX, pgLido.parcelas); }
+  }
   if (base === 'outro') $('#trOutro').value = moedaTxt(outro);
   $('#folhaCorpo').dispatchEvent(new Event('input', {bubbles:true}));
   avisar('Formulário preenchido pelos prints. Confira e toque em Salvar.', 'ok', 6000);
@@ -32557,14 +32608,17 @@ function campoParcelas(id, valor, rotulo){
 }
 /* Os botões são ligados por delegação, uma vez só: cada folha monta o seu campo
    e não precisa lembrar de ligar nada. */
+/* Na fase de captura: as folhas param a propagação do clique no véu (para o
+   toque não atravessar para a tela de trás), e um ouvinte comum no documento
+   nunca recebia o clique dos botões de dentro delas. */
 document.addEventListener('click', ev => {
-  const b = ev.target.closest('.parc-bt'); if (!b) return;
-  const campo = document.getElementById(b.dataset.parc); if (!campo) return;
+  const b = ev.target.closest && ev.target.closest('.parc-bt'); if (!b) return;
+  const campo = document.getElementById(b.dataset.parc); if (!campo || campo.disabled || b.disabled) return;
   const novo = Math.min(PARC_MAX, Math.max(1, (Number(campo.value) || 1) + Number(b.dataset.d)));
   campo.value = novo;
   campo.dispatchEvent(new Event('input', {bubbles:true}));
   campo.dispatchEvent(new Event('change', {bubbles:true}));
-});
+}, true);
 /* Trava na saída: quem digita 0 ou 99 tem o número corrigido para a borda mais
    próxima, em vez de gravar algo que a fatura não sabe distribuir. */
 document.addEventListener('change', ev => {
