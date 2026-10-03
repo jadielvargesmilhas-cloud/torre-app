@@ -8341,7 +8341,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 08:40';
+const BUILD = '2026-10-03 10:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19590,7 +19590,7 @@ function editarAssinatura(id, pre){
     $('#asPlano').disabled = !p;
     aplicarPreco();
   };
-  const aplicarPreco = (doProprioValor) => {
+  const aplicarPreco = (doProprioValor, abrindo) => {
     const p = $('#asProg').value, plId = $('#asPlano').value, mod = $('#asMod').value;
     if (!p){
       /* Sem clube escolhido não há milheiro a desenhar nem ficha a mostrar: a
@@ -19614,7 +19614,7 @@ function editarAssinatura(id, pre){
       const temPreco = m => pl.precos && pl.precos[m] !== undefined;
       [...$('#asMod').options].forEach(o => { o.disabled = !temPreco(o.value); });
       let usar = mod;
-      if (!temPreco(usar)){
+      if (!temPreco(usar) && !abrindo){
         usar = [...$('#asMod').options].map(o => o.value).find(temPreco);
         if (usar) $('#asMod').value = usar;
       }
@@ -19624,8 +19624,10 @@ function editarAssinatura(id, pre){
          Só reescreve quando a mudança veio do plano, da modalidade ou do
          parcelamento. Reescrever a cada digitação impedia corrigir o valor à mão
          — o campo voltava ao preço de tabela antes de a segunda tecla chegar. */
-      if (temPreco(usar) && !doProprioValor) $('#asValor').value = moedaTxt(valorCobranca(pl, usar, $('#asParcelas').value));
-      if (pl.fid !== undefined) $('#asFid').value = pl.fid;
+      /* Abrindo uma assinatura gravada, valor, modalidade e carência são os dela:
+         o preço de tabela só entra quando a pessoa troca plano ou modalidade. */
+      if (temPreco(usar) && !doProprioValor && !abrindo) $('#asValor').value = moedaTxt(valorCobranca(pl, usar, $('#asParcelas').value));
+      if (pl.fid !== undefined && !abrindo) $('#asFid').value = pl.fid;
       const cpm = (valorMensalAssin({valor:moedaNum($('#asValor').value), modalidade:usar,
         parcelas:$('#asParcelas').value}) / pl.qtd) * 1000;
       $('#asPreview').innerHTML = desenharTermometro(p, cpm, {compacto:true, rotulo:`Milheiro Deste Plano`});
@@ -19688,14 +19690,17 @@ function editarAssinatura(id, pre){
     /* A situação agora divide a fileira com o Cancelar Antes e tem largura de
        coluna; quem segue a régua é só ela mesma. */
   };
-  $('#asParcelas').onchange = aplicarPreco;
+  /* Os três em função própria: passado direto, o evento chegava como primeiro
+     argumento e era lido como "o valor foi digitado à mão", e trocar plano,
+     modalidade ou parcelas não atualizava mais o preço. */
+  $('#asParcelas').onchange = () => aplicarPreco();
   $('#asProg').onchange = () => {
     const h = $('#asHerdado');
     if (h) h.remove();
     sincronizar();
   };
-  $('#asPlano').onchange = aplicarPreco;
-  $('#asMod').onchange = aplicarPreco;
+  $('#asPlano').onchange = () => aplicarPreco();
+  $('#asMod').onchange = () => aplicarPreco();
   $('#asValor').oninput = () => aplicarPreco(true);
   $('#asValor').addEventListener('change', () => aplicarPreco(true));
   /* mexer na carência não recalcula preço nem plano: só o que ela prende */
@@ -19706,7 +19711,7 @@ function editarAssinatura(id, pre){
     if (ck.checked) sel.focus();
   };
   if (a.planoId) $('#asPlano').value = a.planoId;
-  aplicarPreco();
+  aplicarPreco(false, !!id);
 
   /* ── altura fixa da folha ────────────────────────────────────────────────────
      A ficha do plano muda de tamanho conforme o clube: o Club Basic tem sete
@@ -19805,6 +19810,11 @@ function editarAssinatura(id, pre){
       $('#asProg').value = guardaProg; sincronizar();
       $('#asPlano').value = guardaPlano; aplicarPreco();
     }
+    /* A medição passou por todos os planos e reescreveu valor, modalidade e
+       carência com os preços de tabela. Tudo volta ao que estava na tela antes
+       dela, e a régua é redesenhada sem tocar no valor. */
+    $('#asMod').value = mod0; $('#asValor').value = valor0; $('#asFid').value = fid0;
+    aplicarPreco(true, true);
   };
   fixarAlturaAssin();
 
@@ -20518,6 +20528,10 @@ function editarLancamento(id, pre){
   let custoTravado = !!(pre && pre.custoDeSimulacao);
   const custoSeguePorConta = !!(pre && pre.custoDeSimulacao && !pre.custoEhDinheiroNovo);
   let entradaTravada = !!(pre && pre.custoDeSimulacao && pre.qtd);
+  /* Editando, os números gravados são a verdade de partida: custo e quantidade
+     que entrou não são recalculados ao abrir. Só voltam a ser calculados quando
+     a pessoa mexe na origem ou na quantidade que saiu. */
+  if (id){ custoTravado = true; entradaTravada = true; }
   /* A linha de saída de uma transferência não se edita sozinha: ela é a metade
      de baixo de um lançamento só. Abrir o formulário nela mostrava a origem
      vazia e as quantidades zeradas, porque quem guarda origem, quantidade que
@@ -20562,7 +20576,7 @@ function editarLancamento(id, pre){
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr))">
       <div class="campo"><label>Custo total (R$)</label><input type="text" inputmode="decimal" data-moeda id="lcCusto" value="${moedaTxt(l.custo)}"></div>
       <div class="campo"><label>Forma de pagamento</label><select id="lcForma" data-ordem="natural">${
-        FORMAS_PAGAMENTO.map(f => `<option value="${f.k}"${f.k === (l.forma || 'cpm') ? ' selected' : ''}>${f.n}</option>`).join('')}</select></div>
+        FORMAS_PAGAMENTO.map(f => `<option value="${f.k}"${f.k === (id ? (l.forma !== undefined ? l.forma : (l.tipo === 'transferencia' ? 'cpm' : '')) : (l.forma || 'cpm')) ? ' selected' : ''}>${f.n}</option>`).join('')}</select></div>
       <div class="campo"><label>Cartão que pagou</label><select id="lcCartao"><option value="">— não informado —</option>${
         (DB.cartoes || []).map(c => `<option value="${c.id}"${c.id === l.cartaoId ? ' selected' : ''}>${esc(nomeCartao(c.id))}</option>`).join('')}</select></div>
       ${campoParcelas('lcParcelas', l.parcelas)}
@@ -20660,6 +20674,16 @@ function editarLancamento(id, pre){
     const jaTem = alvo.querySelector('#lcOrigem');
     const escolhida = jaTem ? jaTem.value : (l.origem || '');
     const saiuAtual = alvo.querySelector('#lcSaiu') ? alvo.querySelector('#lcSaiu').value : nBR(l.saiu || 0);
+    /* Bônus da transferência: o gravado, ou o que a própria linha revela (o que
+       entrou contra o que saiu, descontada a paridade). */
+    const bonusAtual = alvo.querySelector('#lcBonus') ? alvo.querySelector('#lcBonus').value : (() => {
+      if (l.bonus !== undefined) return String(l.bonus);
+      const sa = Number(l.saiu) || 0, en = Number(l.qtd) || 0;
+      if (!(sa > 0 && en > 0)) return '0';
+      const r = PARIDADES.find(x => x.de === (l.origem || escolhida) && x.para === destino);
+      const par = r ? r.p : 1;
+      return String(Math.max(0, Math.round((en * par / sa - 1) * 100)));
+    })();
     const candidatas = PROG_IDS.filter(p => p !== destino && PARIDADES.some(x => x.de === p && x.para === destino));
     const lista = candidatas.length ? candidatas : PROG_IDS.filter(p => p !== destino);
     alvo.innerHTML = `
@@ -20670,6 +20694,7 @@ function editarLancamento(id, pre){
           ${lista.map(p => `<option value="${p}"${p === escolhida ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}
         </select></div>
         <div class="campo"><label>Quantidade que saiu</label><input type="number" id="lcSaiu" value="${esc(saiuAtual)}" step="1000"></div>
+        <div class="campo"><label for="lcBonus">Bônus (%)</label><input type="number" id="lcBonus" value="${esc(bonusAtual)}" step="1" min="0"></div>
         <div class="campo"><label>Saldo creditado em ${esc(prog(destino).n)}</label>
           <input type="text" id="lcQtd" value="${esc(nBR(l.qtd || 0))}" data-calculado="1"></div>
       </div>
@@ -20685,6 +20710,10 @@ function editarLancamento(id, pre){
        sido calculado — e o lançamento ia para o banco com o destino a custo zero
        e a saída a custo cheio, tirando dinheiro do investido total. */
     ligarCampoContagem('#lcSaiu', () => { calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); });
+    /* Mudar o bônus é dizer quanto de fato entrou: a entrada é refeita pela
+       paridade com o bônus, mesmo numa edição. O custo não muda, porque o
+       dinheiro é o dos pontos que saíram. */
+    $('#lcBonus').addEventListener('input', () => { entradaTravada = false; calcularEntrada(); aplicarForma(); });
     ligarCampoContagem('#lcQtd', previa);
     /* Em transferência a quantidade que entra é calculada pela paridade, e por
        isso o campo é fechado: digitar ali seria contradizer a rota.
@@ -20777,7 +20806,8 @@ function editarLancamento(id, pre){
     if (entradaTravada) return;
     const saiu = rgNum(($('#lcSaiu') || {}).value);
     const par = paridadeDaRota();
-    campo.value = (par && saiu) ? nBR(Math.round(saiu / par)) : nBR(0);
+    const bonus = Math.max(0, Number(($('#lcBonus') || {}).value) || 0);
+    campo.value = (par && saiu) ? nBR(Math.round(saiu / par * (1 + bonus / 100))) : nBR(0);
   };
 
   /* ── custo ──────────────────────────────────────────────────────────────────
@@ -20896,7 +20926,7 @@ function editarLancamento(id, pre){
             <div>Sem origem escolhida, ou origem sem custo lançado: não há de onde puxar o valor.</div>
             <div>Escolha o programa de origem acima, ou troque a forma de pagamento para informar o custo à mão.</div></div>`
         : `<svg><use href="#i-ok"/></svg><div class="pilha compacta">
-            <div>Nenhum dinheiro novo: ${brl(v)} é o que estes pontos custaram em ${esc(prog($('#lcOrigem').value).n)}.</div>
+            <div>Nenhum dinheiro novo: ${brl(custoTravado ? rgNum(custo.value) : v)} é o que estes pontos custaram em ${esc(prog($('#lcOrigem').value).n)}.</div>
             <div>O valor sai de lá e entra aqui, e o total investido não muda.</div></div>`;
     } else {
       custo.readOnly = false;
@@ -21030,6 +21060,14 @@ function editarLancamento(id, pre){
   if ($('#lcCartao')) $('#lcCartao').onchange = aplicarForma;
   /* A quantidade nasce dentro do bloco de saída, remontado a cada troca de tipo;
      por isso é escutada por delegação, e não uma vez só. */
+  /* Destravar na fase de captura: assim a trava cai antes de o próprio campo
+     recalcular a entrada e o custo. */
+  $('#folhaCorpo').addEventListener('input', e => {
+    if (e.target && e.target.id === 'lcSaiu' && id){ custoTravado = false; entradaTravada = false; }
+  }, true);
+  $('#folhaCorpo').addEventListener('change', e => {
+    if (e.target && e.target.id === 'lcOrigem' && id){ custoTravado = false; entradaTravada = false; }
+  }, true);
   $('#folhaCorpo').addEventListener('input', e => {
     if (e.target && (e.target.id === 'lcQtd' || e.target.id === 'lcSaiu')) aplicarForma();
   });
@@ -21087,6 +21125,11 @@ function editarLancamento(id, pre){
     const custo0 = $('#lcCusto').value;
     const qtd0 = ($('#lcQtd') || {}).value, saiu0 = ($('#lcSaiu') || {}).value;
     const origem0 = ($('#lcOrigem') || {}).value;
+    /* Cartão, parcelas e nota também: a medição passa por formas de pagamento que
+       limpam o cartão e voltam as parcelas para um, e sem devolvê-los a edição
+       abria com esses campos vazios. */
+    const cartao0 = ($('#lcCartao') || {}).value, parcelas0 = ($('#lcParcelas') || {}).value, nota0 = ($('#lcNota') || {}).value;
+    const bonus0 = ($('#lcBonus') || {}).value;
 
     corpo.style.minHeight = '';
     let maior = 0;
@@ -21108,9 +21151,14 @@ function editarLancamento(id, pre){
     montarSaida();
     if ($('#lcOrigem') && origem0 !== undefined) $('#lcOrigem').value = origem0;
     if ($('#lcSaiu') && saiu0 !== undefined) $('#lcSaiu').value = saiu0;
+    if ($('#lcBonus') && bonus0 !== undefined) $('#lcBonus').value = bonus0;
     if ($('#lcQtd') && qtd0 !== undefined) $('#lcQtd').value = qtd0;
     $('#lcCusto').value = custo0;
     $('#lcForma').value = forma0;
+    if ($('#lcNota') && nota0 !== undefined) $('#lcNota').value = nota0;
+    aplicarForma();
+    if ($('#lcCartao') && cartao0 !== undefined && !$('#lcCartao').disabled) $('#lcCartao').value = cartao0;
+    if ($('#lcParcelas') && parcelas0 !== undefined && !$('#lcParcelas').disabled) $('#lcParcelas').value = parcelas0;
     aplicarForma();
     medirPreview();
 
@@ -21145,6 +21193,9 @@ function editarLancamento(id, pre){
       parcelas: $('#lcForma').value === 'organico' ? 0
         : Math.min(PARC_MAX, Math.max(1, Number($('#lcParcelas').value) || 1)),
       nota:$('#lcNota').value.trim(), origem, saiu };
+    /* Bônus guardado só quando há: transferência simples segue sem o campo. */
+    const bonusLanc = origem ? Math.max(0, Number(($('#lcBonus') || {}).value) || 0) : 0;
+    if (bonusLanc > 0) novo.bonus = bonusLanc;
 
     /* Editar reescreve o lançamento inteiro, e o que não for copiado do original
        se perde. Três vínculos moram só aqui e não têm campo na tela:
