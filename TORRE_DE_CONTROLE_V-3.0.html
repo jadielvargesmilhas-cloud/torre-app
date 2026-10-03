@@ -3345,6 +3345,24 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
   letter-spacing:normal; color:var(--giz); margin:0; }
 .cd-grade select:disabled, .cd-grade input:disabled{ opacity:.5; cursor:not-allowed; }
 .fat-cab{ margin-top:12px; }
+/* Quatro números em quatro colunas, ou em duas por duas: nunca três e uma
+   sobrando embaixo. */
+.grade.g4.g4-par{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
+@media (max-width:1300px){ .grade.g4.g4-par{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:560px){ .grade.g4.g4-par{ grid-template-columns:1fr; } }
+/* Panorama: os dois lados lado a lado. */
+.grade.lados{ grid-template-columns:repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap:13px; }
+.lado-cartao{ display:flex; flex-direction:column; gap:12px; }
+.lado-nome{ font-family:var(--f-m); font-size:calc(12px * var(--esc)); letter-spacing:.14em; text-transform:uppercase; color:var(--anil-claro); font-weight:600; }
+.lado-dados{ display:flex; flex-direction:column; }
+.lado-dados > div{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:8px 0; border-bottom:1px solid var(--fio-suave); font-size:calc(14px * var(--esc)); }
+.lado-dados > div:last-child{ border-bottom:0; }
+.lado-dados span{ color:var(--grafite); }
+.lado-dados b{ font-family:var(--f-m); font-weight:600; color:var(--giz); white-space:nowrap; }
+.lado-ir{ align-self:flex-start; display:inline-flex; align-items:center; gap:6px; padding:0; border:0; background:none; cursor:pointer;
+  font:inherit; font-size:calc(13.5px * var(--esc)); font-weight:600; color:var(--anil-claro); }
+.lado-ir svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; }
+.lado-ir:hover{ text-decoration:underline; text-underline-offset:3px; }
 .crd-fat-isen{ display:flex; gap:9px; align-items:flex-start; margin-top:10px; font-size:calc(13px * var(--esc)); line-height:1.45; color:var(--giz-2); }
 .crd-fat-isen .etq{ flex-shrink:0; }
 .crd-fat-isen small{ display:block; }
@@ -7607,13 +7625,12 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="esticar"></div>
               <button class="bt primario" id="btNovaMeta"><svg><use href="#i-mais"/></svg>Nova Meta</button>
             </div>
-            <div class="grade g4" id="rtResumoMetas"></div>
+            <div class="grade g4 g4-par" id="rtResumoMetas"></div>
             <div id="rtPanorama"></div>
             <div id="rtMetasBloco" class="pilha" style="gap:14px">
               <div class="olho anil" style="margin-bottom:0" id="rtMetasTit">Metas em curso</div>
               <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));align-items:start" id="rtMetas"></div>
             </div>
-            <div id="rtViagensEscopo"></div>
           </div>
         </div>
 
@@ -7624,19 +7641,18 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba" id="p-rt-viagens">
           <div class="pilha" style="gap:16px">
-            <div class="grade g4" id="viResumo"></div>
-            <div class="cartao">
-              <div class="cartao-cab" style="margin-bottom:4px">
-                <h3 style="color:var(--anil-claro)">Diário de viagens
-                  <div class="sub">O que você já resgatou de verdade. Cada linha mostra quanto a viagem valeu por milheiro e quanto sobrou depois de descontar o que as milhas custaram para fabricar.</div></h3>
-                <button class="bt primario" onclick="editarViagem()"><svg><use href="#i-mais"/></svg>Registrar Resgate</button>
-              </div>
-              <div class="nota" style="margin:12px 0 0"><svg><use href="#i-info"/></svg>
-                <div class="pilha" style="gap:5px">
-                  <div>O valor por milheiro sai de <b>(preço à vista − taxas) ÷ milhas</b>, que é a fórmula usada pelo mercado.</div>
-                  <div>Use o preço que você <b>realmente pagaria</b> pelo trecho, não a tarifa de balcão: comparar com um preço que ninguém paga infla o resultado.</div>
-                </div></div>
+            <!-- Panorama geral, Nacional e Internacional, como nas Metas: o geral é
+                 só o painel de números; os outros dois mostram as viagens daquele lado. -->
+            <div class="linha" style="flex-wrap:wrap;gap:11px">
+              <div class="seg" id="segViagens"></div>
+              <div class="esticar"></div>
+              <button class="bt primario" onclick="editarViagem()"><svg><use href="#i-mais"/></svg>Registrar Resgate</button>
             </div>
+            <div class="grade g4 g4-par" id="viResumo"></div>
+            <div id="viPanorama"></div>
+            <div id="viListas" class="pilha" style="gap:16px">
+            <div class="nota" style="margin:0"><svg><use href="#i-info"/></svg>
+              <div>Valor por milheiro: <b>(preço à vista − taxas) ÷ milhas</b>. Use o preço que você <b>realmente pagaria</b>, não a tarifa de balcão.</div></div>
             <div class="cartao" style="padding:0">
               <div style="padding:16px 20px 12px;border-bottom:1px solid var(--fio-suave)">
                 <div class="olho" style="margin:0">Reservado, aguardando a data</div>
@@ -7648,6 +7664,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                 <div class="olho jade" style="margin:0">Viagens realizadas</div>
               </div>
               <div class="rolo" style="margin:0;padding:0" id="viFeitas"></div>
+            </div>
             </div>
           </div>
         </div>
@@ -8379,7 +8396,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 15:20';
+const BUILD = '2026-10-03 16:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11681,6 +11698,7 @@ function irParaAba(grupo, aba){
   if (aba === 'cr-faturas' && !jaEstava){ mesFatura = null; setTimeout(renderFaturas, 0); }
   /* Entrar em Metas de viagem abre sempre o Panorama geral. */
   if (aba === 'rt-metas' && !jaEstava){ filtroMetas = 'todas'; setTimeout(renderMetas, 0); }
+  if (aba === 'rt-viagens' && !jaEstava){ filtroViagens = 'todas'; setTimeout(renderViagens, 0); }
   /* Uma aba pode responder por mais de um painel: o botão fica marcado se o
      painel aberto for o dela ou o de um irmão declarado em data-irmas. */
   $$('.aba', cx).forEach(b => {
@@ -24348,6 +24366,26 @@ function religarMeta(lanc){
    tipo à mão quando o destino não está na tabela. O que não dá para classificar
    entra no panorama geral, contado à parte. */
 let filtroMetas = 'todas';
+let filtroViagens = 'todas';
+
+/* Os dois lados, lado a lado: o Panorama geral não lista nada, só compara. Cada
+   lado é um cartão com quatro números e uma porta para a lista dele. */
+function cartoesDosLados(N, I, linhas, irPara, oQue){
+  const lado = (k, X, nome) => `<div class="cartao lado-cartao">
+      <div class="lado-cab"><span class="lado-nome">${nome}</span></div>
+      <div class="lado-dados">${linhas.map(([rot, f]) => `<div><span>${rot}</span><b>${f(X)}</b></div>`).join('')}</div>
+      <button type="button" class="lado-ir" onclick="${irPara}('${k}')">Ver ${oQue} ${k === 'nac' ? 'nacionais' : 'internacionais'} <svg><use href="#i-seta"/></svg></button>
+    </div>`;
+  return `<div class="grade lados">${lado('nac', N, 'Nacional')}${lado('int', I, 'Internacional')}</div>`;
+}
+function irParaLadoMetas(k){ filtroMetas = k; renderMetas(); marcarColunaMenu(); window.scrollTo({top:0, behavior:'smooth'}); }
+function irParaLadoViagens(k){ filtroViagens = k; renderViagens(); marcarColunaMenu(); window.scrollTo({top:0, behavior:'smooth'}); }
+function segLados(sel, atual, contN, contI, aoTrocar){
+  const seg = $(sel); if (!seg) return;
+  seg.innerHTML = [['todas', 'Panorama geral', null], ['nac', 'Nacional', contN], ['int', 'Internacional', contI]]
+    .map(([k, n, c]) => `<button class="${k === atual ? 'on' : ''}" data-f="${k}">${n}${c != null ? ` <span class="cont-disco">${c}</span>` : ''}</button>`).join('');
+  seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; aoTrocar(b.dataset.f); if (typeof marcarColunaMenu === 'function') marcarColunaMenu(); };
+}
 function escopoPorAeroportos(codigos, fixado){
   if (fixado === 'nac' || fixado === 'int') return fixado;
   const conhecidos = codigos.map(c => AEROPORTOS[String(c || '').toUpperCase()]).filter(Boolean);
@@ -24387,72 +24425,28 @@ function renderMetas(){
   $('#contMetas').textContent = abertasTodas.length;
   const T = numerosViagens(null), N = numerosViagens('nac'), I = numerosViagens('int');
 
-  const seg = $('#segMetas');
-  if (seg){
-    seg.innerHTML = [['todas', 'Panorama geral', null], ['nac', 'Nacional', N.abertas.length], ['int', 'Internacional', I.abertas.length]]
-      .map(([k, n, c]) => `<button class="${k === filtroMetas ? 'on' : ''}" data-f="${k}">${n}${c != null ? ` <span class="cont-disco">${c}</span>` : ''}</button>`).join('');
-    seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; filtroMetas = b.dataset.f; renderMetas(); if (typeof marcarColunaMenu === 'function') marcarColunaMenu(); };
-  }
+  segLados('#segMetas', filtroMetas, N.abertas.length, I.abertas.length, f => { filtroMetas = f; renderMetas(); });
   const geral = filtroMetas === 'todas';
   const X = geral ? T : filtroMetas === 'nac' ? N : I;
   const lado = filtroMetas === 'nac' ? 'nacionais' : 'internacionais';
 
-  $('#rtResumoMetas').innerHTML = geral ? `
-    ${metrica('Metas em curso', String(T.abertas.length), `${T.realizadas} já realizada${T.realizadas === 1 ? '' : 's'}`, '')}
-    ${metrica('Viagens realizadas', String(T.feitas.length), T.agenda ? `${T.agenda} reservada${T.agenda > 1 ? 's' : ''} à frente` : 'Nada reservado à frente', '')}
-    ${metrica('Passagens pagas com milhas', T.vista ? brl(T.vista) : '—', T.vista ? `Preço à vista de ${nBR(T.milhas)} milhas` : 'Informe o preço à vista dos resgates', '')}
-    ${metrica('Economizou', T.ganho ? brl(T.ganho) : '—', T.ganho ? 'À vista, menos taxas e custo das milhas' : 'Precisa do preço à vista e do custo', T.ganho > 0 ? 'jade' : '')}`
-  : `
-    ${metrica('Metas em curso', String(X.abertas.length), `${X.prontas} pronta${X.prontas === 1 ? '' : 's'} para emitir`, X.prontas ? 'jade' : '')}
-    ${metrica('Milhas que faltam', nBR(X.faltam), X.faltam ? `${brl(X.custoFechar)} ao alvo` : 'Nada a fabricar', '')}
-    ${metrica('Viagens realizadas', String(X.feitas.length), X.milhas ? `${nBR(X.milhas)} milhas usadas` : 'Nenhum resgate registrado', '')}
-    ${metrica('Economizou', X.ganho ? brl(X.ganho) : '—', X.ganho ? `Em viagens ${lado}` : 'Precisa do preço à vista e do custo', X.ganho > 0 ? 'jade' : '')}`;
+  $('#rtResumoMetas').innerHTML = `
+    ${metrica('Metas em curso', String(X.abertas.length), `${X.realizadas} já realizada${X.realizadas === 1 ? '' : 's'}`, '')}
+    ${metrica('Prontas para emitir', String(X.prontas), X.prontas ? 'Saldo já cobre a necessidade' : 'Nenhuma com saldo completo', X.prontas ? 'jade' : '')}
+    ${metrica('Milhas que faltam', nBR(X.faltam), X.faltam ? 'Somando as metas abertas' : 'Nada a fabricar', '')}
+    ${metrica('Custo de fechar', brl(X.custoFechar), 'Ao valor-alvo de cada programa', 'ouro')}`;
 
-  /* Panorama: nacional e internacional lado a lado, com o total. */
-  const semTipo = {metas:T.metas.length - N.metas.length - I.metas.length, viagens:T.viagens.length - N.viagens.length - I.viagens.length};
-  const lin = (rot, f, fmt) => `<tr><td>${rot}</td><td class="n">${fmt(f(N))}</td><td class="n">${fmt(f(I))}</td><td class="n"><b>${fmt(f(T))}</b></td></tr>`;
-  const num = v => v ? nBR(v) : '<span class="fraco">—</span>';
-  const din = v => v ? brl(v) : '<span class="fraco">—</span>';
-  const mil = v => v ? brl2(v) : '<span class="fraco">—</span>';
-  $('#rtPanorama').innerHTML = geral ? `<div class="cartao" style="padding:0;overflow:hidden">
-      <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
-        <h3 style="color:var(--anil-claro)">Nacional e internacional<div class="sub">Metas e viagens de cada lado. Para ver as metas e as viagens de um lado só, escolha Nacional ou Internacional acima.</div></h3>
-      </div>
-      <div class="rolo" style="margin:0;padding:0"><table class="tb-dados tb-mes">
-        <thead><tr><th></th><th class="n">Nacional</th><th class="n">Internacional</th><th class="n">Total</th></tr></thead>
-        <tbody>
-          ${lin('Metas em curso', x => x.abertas.length, num)}
-          ${lin('Prontas para emitir', x => x.prontas, num)}
-          ${lin('Milhas que faltam', x => x.faltam, num)}
-          ${lin('Custo de fechar, ao alvo', x => x.custoFechar, din)}
-          ${lin('Viagens realizadas', x => x.feitas.length, num)}
-          ${lin('Milhas usadas', x => x.milhas, num)}
-          ${lin('Passagens à vista', x => x.vista, din)}
-          ${lin('Taxas pagas', x => x.taxas, din)}
-          ${lin('Valor médio do milheiro', x => x.medio, mil)}
-          ${lin('Economizou', x => x.ganho, din)}
-        </tbody></table></div>
-      ${semTipo.metas || semTipo.viagens ? `<div class="nota" style="margin:12px 16px 16px"><svg><use href="#i-info"/></svg><div>${[
-        semTipo.metas ? `${semTipo.metas} meta${semTipo.metas > 1 ? 's' : ''}` : '', semTipo.viagens ? `${semTipo.viagens} viage${semTipo.viagens > 1 ? 'ns' : 'm'}` : ''].filter(Boolean).join(' e ')}
-        sem destino reconhecido: ${semTipo.metas + semTipo.viagens > 1 ? 'entram' : 'entra'} só no total. Na meta, escolha Nacional ou Internacional no campo Viagem.</div></div>` : ''}
-    </div>` : '';
+  const semTipo = T.metas.length - N.metas.length - I.metas.length;
+  $('#rtPanorama').innerHTML = geral ? cartoesDosLados(N, I, [
+      ['Metas em curso', x => nBR(x.abertas.length)],
+      ['Prontas para emitir', x => nBR(x.prontas)],
+      ['Milhas que faltam', x => x.faltam ? nBR(x.faltam) : '—'],
+      ['Custo de fechar', x => x.custoFechar ? brl(x.custoFechar) : '—']], 'irParaLadoMetas', 'metas')
+    + (semTipo ? `<div class="nota" style="margin:13px 0 0"><svg><use href="#i-info"/></svg><div>${semTipo} meta${semTipo > 1 ? 's' : ''} sem destino reconhecido: ${semTipo > 1 ? 'entram' : 'entra'} só nos números de cima. Na meta, escolha Nacional ou Internacional no campo Viagem.</div></div>` : '')
+    : '';
 
   $('#rtMetasBloco').style.display = geral ? 'none' : '';
   if ($('#rtMetasTit')) $('#rtMetasTit').textContent = `Metas ${lado}`;
-
-  /* Viagens realizadas do lado escolhido. */
-  $('#rtViagensEscopo').innerHTML = geral ? '' : `<div class="cartao" style="padding:0;overflow:hidden">
-      <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
-        <h3 style="color:var(--anil-claro)">Viagens ${lado} realizadas<div class="sub">Cada resgate, o que ele valeu à vista e quanto sobrou depois do custo das milhas.</div></h3>
-      </div>
-      ${X.feitas.length ? `<div class="rolo" style="margin:0;padding:0"><table class="tb-dados">
-        <thead><tr><th class="c">Data</th><th>O quê</th><th class="n">Milhas</th><th class="n">Preço à vista</th><th class="n">Sobrou</th></tr></thead>
-        <tbody>${X.feitas.slice().sort((a, b) => (b.data || '').localeCompare(a.data || '')).map(r => { const v = valorResgate(r); return `<tr>
-          <td class="c">${dataBR(r.data)}</td><td><b>${esc(r.desc || '')}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(prog(r.prog).n)}</div></td>
-          <td class="n">${nBR(r.milhas || 0)}</td><td class="n">${v.vista ? brl(v.vista) : '<span class="fraco">—</span>'}</td>
-          <td class="n">${v.ganho == null ? '<span class="fraco">—</span>' : `<span class="${v.ganho >= 0 ? 'jade' : 'brasa'}">${brl(v.ganho)}</span>`}</td></tr>`; }).join('')}</tbody></table></div>`
-      : `<div class="vazio" style="border:0;padding:26px"><p>Nenhuma viagem ${filtroMetas === 'nac' ? 'nacional' : 'internacional'} realizada ainda.</p></div>`}
-    </div>`;
 
   if (geral) return;
   const lista = X.metas;
@@ -26152,25 +26146,30 @@ function renderHospedagens(){
 }
 
 function renderViagens(){
-  const todas = viagensProprias();
+  const T = numerosViagens(null), N = numerosViagens('nac'), I = numerosViagens('int');
+  if ($('#contViagens')) $('#contViagens').textContent = T.viagens.length;
+  segLados('#segViagens', filtroViagens, N.feitas.length, I.feitas.length, f => { filtroViagens = f; renderViagens(); });
+  const geral = filtroViagens === 'todas';
+  const X = geral ? T : filtroViagens === 'nac' ? N : I;
+  const todas = X.viagens;
   const feitas = todas.filter(r => r.status === 'usada');
   const agenda = todas.filter(r => r.status !== 'usada').sort((a, b) => (a.data || '').localeCompare(b.data || ''));
-  if ($('#contViagens')) $('#contViagens').textContent = todas.length;
-
-  const comValor = feitas.map(valorResgate).filter(v => v.porMilheiro != null);
-  const milhasUsadas = soma(feitas.map(r => Number(r.milhas) || 0));
-  const valorTotal = soma(comValor.map(v => v.liquido));
-  const ganhoTotal = soma(comValor.filter(v => v.ganho != null).map(v => v.ganho));
-  /* média ponderada pelas milhas, não média das médias: uma viagem de 200.000
-     milhas pesa mais que uma de 20.000 */
-  const medio = milhasUsadas && valorTotal ? valorTotal / milhasUsadas * 1000 : 0;
-  const prox = agenda[0];
 
   $('#viResumo').innerHTML = `
-    ${metrica('Viagens realizadas', String(feitas.length), agenda.length ? `${agenda.length} já reservada${agenda.length > 1 ? 's' : ''}` : 'Nada reservado à frente', '')}
-    ${metrica('Milhas queimadas em viagem', nBR(milhasUsadas), feitas.length ? 'Somando todos os resgates seus' : 'Nenhum resgate registrado', '')}
-    ${metrica('Valor médio por milheiro', medio ? brl2(medio) : '—', medio ? 'Preço à vista menos taxas, por mil milhas' : 'Informe o preço à vista dos resgates', medio ? 'jade' : '')}
-    ${metrica('Sobrou no bolso', ganhoTotal ? brl(ganhoTotal) : '—', ganhoTotal ? 'Já descontado o que as milhas custaram' : 'Precisa do custo lançado na Fábrica', ganhoTotal > 0 ? 'ouro' : '')}`;
+    ${metrica('Viagens realizadas', String(X.feitas.length), X.agenda ? `${X.agenda} reservada${X.agenda > 1 ? 's' : ''} à frente` : 'Nada reservado à frente', '')}
+    ${metrica('Milhas usadas', nBR(X.milhas), X.milhas ? 'Somando os resgates realizados' : 'Nenhum resgate registrado', '')}
+    ${metrica('Valor médio do milheiro', X.medio ? brl2(X.medio) : '—', X.medio ? `Passagens de ${brl(X.vista)} à vista` : 'Informe o preço à vista', X.medio ? 'jade' : '')}
+    ${metrica('Economizou', X.ganho ? brl(X.ganho) : '—', X.ganho ? 'Já descontado o custo das milhas' : 'Precisa do custo lançado', X.ganho > 0 ? 'ouro' : '')}`;
+
+  const semTipo = T.viagens.length - N.viagens.length - I.viagens.length;
+  $('#viPanorama').innerHTML = geral ? cartoesDosLados(N, I, [
+      ['Viagens realizadas', x => nBR(x.feitas.length)],
+      ['Reservadas à frente', x => nBR(x.agenda)],
+      ['Valor médio do milheiro', x => x.medio ? brl2(x.medio) : '—'],
+      ['Economizou', x => x.ganho ? brl(x.ganho) : '—']], 'irParaLadoViagens', 'viagens')
+    + (semTipo ? `<div class="nota" style="margin:13px 0 0"><svg><use href="#i-info"/></svg><div>${semTipo} viage${semTipo > 1 ? 'ns' : 'm'} sem aeroporto reconhecido: ${semTipo > 1 ? 'entram' : 'entra'} só nos números de cima.</div></div>` : '')
+    : '';
+  $('#viListas').style.display = geral ? 'none' : '';
 
   $('#viAgenda').innerHTML = agenda.length ? `<table class="tb-dados">
     <thead><tr><th class="c">Data</th><th>O quê</th><th class="c">Tipo</th><th class="n">Milhas</th><th class="n">Taxas</th><th>Meta</th><th></th></tr></thead>
@@ -29344,7 +29343,8 @@ const SUBMENUS = {
   'fb-mural':      {seg:'#segMural'},
   'rd-arsenal':    {seg:'#segArsenal'},
   'em-controle':   {seg:'#segCtrVista'},
-  'rt-metas':      {seg:'#segMetas'}
+  'rt-metas':      {seg:'#segMetas'},
+  'rt-viagens':    {seg:'#segViagens'}
 };
 
 /* As opções de uma seção, lidas da própria página (ou dos modos da calculadora,
