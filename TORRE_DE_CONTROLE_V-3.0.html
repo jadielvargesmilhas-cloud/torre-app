@@ -3600,6 +3600,21 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-cab .etq{ font-size:calc(10px * var(--esc)); padding:1px 7px; }
 .up-antes{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); text-decoration:line-through; margin-top:2px; }
 .bt.up-feito{ border-color:color-mix(in oklab, var(--jade) 50%, var(--fio)); color:var(--jade); }
+.ec-faixa{ display:grid; grid-template-columns:minmax(220px, 0.9fr) 2.6fr; gap:16px 22px; align-items:center; margin-bottom:14px; padding:18px 22px; border-radius:16px; color:#fff;
+  background:linear-gradient(115deg, #0F2B4D 0%, #14506B 55%, #1C7A6A 100%); box-shadow:0 8px 24px rgba(15,43,77,.22); }
+@media (max-width:980px){ .ec-faixa{ grid-template-columns:1fr; } }
+.ec-cab{ display:flex; align-items:center; gap:14px; }
+.ec-ico{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.12); flex-shrink:0; }
+.ec-ico svg{ width:22px; height:22px; fill:none; stroke:#F4C542; stroke-width:1.8; transform:rotate(-30deg); }
+.ec-tit{ display:flex; flex-direction:column; gap:3px; } .ec-tit b{ font-size:calc(17px * var(--esc)); } .ec-tit span{ font-size:calc(13px * var(--esc)); color:rgba(255,255,255,.75); }
+.ec-nums{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+@media (max-width:700px){ .ec-nums{ grid-template-columns:1fr; } }
+.ec-n{ display:flex; flex-direction:column; gap:3px; padding:11px 14px; border-radius:12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); min-width:0; }
+.ec-n.mercado{ background:rgba(244,197,66,.12); border-color:rgba(244,197,66,.45); }
+.ec-n span{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.7); }
+.ec-n b{ font-family:var(--f-m); font-size:calc(21px * var(--esc)); white-space:nowrap; }
+.ec-n b.jade{ color:#7EE2A8; } .ec-n b.brasa{ color:#FF9C8A; } .ec-n b.ec-vazio{ color:rgba(255,255,255,.55); font-size:calc(16px * var(--esc)); }
+.ec-n em{ font-style:normal; font-size:calc(12px * var(--esc)); color:rgba(255,255,255,.7); line-height:1.35; }
 .up-faixa{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:14px; padding:16px 20px; border-radius:16px; color:#fff;
   background:linear-gradient(115deg, #0F2B4D 0%, #14506B 55%, #1C7A6A 100%); box-shadow:0 8px 24px rgba(15,43,77,.22); }
 .up-faixa-ico{ width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.12); flex-shrink:0; }
@@ -8662,7 +8677,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 14:40';
+const BUILD = '2026-10-04 15:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24336,15 +24351,28 @@ function renderTrechos(p){
   const eco = soma(ts.map(t => economiaTrecho(t).valor).filter(v => v != null));
   const comUp = ts.filter(t => t.upgrade);
   const ecoAntes = soma(ts.map(t => economiaTrechoBase(t).valor).filter(v => v != null));
-  host.innerHTML = `${comUp.length ? `<div class="up-faixa">
-      <div class="up-faixa-ico"><svg><use href="#i-aviao"/></svg></div>
-      <div class="up-faixa-txt"><b>${comUp.length === ts.length && ts.length > 1 ? 'Upgrade em todos os trechos' : `Upgrade em ${comUp.length} ${comUp.length === 1 ? 'trecho' : 'trechos'}`}</b>
-        <span>${[...new Set(comUp.map(t => CABINES_TRECHO[t.upgrade.cabine]))].join(', ')} · ${[...new Set(comUp.map(t => ORIGENS_UPGRADE[t.upgrade.origem] || ''))].filter(Boolean).join(', ')}</span></div>
-      <div class="up-faixa-nums">
-        <div><span>Antes</span><b>${brl(ecoAntes)}</b></div>
-        <svg class="up-seta"><use href="#i-seta"/></svg>
-        <div><span>Depois</span><b class="jade">${brl(eco)}</b></div>
-        <div class="up-ganho"><span>O upgrade rendeu</span><b>${eco - ecoAntes >= 0 ? '+' : '−'}${brl(Math.abs(eco - ecoAntes))}</b></div>
+  /* Resumo da economia: o que a viagem custou, e a economia por duas réguas.
+     A mesma companhia mostra o valor do que foi comprado; o menor preço do
+     mercado responde ao cliente que diria "eu compraria em outra companhia":
+     mesmo contra a opção mais barata, sobra economia (ou não, e aí aparece). */
+  const custoTotal = soma(ts.map(t => (custoTrechoReais(t) || 0) + (t.upgrade ? custoUpgradeReais(t) || 0 : 0)));
+  const mercados = ts.map(economiaMercado);
+  const comMercado = mercados.filter(Boolean);
+  const ecoMercado = soma(comMercado.map(m => m.valor));
+  const faltaMercado = ts.length - comMercado.length;
+  const cabVoo = [...new Set(ts.map(t => CABINES_TRECHO[t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica')]))].join(' e ');
+  const ciasMercado = [...new Set(comMercado.map(m => m.cia).filter(Boolean))];
+  host.innerHTML = `${ts.length ? `<div class="ec-faixa">
+      <div class="ec-cab"><div class="ec-ico"><svg><use href="#i-aviao"/></svg></div>
+        <div class="ec-tit"><b>Economia da viagem</b><span>${cabVoo}${comUp.length ? ` · upgrade ${comUp.length === ts.length && ts.length > 1 ? 'em todos os trechos' : `em ${comUp.length} ${comUp.length === 1 ? 'trecho' : 'trechos'}`} por ${[...new Set(comUp.map(t => (ORIGENS_UPGRADE[t.upgrade.origem] || '').toLowerCase()))].filter(Boolean).join(', ')}` : ''}</span></div></div>
+      <div class="ec-nums">
+        <div class="ec-n"><span>A viagem custou</span><b>${brl(custoTotal)}</b><em>passagens, taxas e milhas ao valor escolhido</em></div>
+        <div class="ec-n mesma"><span>Contra a mesma companhia</span><b class="${eco >= 0 ? 'jade' : 'brasa'}">${eco >= 0 ? '' : '−'}${brl(Math.abs(eco))}</b>
+          <em>${comUp.length ? `antes do upgrade ${brl(ecoAntes)} · o upgrade rendeu ${eco - ecoAntes >= 0 ? '+' : '−'}${brl(Math.abs(eco - ecoAntes))}` : 'o mesmo voo, pago em dinheiro'}</em></div>
+        <div class="ec-n mercado"><span>Contra o menor preço do mercado</span>
+          ${comMercado.length ? `<b class="${ecoMercado >= 0 ? 'jade' : 'brasa'}">${ecoMercado >= 0 ? '' : '−'}${brl(Math.abs(ecoMercado))}</b>
+            <em>${ciasMercado.length ? 'mais barata: ' + ciasMercado.join(', ') : 'Google Flights'}${faltaMercado ? ` · falta pesquisar ${faltaMercado} ${faltaMercado === 1 ? 'trecho' : 'trechos'}` : ''}</em>`
+          : `<b class="ec-vazio">a pesquisar</b><em>toque na lupa de cada trecho</em>`}</div>
       </div></div>` : ''}<div class="cartao" style="padding:0;overflow:hidden">
     <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
       <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar. Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato em dinheiro: tudo entra na conta.</div></h3>
@@ -36677,6 +36705,10 @@ function capturarEstadoTela(){
     regras: dr && dr.open && dr._id ? {id:dr._id, aba:ultimaAbaRegras, sim:dr._sim || null} : null,
     guia: gm && gm.open ? {aba:gm._aba || 'instalar'} : null,
     radarCamp: (() => { const rc = document.getElementById('dlgRadarCamp'); return rc && rc.open ? {id:rc._id, jan:rc._jan} : null; })(),
+    /* Rota: a jornada aberta, a aba dela (Jornada, Trechos, Dia a dia), a etapa
+       e os filtros de Nacional e Internacional. */
+    rota: typeof roteiroAberto === 'undefined' ? null : {aberto:roteiroAberto, plano:planoAtual, modo:modoRoteiro, etapa:etapaRota,
+      filtro:filtroRoteiro, filtroViagens:typeof filtroViagens === 'undefined' ? 'todas' : filtroViagens},
     /* Com uma janela aberta a página está fixada e o navegador diz rolagem 0: a
        posição de verdade é a que a trava guardou ao fixar. */
     rolagem: Math.round(fundoTravado ? fundoPosicao
@@ -36745,6 +36777,14 @@ function restaurarEstadoTela(){
       } else if (e.radarCamp && (DB.campanhas || []).some(c => c.id === e.radarCamp.id)){
         abrirRadarCampanha(e.radarCamp.id);
         if (e.radarCamp.jan) radarCampanhaPeriodo(e.radarCamp.jan);
+      }
+      if (e.vista === 'rota' && e.rota){
+        filtroRoteiro = e.rota.filtro || 'todas'; filtroViagens = e.rota.filtroViagens || 'todas';
+        if (e.rota.aberto && (DB.planos || []).some(x => x.id === e.rota.plano)){
+          planoAtual = e.rota.plano; roteiroAberto = true; modoRoteiro = e.rota.modo || 'jornada'; etapaRota = e.rota.etapa || null;
+        }
+        renderPlano(); if (typeof renderViagens === 'function') renderViagens(); if (typeof marcarColunaMenu === 'function') marcarColunaMenu();
+        if (e.rolagem) window.scrollTo({top:e.rolagem, behavior:'instant'});
       }
       fimRestauracao();
     }, 380);
