@@ -6769,7 +6769,9 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
              na Prateleira ou no Horizonte precisava voltar para ver quanto tem —
              e é justamente ali, olhando prazo e curva de custo, que o número do
              estoque faz falta. -->
-        <div class="grade g4" id="mesaMetricas" style="margin-bottom:18px"></div>
+        <!-- Os quatro cartões do Painel (Vale com bônus, Prontas para emitir,
+             Resultado das vendas e Vencendo em 90 dias) saíram a pedido: menos
+             informação na tela. Os números continuam nas telas próprias. -->
 
         <div class="abas" data-grupo="mesa">
           <button class="aba on" data-aba="ms-hoje">Painel de bordo <span class="cont" id="contHoje">0</span></button>
@@ -8341,7 +8343,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 10:40';
+const BUILD = '2026-10-03 11:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12465,7 +12467,9 @@ function renderFita(){
   /* Veredito na primeira linha, consequência na segunda — o mesmo desenho das
      demais células. A rota já está no rodapé da célula, então a explicação usa o
      espaço para dizer o que a campanha faz com o saldo que existe hoje. */
-  if (melhorC){
+  /* "Maior bônus" e "Próx. saída" saíram da fita a pedido: ela fica com
+     milhas, pontos e o milheiro de cada programa. */
+  if (false && melhorC){
     const dias = diasAte(melhorC.fim);
     const base = saldoPorPrograma()[melhorC.de] || 0;
     const ganho = Math.round(base * (Number(melhorC.bonus) || 0) / 100);
@@ -12483,7 +12487,7 @@ function renderFita(){
 
   const prox = DB.reservas.filter(r => r.status !== 'realizada' && r.status !== 'cancelada' && diasAte(r.data) >= 0)
     .sort((a, b) => a.data.localeCompare(b.data))[0];
-  if (prox){
+  if (false && prox){
     const d = diasAte(prox.data);
     cels.push({ r:'Próx. saída', v:dataCurta(prox.data), s:prox.desc.split(' · ')[0],
       acao:"irPara('emissoes');irParaAba('emissoes','em-resgates')",
@@ -12523,7 +12527,7 @@ function renderMesa(){
   const inv = investidoPontos(), est = valorEstoquePontos();
   const lucro = soma(DB.reservas.filter(r => r.quem === 'terceiro').map(r => resultadoReserva(r)));
   const ativos = lotesEmRisco(90);
-  $('#mesaMetricas').innerHTML = `
+  if ($('#mesaMetricas')) $('#mesaMetricas').innerHTML = `
     ${metrica('Vale com bônus, na melhor transferência', brl(est), inv > 0 ? `<div>Investido ${brl(inv)}</div><div>Diferença de ${brl(est - inv)}</div>` : 'Sem custo lançado ainda', !est ? '' : est >= inv ? 'jade' : 'brasa', detalhePontosMelhor(), true)}
     ${(() => {
       /* Milha pronta para emitir: o que já está no programa aéreo e não depende de
