@@ -2328,7 +2328,9 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 .mp-qtd, .mp-centro{ text-align:center; }
 /* Tabela de pontos: a coluna da rota é texto, à esquerda e sem quebrar o par
    paridade e destino. */
-table.tb-pontos .pts-rota{ text-align:left; white-space:normal; max-width:190px; line-height:1.35; font-size:calc(12.5px * var(--esc)); margin-top:2px; color:var(--grafite); }
+/* Duas linhas fixas: a rota (paridade e destino) e, embaixo, a situação da
+   campanha. */
+table.tb-pontos .pts-rota{ text-align:left; white-space:nowrap; line-height:1.35; font-size:calc(12.5px * var(--esc)); margin-top:2px; color:var(--grafite); }
 table.tb-pontos td.venda-cel{ text-align:right; }
 table.tb-pontos .tc-cpm, table.tb-pontos .gp-num, table.tb-pontos .pos-n{ white-space:nowrap; }
 table.tb-pontos td.quem > .linha{ flex-wrap:nowrap; align-items:flex-start; }
@@ -8337,7 +8339,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 03:10';
+const BUILD = '2026-10-03 03:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31310,7 +31312,9 @@ function importar(arquivo){
   fr.readAsText(arquivo);
 }
 
-const RENDER = { mesa:() => { renderMesa(); renderVender(); }, radar:renderRadar, fabrica:renderFabrica,
+/* O livro de lançamentos mora numa aba do Painel: sem ele aqui, apagar ou editar
+   um lançamento pelo Painel deixava a linha velha na tabela até apertar F5. */
+const RENDER = { mesa:() => { renderMesa(); renderVender(); renderLancamentos(); }, radar:renderRadar, fabrica:renderFabrica,
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 function aplicarTudo(){
   aplicarCondicoesCampanhas();
@@ -34905,7 +34909,7 @@ const linhaPosicao = l => {
         <td class="quem" data-r="Programa"><div class="linha" style="gap:9px">${discoProg(p)}
           <div style="min-width:0"><div class="linha" style="gap:9px"><span class="gp-nome">${esc(prog(p).n)}</span>
           <span class="gp-cont">${contas.length} conta${contas.length > 1 ? 's' : ''}</span></div>
-          <div class="pts-rota">${viaComDestino(v)}</div></div></div></td>
+          <div class="pts-rota">${viaComDestino(v).replace(/<\/b>\s+(?=[^<]*$)/, '</b><br>')}</div></div></div></td>
         <td class="pos" data-r="Pontos"><span class="gp-num">${nBR(qtd)}</span></td>
         <td class="pos" data-r="Milheiro">${cpm ? `<span class="tc-cpm ${tomCpm(p, cpm)}" style="font-weight:600">${brl2(cpm)}</span>` : '<span class="fraco">sem custo</span>'}</td>
         <td class="pos" data-r="Custo total"><span class="gp-num">${custo ? brl(custo) : '—'}</span></td>
@@ -34928,7 +34932,7 @@ const linhaPosicao = l => {
   const nContas = new Set(pts.map(s => s.contaId || '')).size;
   $('#vdPontos').innerHTML = `<div class="cartao" style="padding:0;overflow:hidden">
     <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
-      <h3 style="color:var(--anil-claro)">Matéria-prima, não prateleira<div class="sub">Ponto de banco não emite passagem, então não entra no controle de CPF. Vira milha primeiro; a vaga é consumida no programa aéreo de destino.</div></h3>
+      <h3 style="color:var(--anil-claro)"><span class="tit-2l"><span style="white-space:nowrap">Matéria-prima,</span><br><span style="white-space:nowrap">não prateleira</span></span><div class="sub">Ponto de banco não emite passagem, então não entra no controle de CPF. Vira milha primeiro; a vaga é consumida no programa aéreo de destino.</div></h3>
     </div>
     <div class="rolo" style="margin:0;padding:0"><table class="livro tb-pontos">
       <thead><tr>
