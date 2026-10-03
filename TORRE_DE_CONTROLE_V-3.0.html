@@ -3572,6 +3572,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 
 .rt-etapa{ border-top:3px solid var(--c); }
 /* Próximo passo: um item por vez, em destaque, com a ação que o resolve. */
+.rt-vazio .rt-trilho{ justify-content:center; margin-bottom:14px; }
 .rt-proximo{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 16px; margin-bottom:16px; border-radius:14px;
   background:color-mix(in oklab, var(--c) 9%, var(--sup-0)); border:1px solid color-mix(in oklab, var(--c) 40%, transparent); }
 .rt-proximo-letra{ width:40px; height:40px; border-radius:50%; display:grid; place-items:center; flex-shrink:0; background:var(--c); color:#fff;
@@ -5857,7 +5858,9 @@ details[open] > .resumo-dobra::before{ rotate:90deg; }
   text-align:center; padding:44px 22px; border:1px dashed var(--fio);
   border-radius:var(--r-lg); color:var(--grafite);
 }
-.vazio svg{ width:30px;height:30px;fill:none;stroke:var(--grafite-dim);stroke-width:1.3;margin-bottom:12px; }
+.vazio > svg{ width:30px;height:30px;fill:none;stroke:var(--grafite-dim);stroke-width:1.3;margin-bottom:12px; }
+/* Só o ícone grande do estado vazio; os ícones dos botões ficam do tamanho de
+   botão (antes herdavam os 30px e passavam por cima do texto). */
 .vazio h4{ font-family:var(--f-b); font-size:calc(15px * var(--esc)); font-weight:600; color:var(--giz-2); margin-bottom:5px; }
 .vazio p{ font-size:calc(13.5px * var(--esc)); max-width:390px; margin:0 auto 14px; line-height:1.5; }
 
@@ -8521,7 +8524,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 21:20';
+const BUILD = '2026-10-03 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23984,12 +23987,47 @@ function montarSegRoteiro(){
 }
 
 /* A lista: um cartão por viagem, com o trilho ROTA·VEM e o quanto falta. */
+/* Números de um conjunto de jornadas, para o panorama. */
+function numerosJornadas(lista){
+  const sal = saldoPorPrograma();
+  const abertas = lista.filter(p => progressoRota(p).pct < 100 && !(p.fim && diasAte(p.fim) < 0));
+  const faltam = soma(abertas.map(p => { const m = metaDoPlano(p); return m && m.precisa > 0 ? Math.max(0, m.precisa - (sal[m.prog] || 0)) : 0; }));
+  const prontas = abertas.filter(p => { const m = metaDoPlano(p); return m && m.precisa > 0 && (sal[m.prog] || 0) >= m.precisa
+    && !(((m.etapas || {}).ida || {}).feita); }).length;
+  const futuras = lista.filter(p => diasAte(p.inicio) !== null && diasAte(p.inicio) >= 0).sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const prox = futuras[0] || null;
+  return {total:lista.length, abertas:abertas.length, faltam, prontas, prox,
+    proxTxt: prox ? (diasAte(prox.inicio) === 0 ? 'hoje' : `em ${diasAte(prox.inicio)} dias`) : '—',
+    custo: soma(abertas.map(p => { const m = metaDoPlano(p); return m && m.precisa > 0 ? Math.max(0, m.precisa - (sal[m.prog] || 0)) / 1000 * faixasDe(m.prog).alvo : 0; }))};
+}
+
 function renderListaRoteiros(){
   const host = $('#rtRoteiroLista'); if (!host) return;
   const lista = planosOrdenados().filter(p => filtroRoteiro === 'todas' || escopoPlano(p) === filtroRoteiro);
   const nomeLado = filtroRoteiro === 'nac' ? 'nacional' : filtroRoteiro === 'int' ? 'internacional' : '';
+  /* Panorama: quatro números no topo; no geral, os dois lados lado a lado; e
+     embaixo as jornadas. Como em Resultados. */
+  const X = numerosJornadas(lista);
+  const topo = lista.length ? `<div class="grade g4 g4-par" style="margin-bottom:16px">
+      ${metrica('Jornadas em andamento', String(X.abertas), `${X.total} no total`, '')}
+      ${metrica('Prontas para emitir', String(X.prontas), X.prontas ? 'Saldo já cobre as milhas' : 'Nenhuma com saldo completo', X.prontas ? 'jade' : '')}
+      ${metrica('Milhas que faltam', nBR(X.faltam), X.faltam ? `${brl(X.custo)} ao alvo` : 'Nada a fabricar', '')}
+      ${metrica('Próxima viagem', X.proxTxt, X.prox ? esc(X.prox.nome) : 'Nenhuma data à frente', X.prox ? 'ouro' : '')}
+    </div>` : '';
+  let lados = '';
+  if (filtroRoteiro === 'todas' && lista.length){
+    const ps = DB.planos || [];
+    const N = numerosJornadas(ps.filter(p => escopoPlano(p) === 'nac')), I = numerosJornadas(ps.filter(p => escopoPlano(p) === 'int'));
+    lados = cartoesDosLados(N, I, [
+      ['Jornadas em andamento', x => nBR(x.abertas)],
+      ['Prontas para emitir', x => nBR(x.prontas)],
+      ['Milhas que faltam', x => x.faltam ? nBR(x.faltam) : '—'],
+      ['Próxima viagem', x => x.prox ? x.proxTxt : '—']], 'irParaLadoJornadas', 'jornadas')
+      + `<div class="olho anil" style="margin:20px 0 12px">Todas as jornadas</div>`;
+  }
   if (!lista.length){
-    host.innerHTML = `<div class="vazio" style="padding:34px"><svg><use href="#i-mapa"/></svg>
+    const demo = {porEt:Object.fromEntries(ROTA_ETAPAS.map((e, i) => [e.k, {total:4, feitos:Math.max(0, 4 - i)}]))};
+    host.innerHTML = `<div class="vazio rt-vazio" style="padding:34px">${trilhoRota(demo, false)}
       <h4>Nenhuma jornada${nomeLado ? ' ' + nomeLado : ''}</h4>
       <p>Cada viagem é uma jornada pelo Método ROTA: Rumo, Otimização, Timing e Ação levam à Viagem planejada, à Emissão realizada e à Mensuração da economia. Quando a lista fecha, a viagem está pronta.</p>
       <div class="linha" style="justify-content:center;gap:9px">
@@ -23998,7 +24036,7 @@ function renderListaRoteiros(){
       </div></div>`;
     return;
   }
-  host.innerHTML = `<div class="grade rt-cartoes">${lista.map(p => {
+  host.innerHTML = topo + lados + `<div class="grade rt-cartoes">${lista.map(p => {
     const pr = progressoRota(p), selo = seloPrazoPlano(p), int = escopoPlano(p) === 'int';
     return `<button type="button" class="cartao rt-cartao${pr.pct === 100 ? ' pronta' : ''}" onclick="abrirRoteiroViagem('${p.id}')">
       <div class="rt-cartao-cab">
@@ -24890,6 +24928,7 @@ function cartoesDosLados(N, I, linhas, irPara, oQue){
   return `<div class="grade lados">${lado('nac', N, 'Nacional')}${lado('int', I, 'Internacional')}</div>`;
 }
 function irParaLadoMetas(k){ filtroMetas = k; renderMetas(); marcarColunaMenu(); window.scrollTo({top:0, behavior:'smooth'}); }
+function irParaLadoJornadas(k){ filtroRoteiro = k; roteiroAberto = false; renderPlano(); marcarColunaMenu(); window.scrollTo({top:0, behavior:'smooth'}); }
 function irParaLadoViagens(k){ filtroViagens = k; renderViagens(); marcarColunaMenu(); window.scrollTo({top:0, behavior:'smooth'}); }
 function segLados(sel, atual, contN, contI, aoTrocar){
   const seg = $(sel); if (!seg) return;
