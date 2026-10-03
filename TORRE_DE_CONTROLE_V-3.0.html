@@ -3764,7 +3764,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
   letter-spacing:.06em; color:var(--grafite-dim);
 }
 .cl-grade{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
-.cl-grade i{ display:block; }
+.cl-grade i{ display:block; aspect-ratio:1; } /* casa vazia do tamanho de um dia: as seis semanas têm sempre a mesma altura */
 
 .cl-dia{
   position:relative; aspect-ratio:1; border:0; background:transparent; cursor:pointer;
@@ -8532,7 +8532,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 23:40';
+const BUILD = '2026-10-04 00:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24853,6 +24853,26 @@ function desenharCalendario(){
   </div>
   ${legendaHTML([m1, m2])}`;
 
+  /* A legenda de feriados também tem altura fixa: a maior entre os pares de
+     meses dos próximos três anos e do último, medida uma vez na largura atual. */
+  const leg = host.querySelector('.cl-legenda');
+  if (leg){
+    if (!_cal.legH){
+      const sonda = document.createElement('div');
+      sonda.style.cssText = `position:absolute;visibility:hidden;left:-9999px;top:0;width:${leg.getBoundingClientRect().width}px`;
+      document.body.appendChild(sonda);
+      let maior = 0; const b = new Date(hojeISO() + 'T12:00:00'); b.setDate(1); b.setMonth(b.getMonth() - 12);
+      for (let i = 0; i < 48; i++){
+        const a1 = new Date(b), a2 = new Date(b); a2.setMonth(a2.getMonth() + 1);
+        sonda.innerHTML = legendaHTML([a1, a2]);
+        maior = Math.max(maior, sonda.firstElementChild.getBoundingClientRect().height);
+        b.setMonth(b.getMonth() + 1);
+      }
+      sonda.remove(); _cal.legH = Math.ceil(maior);
+    }
+    leg.style.minHeight = _cal.legH + 'px'; leg.style.boxSizing = 'border-box'; leg.style.alignContent = 'flex-start';
+  }
+
   $('#calAnt').onclick = () => { _cal.mes.setMonth(_cal.mes.getMonth() - 1); desenharCalendario(); };
   $('#calProx').onclick = () => { _cal.mes.setMonth(_cal.mes.getMonth() + 1); desenharCalendario(); };
   $$('.cl-dia[data-d]', host).forEach(b => {
@@ -24887,6 +24907,9 @@ function mesHTML(base){
     cel += `<button type="button" class="${cls}" data-d="${iso}"${
       fer ? ` data-dica="${esc(fer)}"` : eme ? ` data-dica="Emenda de feriado, ${esc(eme)}"` : ''}>${d}</button>`;
   }
+  /* Sempre seis semanas: mês de cinco linhas ganha uma linha vazia no fim, e o
+     calendário não muda de altura ao passar de um mês para outro. */
+  for (let i = primeiro + total; i < 42; i++) cel += '<i></i>';
   return `<div class="cl-mes">
     <div class="cl-tit">${MESP[mes]}<span>${ano}</span></div>
     <div class="cl-sem">${['dom','seg','ter','qua','qui','sex','sáb'].map(x => `<span>${x}</span>`).join('')}</div>
