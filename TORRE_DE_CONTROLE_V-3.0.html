@@ -2321,6 +2321,14 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
   line-height:1.3; margin-top:2px;
 }
 .mp-qtd, .mp-centro{ text-align:center; }
+/* Uma linha por conta, abaixo do total: nome à esquerda, pontos e milheiro à
+   direita. Fio fino em cima separa do total. */
+.mp-contas{ margin:6px 0 4px; padding-top:6px; border-top:1px solid var(--fio); display:flex; flex-direction:column; gap:2px;
+  font-size:calc(12.5px * var(--esc)); }
+.mp-contas > div{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:baseline; }
+.mp-contas span{ color:var(--giz-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mp-contas b{ font-weight:600; color:var(--giz); font-variant-numeric:tabular-nums; }
+.mp-contas small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); min-width:7ch; text-align:right; white-space:nowrap; }
 
 /* ── calculadora de milheiro ─────────────────────────────────────────────────
    Três números de resultado à esquerda, o veredito à direita. Em tela estreita a
@@ -5690,6 +5698,18 @@ details[open] > .resumo-dobra::before{ rotate:90deg; }
   color:var(--giz-2); line-height:1.5;
 }
 .nota svg{ width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;flex-shrink:0;margin-top:1px; }
+.cmp-rodape{ display:flex; gap:16px; align-items:flex-start; justify-content:space-between; margin-top:12px; }
+.cmp-obs{ flex:1 1 auto; min-width:0; }
+.cmp-aviso{ flex:0 1 380px; margin-left:auto; }
+.cmp-ir{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin-top:6px; padding:0;
+  background:none; border:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.cmp-ir > span{ text-decoration:underline; text-underline-offset:3px; font-weight:600; }
+.cmp-ir > small{ font-size:calc(12.5px * var(--esc)); opacity:.85; }
+.cmp-ir:hover > span{ text-decoration-thickness:2px; }
+@media (max-width:720px){ .cmp-rodape{ flex-direction:column; } .cmp-aviso{ flex-basis:auto; width:100%; margin-left:0; } }
+/* Cartão de campanha recém-aberto por um atalho: um contorno que some sozinho. */
+@keyframes cpFoco{ 0%{ box-shadow:0 0 0 0 transparent; } 15%{ box-shadow:0 0 0 3px var(--ouro); } 100%{ box-shadow:0 0 0 0 transparent; } }
+.cp.cp-foco{ animation:cpFoco 2.2s ease-out; }
 .nota.ouro{ background:var(--lavagem-ouro); border-color:color-mix(in oklab,var(--ouro) 25%,transparent); color:var(--ouro-hi); }
 .nota.brasa{ background:var(--lavagem-brasa); border-color:color-mix(in oklab,var(--brasa) 25%,transparent); color:var(--brasa); }
 .nota.jade{ background:var(--lavagem-jade); border-color:color-mix(in oklab,var(--jade) 25%,transparent); color:var(--jade); }
@@ -6765,7 +6785,8 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
         <div class="painel-aba" id="p-ms-vender">
           <div class="pilha" style="gap:18px">
             <div class="grade g4" id="prateleiraResumo"></div>
-            <div class="cartao mk-cartao" id="mercadoCartao"></div>
+            <!-- O cartão "Preço de mercado" saiu da tela a pedido. A leitura do Rota 360
+                 continua: o favorito segue importando, e a venda sugerida usa os preços. -->
             <div class="cartao" style="padding:0;overflow:hidden">
               <div style="padding:17px 20px 13px;border-bottom:1px solid var(--fio-suave)">
                 <div class="linha">
@@ -8295,7 +8316,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-02 23:40';
+const BUILD = '2026-10-03 01:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12398,7 +12419,7 @@ function renderMesa(){
         total ? `Valem ${brl(vale)} ao alvo` : 'Nada nos programas aéreos',
         total ? 'jade' : '', dica, true, "irPara('emissoes');irParaAba('emissoes','em-resgates')");
     })()}
-    ${metrica('Resultado do balcão', brl(lucro), `${DB.reservas.filter(r => r.quem === 'terceiro').length} reservas para terceiros`, !lucro ? '' : lucro > 0 ? 'jade' : 'brasa', '', false, `irPara('emissoes');irParaAba('emissoes','em-resgates')`)}
+    ${metrica('Resultado das vendas', brl(lucro), `${DB.reservas.filter(r => r.quem === 'terceiro').length} reservas para terceiros`, !lucro ? '' : lucro > 0 ? 'jade' : 'brasa', '', false, `irPara('vendas')`)}
     ${metrica('Vencendo em 90 dias', nBR(soma(ativos.map(l => l.qtd))), ativos.length ? `${ativos.length} lote${ativos.length > 1 ? 's' : ''} em contagem regressiva` : 'Nenhum lote em risco', ativos.length ? 'brasa' : '',
       ativos.length ? 'Clique para ver os lotes, do mais perto de vencer ao mais distante.' : 'Nenhum lote vence nos próximos 90 dias.', false,
       "irPara('saldo');irParaAba('saldo','sl-validade')")}`;
@@ -15945,7 +15966,7 @@ function cartaoCampanha(c){
   const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
     : dias === 0 ? 'Fecha hoje' : dias === 1 ? 'Fecha amanhã' : `Fecha em ${dias} dias`;
 
-  return `<article class="cp cp-${urg}">
+  return `<article class="cp cp-${urg}" data-camp-id="${esc(c.id)}">
     <header class="cp-cab">
       <div class="cp-rota">
         ${c.de ? discoProg(c.de) + '<svg class="cp-seta"><use href="#i-seta-d"/></svg>' : ''}${discoProg(c.para)}
@@ -19717,7 +19738,56 @@ function renderComparador(){
         <td class="n cmp-cpm" data-r="Milheiro" style="color:${cor(l.cpm)}">${brl2(l.cpm)}</td>
         <td data-r="Leitura"><span class="etq ${leitura(l.cpm).z}">${leitura(l.cpm).t}</span></td>
         <td class="n" data-r="Carência">${l.pl.fid ? l.pl.fid + ' m' : '—'}</td></tr>`).join('')}</tbody></table></div>
-    ${cat.planos.some(pl => pl.obs) ? `<p class="fraco" style="font-size:calc(13px * var(--esc));margin-top:11px">${cat.planos.filter(pl => pl.obs).map(pl => `<b>${esc(pl.n)}:</b> ${esc(pl.obs)}`).join('<br>')}</p>` : ''}`;
+    <div class="cmp-rodape">
+      <div class="cmp-obs">${cat.planos.some(pl => pl.obs) ? `<p class="fraco" style="font-size:calc(13px * var(--esc));margin:0">${cat.planos.filter(pl => pl.obs).map(pl => `<b>${esc(pl.n)}:</b> ${esc(pl.obs)}`).join('<br>')}</p>` : ''}</div>
+      ${avisoCampanhaClube(p)}
+    </div>`;
+}
+
+/* Canto do comparador: a tabela mostra o preço de tabela, fora de campanha, e
+   aqui fica dito se há campanha de clube no ar para o programa escolhido. Com
+   campanha, cada uma vira um atalho que leva ao cartão dela em Campanhas. */
+function avisoCampanhaClube(p){
+  const vivas = campanhasVivas('clube').filter(c => c.para === p)
+    .sort((a, b) => (cpmClubeSeguro(a) ?? 9e9) - (cpmClubeSeguro(b) ?? 9e9));
+  if (!vivas.length){
+    const ultima = (DB.campanhas || []).filter(c => c.tipo === 'clube' && c.para === p && c.fim)
+      .sort((a, b) => b.fim.localeCompare(a.fim))[0];
+    return `<div class="nota cmp-aviso"><svg><use href="#i-info"/></svg><div class="pilha compacta">
+      <div><b>Sem campanha de clube no ar</b></div>
+      <div>${ultima ? `A última para ${esc(prog(p).n)} terminou em ${mesAnoCurto(ultima.fim)}.` : `Nenhuma campanha de clube registrada para ${esc(prog(p).n)}.`}</div>
+    </div></div>`;
+  }
+  const prazo = c => { const d = diasAte(c.fim); return d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `fecha em ${d} dias`; };
+  return `<div class="nota jade cmp-aviso"><svg><use href="#i-ok"/></svg><div class="pilha compacta">
+      <div><b>${vivas.length === 1 ? 'Campanha de clube no ar' : `${vivas.length} campanhas de clube no ar`}</b></div>
+      ${vivas.slice(0, 3).map(c => { const cpm = cpmClubeSeguro(c); return `<button type="button" class="cmp-ir" onclick="irParaCampanha('${c.id}')">
+        <span>${esc(c.titulo || 'Campanha')}</span>
+        <small>${cpm != null ? `milheiro de ${brl2(cpm)}, ` : ''}${prazo(c)}</small></button>`; }).join('')}
+    </div></div>`;
+}
+
+/* Leva ao cartão da campanha na lista dela e o destaca por um instante. */
+function irParaCampanha(id){
+  const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+  if (c.tipo === 'clube'){
+    irPara('fabrica'); irParaAba('fabrica', 'fb-campanhas'); trocarAbaCampFab('clube');
+  } else {
+    irPara('comprar'); irParaAba('comprar', 'ct-campanhas');
+    abaCampanha = c.tipo; renderCampanhas();
+  }
+  /* A lista pode ser redesenhada logo depois da troca de tela; por isso a
+     marca é conferida de novo e reposta no cartão que estiver na tela. */
+  let ultimo = null;
+  const focar = rolar => {
+    const el = document.querySelector(`.vista.on article[data-camp-id="${CSS.escape(id)}"]`);
+    if (!el || el === ultimo) return;
+    ultimo = el;
+    if (rolar) el.scrollIntoView({block:'center', behavior:'smooth'});
+    el.classList.remove('cp-foco'); void el.offsetWidth; el.classList.add('cp-foco');
+  };
+  setTimeout(() => focar(true), 120);
+  setTimeout(() => focar(true), 600);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -25744,7 +25814,7 @@ function renderBalcao(){
          ${metrica('Em aberto', String(emAberto), 'Ainda vão acontecer', '')}`
       : `${metrica('Emissões', String(daLista.length), `${nBR(milhasLista)} milhas usadas`, '')}
          ${metrica('Custo real', brl(custoLista), 'Milhas ao seu milheiro + taxas', '')}
-         ${metrica('Resultado do balcão', brl(lucro), `${terceiros.length} para cliente`, lucro >= 0 ? 'jade' : 'brasa')}
+         ${metrica('Resultado das vendas', brl(lucro), `${terceiros.length} para cliente`, lucro >= 0 ? 'jade' : 'brasa')}
          ${metrica('Em aberto', String(emAberto), 'Ainda vão acontecer', '')}`;
 
   $('#blReservas').innerHTML = lista.length ? lista.map(r => {
@@ -34686,13 +34756,14 @@ const linhaPosicao = l => {
     <div class="cartao-cab" style="margin-bottom:12px">
       <h3 style="color:var(--anil-claro)">Matéria-prima, não prateleira<div class="sub">Ponto de banco não emite passagem, então não entra no controle de CPF. Vira milha primeiro; a vaga é consumida no programa aéreo de destino.</div></h3>
     </div>
-    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px">
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:11px">
       ${Object.entries(porPrograma).sort((a, b) => b[1] - a[1]).map(([p, q]) => {
         const v = valorPrograma(p, q);
         return `<div style="border:1px solid var(--fio);border-radius:var(--r-p);padding:12px 14px">
           <div class="mp-nome">${discoProg(p)}
             <span>${esc(prog(p).n)}</span></div>
           <div class="num mp-qtd" style="font-size:calc(19px * var(--esc))">${nBR(q)}</div>
+          ${contasDoPrograma(p)}
           <!-- Duas linhas que o cartão não tinha: o que estes pontos custaram e a
                quanto saiu o milheiro. Sem elas o cartão só dizia quanto o ponto
                VALE hoje — e valor sem custo não responde a pergunta que importa,
@@ -34715,6 +34786,23 @@ const linhaPosicao = l => {
       }).join('')}
     </div>
   </div>` : '';
+}
+
+/* Quanto de cada programa de pontos está em cada conta. O total do programa
+   esconde que o saldo é de pessoas diferentes, e é por conta que se transfere:
+   cada titular move só o próprio saldo. O milheiro de cada conta aparece quando
+   ela tem custo lançado. */
+function contasDoPrograma(p){
+  const porConta = {};
+  DB.saldos.filter(s => s.prog === p && s.qtd > 0)
+    .forEach(s => { const k = s.contaId || ''; porConta[k] = (porConta[k] || 0) + s.qtd; });
+  const ids = Object.keys(porConta).sort((a, b) => porConta[b] - porConta[a]);
+  if (!ids.length) return '';
+  const cpms = (cpmPorProgramaConta() || {})[p] || {};
+  return `<div class="mp-contas">${ids.map(id => `<div>
+      <span>${id ? esc(nomeCurtoConta(id)) : 'Sem conta'}</span>
+      <b class="num">${nBR(porConta[id])}</b>
+      <small>${cpms[id] ? brl2(cpms[id]) + '/mil' : 'sem custo'}</small></div>`).join('')}</div>`;
 }
 
 /* O nome do programa de destino sai do meio da frase em azul: é ele que a pessoa
