@@ -8592,7 +8592,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 04:40';
+const BUILD = '2026-10-04 05:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24173,7 +24173,7 @@ function editarTrecho(id){
     titulo: id ? 'Editar Trecho' : 'Novo Trecho', largura:'larga',
     corpo:`<div class="tr-leitor" id="trLeitor">
       <svg><use href="#i-imagem"/></svg>
-      <div class="tr-leitor-txt"><b>Preencher pelos prints</b><span>Anexe as telas da companhia (busca, resumo, pagamento). A Torre lê, compara dinheiro e milhas e mostra tudo antes de preencher.</span></div>
+      <div class="tr-leitor-txt"><b>Preencher pelos prints</b><span>Anexe as telas da companhia (busca, resumo, pagamento). A Torre lê no seu navegador, sem custo, compara dinheiro e milhas e mostra tudo antes de preencher.</span></div>
       <label class="bt primario tr-leitor-bt"><svg><use href="#i-faisca"/></svg>Anexar prints<input type="file" id="trPrints" accept="image/*" multiple hidden></label>
     </div>
     <div class="grade tr-grade">
@@ -24334,6 +24334,97 @@ function programaPorNome(v){
   if (PROG_IDS.includes(t)) return t;
   return PROG_IDS.find(k => semAcento(prog(k).n).includes(t) || t.includes(semAcento(prog(k).n).split(' ')[0])) || '';
 }
+/* ── LEITOR GRATUITO ──────────────────────────────────────────────────────────
+   A leitura dos prints roda no próprio navegador, sem API e sem custo: um
+   leitor de texto (Tesseract.js, código aberto) transforma cada tela em texto,
+   e as regras abaixo encontram o que interessa nas telas das companhias. O
+   leitor é baixado uma vez (uns 4 MB) e fica no cache do navegador. Nada sai
+   do computador. */
+const OCR_SCRIPT = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let _ocrWorker = null;
+async function prepararLeitorOCR(aoProgresso){
+  if (_ocrWorker) return _ocrWorker;
+  if (!window.Tesseract){
+    await new Promise((ok, err) => { const sc = document.createElement('script'); sc.src = OCR_SCRIPT; sc.onload = ok;
+      sc.onerror = () => err(new Error('Não deu para baixar o leitor de prints. Confira a internet e tente de novo.')); document.head.appendChild(sc); });
+  }
+  _ocrWorker = await window.Tesseract.createWorker('por', 1, {logger:m => { if (aoProgresso && m && typeof m.progress === 'number') aoProgresso(m); }});
+  return _ocrWorker;
+}
+const CIAS_PROG = [[/\bazul\b/i, 'Azul', 'azul'], [/\bgol\b|smiles/i, 'GOL', 'smiles'], [/latam/i, 'LATAM', 'latampass'], [/\btap\b|miles&go/i, 'TAP', 'tap'],
+  [/iberia/i, 'Iberia', 'iberia'], [/\bcopa\b|connectmiles/i, 'Copa', 'connect'], [/air france|klm|flying blue/i, 'Air France-KLM', 'flyingblue'], [/avianca|lifemiles/i, 'Avianca', 'lifemiles']];
+/* Lê o texto de todas as telas e devolve os mesmos campos que a revisão usa. */
+function interpretarTextosPrints(textos){
+  const tudo = textos.join('\n');
+  const d = {voos:[], avisos:[]};
+  /* rota: o primeiro "AAA > BBB" do cabeçalho; conexões são os outros aeroportos entre parênteses */
+  const par = tudo.match(/\b([A-Z]{3})\s*[-–>→€<«»]+\s*([A-Z]{3})\b/);
+  if (par){ d.origem = par[1]; d.destino = par[2]; }
+  const entreParenteses = [...tudo.matchAll(/\(([A-Z]{3})\)/g)].map(m => m[1]);
+  const escalas = [...new Set(entreParenteses.filter(c => c !== d.origem && c !== d.destino))];
+  /* data: dd/mm/aaaa, ou dd/mm/aa */
+  let dm = tudo.match(/\b(\d{2})\/(\d{2})\/(20\d{2})\b/) || tudo.match(/\b(\d{2})\/(\d{2})\/(\d{2})\b/);
+  if (dm){ const ano = dm[3].length === 2 ? '20' + dm[3] : dm[3]; d.data = `${ano}-${dm[2]}-${dm[1]}`; }
+  /* voos e companhia */
+  const numerosVoo = [...new Set([...tudo.matchAll(/\bVoo\s*(\d{3,4})\b/gi)].map(m => m[1]))];
+  const contagem = CIAS_PROG.map(([re, nome, pg]) => ({nome, pg, n:(tudo.match(new RegExp(re.source, 'gi')) || []).length})).sort((a, b) => b.n - a.n);
+  const cia = contagem[0] && contagem[0].n ? contagem[0] : null;
+  if (cia) d.cia = cia.nome;
+  const rota = [d.origem].concat(escalas).concat([d.destino]).filter(Boolean);
+  for (let i = 0; i < rota.length - 1; i++) d.voos.push({origem:rota[i], destino:rota[i + 1], voo:numerosVoo[i] || '', cia:d.cia || ''});
+  const pax = tudo.match(/(\d+)\s*passageiros?/i); if (pax) d.passageiros = Number(pax[1]);
+  /* cada tela é de um tipo: pagamento, milhas ou dinheiro */
+  textos.forEach(t => {
+    const pontos = [...t.matchAll(/(\d{1,3}(?:\.\d{3})+)\s*(?:pontos|pts|milhas)\b/gi)].map(m => numBR(m[1]));
+    const reais = (re) => { const m = t.match(re); return m ? numBR(m[1]) : null; };
+    const ehPagamento = /pagamento|parcelamento|finalizar/i.test(t) && /(VISA|MASTER|ELO|AMEX|\*{3,}|Venc\.)/i.test(t);
+    if (ehPagamento){
+      const pg = {};
+      const totalPts = t.match(/Total[^\n]*?\n?[^\n]*?(\d{1,3}(?:\.\d{3})+)\s*pontos/i) || t.match(/(\d{1,3}(?:\.\d{3})+)\s*pontos/i);
+      if (totalPts) pg.pontos = numBR(totalPts[1]);
+      const din = t.match(/pontos[^\n]*\n?[^\n]*?\+\s*R\$\s*([\d.]+,\d{2})/i) || t.match(/\+\s*R\$\s*([\d.]+,\d{2})/);
+      if (din) pg.dinheiro = numBR(din[1]);
+      pg.forma = pg.pontos ? 'milhas' : 'dinheiro';
+      const cart = t.match(/(?:VISA|MASTERCARD|ELO|AMEX|\*{3,})\s*(\d{4})\b/i); if (cart) pg.cartao_final = cart[1];
+      const parc = t.match(/R\$\s*[\d.]+,\d{2}\s*\+\s*(\d{1,2})\s*[xX]/); const parc2 = t.match(/(\d{1,2})\s*[xX]\s*(?:de\s*)?R\$/);
+      if (parc) pg.parcelas = Number(parc[1]) + 1; else if (parc2) pg.parcelas = Number(parc2[1]);
+      const desc = t.match(/desconto de\s*(\d+)\s*%/i); if (desc) pg.obs = `desconto de ${desc[1]}%`;
+      d.pagamento = pg;
+      return;
+    }
+    if (pontos.length){
+      const mi = d.milhas || {};
+      /* o total é o valor de pontos que mais aparece na tela (o riscado não tem ponto de milhar e fica de fora) */
+      const freq = {}; pontos.forEach(p => freq[p] = (freq[p] || 0) + 1);
+      const total = Number(Object.keys(freq).sort((a, b) => freq[b] - freq[a] || b - a)[0]);
+      mi.pontos = mi.pontos || total;
+      const tx = reais(/Taxas e impostos\s*R\$\s*([\d.]+,\d{2})/i) || reais(/(?:pontos|pts)\s*\n?\s*\+\s*R\$\s*([\d.]+,\d{2})/i);
+      const txTot = reais(/Total a pagar[^\n]*\n?[^\n]*?\+\s*R\$\s*([\d.]+,\d{2})/i) || reais(/Total\s*\d+\s*passageiros[\s\S]{0,80}?\+\s*R\$\s*([\d.]+,\d{2})/i);
+      mi.taxas = Math.max(mi.taxas || 0, tx || 0, txTot || 0) || undefined;
+      if (cia) mi.programa = cia.pg;
+      d.milhas = mi;
+    } else {
+      const total = reais(/Total a pagar\s*R\$\s*([\d.]+,\d{2})/i) || reais(/Total\s*\d+\s*passageiros[\s\S]{0,40}?R\$\s*([\d.]+,\d{2})/i);
+      if (total){
+        const dn = d.dinheiro || {};
+        dn.total = Math.max(dn.total || 0, total);
+        const tar = reais(/Pre[çc]o da Tarifa\s*R\$\s*([\d.]+,\d{2})/i); if (tar) dn.tarifa = tar;
+        const tx = reais(/Taxas e impostos\s*R\$\s*([\d.]+,\d{2})/i); if (tx) dn.taxas = tx;
+        d.dinheiro = dn;
+      }
+    }
+  });
+  if (/cortesia/i.test(tudo)){
+    d.avisos.push('Uma das passagens é cortesia: o preço mostrado vale para os pagantes.');
+    if (d.dinheiro) d.dinheiro.obs = 'com passagem cortesia';
+    if (d.milhas) d.milhas.obs = 'com passagem cortesia';
+  }
+  if (d.pagamento && d.milhas && d.pagamento.pontos && Math.abs(d.pagamento.pontos - d.milhas.pontos) > d.milhas.pontos * 0.02)
+    d.avisos.push(`A tela de pagamento mostra ${nBR(d.pagamento.pontos)} pontos${d.pagamento.dinheiro ? ' + ' + brl(d.pagamento.dinheiro) : ''}, diferente da busca (${nBR(d.milhas.pontos)} pontos). Confira se a compra incluiu outro trecho.`);
+  d.avisos.push('Leitura feita no seu navegador, sem custo. Confira os números antes de preencher.');
+  return d;
+}
+
 async function lerPrintsTrecho(arquivos){
   const lista = [...arquivos].filter(f => f.type && f.type.startsWith('image/')).slice(0, 8);
   if (!lista.length){ avisar('Escolha imagens (PNG, JPG ou WEBP).', 'alerta'); return; }
@@ -24342,31 +24433,39 @@ async function lerPrintsTrecho(arquivos){
   abrirFolha({titulo:'Leitura dos prints', largura:'larga', tipo:'formulario',
     corpo:`<div id="lpCorpo"></div>`,
     pe:`<button class="bt fantasma" onclick="fecharLeituraPrints()">Fechar</button><button class="bt primario" id="btLpOk" disabled>Preencher o formulário</button>`});
-  const passos = ['Abrindo as imagens', 'Lendo voos, datas e valores', 'Comparando dinheiro e milhas', 'Montando o preenchimento'];
+  const passos = ['Preparando o leitor', 'Lendo voos, datas e valores', 'Comparando dinheiro e milhas', 'Montando o preenchimento'];
   /* As etapas acendem quando acontecem de verdade. A leitura pela IA é a parte
      longa (com várias imagens, costuma levar de 20 a 60 segundos), e um
      cronômetro mostra que ela está andando. */
   const desenharEspera = (i, urls) => { if (!$('#lpCorpo')) return; $('#lpCorpo').innerHTML = `<div class="lp-espera">
       <div class="lp-miniaturas">${(urls || lista.map(() => '')).map(u => `<div class="lp-mini${u ? '' : ' vazia'}">${u ? `<img src="${u}" alt="">` : ''}<span class="lp-varredura"></span></div>`).join('')}</div>
       <div class="lp-passos">${passos.map((p, k) => `<div class="${k < i ? 'feito' : k === i ? 'agora' : ''}"><span class="lp-bola">${k < i ? '<svg><use href="#i-ok"/></svg>' : ''}</span>${p}${k === 1 && i === 1 ? ' <span class="lp-tempo" id="lpTempo">0 s</span>' : ''}</div>`).join('')}
-        ${i === 1 ? `<div class="lp-dica">Com ${lista.length} ${lista.length === 1 ? 'imagem' : 'imagens'}, a leitura costuma levar de 20 a 60 segundos.</div>` : ''}</div>
+        ${i === 0 ? `<div class="lp-dica">Na primeira vez, o leitor é baixado (uns 4 MB). Depois fica guardado no navegador.</div>` : ''}
+        ${i === 1 ? `<div class="lp-dica" id="lpQual">Lendo a imagem 1 de ${lista.length}. Tudo acontece no seu navegador, sem custo.</div>` : ''}</div>
     </div>`; };
   desenharEspera(0);
   let cron = null;
   try{
-    _leitura.imagens = await Promise.all(lista.map(arquivoParaImagemIA));
+    _leitura.imagens = await Promise.all(lista.map(async f => ({url:await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = err; fr.readAsDataURL(f); })})));
+    desenharEspera(0, _leitura.imagens.map(i => i.url));
+    const worker = await prepararLeitorOCR();
+    if (!_leitura) return;
     desenharEspera(1, _leitura.imagens.map(i => i.url));
     const t0 = Date.now();
     cron = setInterval(() => { const e = $('#lpTempo'); if (e) e.textContent = `${Math.round((Date.now() - t0) / 1000)} s`; else clearInterval(cron); }, 1000);
-    const prompt = `São ${lista.length} imagem(ns) da mesma compra. Hoje é ${hojeISO()}. Responda só o JSON.`;
-    const bruto = await chamarIAComImagens(_leitura.imagens, prompt, SISTEMA_TRECHO.replace('PROGRAMAS_VALIDOS', PROG_IDS.filter(k => prog(k).tipo === 'milhas').join(', ')));
+    const textos = [];
+    for (let k = 0; k < lista.length; k++){
+      if ($('#lpQual')) $('#lpQual').textContent = `Lendo a imagem ${k + 1} de ${lista.length}. Tudo acontece no seu navegador, sem custo.`;
+      const {data} = await worker.recognize(lista[k]);
+      textos.push(data.text || '');
+      if (!_leitura) return;
+    }
     clearInterval(cron);
-    if (!_leitura) return;
     desenharEspera(2, _leitura.imagens.map(i => i.url));
+    const d = interpretarTextosPrints(textos);
+    _leitura.textos = textos;
     await new Promise(ok => setTimeout(ok, 250));
     desenharEspera(3, _leitura.imagens.map(i => i.url));
-    let d; try{ d = JSON.parse(bruto.replace(/```json|```/g, '').trim()); }
-    catch(e){ throw new Error('A leitura não veio num formato que a Torre entenda. Tente de novo, ou com menos imagens.'); }
     _leitura.dados = d;
     desenharRevisaoPrints();
   }catch(e){
