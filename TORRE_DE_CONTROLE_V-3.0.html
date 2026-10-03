@@ -6486,6 +6486,8 @@ body.folha-aberta{
 
 /* ── avisos flutuantes ────────────────────────────────────────────────────── */
 .campo.erro-campo input, .campo.erro-campo select{ border-color:var(--brasa) !important; box-shadow:0 0 0 3px color-mix(in oklab, var(--brasa) 20%, transparent); }
+.cort-calc{ margin-top:6px; font-size:calc(12.5px * var(--esc)); line-height:1.4; color:var(--grafite); }
+.cort-calc b{ font-family:var(--f-m); color:var(--jade); }
 .erro-msg{ margin-top:6px; font-size:calc(12.5px * var(--esc)); line-height:1.4; color:var(--brasa); }
 .avisos{ position:fixed; bottom:20px; right:20px; z-index:1400; display:flex; flex-direction:column; gap:9px; pointer-events:none; max-width:min(400px,calc(100vw - 40px)); }
 .aviso{
@@ -8657,7 +8659,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 13:30';
+const BUILD = '2026-10-04 14:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24205,12 +24207,32 @@ function economiaMercado(t){
   if (c == null || cu == null) return null;
   return {valor:Number(m.preco) - c - cu, cia:m.cia || '', preco:Number(m.preco), cabine:voouCab};
 }
-const cortesiaTrecho = t => (Number(t.cortesiaQtd) || 0) * (Number(t.cortesiaValor) || 0);
+/* Quanto a cortesia cobriu. Se o valor por pessoa foi informado (a tarifa do
+   resumo da compra), vale ele. Se não, a Torre calcula pelo que os pagantes
+   pagaram: a passagem cortesia é igual à deles. Em milhas, as milhas por
+   pagante ao milheiro do trecho; em dinheiro, o valor por pagante. As taxas
+   ficam de fora, porque elas foram cobradas também da cortesia. */
+const planoDoTrecho = t => (DB.planos || []).find(p => trechosDe(p).includes(t)) || null;
+function cortesiaCalculada(t, paxInformado){
+  const qtd = Number(t.cortesiaQtd) || 0; if (!qtd) return 0;
+  const p = planoDoTrecho(t);
+  const pax = Number(paxInformado) || Number(p && p.pax) || (qtd + 1);
+  const pagantes = Math.max(1, pax - qtd);
+  let porPessoa = 0;
+  if (t.forma !== 'dinheiro'){
+    const mil = milheiroDaBase(t.baseMilheiro || 'custo', t.prog, t.milheiroOutro);
+    if (mil != null) porPessoa += (Number(t.milhas) || 0) / pagantes / 1000 * mil;
+  }
+  if (t.forma !== 'milhas') porPessoa += (Number(t.pago) || 0) / pagantes;
+  return qtd * porPessoa;
+}
+const cortesiaTrecho = t => (Number(t.cortesiaValor) || 0) > 0 ? (Number(t.cortesiaQtd) || 0) * Number(t.cortesiaValor) : cortesiaCalculada(t);
 function economiaTrechoBase(t){
   const e = economiaTrechoCompra(t);
   const c = cortesiaTrecho(t);
   if (!c || e.valor == null) return e;
-  return {valor:e.valor + c, nota:`${e.nota} + cortesia ${brl(c)}`, cortesia:c};
+  const como = {meta_cartao:'meta do cartão', beneficio_cartao:'benefício do cartão', companhia:'promoção da companhia'}[t.cortesiaOrigem] || '';
+  return {valor:e.valor + c, nota:`${e.nota} + cortesia${como ? ' (' + como + ')' : ''} ${brl(c)}`, cortesia:c};
 }
 function economiaTrechoCompra(t){
   const pago = Number(t.pago) || 0, taxas = Number(t.taxas) || 0, vista = Number(t.vista) || 0;
@@ -24633,7 +24655,9 @@ function editarTrecho(id){
       ${campoParcelas('trParcelas', t.parcelas || 1)}
       <div class="campo"><label>Data da compra</label><input type="date" id="trDataCompra" value="${t.dataCompra || ''}"></div>
       <div class="campo"><label>Passagens cortesia</label><select id="trCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === (Number(t.cortesiaQtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
-      <div class="campo tr-cort"><label>Tarifa coberta por pessoa (R$)</label><input type="text" inputmode="decimal" data-moeda id="trCortValor" value="${moedaTxt(t.cortesiaValor || 0)}"></div>
+      <div class="campo tr-cort"><label>Como veio a cortesia</label><select id="trCortOrigem" data-ordem="natural">${[['meta_cartao', 'Meta do cartão'], ['beneficio_cartao', 'Benefício do cartão'], ['companhia', 'Promoção da companhia'], ['outro', 'Outro']].map(([k, v]) => `<option value="${k}"${k === (t.cortesiaOrigem || 'meta_cartao') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="campo tr-cort"><label>Tarifa coberta por pessoa (R$), opcional</label><input type="text" inputmode="decimal" data-moeda id="trCortValor" value="${moedaTxt(t.cortesiaValor || 0)}">
+        <div class="cort-calc" id="trCortCalc"></div></div>
       <div class="campo"><label>Milhas valem</label><select id="trBase" data-ordem="natural"></select></div>
       <div class="campo tr-outro"><label>Cotação (R$ por mil)</label><input type="text" inputmode="decimal" data-moeda id="trOutro" value="${moedaTxt(t.milheiroOutro || 0)}"></div>
       <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"></div>
@@ -24687,8 +24711,25 @@ function editarTrecho(id){
   ligarCampoMoeda('#trCortValor');
   const verCartao = () => { const tem = !!$('#trCartao').value; $('#trParcelas').disabled = !tem; $$('.parc-bt[data-parc="trParcelas"]').forEach(b => b.disabled = !tem); if (!tem) $('#trParcelas').value = 1; };
   $('#trCartao').addEventListener('change', verCartao); verCartao();
-  const verCort = () => $$('.tr-cort').forEach(e => e.style.display = Number($('#trCortQtd').value) > 0 ? '' : 'none');
-  $('#trCortQtd').addEventListener('change', verCort); verCort();
+  /* Com o valor em branco, a Torre mostra o que vai usar: o que a cortesia
+     cobriu, calculado pelo que os pagantes pagaram. */
+  const verCort = () => {
+    $$('.tr-cort').forEach(e => e.style.display = Number($('#trCortQtd').value) > 0 ? '' : 'none');
+    const qtd = Number($('#trCortQtd').value) || 0; const alvo = $('#trCortCalc'); if (!alvo) return;
+    if (!qtd){ alvo.innerHTML = ''; return; }
+    const f = $('#trForma').value;
+    const sim = {forma:f, cortesiaQtd:qtd, milhas:rgNum($('#trMilhas').value), pago:moedaNum($('#trPago').value), prog:$('#trProg').value,
+      baseMilheiro:$('#trBase').value || 'custo', milheiroOutro:moedaNum($('#trOutro').value)};
+    const v = moedaNum($('#trCortValor').value);
+    const pax = Number(p.pax) || 1, pagantes = Math.max(1, pax - qtd);
+    if (v > 0){ alvo.innerHTML = `Usando o valor informado: ${qtd} × ${brl(v)} = <b>${brl(qtd * v)}</b>`; return; }
+    const calc = cortesiaCalculada(sim, pax);
+    const comoMilhas = f !== 'dinheiro' && sim.milhas ? `${nBR(Math.round(sim.milhas / pagantes))} milhas por pessoa` : '';
+    const comoDin = f !== 'milhas' && sim.pago ? `${brl(sim.pago / pagantes)} por pessoa` : '';
+    alvo.innerHTML = calc > 0 ? `Em branco, a Torre calcula pelo que ${pagantes === 1 ? 'o pagante pagou' : 'os pagantes pagaram'} (${[comoMilhas, comoDin].filter(Boolean).join(' + ')}): <b>${brl(calc)}</b>` : 'Em branco, a Torre calcula pelo que os pagantes pagaram.';
+  };
+  ['#trCortQtd', '#trCortValor', '#trMilhas', '#trPago', '#trForma', '#trProg', '#trBase', '#trOutro'].forEach(sel => { const e = $(sel); if (e){ e.addEventListener('change', verCort); e.addEventListener('input', verCort); } });
+  verCort();
   $('#trForma').onchange = () => { aplicar(); montarBase(); }; $('#trSemAlt').onchange = aplicar; aplicar(); montarBase();
   ligarCampoMoeda('#trOutro');
   $('#btSalvarTrecho').onclick = () => {
@@ -24700,13 +24741,14 @@ function editarTrecho(id){
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
       cartaoId:$('#trCartao').value, parcelas:$('#trCartao').value ? (Number($('#trParcelas').value) || 1) : 1, dataCompra:$('#trDataCompra').value,
       cortesiaQtd:Number($('#trCortQtd').value) || 0, cortesiaValor:Number($('#trCortQtd').value) ? moedaNum($('#trCortValor').value) : 0,
+      cortesiaOrigem:Number($('#trCortQtd').value) ? $('#trCortOrigem').value : '',
       baseMilheiro:$('#trBase').value, milheiroOutro:$('#trBase').value === 'outro' ? moedaNum($('#trOutro').value) : 0,
       altMilhas:f === 'dinheiro' && !$('#trSemAlt').checked ? rgNum($('#trAltMilhas').value) : 0, altProg:$('#trAltProg').value,
       altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
     if (!novo.origem){ erroNoCampo('#trOri', 'Informe a origem do trecho.'); return; }
     if (!novo.destino){ erroNoCampo('#trDes', 'Informe o destino do trecho.'); return; }
     if (novo.cartaoId && !novo.dataCompra){ erroNoCampo('#trDataCompra', 'Informe a data da compra: é dela que a Torre conta as parcelas na fatura do cartão.'); return; }
-    if (novo.cortesiaQtd && !(novo.cortesiaValor > 0)){ erroNoCampo('#trCortValor', 'Com passagem cortesia, informe quanto a tarifa dela custaria, por pessoa (o "Preço da Tarifa" do resumo da compra). Se não houve cortesia, escolha "Nenhuma".'); return; }
+    if (novo.cortesiaQtd && (Number(p.pax) || 1) <= novo.cortesiaQtd){ erroNoCampo('#trCortQtd', `A jornada tem ${Number(p.pax) || 1} ${(Number(p.pax) || 1) === 1 ? 'viajante' : 'viajantes'}: alguém precisa ter pago. Confira o número de cortesias ou os viajantes da jornada.`); return; }
     if (novo.baseMilheiro === 'outro'){
       const pgC = f === 'dinheiro' ? novo.altProg : novo.prog, custoR = milheiroDaBase('custo', pgC);
       if (!(novo.milheiroOutro > 0)){ erroNoCampo('#trOutro', 'Informe o valor de cotação: quanto vale cada mil milhas.'); return; }
