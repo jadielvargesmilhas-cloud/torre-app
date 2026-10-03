@@ -8532,7 +8532,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 00:10';
+const BUILD = '2026-10-04 00:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24245,7 +24245,8 @@ function renderListaRoteiros(){
     const demo = {porEt:Object.fromEntries(ROTA_ETAPAS.map((e, i) => [e.k, {total:4, feitos:Math.max(0, 4 - i)}]))};
     host.innerHTML = `<div class="vazio rt-vazio" style="padding:34px">${trilhoRota(demo, false)}
       <h4>Nenhuma jornada${nomeLado ? ' ' + nomeLado : ''}</h4>
-      <p>Cada viagem é uma jornada pelo Método ROTA: Rumo, Otimização, Timing e Ação levam à Viagem planejada, à Emissão realizada e à Mensuração da economia. Quando a lista fecha, a viagem está pronta.</p>
+      <p>Cada viagem é uma jornada pelo Método ROTA: Rumo, Otimização, Timing e Ação levam à Viagem planejada, à Emissão realizada e à Mensuração da economia.</p>
+      <p>Quando a lista fecha, a viagem está pronta.</p>
       <div class="linha" style="justify-content:center;gap:9px">
         <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Nova Jornada</button>
         <button class="bt fantasma" onclick="abrirCompositor()"><svg><use href="#i-faisca"/></svg>Compor com IA</button>
@@ -24823,23 +24824,52 @@ function emendaEm(iso){
 /* ── a folha ──────────────────────────────────────────────────────────────── */
 let _cal = {de:'', ate:'', mes:null, aoConfirmar:null, titulo:''};
 
+/* O calendário abre por cima de um formulário (a jornada, o roteiro). A folha
+   do sistema é uma só: abrir o calendário nela apagava o formulário, e ao
+   confirmar a pessoa voltava para a página sem nada do que tinha digitado.
+   Agora o formulário é guardado inteiro (os próprios elementos, com o que foi
+   digitado e os seus ouvintes) e devolvido ao fechar ou confirmar. */
+function guardarFolhaAberta(){
+  if (!$('#veu').classList.contains('aberto')) return null;
+  const corpo = $('#folhaCorpo'), pe = $('#folhaPe'), f = $('#folha');
+  const g = {tit:$('#folhaTit').innerHTML, classe:f.className, maxW:f.style.maxWidth, minH:corpo.style.minHeight,
+    rolagem:corpo.scrollTop, conf:folhaAoConfirmar, corpo:document.createDocumentFragment(), pe:document.createDocumentFragment()};
+  while (corpo.firstChild) g.corpo.appendChild(corpo.firstChild);
+  while (pe.firstChild) g.pe.appendChild(pe.firstChild);
+  return g;
+}
+function devolverFolhaGuardada(g){
+  const corpo = $('#folhaCorpo'), pe = $('#folhaPe'), f = $('#folha');
+  $('#folhaTit').innerHTML = g.tit;
+  corpo.innerHTML = ''; corpo.appendChild(g.corpo);
+  pe.innerHTML = ''; pe.appendChild(g.pe);
+  f.className = g.classe; f.style.maxWidth = g.maxW; corpo.style.minHeight = g.minH;
+  folhaAoConfirmar = g.conf;
+  requestAnimationFrame(() => { corpo.scrollTop = g.rolagem; });
+}
+function fecharCalendario(){
+  const pai = _cal && _cal.pai;
+  if (pai) devolverFolhaGuardada(pai); else fecharFolha();
+}
+
 function abrirCalendario({de, ate, titulo, aoConfirmar}){
+  const pai = guardarFolhaAberta();
   _cal = {de:de || '', ate:ate || '', aoConfirmar, titulo:titulo || 'Ida e volta',
-          mes:dISOplano(de || hojeISO())};
+          mes:dISOplano(de || hojeISO()), pai};
   _cal.mes.setDate(1);
   abrirFolha({
     titulo:_cal.titulo, largura:'larga', tipo:'formulario',
     corpo:`<div id="calCorpo"></div>`,
     pe:`<div id="calResumo" class="cl-resumo"></div><div class="esticar"></div>
-        <button class="bt fantasma" onclick="fecharFolha()">Cancelar</button>
+        <button class="bt fantasma" onclick="fecharCalendario()">Cancelar</button>
         <button class="bt primario" id="btCalOk">Confirmar</button>`
   });
   desenharCalendario();
   $('#btCalOk').onclick = () => {
     if (!_cal.de){ avisar('Escolha ao menos a data de ida.', 'alerta'); return; }
-    const fn = _cal.aoConfirmar;
-    fecharFolha();
-    if (fn) fn(_cal.de, _cal.ate || _cal.de);
+    const fn = _cal.aoConfirmar, de = _cal.de, ate = _cal.ate || _cal.de;
+    fecharCalendario();
+    if (fn) fn(de, ate);
   };
 }
 
@@ -24981,7 +25011,10 @@ function ligarPeriodo(idDe, idAte, rot){
   };
   $('#bt-' + idDe).onclick = () => abrirCalendario({
     de:$('#' + idDe).value, ate:$('#' + idAte).value, titulo:rot,
-    aoConfirmar:(de, ate) => { $('#' + idDe).value = de; $('#' + idAte).value = ate; pintar(); }
+    aoConfirmar:(de, ate) => {
+      $('#' + idDe).value = de; $('#' + idAte).value = ate; pintar();
+      $('#' + idDe).dispatchEvent(new Event('change', {bubbles:true}));
+    }
   });
   pintar();
 }
