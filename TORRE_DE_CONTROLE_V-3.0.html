@@ -3576,6 +3576,19 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 @media (max-width:900px){ .tr-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){ .tr-grade{ grid-template-columns:1fr; } }
 .rt-sit{ cursor:pointer; border:0; font:inherit; }
+.mk-linha{ display:flex; flex-direction:column; gap:10px; padding:14px 0; border-top:1px solid var(--fio-suave); }
+.mk-topo{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.mk-bts{ display:flex; gap:8px; flex-wrap:wrap; }
+.mk-campos{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px 12px; }
+.mk-campos .campo{ margin:0; }
+@media (max-width:560px){ .mk-campos{ grid-template-columns:1fr; } }
+.mk-cab{ display:flex; flex-direction:column; gap:2px; } .mk-cab b{ color:var(--giz); font-size:calc(15px * var(--esc)); } .mk-cab span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.mk-ofertas{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.mk-oferta{ border:1px solid var(--fio); background:none; border-radius:99px; padding:4px 10px; cursor:pointer; font:inherit; font-size:calc(12.5px * var(--esc)); color:var(--giz-2); }
+.mk-oferta.on{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 12%, transparent); }
+.mk-oferta b{ font-family:var(--f-m); }
+.mk-dif{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); margin-top:3px; white-space:nowrap; }
+.mk-dif b{ font-family:var(--f-m); } .mk-dif b.jade{ color:var(--jade); } .mk-dif b.brasa{ color:var(--brasa); }
 .lu-grade{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
 @media (max-width:700px){ .lu-grade{ grid-template-columns:1fr; } }
 .lu-confere{ display:flex; flex-direction:column; gap:8px; font-size:calc(13.5px * var(--esc)); }
@@ -8642,7 +8655,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 09:40';
+const BUILD = '2026-10-04 11:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24112,7 +24125,38 @@ function economiaTrecho(t){
   if (c == null || cu == null) return {valor:null, nota:'Sem custo lançado no programa'};
   return {valor:vistaUp - c - cu, nota:`${CABINES_TRECHO[t.upgrade.cabine] || 'Upgrade'}, com upgrade`};
 }
+/* Cortesia: passagem dada pelo benefício do cartão. Os preços das telas já vêm
+   com ela descontada (paga-se uma, voam duas), então a economia da compra não
+   a enxerga. O valor da tarifa que a cortesia cobriu entra como economia à
+   parte, somada à da compra. No upgrade, o preço da nova cabine é informado
+   cheio, para todos os passageiros, e a cortesia já está dentro da conta. */
+/* MERCADO. Além do mesmo voo, cada trecho pode guardar a opção mais barata do
+   mercado (outra companhia), na econômica e na executiva, pesquisada no Google
+   Flights. O Google não tem API pública de preços, então a Torre não busca
+   sozinha: ela abre a pesquisa já preenchida (rota, data, cabine e
+   passageiros), e o resultado volta por print, lido no navegador. A economia
+   contra o mercado é o preço da opção mais barata menos o que a viagem custou
+   (compra mais upgrade). */
+function linkGoogleFlights(t, cabine, pax){
+  const partes = [`Flights from ${t.origem} to ${t.destino} on ${t.data}`, 'one way', cabine === 'executiva' ? 'business class' : cabine === 'primeira' ? 'first class' : '', `${pax || 1} adults`].filter(Boolean);
+  return 'https://www.google.com/travel/flights?q=' + encodeURIComponent(partes.join(' ')).replace(/%20/g, '+') + '&hl=pt-BR&gl=BR&curr=BRL';
+}
+function economiaMercado(t){
+  const voouCab = t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica');
+  const m = (t.mercado || {})[voouCab === 'economica' ? 'economica' : 'executiva'];
+  if (!m || !(Number(m.preco) > 0)) return null;
+  const c = custoTrechoReais(t), cu = t.upgrade ? custoUpgradeReais(t) : 0;
+  if (c == null || cu == null) return null;
+  return {valor:Number(m.preco) - c - cu, cia:m.cia || '', preco:Number(m.preco), cabine:voouCab};
+}
+const cortesiaTrecho = t => (Number(t.cortesiaQtd) || 0) * (Number(t.cortesiaValor) || 0);
 function economiaTrechoBase(t){
+  const e = economiaTrechoCompra(t);
+  const c = cortesiaTrecho(t);
+  if (!c || e.valor == null) return e;
+  return {valor:e.valor + c, nota:`${e.nota} + cortesia ${brl(c)}`, cortesia:c};
+}
+function economiaTrechoCompra(t){
   const pago = Number(t.pago) || 0, taxas = Number(t.taxas) || 0, vista = Number(t.vista) || 0;
   if (t.forma === 'dinheiro'){
     if (t.semAlt) return {valor:0, nota:'Sem opção em milhas'};
@@ -24237,9 +24281,11 @@ function renderTrechos(p){
           : `<span class="etq aco">${esc(prog(t.prog).n)}</span> ${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}`}</td>
         <td class="c" data-r="Situação"><button type="button" class="etq ${sit === 'voado' ? 'jade' : sit === 'emitido' ? 'ouro' : ''} rt-sit" onclick="avancarTrecho('${t.id}')" data-dica="Tocar para avançar a situação">${SITUACOES_TRECHO[sit]}</button></td>
         <td class="n" data-r="Economia">${e.valor == null ? `<span class="fraco" data-dica="${esc(e.nota)}">—</span>` : `<span class="${e.valor >= 0 ? 'jade' : 'brasa'}">${e.valor >= 0 ? '' : '−'}${brl(Math.abs(e.valor))}</span><div class="fraco" style="font-size:calc(11.5px * var(--esc))">${esc(e.nota)}</div>`}
-          ${t.upgrade ? (eb => eb.valor != null ? `<div class="up-antes">antes ${eb.valor >= 0 ? '' : '−'}${brl(Math.abs(eb.valor))}</div>` : '')(economiaTrechoBase(t)) : ''}</td>
+          ${t.upgrade ? (eb => eb.valor != null ? `<div class="up-antes">antes ${eb.valor >= 0 ? '' : '−'}${brl(Math.abs(eb.valor))}</div>` : '')(economiaTrechoBase(t)) : ''}
+          ${(em => em ? `<div class="mk-dif">contra ${esc(em.cia || 'o mercado')} ${brl(em.preco)}: <b class="${em.valor >= 0 ? 'jade' : 'brasa'}">${em.valor >= 0 ? '' : '−'}${brl(Math.abs(em.valor))}</b></div>` : '')(economiaMercado(t))}</td>
         <td><div class="acoes-cel">
           ${t.forma !== 'dinheiro' && !t.reservaId ? `<button class="bt p fantasma" onclick="registrarTrecho('${t.id}')" data-dica="Lança a emissão no Diário e desconta as milhas do saldo">Lançar no Diário</button>` : ''}
+          <button class="bt p fantasma icone${t.mercado && Object.keys(t.mercado).length ? ' up-feito' : ''}" onclick="editarMercado('${t.id}')" data-dica="Comparar com a opção mais barata do mercado" aria-label="Mercado"><svg><use href="#i-busca"/></svg></button>
           <button class="bt p fantasma icone${t.upgrade ? ' up-feito' : ''}" onclick="editarUpgrade('${t.id}')" data-dica="${t.upgrade ? 'Ver ou mudar o upgrade' : 'Registrar upgrade de cabine'}" aria-label="Upgrade"><svg><use href="#i-subir"/></svg></button>
           <button class="bt p fantasma icone" onclick="editarTrecho('${t.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
           <button class="bt p fantasma icone" onclick="apagarTrecho('${t.id}')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
@@ -24247,6 +24293,7 @@ function renderTrechos(p){
       <div class="rt-trechos-pe">
         ${Object.keys(porProg).map(k => `<span><b>${nBR(porProg[k])}</b> milhas ${esc(prog(k).n)}</span>`).join('')}
         ${dinheiro ? `<span><b>${brl(dinheiro)}</b> em dinheiro</span>` : ''}${taxas ? `<span><b>${brl(taxas)}</b> de taxas</span>` : ''}
+        ${(ms => ms.length ? `<span>Contra o mais barato do mercado <b class="${soma(ms.map(x => x.valor)) >= 0 ? 'jade' : 'brasa'}">${brl(soma(ms.map(x => x.valor)))}</b>${ms.length < ts.length ? ` <em class="fraco">(${ms.length} de ${ts.length} trechos)</em>` : ''}</span>` : '')(ts.map(economiaMercado).filter(Boolean))}
         <span class="esticar"></span><span>Economia da viagem <b class="${eco >= 0 ? 'jade' : 'brasa'}">${brl(eco)}</b>${comUp.length ? ` <em class="fraco">(antes dos upgrades ${brl(ecoAntes)})</em>` : ''}</span>
       </div>`
     : `<div class="vazio" style="border:0;padding:26px"><p>Nenhum trecho ainda. Lance cada voo: a ida, os internos e a volta, cada um com o que vai ser usado para pagar.</p></div>`}
@@ -24272,7 +24319,7 @@ function editarUpgrade(id){
       <div class="campo"><label>Nova cabine</label><select id="upPara" data-ordem="natural">${Object.entries(CABINES_TRECHO).map(([k, v]) => `<option value="${k}"${k === u.cabine ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Como veio</label><select id="upOrigem" data-ordem="natural">${Object.entries(ORIGENS_UPGRADE).map(([k, v]) => `<option value="${k}"${k === u.origem ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Data do upgrade</label><input type="date" id="upData" value="${u.data || hojeISO()}"></div>
-      <div class="campo"><label>Preço da nova cabine em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="upVista" value="${moedaTxt(u.vista || 0)}"></div>
+      <div class="campo"><label>Preço da nova cabine em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="upVista" value="${moedaTxt(u.vista || 0)}" data-dica="Para todos os passageiros, sem cortesia"></div>
       <div class="campo up-mi"><label>Milhas extras</label><input type="number" id="upMilhas" step="1000" value="${u.milhas || ''}"></div>
       <div class="campo up-mi"><label>Programa</label><select id="upProg">${progsMilhas.map(k => `<option value="${k}"${k === (u.prog || t.prog || t.altProg) ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
       <div class="campo up-di"><label>Dinheiro extra (R$)</label><input type="text" inputmode="decimal" data-moeda id="upDinheiro" value="${moedaTxt(u.dinheiro || 0)}"></div>
@@ -24412,6 +24459,69 @@ function desenharLeituraUpgrade(){
 }
 function fecharLeituraUpgrade(){ const pai = _leituraUp && _leituraUp.pai; _leituraUp = null; if (pai) devolverFolhaGuardada(pai); else fecharFolha(); }
 
+/* Janela do mercado: duas linhas, econômica e executiva. Cada uma abre a
+   pesquisa no Google Flights e recebe o resultado por print ou à mão. */
+function editarMercado(id){
+  const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
+  const m = t.mercado || {};
+  const pax = Number(p.pax) || 1;
+  const linha = (k, nome) => `<div class="mk-linha" data-cab="${k}">
+      <div class="mk-topo"><div class="mk-cab"><b>${nome}</b><span>${esc(rotuloTrecho(t))} · ${dataBR(t.data)} · ${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}</span></div>
+      <div class="mk-bts"><a class="bt p fantasma" href="${linkGoogleFlights(t, k, pax)}" target="_blank" rel="noopener"><svg><use href="#i-busca"/></svg>Abrir no Google Flights</a>
+      <label class="bt p fantasma" style="cursor:pointer"><svg><use href="#i-imagem"/></svg>Ler print<input type="file" accept="image/*" multiple hidden data-mk="${k}"></label></div></div>
+      <div class="mk-campos"><div class="campo"><label>Companhia</label><input type="text" id="mkCia_${k}" value="${esc((m[k] || {}).cia || '')}" placeholder="LATAM"></div>
+      <div class="campo"><label>Menor preço, todos os passageiros (R$)</label><input type="text" inputmode="decimal" data-moeda id="mkPreco_${k}" value="${moedaTxt((m[k] || {}).preco || 0)}"></div></div>
+      <div class="mk-lidos" id="mkLidos_${k}"></div>
+    </div>`;
+  abrirFolha({titulo:`Mercado · ${esc(rotuloTrecho(t))}`, largura:'larga',
+    corpo:`<div class="nota" style="margin:0 0 14px"><svg><use href="#i-info"/></svg><div class="pilha compacta">
+        <div>O Google Flights não oferece consulta automática de preços. O botão abre a pesquisa já montada (rota, data, cabine, passageiros, em reais).</div>
+        <div>Na página, tire um print da lista de voos e use <b>Ler print</b>: a Torre encontra a opção mais barata. Fonte: Google Flights, que reúne as companhias e agências.</div></div></div>
+      ${linha('economica', 'Econômica')}${linha('executiva', 'Executiva')}`,
+    pe:`<button class="bt fantasma" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarMk">Salvar</button>`});
+  ['economica', 'executiva'].forEach(k => ligarCampoMoeda('#mkPreco_' + k));
+  $$('input[data-mk]').forEach(inp => inp.onchange = async e => {
+    const k = inp.dataset.mk, fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return;
+    const alvo = $('#mkLidos_' + k);
+    alvo.innerHTML = `<div class="fraco" style="font-size:calc(13px * var(--esc))">Preparando o leitor e lendo ${fs.length} ${fs.length === 1 ? 'imagem' : 'imagens'}…</div>`;
+    try{
+      const w = await prepararLeitorOCR();
+      let txt = '';
+      for (const f of fs){ const {data} = await w.recognize(f); txt += '\n' + (data.text || ''); }
+      const ofertas = ofertasDoTexto(txt);
+      if (!$('#mkLidos_' + k)) return;
+      if (!ofertas.length){ alvo.innerHTML = `<div class="brasa" style="font-size:calc(13px * var(--esc))">Nenhum preço encontrado no print. Confira se a lista de voos aparece inteira, ou digite o valor.</div>`; return; }
+      const melhor = ofertas[0];
+      $('#mkCia_' + k).value = melhor.cia || ''; $('#mkPreco_' + k).value = moedaTxt(melhor.preco);
+      alvo.innerHTML = `<div class="mk-ofertas"><span>Lidas no print, da mais barata para a mais cara:</span>${ofertas.slice(0, 5).map((o, i) => `<button type="button" class="mk-oferta${i === 0 ? ' on' : ''}" data-cia="${esc(o.cia || '')}" data-preco="${o.preco}">${esc(o.cia || 'Companhia não lida')} · <b>${brl(o.preco)}</b></button>`).join('')}</div>`;
+      $$('.mk-oferta', alvo).forEach(b => b.onclick = () => { $$('.mk-oferta', alvo).forEach(x => x.classList.remove('on')); b.classList.add('on'); $('#mkCia_' + k).value = b.dataset.cia; $('#mkPreco_' + k).value = moedaTxt(Number(b.dataset.preco)); });
+    }catch(err){ if ($('#mkLidos_' + k)) alvo.innerHTML = `<div class="brasa">${esc(err.message || String(err))}</div>`; }
+  });
+  $('#btSalvarMk').onclick = () => {
+    const novo = {};
+    ['economica', 'executiva'].forEach(k => { const pr = moedaNum($('#mkPreco_' + k).value); if (pr > 0) novo[k] = {cia:$('#mkCia_' + k).value.trim(), preco:pr, data:hojeISO(), fonte:'Google Flights'}; });
+    t.mercado = novo; salvar(); fecharFolha(); renderPlano(); avisar('Comparação com o mercado salva.', 'ok');
+  };
+}
+/* Preços de uma página de resultados: cada "R$ 12.345" com a companhia que
+   aparece perto dele. Ordena do mais barato para o mais caro. */
+const CIAS_MERCADO = ['LATAM', 'Azul', 'GOL', 'TAP', 'Iberia', 'Air France', 'KLM', 'Lufthansa', 'Copa', 'Avianca', 'American', 'United', 'Delta', 'Emirates', 'Qatar', 'Turkish', 'British Airways', 'Air Europa', 'ITA', 'Swiss', 'Aerolíneas', 'Ethiopian', 'Royal Air Maroc', 'LOT', 'Condor', 'Edelweiss', 'Vueling', 'Ryanair', 'easyJet', 'Eurowings', 'Wizz'];
+function ofertasDoTexto(txt){
+  const linhas = String(txt || '').split('\n');
+  const out = [];
+  linhas.forEach((l, i) => {
+    [...l.matchAll(/R\$\s*([\d.]{1,9}(?:,\d{2})?)/g)].forEach(m => {
+      const v = numBR(m[1]); if (!(v >= 100)) return;
+      /* a companhia mais perto do preço: a mesma linha, depois as de cima, por último a de baixo */
+      const acha = txt => CIAS_MERCADO.find(c => new RegExp('\\b' + c.replace(/ /g, '\\s+') + '\\b', 'i').test(txt || ''));
+      const cia = acha(linhas[i]) || acha(linhas[i - 1]) || acha(linhas[i - 2]) || acha(linhas[i + 1]) || '';
+      out.push({preco:v, cia});
+    });
+  });
+  const vistos = new Set();
+  return out.sort((a, b) => a.preco - b.preco).filter(o => { const k = o.preco + '|' + o.cia; if (vistos.has(k)) return false; vistos.add(k); return true; });
+}
+
 function avancarTrecho(id){
   const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
   const ordem = ['planejado', 'emitido', 'voado']; t.situacao = ordem[(ordem.indexOf(t.situacao || 'planejado') + 1) % 3];
@@ -24462,6 +24572,8 @@ function editarTrecho(id){
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
       <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
       <div class="campo tr-sem"><label for="trSemAlt">Opção em milhas</label><label class="ck cd-caixa"><input type="checkbox" id="trSemAlt"${t.semAlt ? ' checked' : ''}> Não havia</label></div>
+      <div class="campo"><label>Passagens cortesia</label><select id="trCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === (Number(t.cortesiaQtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
+      <div class="campo tr-cort"><label>Tarifa coberta por pessoa (R$)</label><input type="text" inputmode="decimal" data-moeda id="trCortValor" value="${moedaTxt(t.cortesiaValor || 0)}"></div>
       <div class="campo"><label>Milhas valem</label><select id="trBase" data-ordem="natural"></select></div>
       <div class="campo tr-outro"><label>Cotação (R$ por mil)</label><input type="text" inputmode="decimal" data-moeda id="trOutro" value="${moedaTxt(t.milheiroOutro || 0)}"></div>
       <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"></div>
@@ -24512,6 +24624,9 @@ function editarTrecho(id){
     $$('.tr-outro').forEach(e => e.style.display = $('#trBase').value === 'outro' ? '' : 'none');
   };
   ['#trProg', '#trAltProg', '#trBase'].forEach(sel => $(sel).addEventListener('change', montarBase));
+  ligarCampoMoeda('#trCortValor');
+  const verCort = () => $$('.tr-cort').forEach(e => e.style.display = Number($('#trCortQtd').value) > 0 ? '' : 'none');
+  $('#trCortQtd').addEventListener('change', verCort); verCort();
   $('#trForma').onchange = () => { aplicar(); montarBase(); }; $('#trSemAlt').onchange = aplicar; aplicar(); montarBase();
   ligarCampoMoeda('#trOutro');
   $('#btSalvarTrecho').onclick = () => {
@@ -24521,10 +24636,12 @@ function editarTrecho(id){
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
+      cortesiaQtd:Number($('#trCortQtd').value) || 0, cortesiaValor:Number($('#trCortQtd').value) ? moedaNum($('#trCortValor').value) : 0,
       baseMilheiro:$('#trBase').value, milheiroOutro:$('#trBase').value === 'outro' ? moedaNum($('#trOutro').value) : 0,
       altMilhas:f === 'dinheiro' && !$('#trSemAlt').checked ? rgNum($('#trAltMilhas').value) : 0, altProg:$('#trAltProg').value,
       altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
     if (!novo.origem || !novo.destino){ avisar('Informe a origem e o destino do trecho.', 'alerta'); return; }
+    if (novo.cortesiaQtd && !(novo.cortesiaValor > 0)){ avisar('Informe o valor da tarifa que a cortesia cobriu, por pessoa.', 'alerta', 7000); return; }
     if (novo.baseMilheiro === 'outro'){
       const pgC = f === 'dinheiro' ? novo.altProg : novo.prog, custoR = milheiroDaBase('custo', pgC);
       if (!(novo.milheiroOutro > 0)){ avisar('Informe o valor de cotação: quanto vale cada mil milhas.', 'alerta'); return; }
@@ -24709,6 +24826,7 @@ function interpretarTextosPrints(textos){
     }
   });
   if (/cortesia/i.test(tudo)){
+    d.cortesia = {qtd:1, valor:(d.dinheiro && d.dinheiro.tarifa) || 0};
     d.avisos.push('Uma das passagens é cortesia: o preço mostrado vale para os pagantes.');
     if (d.dinheiro) d.dinheiro.obs = 'com passagem cortesia';
     if (d.milhas) d.milhas.obs = 'com passagem cortesia';
@@ -24885,9 +25003,11 @@ function desenharRevisaoPrints(){
       ${campoLeitura('lpAltMilhas', 'Em milhas custaria', pre.altMilhas, 'numero', false, 'lp-alt')}
       ${campoLeitura('lpAltTaxas', 'Com taxas de (R$)', pre.altTaxas, 'moeda', false, 'lp-alt')}
       ${campoLeitura('lpLoc', 'Localizador', pre.loc, 'texto', false)}
+      <div class="campo"><label>Passagens cortesia</label><select id="lpCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === ((d.cortesia && d.cortesia.qtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
+      ${campoLeitura('lpCortValor', 'Tarifa coberta por pessoa (R$)', (d.cortesia && d.cortesia.valor) || 0, 'moeda', false)}
     </div>
     <p class="fraco lp-rodape" id="lpFalta"></p>`;
-  ['#lpTaxas', '#lpPago', '#lpVista', '#lpAltTaxas'].forEach(sel => ligarCampoMoeda(sel));
+  ['#lpTaxas', '#lpPago', '#lpVista', '#lpAltTaxas', '#lpCortValor'].forEach(sel => ligarCampoMoeda(sel));
   ligarCampoContagem('#lpMilhas'); ligarCampoContagem('#lpAltMilhas');
   const conferir = () => {
     const f = $('#lpForma').value;
@@ -24939,7 +25059,7 @@ function campoLeitura(id, rot, valor, tipo, obrig, classe){
    com tudo preenchido e ainda não salvo. */
 function aplicarLeituraPrints(){
   const f = $('#lpForma').value;
-  const v = {ori:$('#lpOri').value.toUpperCase().trim(), des:$('#lpDes').value.toUpperCase().trim(), data:$('#lpData').value, cia:$('#lpCia').value.trim(),
+  const v = {cortQtd:$('#lpCortQtd').value, cortValor:$('#lpCortValor').value, ori:$('#lpOri').value.toUpperCase().trim(), des:$('#lpDes').value.toUpperCase().trim(), data:$('#lpData').value, cia:$('#lpCia').value.trim(),
     prog:$('#lpProg').value, milhas:rgNum($('#lpMilhas').value), taxas:$('#lpTaxas').value, pago:$('#lpPago').value, vista:$('#lpVista').value,
     alt:rgNum($('#lpAltMilhas').value), altTaxas:$('#lpAltTaxas').value, loc:$('#lpLoc').value.toUpperCase().trim()};
   const progAlt = $('#lpProg').value || (_leitura.pre && _leitura.pre.prog) || '';
@@ -24949,6 +25069,7 @@ function aplicarLeituraPrints(){
   const set = (sel, val) => { const e = $(sel); if (e && val !== undefined && val !== null) e.value = val; };
   set('#trOri', v.ori); set('#trDes', v.des); set('#trData', v.data); set('#trCia', v.cia); set('#trLoc', v.loc);
   set('#trForma', f); $('#trForma').dispatchEvent(new Event('change'));
+  set('#trCortQtd', v.cortQtd); $('#trCortQtd').dispatchEvent(new Event('change')); if (Number(v.cortQtd)) set('#trCortValor', v.cortValor);
   if (f !== 'dinheiro'){ if (v.prog) set('#trProg', v.prog); set('#trMilhas', v.milhas || ''); set('#trTaxas', v.taxas); set('#trVista', v.vista); }
   if (f !== 'milhas') set('#trPago', v.pago);
   if (f === 'dinheiro'){
