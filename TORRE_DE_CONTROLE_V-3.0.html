@@ -8339,7 +8339,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 03:50';
+const BUILD = '2026-10-03 04:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -20202,12 +20202,17 @@ const TIPOS_LANC = {
   bonus:        'Bônus de Cashback',
   bonificada:   'Compra Bonificada',
   compra:       'Compra de Pontos/Milhas',
+  /* Ajustes acertam a carteira com o extrato do programa quando a diferença não
+     tem outra origem a registrar: pontos que apareceram ou sumiram sem uma
+     operação correspondente. */
+  ajusteEntrada:'Entrada (Ajuste)',
   km:           'KM de Vantagens',
   cartao:       'Pontos Cartão de Crédito',
   premmia:      'Premmia',
   resgateAccor: 'Resgate All Accor',
   resgatePass:  'Resgate de Passagem',
   resgateProd:  'Resgate de Produto',
+  ajusteSaida:  'Saída (Ajuste)',
   inicial:      'Saldo Inicial',
   transferencia:'Transferência de Pontos',
   venda:        'Venda de Milhas'
@@ -20222,7 +20227,7 @@ const tipoLancAtual = t => TIPOS_LANC_ANTIGOS[t] || t;
 const nomeTipoLanc = t => TIPOS_LANC[tipoLancAtual(t)] || (t === 'organico' ? 'Orgânico' : t) || '—';
 
 /* Os que tiram ponto do saldo, e não põem. */
-const TIPOS_SAIDA = ['resgateAccor', 'resgatePass', 'resgateProd', 'venda'];
+const TIPOS_SAIDA = ['resgateAccor', 'resgatePass', 'resgateProd', 'venda', 'ajusteSaida'];
 
 /* ── forma de pagamento ───────────────────────────────────────────────────────
    Em ordem alfabética, e por isso com data-ordem natural: a lista já está
@@ -20536,6 +20541,9 @@ function editarLancamento(id, pre){
     const alvo = $('#lcSaida');
     const destino = $('#lcProg').value;
     const ehTransf = $('#lcTipo').value === 'transferencia';
+    /* Resgate, venda e Saída (Ajuste) tiram pontos: o formulário fala em saída,
+       não em crédito. */
+    const ehSaida = TIPOS_SAIDA.includes($('#lcTipo').value);
 
     if (!ehTransf){
       const q = alvo.querySelector('#lcQtd');
@@ -20548,11 +20556,11 @@ function editarLancamento(id, pre){
          é a única coisa que pode ficar longa, e a marcação é uma frase fixa que
          não cresce nunca. */
       alvo.innerHTML = `
-        <div class="olho anil" style="margin:0 0 6px">Pontuação a ser creditada</div>
+        <div class="olho anil" style="margin:0 0 6px">${ehSaida ? 'Pontuação que sai' : 'Pontuação a ser creditada'}</div>
         <div class="grade linha-credito">
-          <div class="campo"><label>Saldo creditado em ${esc(prog(destino).n)}</label>
+          <div class="campo"><label>${ehSaida ? 'Sai de' : 'Saldo creditado em'} ${esc(prog(destino).n)}</label>
             <input type="number" id="lcQtd" value="${esc(atual)}" step="1000"></div>
-          <label class="ck ck-credito${id ? ' ck-travada' : ''}"${id ? ' data-dica="O saldo já foi somado quando este lançamento foi criado. Para acertar a carteira, use Tanque → Conferir com o Diário."' : ''}>${caixaSaldo()} Somar também ao saldo da carteira</label>
+          <label class="ck ck-credito${id ? ' ck-travada' : ''}"${id ? ' data-dica="O saldo já foi somado quando este lançamento foi criado. Para acertar a carteira, use Tanque → Conferir com o Diário."' : ''}>${caixaSaldo()} ${ehSaida ? 'Descontar também do saldo da carteira' : 'Somar também ao saldo da carteira'}</label>
           <div class="campo"><label>Nota</label>
             <input type="text" id="lcNota" value="${esc(notaAtual())}" placeholder="Livelo com 80% de bônus, pontos + dinheiro"></div>
         </div>`;
