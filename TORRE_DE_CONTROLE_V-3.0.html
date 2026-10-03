@@ -6486,7 +6486,10 @@ body.folha-aberta{
 
 /* ── avisos flutuantes ────────────────────────────────────────────────────── */
 .campo.erro-campo input, .campo.erro-campo select{ border-color:var(--brasa) !important; box-shadow:0 0 0 3px color-mix(in oklab, var(--brasa) 20%, transparent); }
-.cort-calc{ margin-top:6px; font-size:calc(12.5px * var(--esc)); line-height:1.4; color:var(--grafite); }
+.cort-calc{ grid-column:1 / -1; display:flex; align-items:flex-start; gap:8px; padding:9px 12px; border-radius:10px; background:var(--sup-1);
+  font-size:calc(13px * var(--esc)); line-height:1.45; color:var(--grafite); }
+.cort-calc:empty{ display:none !important; }
+.cort-calc svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; flex-shrink:0; margin-top:2px; }
 .cort-calc b{ font-family:var(--f-m); color:var(--jade); }
 .erro-msg{ margin-top:6px; font-size:calc(12.5px * var(--esc)); line-height:1.4; color:var(--brasa); }
 .avisos{ position:fixed; bottom:20px; right:20px; z-index:1400; display:flex; flex-direction:column; gap:9px; pointer-events:none; max-width:min(400px,calc(100vw - 40px)); }
@@ -8659,7 +8662,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 14:10';
+const BUILD = '2026-10-04 14:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24656,8 +24659,8 @@ function editarTrecho(id){
       <div class="campo"><label>Data da compra</label><input type="date" id="trDataCompra" value="${t.dataCompra || ''}"></div>
       <div class="campo"><label>Passagens cortesia</label><select id="trCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === (Number(t.cortesiaQtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
       <div class="campo tr-cort"><label>Como veio a cortesia</label><select id="trCortOrigem" data-ordem="natural">${[['meta_cartao', 'Meta do cartão'], ['beneficio_cartao', 'Benefício do cartão'], ['companhia', 'Promoção da companhia'], ['outro', 'Outro']].map(([k, v]) => `<option value="${k}"${k === (t.cortesiaOrigem || 'meta_cartao') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div class="campo tr-cort"><label>Tarifa coberta por pessoa (R$), opcional</label><input type="text" inputmode="decimal" data-moeda id="trCortValor" value="${moedaTxt(t.cortesiaValor || 0)}">
-        <div class="cort-calc" id="trCortCalc"></div></div>
+      <div class="campo tr-cort"><label>Tarifa por pessoa (R$)</label><input type="text" inputmode="decimal" data-moeda id="trCortValor" value="${moedaTxt(t.cortesiaValor || 0)}"></div>
+      <div class="tr-cort cort-calc" id="trCortCalc"></div>
       <div class="campo"><label>Milhas valem</label><select id="trBase" data-ordem="natural"></select></div>
       <div class="campo tr-outro"><label>Cotação (R$ por mil)</label><input type="text" inputmode="decimal" data-moeda id="trOutro" value="${moedaTxt(t.milheiroOutro || 0)}"></div>
       <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"></div>
@@ -24693,7 +24696,7 @@ function editarTrecho(id){
     $$('.tr-alt').forEach(e => e.style.display = f === 'dinheiro' && !sem ? '' : 'none');
     $$('.tr-sem').forEach(e => e.style.display = f === 'dinheiro' ? '' : 'none');
     $('#trNotaTxt').innerHTML = f === 'dinheiro'
-      ? (sem ? 'Sem opção em milhas: o trecho entra na viagem sem economia nem perda.' : 'Comprado em dinheiro porque saiu mais barato? Informe quanto custaria em milhas: a diferença, com as milhas ao valor-alvo do programa, entra como <b>economia da viagem</b>.')
+      ? (sem ? 'Sem opção em milhas: o trecho entra na viagem sem economia nem perda.' : 'Comprado em dinheiro porque saiu mais barato? Informe quanto custaria em milhas: a diferença, com as milhas pelo valor escolhido em <b>Milhas valem</b>, entra como <b>economia da viagem</b>.')
       : f === 'misto' ? 'A economia é o preço do voo em dinheiro, menos o que foi pago, as taxas e o custo das milhas.'
       : 'A economia é o preço do voo em dinheiro, menos as taxas e o custo das milhas ao seu milheiro médio.';
   };
@@ -24722,11 +24725,11 @@ function editarTrecho(id){
       baseMilheiro:$('#trBase').value || 'custo', milheiroOutro:moedaNum($('#trOutro').value)};
     const v = moedaNum($('#trCortValor').value);
     const pax = Number(p.pax) || 1, pagantes = Math.max(1, pax - qtd);
-    if (v > 0){ alvo.innerHTML = `Usando o valor informado: ${qtd} × ${brl(v)} = <b>${brl(qtd * v)}</b>`; return; }
+    if (v > 0){ alvo.innerHTML = `<svg><use href="#i-info"/></svg><span>Usando a tarifa informada: ${qtd} × ${brl(v)}, a cortesia cobriu <b>${brl(qtd * v)}</b>.</span>`; return; }
     const calc = cortesiaCalculada(sim, pax);
     const comoMilhas = f !== 'dinheiro' && sim.milhas ? `${nBR(Math.round(sim.milhas / pagantes))} milhas por pessoa` : '';
     const comoDin = f !== 'milhas' && sim.pago ? `${brl(sim.pago / pagantes)} por pessoa` : '';
-    alvo.innerHTML = calc > 0 ? `Em branco, a Torre calcula pelo que ${pagantes === 1 ? 'o pagante pagou' : 'os pagantes pagaram'} (${[comoMilhas, comoDin].filter(Boolean).join(' + ')}): <b>${brl(calc)}</b>` : 'Em branco, a Torre calcula pelo que os pagantes pagaram.';
+    alvo.innerHTML = calc > 0 ? `<svg><use href="#i-info"/></svg><span>Tarifa por pessoa é opcional. Em branco, a Torre calcula pelo que ${pagantes === 1 ? 'o pagante pagou' : 'os pagantes pagaram'} (${[comoMilhas, comoDin].filter(Boolean).join(' + ')}): a cortesia cobriu <b>${brl(calc)}</b>.</span>` : '<svg><use href="#i-info"/></svg><span>Tarifa por pessoa é opcional. Em branco, a Torre calcula pelo que os pagantes pagaram.</span>';
   };
   ['#trCortQtd', '#trCortValor', '#trMilhas', '#trPago', '#trForma', '#trProg', '#trBase', '#trOutro'].forEach(sel => { const e = $(sel); if (e){ e.addEventListener('change', verCort); e.addEventListener('input', verCort); } });
   verCort();
