@@ -3621,7 +3621,15 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .ee-mercado .ee-barra{ background:repeating-linear-gradient(135deg, color-mix(in oklab, #D9A21B 28%, transparent) 0 8px, color-mix(in oklab, #D9A21B 14%, transparent) 8px 16px);
   border:2px solid #D9A21B; box-shadow:none; }
 .ee-tot .ee-rot b{ color:var(--giz); }
-.ee-passos{ list-style:none; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; }
+.ee-det{ margin-top:14px; border-top:1px solid var(--fio-suave); }
+.ee-det > summary{ list-style:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 0 2px; cursor:pointer;
+  font-size:calc(13.5px * var(--esc)); font-weight:600; color:var(--anil-claro); user-select:none; }
+.ee-det > summary::-webkit-details-marker{ display:none; }
+.ee-det > summary svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; transition:transform .2s var(--ease); }
+.ee-det[open] > summary svg{ transform:rotate(180deg); }
+.ee-det-fe{ display:none; } .ee-det[open] .ee-det-ab{ display:none; } .ee-det[open] .ee-det-fe{ display:inline; }
+.ee-det > summary:hover{ text-decoration:underline; text-underline-offset:3px; }
+.ee-passos{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; }
 .ee-passos li{ display:flex; gap:12px; align-items:flex-start; padding:10px 6px; border-top:1px solid var(--fio-suave); }
 .ee-num{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; flex-shrink:0; color:#fff; font-family:var(--f-m); font-weight:700; font-size:calc(12.5px * var(--esc)); background:var(--c, var(--grafite)); }
 .ee-num svg{ width:14px; height:14px; fill:none; stroke:#fff; stroke-width:3; }
@@ -8713,7 +8721,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 17:00';
+const BUILD = '2026-10-04 17:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24616,6 +24624,9 @@ function fecharLeituraUpgrade(){ const pai = _leituraUp && _leituraUp.pai; _leit
    As três partes fecham exatamente o total: compra + cortesia + upgrade é a
    economia final do trecho (o upgrade é medido como depois menos antes, e o
    "antes" já inclui a cortesia). */
+/* O passo a passo fica fechado; abre quando a pessoa pede, e continua aberto
+   enquanto ela navega pela jornada. */
+let detalhesEscadaAbertos = false;
 function etapasEconomia(ts){
   const linhas = ts.map(t => {
     const compra = economiaTrechoCompra(t).valor;
@@ -24683,12 +24694,14 @@ function escadaEconomiaHTML(ts){
       <i class="ee-zero"></i>
       ${colunas.map(coluna).join('')}
     </div>
+    <details class="ee-det"${detalhesEscadaAbertos ? ' open' : ''} ontoggle="detalhesEscadaAbertos = this.open">
+      <summary><span class="ee-det-ab">Ver o passo a passo</span><span class="ee-det-fe">Ocultar o passo a passo</span><svg><use href="#i-baixo"/></svg></summary>
     <ol class="ee-passos">
       ${degraus.map((d, i) => `<li class="ee-p-${d.k}"><span class="ee-num">${i + 1}</span><div><b>${d.n}</b> <em>${d.v >= 0 ? '+' : '−'}${brl(Math.abs(d.v))}</em><p>${esc(frase[d.k])}</p></div></li>`).join('')}
       <li class="ee-p-total"><span class="ee-num"><svg><use href="#i-ok"/></svg></span><div><b>Economia contra a mesma companhia</b> <em>${brl(total)}</em><p>${esc(frase.total)}</p></div></li>
       ${E.mercado != null ? `<li class="ee-p-mercado"><span class="ee-num">$</span><div><b>Contra o menor preço do mercado</b> <em>${E.mercado >= 0 ? '' : '−'}${brl(Math.abs(E.mercado))}</em><p>${frase.mercado}</p></div></li>`
         : `<li class="ee-p-mercado falta"><span class="ee-num">$</span><div><b>Contra o menor preço do mercado</b> <em>${E.mercadoParcial ? `${E.mercadoParcial} de ${ts.length} trechos pesquisados` : 'a pesquisar'}</em><p>Pesquise cada trecho na lupa: a régua do mercado aparece quando todos estiverem pesquisados.</p></div></li>`}
-    </ol>
+    </ol></details>
   </div>`;
 }
 
