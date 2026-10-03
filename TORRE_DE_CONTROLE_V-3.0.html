@@ -3509,7 +3509,10 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 /* ── o dia aberto ────────────────────────────────────────────────────────── */
 .pl-linha{ background:var(--sup-0); border:1px solid var(--fio); border-radius:var(--r-lg); overflow:hidden; }
 .pl-linha-cab{ display:flex; align-items:center; gap:11px; padding:16px 18px; border-bottom:1px solid var(--fio-suave); flex-wrap:wrap; }
-.pl-linha-rot{ font-family:var(--f-d); font-size:calc(17px * var(--esc)); font-weight:700; color:var(--giz); letter-spacing:-.01em; text-transform:capitalize; }
+.pl-linha-rot{ font-family:var(--f-d); font-size:calc(17px * var(--esc)); font-weight:700; color:var(--giz); letter-spacing:-.01em; }
+.pl-linha-rot::first-letter{ text-transform:uppercase; }
+/* Os três botões do topo andam juntos: se faltar lugar, descem os três. */
+.pl-acoes{ display:flex; gap:7px; flex-wrap:nowrap; }
 .pl-linha-sub{ font-family:var(--f-m); font-size:calc(12px * var(--esc)); color:var(--grafite); margin-top:2px; }
 
 /* ── o fio do tempo ──────────────────────────────────────────────────────── */
@@ -7635,6 +7638,9 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
         </div>
 
         <div class="painel-aba" id="p-rt-plano">
+          <!-- As viagens em preparo viram os sub-itens de Roteiro na coluna de menu,
+               da mais próxima para a mais distante; no celular, este seletor. -->
+          <div class="linha" style="margin-bottom:14px"><div class="seg" id="segRoteiro"></div></div>
           <div id="rtPlano"></div>
           <div id="rtRoteirosSalvos" class="pilha" style="gap:10px;margin-top:20px"></div>
         </div>
@@ -8396,7 +8402,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 16:10';
+const BUILD = '2026-10-03 17:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23618,10 +23624,39 @@ function prazosDeViagem(){
 }
 
 /* ── a tela ───────────────────────────────────────────────────────────────── */
+/* Ordem das viagens no menu: as que ainda vão acontecer, da mais próxima para
+   a mais distante; depois as encerradas, da mais recente para a mais antiga. */
+function planosOrdenados(){
+  const hoje = hojeISO();
+  const vem = (DB.planos || []).filter(p => (p.fim || p.inicio || '') >= hoje).sort((a, b) => (a.inicio || '').localeCompare(b.inicio || ''));
+  const foi = (DB.planos || []).filter(p => (p.fim || p.inicio || '') < hoje).sort((a, b) => (b.inicio || '').localeCompare(a.inicio || ''));
+  return vem.concat(foi);
+}
+/* O seletor de viagens do Roteiro: cada viagem em preparo é um botão, com a
+   contagem regressiva no balão ("12d", "hoje"); a última opção começa uma nova.
+   Na coluna de menu, esses botões viram os sub-itens de Roteiro. */
+function montarSegRoteiro(){
+  const seg = $('#segRoteiro'); if (!seg) return;
+  const lista = planosOrdenados();
+  seg.innerHTML = lista.map(p => {
+    const d = diasAte(p.inicio), dFim = diasAte(p.fim || p.inicio);
+    const cont = d !== null && d > 0 ? `${d}d` : d === 0 ? 'hoje' : (d !== null && d < 0 && dFim !== null && dFim >= 0) ? 'agora' : '';
+    return `<button class="${p.id === planoAtual ? 'on' : ''}" data-plano="${p.id}">${esc(p.nome)}${cont ? ` <span class="cont-disco">${cont}</span>` : ''}</button>`;
+  }).join('') + `<button data-novo="1">Novo roteiro</button>`;
+  seg.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.novo){ abrirCompositor(); return; }
+    planoAtual = b.dataset.plano; planoDia = null; renderPlano();
+    if (typeof marcarColunaMenu === 'function') marcarColunaMenu();
+  };
+}
+
 function renderPlano(){
   const host = $('#rtPlano'); if (!host) return;
   if (!DB.planos) DB.planos = [];
   const planos = DB.planos;
+  if (planos.length && (!planoAtual || !planos.some(x => x.id === planoAtual))) planoAtual = planosOrdenados()[0].id;
+  montarSegRoteiro();
 
   if (!planos.length){
     host.innerHTML = `<div class="vazio" style="padding:34px">
@@ -23645,20 +23680,21 @@ function renderPlano(){
 
   host.innerHTML = `
     <div class="pl-topo">
-      <div class="campo" style="flex:0 0 auto;width:calc(230px * var(--esc))"><label>Viagem</label>
-        <select id="plSel">${planos.map(x => `<option value="${x.id}"${x.id === p.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></div>
       <div class="pl-cab">
         <div class="pl-nome">${esc(p.nome)}</div>
         <div class="pl-sub">${dataBR(p.inicio)} — ${dataBR(p.fim)} · ${ds.length} ${ds.length === 1 ? 'dia' : 'dias'} · ${p.pax || 1} ${(p.pax || 1) === 1 ? 'viajante' : 'viajantes'}
-          ${faltam !== null && faltam >= 0 ? `<span class="etq ${faltam <= 7 ? 'ouro' : ''}">${faltam === 0 ? 'embarca hoje' : 'faltam ' + faltam + ' dias'}</span>` : '<span class="etq">encerrada</span>'}</div>
+          ${faltam !== null && faltam >= 0 ? `<span class="etq ${faltam <= 7 ? 'ouro' : ''}">${faltam === 0 ? 'embarca hoje' : 'faltam ' + faltam + ' dias'}</span>`
+            : (diasAte(p.fim || p.inicio) ?? -1) >= 0 ? '<span class="etq jade">em andamento</span>' : '<span class="etq">encerrada</span>'}</div>
       </div>
       <div class="esticar"></div>
+      <div class="pl-acoes">
       <button class="bt p fantasma" onclick="editarPlanoViagem('${p.id}')"><svg><use href="#i-lapis"/></svg>Viagem</button>
       <button class="bt p fantasma" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Em branco</button>
       <button class="bt p primario" onclick="abrirCompositor()"><svg><use href="#i-faisca"/></svg>Compor</button>
+      </div>
     </div>
 
-    <div class="grade g4" style="margin-bottom:16px">
+    <div class="grade g4 g4-par" style="margin-bottom:16px">
       ${metrica('Custo do roteiro', brl(total), `${(p.paradas || []).length} paradas lançadas`, total ? 'ouro' : '')}
       ${metrica('Por viajante', brl(total / Math.max(1, p.pax || 1)), `${p.pax || 1} ${(p.pax || 1) === 1 ? 'pessoa' : 'pessoas'}`, '')}
       ${(() => { const m = milhasDoPlano(p);
@@ -23701,7 +23737,6 @@ function renderPlano(){
       </div>
     </div>`;
 
-  $('#plSel').onchange = e => { planoAtual = e.target.value; planoDia = null; renderPlano(); };
   ordenarSelects(host);
 }
 
@@ -29344,7 +29379,8 @@ const SUBMENUS = {
   'rd-arsenal':    {seg:'#segArsenal'},
   'em-controle':   {seg:'#segCtrVista'},
   'rt-metas':      {seg:'#segMetas'},
-  'rt-viagens':    {seg:'#segViagens'}
+  'rt-viagens':    {seg:'#segViagens'},
+  'rt-plano':      {seg:'#segRoteiro'}
 };
 
 /* As opções de uma seção, lidas da própria página (ou dos modos da calculadora,
@@ -29367,7 +29403,7 @@ function htmlSubmenu(grupo, aba){
   const ops = opcoesSubmenu(aba); if (!ops.length) return '';
   return `<div class="cm-sub" data-sub="${aba}" role="group">${ops.map(o =>
     `<button type="button" class="cm-subitem${o.on ? ' on' : ''}" data-chave="${o.chave}"
-      onclick="irParaSubmenu('${grupo}','${aba}','${o.chave}')"><span>${esc(o.rot)}</span>${o.cont !== '' ? `<span class="cm-subcont">${esc(o.cont)}</span>` : ''}</button>`).join('')}</div>`;
+      onclick="irParaSubmenu('${grupo}','${aba}','${o.chave}')" title="${esc(o.rot)}"><span>${esc(o.rot)}</span>${o.cont !== '' ? `<span class="cm-subcont">${esc(o.cont)}</span>` : ''}</button>`).join('')}</div>`;
 }
 
 function irParaSubmenu(grupo, aba, chave){
@@ -29391,6 +29427,16 @@ function irParaSubmenu(grupo, aba, chave){
 function atualizarSubmenus(){
   document.querySelectorAll('.cm-sub[data-sub]').forEach(box => {
     const ops = opcoesSubmenu(box.dataset.sub);
+    /* Se a lista mudou (uma viagem nova no Roteiro, por exemplo), o grupo é
+       remontado; se só o estado mudou, só se marca. */
+    const atuais = [...box.querySelectorAll('.cm-subitem')].map(b => (b.querySelector('span') || b).textContent.trim());
+    if (atuais.length !== ops.length || ops.some((o, i) => o.rot !== atuais[i])){
+      const aba = document.querySelector(`.abas .aba[data-aba="${box.dataset.sub}"]`);
+      const grupo = aba ? aba.closest('.abas').dataset.grupo : '';
+      const tmp = document.createElement('div'); tmp.innerHTML = htmlSubmenu(grupo, box.dataset.sub);
+      if (tmp.firstElementChild) box.replaceWith(tmp.firstElementChild);
+      return;
+    }
     box.querySelectorAll('.cm-subitem').forEach((b, i) => {
       const o = ops[i]; if (!o) return;
       b.classList.toggle('on', o.on);
@@ -29444,7 +29490,10 @@ function ajustarLarguraMenu(){
     montarColunaMenu(sombra, v);
     const t = sombra.querySelector('.cm-tit-nome');
     if (t){ const ps = getComputedStyle(t.parentElement); maior = Math.max(maior, t.getBoundingClientRect().left - cl + larguraTexto(t) + (parseFloat(ps.paddingRight) || 0)); }
-    sombra.querySelectorAll('.cm-item, .cm-subitem').forEach(it => {
+    /* Os nomes das viagens do Roteiro são livres e podem ser longos: eles não
+       alargam a coluna; se não couberem, ganham reticências, e o nome inteiro
+       aparece ao passar o dedo ou o mouse. */
+    sombra.querySelectorAll('.cm-item, .cm-sub:not([data-sub="rt-plano"]) .cm-subitem').forEach(it => {
       const st = getComputedStyle(it);
       const filhos = [...it.children];
       const gap = parseFloat(st.columnGap || st.gap) || 0;
