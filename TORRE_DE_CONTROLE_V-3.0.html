@@ -3576,6 +3576,12 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 @media (max-width:900px){ .tr-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){ .tr-grade{ grid-template-columns:1fr; } }
 .rt-sit{ cursor:pointer; border:0; font:inherit; }
+.pv-trechos{ display:flex; flex-direction:column; border:1px solid var(--fio-suave); border-radius:12px; overflow:hidden; }
+.pv-trechos > div{ display:grid; grid-template-columns:minmax(110px, auto) minmax(95px, auto) 1fr; gap:12px; padding:9px 13px;
+  border-bottom:1px solid var(--fio-suave); font-size:calc(13.5px * var(--esc)); align-items:baseline; }
+.pv-trechos > div:last-child{ border-bottom:0; }
+.pv-trechos b{ font-family:var(--f-m); color:var(--giz); }
+.pv-trechos span{ color:var(--grafite); }
 .rt-trechos-pe{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; padding:12px 20px; border-top:1px solid var(--fio-suave);
   font-size:calc(13px * var(--esc)); color:var(--grafite); }
 .rt-trechos-pe b{ font-family:var(--f-m); color:var(--giz); }
@@ -8532,7 +8538,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 00:50';
+const BUILD = '2026-10-04 01:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24225,7 +24231,7 @@ function renderListaRoteiros(){
      embaixo as jornadas. Como em Resultados. */
   const X = numerosJornadas(lista);
   const topo = lista.length ? `<div class="grade g4 g4-par" style="margin-bottom:16px">
-      ${metrica('Jornadas em andamento', String(X.abertas), `${X.total} no total`, '')}
+      ${(c => metrica('Jornadas em andamento', String(X.abertas), c ? `${c} ${c === 1 ? 'concluída' : 'concluídas'}` : 'Nenhuma concluída ainda', ''))(X.total - X.abertas)}
       ${metrica('Prontas para emitir', String(X.prontas), X.prontas ? 'Saldo já cobre as milhas' : 'Nenhuma com saldo completo', X.prontas ? 'jade' : '')}
       ${metrica('Milhas que faltam', nBR(X.faltam), X.faltam ? `${brl(X.custo)} ao alvo` : 'Nada a fabricar', '')}
       ${metrica('Próxima viagem', X.proxTxt, X.prox ? esc(X.prox.nome) : 'Nenhuma data à frente', X.prox ? 'ouro' : '')}
@@ -24533,13 +24539,25 @@ function editarPlanoViagem(id){
         <option value="int"${escopoPlano(p) === 'int' ? ' selected' : ''}>Internacional</option></select></div>
       <div class="campo"><label>Orçamento total (R$)</label><input type="text" inputmode="decimal" data-moeda id="pvOrc" value="${moedaTxt(p.orcamento || 0)}"></div>
       ${(() => { const mm = p.metaId ? (DB.metas || []).find(x => x.id === p.metaId) : null;
-        return `<div class="campo"><label>Programa da emissão</label><select id="pvProg">${PROG_IDS.filter(k => prog(k).tipo === 'milhas').map(k => `<option value="${k}"${k === (mm ? mm.prog : 'smiles') ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
-        <div class="campo"><label>Milhas necessárias</label><input type="number" id="pvMilhas" value="${mm ? mm.precisa || '' : ''}" step="5000" placeholder="100.000"></div>
+        const comT = trechosDe(p).length > 0;
+        return `<div class="campo"><label>Programa da emissão</label><select id="pvProg"${comT ? ' disabled data-dica="Calculado pelos trechos"' : ''}>${PROG_IDS.filter(k => prog(k).tipo === 'milhas').map(k => `<option value="${k}"${k === (mm ? mm.prog : 'smiles') ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+        <div class="campo"><label>Milhas necessárias</label><input type="number" id="pvMilhas" value="${mm ? mm.precisa || '' : ''}" step="5000" placeholder="100.000"${comT ? ' disabled data-dica="Calculado pelos trechos"' : ''}></div>
         <div class="campo"><label>Aeroporto de destino (IATA)</label><input type="text" id="pvIata" value="${esc(mm ? mm.destino || '' : '')}" maxlength="3" style="text-transform:uppercase" placeholder="LIS"></div>`; })()}
       ${campoPeriodo('pvIni', 'pvFim', 'Ida e volta')}
       <div class="campo"><label>Viajantes</label><input type="number" id="pvPax" value="${p.pax || 1}" min="1" max="20"></div>
       <div class="campo"><label>Moeda no destino</label><select id="pvMoeda">${Object.keys(MOEDAS).map(m => `<option value="${m}"${m === (p.moeda || 'BRL') ? ' selected' : ''}>${m} · ${MOEDAS[m]}</option>`).join('')}</select></div>
     </div>
+
+    <!-- Trechos: cada voo com a sua forma de pagamento. São lançados na aba Trechos
+         da jornada, que abre sozinha depois de salvar uma jornada nova. -->
+    <div class="olho anil" style="margin:22px 0 8px">Trechos da viagem</div>
+    ${trechosDe(p).length ? `<div class="pv-trechos">${trechosDe(p).slice().sort((a, b) => (a.data || '').localeCompare(b.data || '')).map(t =>
+        `<div><b>${esc(rotuloTrecho(t))}</b><span>${t.data ? dataBR(t.data) : ''}</span><span>${t.forma === 'dinheiro' ? 'dinheiro, ' + brl(t.pago || 0) : nBR(t.milhas || 0) + ' milhas ' + esc(prog(t.prog).n) + (t.forma === 'misto' ? ' + ' + brl(t.pago || 0) : '')}</span></div>`).join('')}</div>
+      <p class="fraco" style="font-size:calc(13px * var(--esc));margin:8px 0 0">Programa e milhas necessárias são calculados pelos trechos. Para incluir, mudar ou apagar um trecho, use a aba <b>Trechos</b> da jornada.</p>`
+    : `<div class="nota" style="margin:0"><svg><use href="#i-info"/></svg><div class="pilha compacta">
+        <div>Ida, voos internos e volta, <b>cada um com milhas, dinheiro ou os dois</b>, entram como trechos.</div>
+        <div>${id ? 'Abra a aba <b>Trechos</b> da jornada para lançar cada voo.' : 'Salve a jornada: ela abre direto na aba <b>Trechos</b>, para você lançar cada voo.'} Se a viagem for um programa só, ida e volta, basta preencher Programa e Milhas acima.</div>
+      </div></div>`}
 
     <div class="olho anil" style="margin:18px 0 8px">Câmbio da viagem</div>
     <p class="fraco" style="font-size:calc(13px * var(--esc));line-height:1.5;margin:0 0 11px">Quanto vale um da moeda em real. Fica guardado junto da viagem, não como cotação do sistema: reabrir o roteiro daqui a um ano mostra o custo que ele teve, não o de hoje.</p>
@@ -24601,8 +24619,9 @@ function editarPlanoViagem(id){
     /* A meta da jornada: programa, milhas e aeroporto vêm daqui. */
     let mm = novo.metaId ? (DB.metas || []).find(x => x.id === novo.metaId) : null;
     if (!mm){ mm = {id:uid(), n:novo.nome, destino:'', prog:'smiles', precisa:0, prazo:novo.inicio, emitida:false, hospedagem:false, feita:false, obs:'', etapas:{}}; DB.metas = DB.metas || []; DB.metas.push(mm); novo.metaId = mm.id; }
-    mm.n = novo.nome; mm.prog = $('#pvProg').value; mm.precisa = rgNum($('#pvMilhas').value); mm.destino = $('#pvIata').value.toUpperCase().trim(); mm.prazo = novo.inicio; mm.escopo = novo.escopo;
+    mm.n = novo.nome; if (!trechosDe(novo).length){ mm.prog = $('#pvProg').value; mm.precisa = rgNum($('#pvMilhas').value); } mm.destino = $('#pvIata').value.toUpperCase().trim(); mm.prazo = novo.inicio; mm.escopo = novo.escopo;
     planoAtual = novo.id; planoDia = null; roteiroAberto = true;
+    if (!id) modoRoteiro = 'trechos';
     salvar(); fecharFolha(); renderRota(); renderFita();
     avisar('Jornada salva.', 'ok');
   };
