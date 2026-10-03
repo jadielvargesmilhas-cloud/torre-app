@@ -3572,6 +3572,14 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 
 .rt-etapa{ border-top:3px solid var(--c); }
 /* Próximo passo: um item por vez, em destaque, com a ação que o resolve. */
+.tr-grade{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
+@media (max-width:900px){ .tr-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:560px){ .tr-grade{ grid-template-columns:1fr; } }
+.rt-sit{ cursor:pointer; border:0; font:inherit; }
+.rt-trechos-pe{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; padding:12px 20px; border-top:1px solid var(--fio-suave);
+  font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.rt-trechos-pe b{ font-family:var(--f-m); color:var(--giz); }
+.rt-trechos-pe b.jade{ color:var(--jade); } .rt-trechos-pe b.brasa{ color:var(--brasa); }
 .rt-vazio .rt-trilho{ justify-content:center; margin-bottom:14px; }
 .rt-proximo{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 16px; margin-bottom:16px; border-radius:14px;
   background:color-mix(in oklab, var(--c) 9%, var(--sup-0)); border:1px solid color-mix(in oklab, var(--c) 40%, transparent); }
@@ -8524,7 +8532,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 22:00';
+const BUILD = '2026-10-03 23:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23792,13 +23800,23 @@ const ROTA_ITENS = [
    auto:p => ({ok:!!(p.inicio && p.fim), info:p.inicio && p.fim ? `${dataBR(p.inicio)} a ${dataBR(p.fim)}` : ''}), ir:'editar'},
   {k:'r-orcamento', et:'R', n:'Orçamento total definido', d:'Quanto a viagem pode custar, com tudo.',
    auto:p => ({ok:Number(p.orcamento) > 0, info:Number(p.orcamento) > 0 ? brl(p.orcamento) : 'Informe o orçamento na viagem'}), ir:'editar'},
-  {k:'r-milhas', et:'R', n:'Milhas necessárias definidas', d:'Quantas milhas a emissão pede, e em qual programa.',
-   auto:(p, x) => ({ok:!!(x.meta && x.meta.precisa > 0), info:x.meta && x.meta.precisa > 0 ? `${nBR(x.meta.precisa)} milhas ${prog(x.meta.prog).n}` : 'Informe na jornada'}), ir:'editar'},
+  {k:'r-milhas', et:'R', n:'Milhas necessárias definidas', d:'Quantas milhas a emissão pede, e em qual programa.', semTrechos:true,
+   auto:(p, x) => ({ok:!!(x.meta && x.meta.precisa > 0), info:x.meta && x.meta.precisa > 0 ? `${nBR(x.meta.precisa)} milhas ${prog(x.meta.prog).n}` : 'Informe na jornada, ou monte os trechos'}), ir:'editar'},
+  {k:'r-trechos', et:'R', n:'Trechos da viagem definidos', d:'Cada voo, com como vai ser pago: milhas, dinheiro ou os dois.',
+   auto:p => { const ts = trechosDe(p); const m = ts.filter(t => t.forma !== 'dinheiro').length, d = ts.length - m;
+     return {ok:ts.length > 0, info:ts.length ? `${ts.length} trecho${ts.length > 1 ? 's' : ''}: ${m} com milhas, ${d} em dinheiro` : 'Monte os trechos: ida, internos e volta'}; }, ir:'trechos'},
 
   {k:'o-programa', et:'O', n:'Programa da emissão escolhido', d:'Onde as milhas vão estar na hora de emitir.',
    auto:(p, x) => ({ok:!!(x.meta && x.meta.prog), info:x.meta ? prog(x.meta.prog).n : 'Vem da meta'})},
   {k:'o-saldo', et:'O', aceitavel:true, n:'Saldo suficiente para a emissão', d:'Milhas no programa contra o que a emissão pede.',
-   auto:(p, x) => { if (!x.meta) return {ok:false, info:'Defina as milhas na etapa R'};
+   auto:(p, x) => {
+     if (trechosDe(p).length){
+       const nec = milhasPendentesPorPrograma(p), ks = Object.keys(nec);
+       if (!ks.length) return {ok:true, info:'Nenhum trecho com milhas por emitir'};
+       const partes = ks.map(k => `${prog(k).n}: ${nBR(x.sal[k] || 0)} de ${nBR(nec[k])}`);
+       return {ok:ks.every(k => (x.sal[k] || 0) >= nec[k]), info:partes.join(' · ')};
+     }
+     if (!x.meta) return {ok:false, info:'Defina as milhas na etapa R'};
      const s = x.sal[x.meta.prog] || 0; return {ok:x.meta.precisa > 0 && s >= x.meta.precisa, info:x.meta.precisa > 0 ? `${nBR(s)} de ${nBR(x.meta.precisa)} (${pct(clamp(s / Math.max(1, x.meta.precisa) * 100, 0, 100), 0)})` : 'Defina as milhas na etapa R'}; }, ir:'fabricar'},
   {k:'o-custo', et:'O', aceitavel:true, n:'Milheiro dentro do alvo', d:'O que as milhas custaram, contra o alvo do programa.',
    auto:(p, x) => { if (!x.meta) return {ok:false, info:'Vem da meta'};
@@ -23820,8 +23838,11 @@ const ROTA_ITENS = [
    d:'Muitos países pedem validade de 6 meses além da volta.',
    info:p => p.fim ? `Precisa valer até ${dataBR(somaMeses(6, p.fim))}` : ''},
   {k:'a-visto', et:'A', n:'Visto ou autorização de entrada verificados', int:true, d:'Visto, eTA, ESTA ou isenção para o destino.'},
-  {k:'a-ida', et:'A', n:'Ida emitida', meta:'ida', d:'Bilhete emitido e localizador em mãos.'},
-  {k:'a-volta', et:'A', n:'Volta emitida', meta:'volta', d:'Se for só ida, marque que não se aplica.'},
+  {k:'a-ida', et:'A', n:'Ida emitida', meta:'ida', semTrechos:true, d:'Bilhete emitido e localizador em mãos.'},
+  {k:'a-volta', et:'A', n:'Volta emitida', meta:'volta', semTrechos:true, d:'Se for só ida, marque que não se aplica.'},
+  {k:'a-trechos', et:'A', n:'Todos os trechos comprados ou emitidos', comTrechos:true, d:'Com milhas ou em dinheiro, cada voo garantido.',
+   auto:p => { const ts = trechosDe(p), e = ts.filter(t => (t.situacao || 'planejado') !== 'planejado').length;
+     return {ok:ts.length > 0 && e === ts.length, info:`${e} de ${ts.length} garantidos`}; }, ir:'trechos'},
   {k:'a-seguro', et:'A', n:'Seguro viagem contratado', int:true, d:'Obrigatório em vários destinos; cheque o do cartão.'},
 
   {k:'v-hotel', et:'V', n:'Hospedagem reservada', meta:'hotel', d:'Se for ficar com parentes, marque que não se aplica.'},
@@ -23834,17 +23855,26 @@ const ROTA_ITENS = [
   {k:'v-cambio', et:'V', n:'Câmbio e cartão para o exterior prontos', int:true, d:'Moeda em mãos ou conta global, e cartão sem IOF alto.'},
   {k:'v-chip', et:'V', n:'Chip ou eSIM para o destino', int:true, d:'Internet garantida desde o desembarque.'},
 
-  {k:'e-registro', et:'E', n:'Emissão registrada na Torre', d:'A passagem lançada em Minhas viagens, ligada à meta.',
-   auto:(p, x) => ({ok:x.res.length > 0, info:x.res.length ? `${x.res.length} emissã${x.res.length > 1 ? 'ões' : 'o'} ligada${x.res.length > 1 ? 's' : ''} à meta` : 'Registre em Minhas viagens'}), ir:'emissao'},
+  {k:'e-registro', et:'E', n:'Emissão registrada na Torre', d:'A passagem lançada em Resultados, ligada à jornada.',
+   auto:(p, x) => {
+     const ts = trechosDe(p).filter(t => t.forma !== 'dinheiro');
+     if (trechosDe(p).length){ const reg = ts.filter(t => t.reservaId && (DB.reservas || []).some(r => r.id === t.reservaId)).length;
+       return {ok:reg === ts.length, info:ts.length ? `${reg} de ${ts.length} trechos com milhas lançados no Diário` : 'Nenhum trecho com milhas'}; }
+     return ({ok:x.res.length > 0, info:x.res.length ? `${x.res.length} emissã${x.res.length > 1 ? 'ões' : 'o'} ligada${x.res.length > 1 ? 's' : ''} à jornada` : 'Registre a emissão'}); }, ir:'emissao'},
   {k:'e-checkin', et:'E', n:'Check-in feito', d:'E cartão de embarque salvo no celular.'},
-  {k:'e-ida', et:'E', n:'Ida voada', meta:'voou_ida', d:'O voo de ida aconteceu.'},
+  {k:'e-ida', et:'E', n:'Ida voada', meta:'voou_ida', semTrechos:true, d:'O voo de ida aconteceu.'},
+  {k:'e-trechos', et:'E', n:'Todos os trechos voados', comTrechos:true, d:'Marque cada voo como voado na lista de trechos.',
+   auto:p => { const ts = trechosDe(p), v = ts.filter(t => t.situacao === 'voado').length; return {ok:ts.length > 0 && v === ts.length, info:`${v} de ${ts.length} voados`}; }, ir:'trechos'},
   {k:'e-estadia', et:'E', n:'Hospedagem cumprida', meta:'hospedou', d:'A estadia aconteceu como reservada.'},
-  {k:'e-volta', et:'E', n:'Volta voada', meta:'voou_volta', d:'O voo de volta aconteceu. Se foi só ida, marque que não se aplica.'},
+  {k:'e-volta', et:'E', n:'Volta voada', meta:'voou_volta', semTrechos:true, d:'O voo de volta aconteceu. Se foi só ida, marque que não se aplica.'},
 
   {k:'m-vista', et:'M', n:'Preço à vista registrado', d:'Quanto a passagem custaria em dinheiro.',
-   auto:(p, x) => ({ok:x.res.some(r => Number(r.precoVista) > 0), info:x.res.some(r => Number(r.precoVista) > 0) ? brl(soma(x.res.map(r => Number(r.precoVista) || 0))) : 'Informe na emissão'}), ir:'emissao'},
+   auto:(p, x) => trechosDe(p).length ? (() => { const ts = trechosDe(p), ok = ts.filter(t => economiaTrecho(t).valor != null).length;
+       return {ok:ok === ts.length, info:`${ok} de ${ts.length} trechos com a comparação completa`}; })() : ({ok:x.res.some(r => Number(r.precoVista) > 0), info:x.res.some(r => Number(r.precoVista) > 0) ? brl(soma(x.res.map(r => Number(r.precoVista) || 0))) : 'Informe na emissão'}), ir:'emissao'},
   {k:'m-economia', et:'M', aceitavel:true, n:'Economia calculada', d:'À vista, menos taxas e o custo das milhas.',
-   auto:(p, x) => { const g = soma(x.res.map(valorResgate).filter(v => v.ganho != null).map(v => v.ganho));
+   auto:(p, x) => { if (trechosDe(p).length){ const vs = trechosDe(p).map(t => economiaTrecho(t).valor).filter(v => v != null);
+       return {ok:vs.length > 0, info:vs.length ? brl(soma(vs)) : 'Depende da comparação de cada trecho'}; }
+     const g = soma(x.res.map(valorResgate).filter(v => v.ganho != null).map(v => v.ganho));
      return {ok:x.res.some(r => valorResgate(r).ganho != null), info:x.res.length ? brl(g) : 'Depende do preço à vista e do custo'}; }},
   {k:'m-realizada', et:'M', n:'Viagem realizada', d:'A volta já passou.',
    auto:p => ({ok:!!p.fim && diasAte(p.fim) < 0, info:p.fim ? (diasAte(p.fim) < 0 ? `Voltou em ${dataBR(p.fim)}` : `Volta em ${dataBR(p.fim)}`) : ''})},
@@ -23856,7 +23886,8 @@ function estadoItensRota(p){
   const x = {meta:metaDoPlano(p), sal:saldoPorPrograma(), res:emissoesDoPlano(p)};
   const int = escopoPlano(p) === 'int';
   const reg = p.rota || {};
-  return ROTA_ITENS.filter(it => !it.int || int).map(it => {
+  const comT = trechosDe(p).length > 0;
+  return ROTA_ITENS.filter(it => (!it.int || int) && !(it.semTrechos && comT) && !(it.comTrechos && !comT)).map(it => {
     const r = reg[it.k] || {};
     if (it.auto){
       const a = it.auto(p, x);
@@ -23902,7 +23933,58 @@ function marcarItemRota(k, valor){
   const depois = progressoRota(p).pct;
   if (depois === 100 && antes < 100) avisar('Jornada completa: ROTA te levou, VEM aconteceu.', 'ok', 6000);
 }
-const ROTULO_IR = {editar:'Preencher', dias:'Montar', emissao:'Registrar', fabricar:'Como fabricar', monitor:'Criar monitor'};
+const ROTULO_IR = {editar:'Preencher', dias:'Montar', emissao:'Registrar', fabricar:'Como fabricar', monitor:'Criar monitor', trechos:'Ver trechos'};
+
+/* ── TRECHOS ──────────────────────────────────────────────────────────────────
+   Uma viagem de verdade raramente é um voo de ida e um de volta no mesmo
+   programa: chega-se por uma cidade e volta-se por outra, há voos internos, e
+   em alguns trechos sai mais barato pagar em dinheiro. Cada trecho guarda como
+   foi pago, e a economia de cada um é medida do jeito certo:
+
+   · com milhas: preço em dinheiro do mesmo voo, menos taxas e o custo das
+     milhas (ao milheiro médio do programa);
+   · em dinheiro: o que custaria em milhas (milhas ao valor-alvo do programa,
+     que é quanto custa repor as milhas que ficaram na conta, mais taxas),
+     menos o que foi pago. Pagar em dinheiro quando é
+     mais barato também é economia, e entra na conta da viagem;
+   · milhas mais dinheiro: preço em dinheiro, menos o pago, as taxas e o custo
+     das milhas. */
+const FORMAS_TRECHO = {milhas:'Milhas', dinheiro:'Dinheiro', misto:'Milhas + dinheiro'};
+const SITUACOES_TRECHO = {planejado:'Planejado', emitido:'Emitido', voado:'Voado'};
+let trechoEmRegistro = null;
+const trechosDe = p => (p && p.trechos) || [];
+function custoMilhasTrecho(milhas, programa){
+  const c = (cpmPorPrograma() || {})[programa];
+  return c != null ? c * (Number(milhas) || 0) / 1000 : null;
+}
+function economiaTrecho(t){
+  const pago = Number(t.pago) || 0, taxas = Number(t.taxas) || 0, vista = Number(t.vista) || 0;
+  if (t.forma === 'dinheiro'){
+    if (t.semAlt) return {valor:0, nota:'Sem opção em milhas'};
+    if (!(Number(t.altMilhas) > 0)) return {valor:null, nota:'Informe quanto custaria em milhas para medir a economia'};
+    /* As milhas que não saíram da conta valem o que custa repô-las: o valor-alvo
+       do programa, não o custo antigo delas. */
+    const cm = (Number(t.altMilhas) || 0) / 1000 * faixasDe(t.altProg).alvo;
+    return {valor:cm + (Number(t.altTaxas) || 0) - pago, nota:'Pagando em dinheiro'};
+  }
+  if (!(vista > 0)) return {valor:null, nota:'Informe o preço em dinheiro do mesmo voo'};
+  const cm = custoMilhasTrecho(t.milhas, t.prog);
+  if (cm == null) return {valor:null, nota:'Sem custo lançado no programa'};
+  return {valor:vista - taxas - pago - cm, nota:t.forma === 'misto' ? 'Milhas + dinheiro' : 'Com milhas'};
+}
+function economiaJornada(p){
+  const ts = trechosDe(p);
+  if (ts.length) return soma(ts.map(t => economiaTrecho(t).valor).filter(v => v != null));
+  return soma(emissoesDoPlano(p).map(valorResgate).filter(v => v.ganho != null).map(v => v.ganho));
+}
+/* Milhas que ainda precisam estar na conta: trechos com milhas ainda não emitidos. */
+function milhasPendentesPorPrograma(p){
+  const out = {};
+  trechosDe(p).filter(t => t.forma !== 'dinheiro' && (t.situacao || 'planejado') === 'planejado' && Number(t.milhas) > 0)
+    .forEach(t => { out[t.prog] = (out[t.prog] || 0) + Number(t.milhas); });
+  return out;
+}
+const rotuloTrecho = t => `${(t.origem || '?').toUpperCase()} → ${(t.destino || '?').toUpperCase()}`;
 function irDoItemRota(k){
   const it = ROTA_ITENS.find(i => i.k === k); const p = P(); if (!it || !p) return;
   if (it.ir === 'editar') editarPlanoViagem(p.id);
@@ -23913,6 +23995,7 @@ function irDoItemRota(k){
     editarReserva(null, {tipo:'voo', quem:'proprio', cliente:'', desc:p.destino || p.nome, data:p.inicio, prog:m ? m.prog : 'smiles',
       milhas:m ? m.precisa || 0 : 0, taxas:0, cobrado:0, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO(), metaId:p.metaId || ''});
   }
+  else if (it.ir === 'trechos'){ modoRoteiro = 'trechos'; renderPlano(); }
   else if (it.ir === 'monitor'){ const m = metaDoPlano(p); abrirMonitor(null, {des:(m && m.destino) || '', ida:p.inicio, volta:p.fim, pax:p.pax || 1}); }
   else if (it.ir === 'fabricar'){ const m = metaDoPlano(p); if (m){ const f = Math.max(0, m.precisa - (saldoPorPrograma()[m.prog] || 0)); if (f) fabricarParaMeta(m.id, f); } }
 }
@@ -23942,8 +24025,15 @@ function sincronizarJornadas(){
     const m = {id:uid(), n:p.nome || 'Viagem', destino:'', prog:'smiles', precisa:0, prazo:p.inicio, emitida:false, hospedagem:false, feita:false, obs:'', etapas:{}};
     DB.metas.push(m); p.metaId = m.id; mudou = true;
   });
-  /* O que a jornada sabe manda no que a meta mostra para o resto da Torre. */
+  /* O que a jornada sabe manda no que a meta mostra para o resto da Torre. Com
+     trechos, a meta passa a ser o programa com mais milhas por emitir. */
   DB.planos.forEach(p => { const m = metaDoPlano(p); if (!m) return;
+    if (trechosDe(p).length){
+      const nec = milhasPendentesPorPrograma(p); const k = Object.keys(nec).sort((a, b) => nec[b] - nec[a])[0];
+      const precisa = k ? nec[k] : 0;
+      if (k && m.prog !== k){ m.prog = k; mudou = true; }
+      if (m.precisa !== precisa){ m.precisa = precisa; mudou = true; }
+    }
     if (m.n !== p.nome){ m.n = p.nome; mudou = true; }
     if (p.inicio && m.prazo !== p.inicio){ m.prazo = p.inicio; mudou = true; }
     const e = escopoPlano(p); if (m.escopo !== e){ m.escopo = e; mudou = true; } });
@@ -23954,6 +24044,132 @@ function abrirJornadaDaMeta(idMeta){
   const p = (DB.planos || []).find(x => x.metaId === idMeta);
   if (p){ filtroRoteiro = 'todas'; abrirRoteiroViagem(p.id); }
 }
+/* A lista de trechos da viagem: cada voo, como foi pago, a situação e a economia. */
+function renderTrechos(p){
+  const host = $('#rtPlano'); if (!host) return;
+  const ts = trechosDe(p).slice().sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  const porProg = {};
+  ts.filter(t => t.forma !== 'dinheiro').forEach(t => { porProg[t.prog] = (porProg[t.prog] || 0) + (Number(t.milhas) || 0); });
+  const dinheiro = soma(ts.map(t => (Number(t.pago) || 0)));
+  const taxas = soma(ts.map(t => (Number(t.taxas) || 0)));
+  const eco = soma(ts.map(t => economiaTrecho(t).valor).filter(v => v != null));
+  host.innerHTML = `<div class="cartao" style="padding:0;overflow:hidden">
+    <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
+      <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar. Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato em dinheiro: tudo entra na conta.</div></h3>
+      <button class="bt primario" onclick="editarTrecho()"><svg><use href="#i-mais"/></svg>Novo Trecho</button>
+    </div>
+    ${ts.length ? `<div class="rolo" style="margin:0;padding:0"><table class="tb-dados tb-trechos">
+      <thead><tr><th class="c">Data</th><th>Trecho</th><th>Pagamento</th><th class="c">Situação</th><th class="n">Economia</th><th></th></tr></thead>
+      <tbody>${ts.map(t => { const e = economiaTrecho(t); const sit = t.situacao || 'planejado';
+        return `<tr>
+        <td class="c" data-r="Data">${t.data ? dataBR(t.data) : '—'}</td>
+        <td data-r="Trecho"><b>${esc(rotuloTrecho(t))}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(t.cia || '')}${t.loc ? ` · ${esc(t.loc)}` : ''}</div></td>
+        <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq">dinheiro</span> ${brl(t.pago || 0)}`
+          : `<span class="etq aco">${esc(prog(t.prog).n)}</span> ${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}`}</td>
+        <td class="c" data-r="Situação"><button type="button" class="etq ${sit === 'voado' ? 'jade' : sit === 'emitido' ? 'ouro' : ''} rt-sit" onclick="avancarTrecho('${t.id}')" data-dica="Tocar para avançar a situação">${SITUACOES_TRECHO[sit]}</button></td>
+        <td class="n" data-r="Economia">${e.valor == null ? `<span class="fraco" data-dica="${esc(e.nota)}">—</span>` : `<span class="${e.valor >= 0 ? 'jade' : 'brasa'}">${e.valor >= 0 ? '' : '−'}${brl(Math.abs(e.valor))}</span><div class="fraco" style="font-size:calc(11.5px * var(--esc))">${esc(e.nota)}</div>`}</td>
+        <td><div class="acoes-cel">
+          ${t.forma !== 'dinheiro' && !t.reservaId ? `<button class="bt p fantasma" onclick="registrarTrecho('${t.id}')" data-dica="Lança a emissão no Diário e desconta as milhas do saldo">Lançar no Diário</button>` : ''}
+          <button class="bt p fantasma icone" onclick="editarTrecho('${t.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+          <button class="bt p fantasma icone" onclick="apagarTrecho('${t.id}')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
+        </div></td></tr>`; }).join('')}</tbody></table></div>
+      <div class="rt-trechos-pe">
+        ${Object.keys(porProg).map(k => `<span><b>${nBR(porProg[k])}</b> milhas ${esc(prog(k).n)}</span>`).join('')}
+        ${dinheiro ? `<span><b>${brl(dinheiro)}</b> em dinheiro</span>` : ''}${taxas ? `<span><b>${brl(taxas)}</b> de taxas</span>` : ''}
+        <span class="esticar"></span><span>Economia da viagem <b class="${eco >= 0 ? 'jade' : 'brasa'}">${brl(eco)}</b></span>
+      </div>`
+    : `<div class="vazio" style="border:0;padding:26px"><p>Nenhum trecho ainda. Lance cada voo: a ida, os internos e a volta, cada um com o que vai ser usado para pagar.</p></div>`}
+  </div>`;
+}
+function avancarTrecho(id){
+  const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
+  const ordem = ['planejado', 'emitido', 'voado']; t.situacao = ordem[(ordem.indexOf(t.situacao || 'planejado') + 1) % 3];
+  /* Voado aqui é voado em Resultados: a emissão ligada acompanha. */
+  const r = t.reservaId && (DB.reservas || []).find(x => x.id === t.reservaId);
+  if (r) r.status = t.situacao === 'voado' ? 'usada' : 'emitida';
+  salvar(); renderPlano();
+}
+function apagarTrecho(id){
+  const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
+  confirmar('Apagar o trecho', `${rotuloTrecho(t)} sai da jornada. Se ele foi lançado no Diário, a emissão continua lá.`, () => {
+    p.trechos = trechosDe(p).filter(x => x.id !== id); salvar(); renderPlano(); avisar('Trecho apagado.', 'ok');
+  }, 'Apagar');
+}
+/* Lançar o trecho no Diário: abre a emissão já preenchida e ligada à jornada; ao
+   salvar, a emissão desconta as milhas e fica ligada a este trecho. */
+function registrarTrecho(id){
+  const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
+  trechoEmRegistro = {plano:p.id, trecho:t.id};
+  editarReserva(null, {tipo:'voo', quem:'proprio', cliente:'', desc:rotuloTrecho(t) + (t.cia ? ' · ' + t.cia : ''), data:t.data || p.inicio, prog:t.prog,
+    milhas:Number(t.milhas) || 0, taxas:Number(t.taxas) || 0, cobrado:0, custoExtra:Number(t.pago) || 0, precoVista:Number(t.vista) || 0,
+    status:'emitida', trajeto:'ida', pax:[], criada:hojeISO(), metaId:p.metaId || ''});
+}
+function editarTrecho(id){
+  const p = P(); if (!p) return;
+  const t = id ? trechosDe(p).find(x => x.id === id) : {forma:'milhas', prog:(metaDoPlano(p) || {}).prog || 'smiles', data:p.inicio, situacao:'planejado'};
+  const progsMilhas = PROG_IDS.filter(k => prog(k).tipo === 'milhas');
+  const opP = sel => progsMilhas.map(k => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('');
+  abrirFolha({
+    titulo: id ? 'Editar Trecho' : 'Novo Trecho', largura:'larga',
+    corpo:`<div class="grade tr-grade">
+      <div class="campo"><label>Origem (IATA)</label><input type="text" id="trOri" maxlength="3" style="text-transform:uppercase" value="${esc(t.origem || '')}" placeholder="SSA"></div>
+      <div class="campo"><label>Destino (IATA)</label><input type="text" id="trDes" maxlength="3" style="text-transform:uppercase" value="${esc(t.destino || '')}" placeholder="OPO"></div>
+      <div class="campo"><label>Data do voo</label><input type="date" id="trData" value="${t.data || ''}"></div>
+      <div class="campo"><label>Companhia</label><input type="text" id="trCia" value="${esc(t.cia || '')}" placeholder="TAP"></div>
+      <div class="campo"><label>Como foi pago</label><select id="trForma" data-ordem="natural">${Object.entries(FORMAS_TRECHO).map(([k, v]) => `<option value="${k}"${k === t.forma ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="campo tr-mi"><label>Programa</label><select id="trProg">${opP(t.prog)}</select></div>
+      <div class="campo tr-mi"><label>Milhas (total)</label><input type="number" id="trMilhas" step="1000" value="${t.milhas || ''}"></div>
+      <div class="campo tr-mi"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxas" value="${moedaTxt(t.taxas || 0)}"></div>
+      <div class="campo tr-di"><label>Pago em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trPago" value="${moedaTxt(t.pago || 0)}"></div>
+      <div class="campo tr-mi"><label>Preço do voo em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trVista" value="${moedaTxt(t.vista || 0)}"></div>
+      <div class="campo tr-alt"><label>Em milhas custaria</label><input type="number" id="trAltMilhas" step="1000" value="${t.altMilhas || ''}" placeholder="Milhas"></div>
+      <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
+      <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
+      <div class="campo tr-sem"><label for="trSemAlt">Opção em milhas</label><label class="ck cd-caixa"><input type="checkbox" id="trSemAlt"${t.semAlt ? ' checked' : ''}> Não havia</label></div>
+      <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"></div>
+      <div class="campo"><label>Situação</label><select id="trSit" data-ordem="natural">${Object.entries(SITUACOES_TRECHO).map(([k, v]) => `<option value="${k}"${k === (t.situacao || 'planejado') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="nota" id="trNota" style="margin-top:14px"><svg><use href="#i-info"/></svg><div id="trNotaTxt"></div></div>`,
+    pe:`<button class="bt fantasma" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarTrecho">Salvar</button>`
+  });
+  ['#trTaxas', '#trPago', '#trVista', '#trAltTaxas'].forEach(sel => ligarCampoMoeda(sel));
+  ligarCampoContagem('#trMilhas'); ligarCampoContagem('#trAltMilhas');
+  /* O formulário mostra só os campos da forma escolhida, e a nota explica como a
+     economia daquele trecho vai ser medida. */
+  const aplicar = () => {
+    const f = $('#trForma').value;
+    $$('.tr-mi').forEach(e => e.style.display = f === 'dinheiro' ? 'none' : '');
+    $$('.tr-di').forEach(e => e.style.display = f === 'milhas' ? 'none' : '');
+    const sem = $('#trSemAlt').checked;
+    $$('.tr-alt').forEach(e => e.style.display = f === 'dinheiro' && !sem ? '' : 'none');
+    $$('.tr-sem').forEach(e => e.style.display = f === 'dinheiro' ? '' : 'none');
+    $('#trNotaTxt').innerHTML = f === 'dinheiro'
+      ? (sem ? 'Sem opção em milhas: o trecho entra na viagem sem economia nem perda.' : 'Comprado em dinheiro porque saiu mais barato? Informe quanto custaria em milhas: a diferença, com as milhas ao valor-alvo do programa, entra como <b>economia da viagem</b>.')
+      : f === 'misto' ? 'A economia é o preço do voo em dinheiro, menos o que foi pago, as taxas e o custo das milhas.'
+      : 'A economia é o preço do voo em dinheiro, menos as taxas e o custo das milhas ao seu milheiro médio.';
+  };
+  $('#trForma').onchange = aplicar; $('#trSemAlt').onchange = aplicar; aplicar();
+  $('#btSalvarTrecho').onclick = () => {
+    const f = $('#trForma').value;
+    const novo = {...t, id:t.id || uid(), origem:$('#trOri').value.toUpperCase().trim(), destino:$('#trDes').value.toUpperCase().trim(),
+      data:$('#trData').value, cia:$('#trCia').value.trim(), forma:f, loc:$('#trLoc').value.toUpperCase().trim(), situacao:$('#trSit').value,
+      prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
+      pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
+      semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
+      altMilhas:f === 'dinheiro' && !$('#trSemAlt').checked ? rgNum($('#trAltMilhas').value) : 0, altProg:$('#trAltProg').value,
+      altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
+    if (!novo.origem || !novo.destino){ avisar('Informe a origem e o destino do trecho.', 'alerta'); return; }
+    if (f === 'dinheiro' && !(novo.pago > 0)){ avisar('Informe quanto foi pago em dinheiro.', 'alerta'); return; }
+    if (f !== 'dinheiro' && !(novo.milhas > 0)){ avisar('Informe as milhas do trecho.', 'alerta'); return; }
+    const outros = trechosDe(p).filter(x => x.id !== novo.id);
+    if (outros.some(x => x.origem === novo.origem && x.destino === novo.destino && x.data === novo.data)){
+      avisar('Já existe um trecho com a mesma origem, destino e data nesta jornada.', 'alerta', 7000); return; }
+    p.trechos = outros.concat([novo]);
+    sincronizarJornadas(); salvar(); fecharFolha(); modoRoteiro = 'trechos'; renderPlano();
+    avisar('Trecho salvo.', 'ok');
+  };
+}
+
 function abrirRoteiroViagem(id){ planoAtual = id; planoDia = null; roteiroAberto = true; modoRoteiro = 'jornada'; etapaRota = null; renderPlano(); window.scrollTo({top:0, behavior:'smooth'}); }
 function voltarListaRoteiros(){ roteiroAberto = false; renderPlano(); }
 
@@ -24062,13 +24278,13 @@ function renderJornadaRota(p){
   const itens = pr.itens.filter(i => i.et === et.k);
   const int = escopoPlano(p) === 'int';
   const m = metaDoPlano(p), res = emissoesDoPlano(p);
-  const ganho = soma(res.map(valorResgate).filter(v => v.ganho != null).map(v => v.ganho));
+  const ganho = economiaJornada(p);
   const selo = seloPrazoPlano(p);
   host.innerHTML = `
     <div class="rt-topo">
       <button type="button" class="rt-voltar" onclick="voltarListaRoteiros()"><svg><use href="#i-seta-e"/></svg>${filtroRoteiro === 'nac' ? 'Jornadas nacionais' : filtroRoteiro === 'int' ? 'Jornadas internacionais' : 'Todas as jornadas'}</button>
       <div class="esticar"></div>
-      <div class="seg" id="segModoRoteiro"><button class="${modoRoteiro === 'jornada' ? 'on' : ''}" onclick="modoRoteiro='jornada';renderPlano()">Jornada ROTA</button><button class="${modoRoteiro === 'dias' ? 'on' : ''}" onclick="modoRoteiro='dias';renderPlano()">Dia a dia</button></div>
+      <div class="seg" id="segModoRoteiro"><button class="${modoRoteiro === 'jornada' ? 'on' : ''}" onclick="modoRoteiro='jornada';renderPlano()">Jornada ROTA</button><button class="${modoRoteiro === 'trechos' ? 'on' : ''}" onclick="modoRoteiro='trechos';renderPlano()">Trechos${trechosDe(p).length ? ` <span class="cont-disco">${trechosDe(p).length}</span>` : ''}</button><button class="${modoRoteiro === 'dias' ? 'on' : ''}" onclick="modoRoteiro='dias';renderPlano()">Dia a dia</button></div>
     </div>
     <div class="rt-cab">
       <div style="min-width:0"><div class="rt-nome">${esc(p.nome)}</div>
@@ -24144,7 +24360,7 @@ function renderPlano(){
   }
   if ($('#rtRoteiroLista')) $('#rtRoteiroLista').innerHTML = '';
   renderJornadaRota(p);
-  if (modoRoteiro === 'dias') renderPlanoDias(); else if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
+  if (modoRoteiro === 'dias') renderPlanoDias(); else if (modoRoteiro === 'trechos') renderTrechos(p); else if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
   if ($('#rtRoteirosSalvos')) $('#rtRoteirosSalvos').innerHTML = '';
 }
 
@@ -24963,7 +25179,9 @@ function numerosViagens(esc){
     faltam:soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)))),
     custoFechar:soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)) / 1000 * faixasDe(m.prog).alvo)),
     milhas, vista:soma(vals.map(v => v.vista)), taxas:soma(vals.map(v => v.taxas)),
-    ganho:soma(comValor.filter(v => v.ganho != null).map(v => v.ganho)),
+    ganho:soma(comValor.filter(v => v.ganho != null).map(v => v.ganho))
+      + soma((DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
+          .filter(t => t.forma === 'dinheiro' && t.situacao === 'voado').map(t => economiaTrecho(t).valor).filter(v => v != null)),
     medio: milhas && liquido ? liquido / milhas * 1000 : 0,
     agenda:viagens.filter(r => r.status !== 'usada').length
   };
@@ -27541,6 +27759,13 @@ function editarReserva(id, rascunho){
       itin:$('#rsItin').value.trim()};
     if (!conferirAntesDeSalvar('reservas', novo, 'uma emissão')) return;
     if (id) DB.reservas[DB.reservas.findIndex(x => x.id === id)] = novo; else DB.reservas.push(novo);
+    /* Emissão aberta a partir de um trecho da jornada: fica ligada a ele. */
+    if (!id && trechoEmRegistro){
+      const pl = (DB.planos || []).find(x => x.id === trechoEmRegistro.plano);
+      const tr = pl && trechosDe(pl).find(x => x.id === trechoEmRegistro.trecho);
+      if (tr){ tr.reservaId = novo.id; if ((tr.situacao || 'planejado') === 'planejado') tr.situacao = 'emitido'; }
+    }
+    trechoEmRegistro = null;
     /* A emissão alimenta três telas ao mesmo tempo: a lista, o controle de CPF e
        o resultado do balcão. Redesenhar só a lista deixava o controle mostrando o
        estado anterior até alguém recarregar a página — a vaga já tinha sido
