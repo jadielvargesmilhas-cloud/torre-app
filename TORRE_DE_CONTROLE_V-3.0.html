@@ -3571,6 +3571,16 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .rt-geral span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 
 .rt-etapa{ border-top:3px solid var(--c); }
+/* Próximo passo: um item por vez, em destaque, com a ação que o resolve. */
+.rt-proximo{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 16px; margin-bottom:16px; border-radius:14px;
+  background:color-mix(in oklab, var(--c) 9%, var(--sup-0)); border:1px solid color-mix(in oklab, var(--c) 40%, transparent); }
+.rt-proximo-letra{ width:40px; height:40px; border-radius:50%; display:grid; place-items:center; flex-shrink:0; background:var(--c); color:#fff;
+  font-family:var(--f-d); font-weight:800; font-size:calc(18px * var(--esc)); }
+.rt-proximo-corpo{ flex:1; min-width:200px; }
+.rt-proximo-rot{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); letter-spacing:.14em; text-transform:uppercase; color:var(--c); }
+.rt-proximo-nome{ font-size:calc(16px * var(--esc)); font-weight:600; color:var(--giz); margin-top:2px; }
+.rt-proximo-dica{ font-size:calc(13px * var(--esc)); color:var(--grafite); margin-top:1px; }
+.rt-proximo-acoes{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .rt-etapa-cab{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
 .rt-etapa-letra{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; flex-shrink:0;
   background:color-mix(in oklab, var(--c) 16%, transparent); color:var(--c); }
@@ -7715,12 +7725,13 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <!-- ══════════════ ROTA ══════════════════════════════════════════════ -->
       <section class="vista" id="v-rota">
         <div class="abas" data-grupo="rota">
-          <button class="aba on" data-aba="rt-metas">Metas de viagem <span class="cont" id="contMetas">0</span></button>
-          <button class="aba" data-aba="rt-plano">Roteiro</button>
-          <button class="aba" data-aba="rt-viagens">Minhas viagens <span class="cont" id="contViagens">0</span></button>
+          <!-- Jornadas (ROTA, o método) e Resultados (VEM, a transformação). A meta
+               de milhas deixou de ser item próprio: virou a etapa R de cada jornada. -->
+          <button class="aba on" data-aba="rt-plano">Jornadas</button>
+          <button class="aba" data-aba="rt-viagens">Resultados <span class="cont" id="contViagens">0</span></button>
         </div>
 
-        <div class="painel-aba on" id="p-rt-metas">
+        <div class="painel-aba" id="p-rt-metas" hidden>
           <div class="pilha" style="gap:18px">
             <!-- Panorama geral, Nacional e Internacional: o geral é só o painel de
                  números; os outros dois mostram números, metas e viagens daquele lado. -->
@@ -7738,14 +7749,14 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           </div>
         </div>
 
-        <div class="painel-aba" id="p-rt-plano">
+        <div class="painel-aba on" id="p-rt-plano">
           <!-- Roteiro pelo Método ROTA das Viagens: Panorama geral, Nacional e
                Internacional, como em Metas e Minhas viagens. Cada viagem é uma
                jornada R O T A (o método) que leva a V E M (a transformação). -->
           <div class="linha" style="flex-wrap:wrap;gap:11px;margin-bottom:16px">
             <div class="seg" id="segRoteiro"></div>
             <div class="esticar"></div>
-            <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Novo Roteiro</button>
+            <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Nova Jornada</button>
           </div>
           <div id="rtRoteiroLista"></div>
           <div id="rtJornada"></div>
@@ -8510,7 +8521,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 19:20';
+const BUILD = '2026-10-03 21:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11696,7 +11707,7 @@ const TITULOS = {
   fabrica: ['Fábrica', 'Onde a milha é fabricada; e a que preço'],
   comprar: ['Comprar e transferir', 'Quanto custa a milha por cada caminho'],
   saldo:   ['Tanque', 'Quanto tem guardado, de quem, e até quando'],
-  rota:    ['Rota', 'Metas de viagem e estúdio de roteiros'],
+  rota:    ['Rota', 'Jornadas pelo Método ROTA e seus resultados'],
   /* Emissões estava declarada três vezes, e só a última valia — as duas
      primeiras eram texto morto, de versões anteriores do módulo. */
   emissoes:['Emissões', 'Cotações, o que foi emitido e a cota de CPF'],
@@ -11723,7 +11734,7 @@ const ABA_INICIAL = {
   fabrica:  'fb-clubes',        /* a assinatura que fabrica sozinha, todo mês */
   saldo:    'sl-resumo',        /* quanto há, em uma tela */
   radar:    'rd-monitores',     /* o que está sendo vigiado */
-  rota:     'rt-metas',         /* para onde se está indo */
+  rota:     'rt-plano',         /* as jornadas: para onde se está indo */
   emissoes: 'em-resgates',      /* o que já foi emitido */
   cartoes:  'cr-painel'         /* o estado das faturas */
 };
@@ -12387,7 +12398,7 @@ function avisos(){
       s: d < 0 ? `Venceu ${prazoTexto(d)} e a viagem embarca ${prazoTexto(diasAte(z.plano.inicio))}.`
          : d === 0 ? `Último dia. A viagem embarca ${prazoTexto(diasAte(z.plano.inicio))}.`
          : `Vence ${prazoTexto(d)} · embarque ${prazoTexto(diasAte(z.plano.inicio))}`,
-      ir:['rota','rt-plano'], fn:`planoAtual='${z.plano.id}';renderPlano();` });
+      ir:['rota','rt-plano'], fn:`abrirRoteiroViagem('${z.plano.id}');` });
   });
 
   /* ── a emissão avisa três vezes ───────────────────────────────────────────
@@ -12491,7 +12502,7 @@ function avisos(){
         curto:`Meta ${m.n}`,
         t: dias < 0 ? `Meta "${m.n}" passou do prazo`
           : dias === 0 ? `Meta "${m.n}" vence hoje` : `Meta "${m.n}" vence ${prazoTexto(dias)}`,
-        s:`Faltam ${nBR(m.precisa - s)} milhas ${prog(m.prog).n}. ${dias < 0 ? 'Vale remarcar ou trocar de programa.' : 'Ainda dá para fabricar ou remarcar.'}`, ir:['rota','rt-metas'] });
+        s:`Faltam ${nBR(m.precisa - s)} milhas ${prog(m.prog).n}. ${dias < 0 ? 'Vale remarcar ou trocar de programa.' : 'Ainda dá para fabricar ou remarcar.'}`, ir:['rota','rt-plano'], fn:`abrirJornadaDaMeta('${m.id}');` });
     }
   });
 
@@ -23778,15 +23789,15 @@ const ROTA_ITENS = [
    auto:p => ({ok:!!(p.inicio && p.fim), info:p.inicio && p.fim ? `${dataBR(p.inicio)} a ${dataBR(p.fim)}` : ''}), ir:'editar'},
   {k:'r-orcamento', et:'R', n:'Orçamento total definido', d:'Quanto a viagem pode custar, com tudo.',
    auto:p => ({ok:Number(p.orcamento) > 0, info:Number(p.orcamento) > 0 ? brl(p.orcamento) : 'Informe o orçamento na viagem'}), ir:'editar'},
-  {k:'r-meta', et:'R', n:'Meta de milhas ligada', d:'A meta diz quantas milhas a viagem pede e em qual programa.',
-   auto:(p, x) => ({ok:!!x.meta, info:x.meta ? x.meta.n : 'Ligue uma meta na viagem, ou crie uma em Metas'}), ir:'editar'},
+  {k:'r-milhas', et:'R', n:'Milhas necessárias definidas', d:'Quantas milhas a emissão pede, e em qual programa.',
+   auto:(p, x) => ({ok:!!(x.meta && x.meta.precisa > 0), info:x.meta && x.meta.precisa > 0 ? `${nBR(x.meta.precisa)} milhas ${prog(x.meta.prog).n}` : 'Informe na jornada'}), ir:'editar'},
 
   {k:'o-programa', et:'O', n:'Programa da emissão escolhido', d:'Onde as milhas vão estar na hora de emitir.',
    auto:(p, x) => ({ok:!!(x.meta && x.meta.prog), info:x.meta ? prog(x.meta.prog).n : 'Vem da meta'})},
-  {k:'o-saldo', et:'O', n:'Saldo suficiente para a meta', d:'Milhas no programa contra o que a meta pede.',
-   auto:(p, x) => { if (!x.meta) return {ok:false, info:'Vem da meta'};
-     const s = x.sal[x.meta.prog] || 0; return {ok:s >= x.meta.precisa, info:`${nBR(s)} de ${nBR(x.meta.precisa)} (${pct(clamp(s / Math.max(1, x.meta.precisa) * 100, 0, 100), 0)})`}; }},
-  {k:'o-custo', et:'O', n:'Milheiro dentro do alvo', d:'O que as milhas custaram, contra o alvo do programa.',
+  {k:'o-saldo', et:'O', aceitavel:true, n:'Saldo suficiente para a emissão', d:'Milhas no programa contra o que a emissão pede.',
+   auto:(p, x) => { if (!x.meta) return {ok:false, info:'Defina as milhas na etapa R'};
+     const s = x.sal[x.meta.prog] || 0; return {ok:x.meta.precisa > 0 && s >= x.meta.precisa, info:x.meta.precisa > 0 ? `${nBR(s)} de ${nBR(x.meta.precisa)} (${pct(clamp(s / Math.max(1, x.meta.precisa) * 100, 0, 100), 0)})` : 'Defina as milhas na etapa R'}; }, ir:'fabricar'},
+  {k:'o-custo', et:'O', aceitavel:true, n:'Milheiro dentro do alvo', d:'O que as milhas custaram, contra o alvo do programa.',
    auto:(p, x) => { if (!x.meta) return {ok:false, info:'Vem da meta'};
      const c = (cpmPorPrograma() || {})[x.meta.prog], a = faixasDe(x.meta.prog).alvo;
      return {ok:c != null && c <= a, info:c != null ? `${brl2(c)} por mil, alvo ${brl2(a)}` : 'Sem custo lançado no programa'}; }},
@@ -23796,9 +23807,9 @@ const ROTA_ITENS = [
   {k:'t-campanhas', et:'T', n:'Campanhas de transferência acompanhadas', d:'Transferir só com bônus.',
    info:(p, x) => { if (!x.meta) return ''; const n = campanhasVivas('transferencia').filter(c => c.para === x.meta.prog).length;
      return n ? `${n} campanha${n > 1 ? 's' : ''} aberta${n > 1 ? 's' : ''} para ${prog(x.meta.prog).n} agora` : `Nenhuma campanha aberta para ${prog(x.meta.prog).n} agora`; }},
-  {k:'t-monitor', et:'T', n:'Preço da passagem monitorado', d:'Um monitor de preço para o trecho da meta.',
+  {k:'t-monitor', et:'T', aceitavel:true, n:'Preço da passagem monitorado', d:'Um monitor de preço para o trecho da meta.',
    auto:(p, x) => { const ok = !!(x.meta && (DB.monitores || []).some(m => (m.des || '').toUpperCase() === (x.meta.destino || '').toUpperCase()));
-     return {ok, info:ok ? 'Monitor ativo para o destino da meta' : 'Crie um monitor em Radar'}; }},
+     return {ok, info:ok ? 'Monitor ativo para o destino' : 'Crie um monitor de preço para o destino'}; }, ir:'monitor'},
   {k:'t-janela', et:'T', n:'Janela de emissão definida', d:'Até quando emitir para pegar a melhor tarifa.'},
 
   {k:'a-comparar', et:'A', n:'Preço em dinheiro comparado', d:'A emissão com milhas tem de valer mais que pagar.'},
@@ -23811,10 +23822,10 @@ const ROTA_ITENS = [
   {k:'a-seguro', et:'A', n:'Seguro viagem contratado', int:true, d:'Obrigatório em vários destinos; cheque o do cartão.'},
 
   {k:'v-hotel', et:'V', n:'Hospedagem reservada', meta:'hotel', d:'Se for ficar com parentes, marque que não se aplica.'},
-  {k:'v-dias', et:'V', n:'Roteiro dia a dia montado', d:'Todos os dias com ao menos uma parada.',
+  {k:'v-dias', et:'V', aceitavel:true, n:'Roteiro dia a dia montado', d:'Todos os dias com ao menos uma parada.',
    auto:p => { const ds = diasDoPlano(p); const n = ds.filter(d => paradasDo(p, d).length).length;
      return {ok:ds.length > 0 && n === ds.length, info:`${n} de ${ds.length} dias com paradas`}; }, ir:'dias'},
-  {k:'v-prazos', et:'V', n:'Prazos em dia', d:'Nenhum prazo da viagem vencido sem resolver.',
+  {k:'v-prazos', et:'V', aceitavel:true, n:'Prazos em dia', d:'Nenhum prazo da viagem vencido sem resolver.',
    auto:p => { const v = (p.prazos || []).filter(z => !z.feito && z.quando && diasAte(z.quando) < 0).length;
      return {ok:v === 0, info:v ? `${v} prazo${v > 1 ? 's' : ''} vencido${v > 1 ? 's' : ''}` : 'Nenhum prazo vencido'}; }, ir:'editar'},
   {k:'v-cambio', et:'V', n:'Câmbio e cartão para o exterior prontos', int:true, d:'Moeda em mãos ou conta global, e cartão sem IOF alto.'},
@@ -23823,14 +23834,18 @@ const ROTA_ITENS = [
   {k:'e-registro', et:'E', n:'Emissão registrada na Torre', d:'A passagem lançada em Minhas viagens, ligada à meta.',
    auto:(p, x) => ({ok:x.res.length > 0, info:x.res.length ? `${x.res.length} emissã${x.res.length > 1 ? 'ões' : 'o'} ligada${x.res.length > 1 ? 's' : ''} à meta` : 'Registre em Minhas viagens'}), ir:'emissao'},
   {k:'e-checkin', et:'E', n:'Check-in feito', d:'E cartão de embarque salvo no celular.'},
+  {k:'e-ida', et:'E', n:'Ida voada', meta:'voou_ida', d:'O voo de ida aconteceu.'},
+  {k:'e-estadia', et:'E', n:'Hospedagem cumprida', meta:'hospedou', d:'A estadia aconteceu como reservada.'},
+  {k:'e-volta', et:'E', n:'Volta voada', meta:'voou_volta', d:'O voo de volta aconteceu. Se foi só ida, marque que não se aplica.'},
 
   {k:'m-vista', et:'M', n:'Preço à vista registrado', d:'Quanto a passagem custaria em dinheiro.',
    auto:(p, x) => ({ok:x.res.some(r => Number(r.precoVista) > 0), info:x.res.some(r => Number(r.precoVista) > 0) ? brl(soma(x.res.map(r => Number(r.precoVista) || 0))) : 'Informe na emissão'}), ir:'emissao'},
-  {k:'m-economia', et:'M', n:'Economia calculada', d:'À vista, menos taxas e o custo das milhas.',
+  {k:'m-economia', et:'M', aceitavel:true, n:'Economia calculada', d:'À vista, menos taxas e o custo das milhas.',
    auto:(p, x) => { const g = soma(x.res.map(valorResgate).filter(v => v.ganho != null).map(v => v.ganho));
      return {ok:x.res.some(r => valorResgate(r).ganho != null), info:x.res.length ? brl(g) : 'Depende do preço à vista e do custo'}; }},
   {k:'m-realizada', et:'M', n:'Viagem realizada', d:'A volta já passou.',
-   auto:p => ({ok:!!p.fim && diasAte(p.fim) < 0, info:p.fim ? (diasAte(p.fim) < 0 ? `Voltou em ${dataBR(p.fim)}` : `Volta em ${dataBR(p.fim)}`) : ''})}
+   auto:p => ({ok:!!p.fim && diasAte(p.fim) < 0, info:p.fim ? (diasAte(p.fim) < 0 ? `Voltou em ${dataBR(p.fim)}` : `Volta em ${dataBR(p.fim)}`) : ''})},
+  {k:'m-nota', et:'M', n:'O que esta viagem ensinou', d:'Uma nota para a próxima: o que deu certo e o que mudar.'}
 ];
 
 /* Estado de cada item da viagem: feito, pendente ou não se aplica. */
@@ -23840,7 +23855,12 @@ function estadoItensRota(p){
   const reg = p.rota || {};
   return ROTA_ITENS.filter(it => !it.int || int).map(it => {
     const r = reg[it.k] || {};
-    if (it.auto){ const a = it.auto(p, x); return {...it, auto:true, estado:a.ok ? 'feito' : 'pendente', info:a.info}; }
+    if (it.auto){
+      const a = it.auto(p, x);
+      /* "Seguir mesmo assim": a Torre não marca, mas a pessoa decidiu seguir. */
+      if (!a.ok && it.aceitavel && r.aceito) return {...it, auto:true, aceito:true, estado:'feito', info:`${a.info}. Seguiu assim em ${dataBR(r.em)}.`};
+      return {...it, auto:true, estado:a.ok ? 'feito' : 'pendente', info:a.info};
+    }
     if (it.meta && x.meta){
       const e = (x.meta.etapas || {})[it.meta] || {};
       return {...it, estado:e.na ? 'na' : e.feita ? 'feito' : 'pendente', em:e.em, info:(it.info ? it.info(p, x) : '') || (e.em ? `Marcado em ${dataBR(e.em)}` : '')};
@@ -23859,26 +23879,78 @@ function progressoRota(p){
   const feitos = valem.filter(i => i.estado === 'feito').length;
   return {itens, porEt, feitos, total:valem.length, pct:valem.length ? Math.round(feitos / valem.length * 100) : 0};
 }
+/* O primeiro item pendente, na ordem do método. */
+function proximoPassoRota(pr){
+  /* "Viagem realizada" só fecha com a volta: enquanto houver outra coisa a
+     fazer, ela não ocupa o lugar do próximo passo. */
+  const pend = ROTA_ETAPAS.flatMap(e => pr.itens.filter(x => x.et === e.k && x.estado === 'pendente'));
+  return pend.find(i => i.k !== 'm-realizada') || pend[0] || null;
+}
 function marcarItemRota(k, valor){
   const p = P(); if (!p) return;
   const it = ROTA_ITENS.find(i => i.k === k); if (!it) return;
   const m = metaDoPlano(p);
-  const reg = valor === 'na' ? {na:true} : valor ? {feito:true, em:hojeISO()} : {feito:false};
-  if (it.meta && m){ m.etapas = m.etapas || {}; m.etapas[it.meta] = {...(m.etapas[it.meta] || {}), ...{feita:!!reg.feito, em:reg.em || null, na:!!reg.na}}; m.feita = metaConcluida(m); }
+  const reg = valor === 'na' ? {na:true} : valor === 'aceito' ? {aceito:true, em:hojeISO()} : valor ? {feito:true, em:hojeISO()} : {feito:false};
+  if (valor === 'aceito' || it.auto){ p.rota = p.rota || {}; p.rota[k] = reg; }
+  else if (it.meta && m){ m.etapas = m.etapas || {}; m.etapas[it.meta] = {...(m.etapas[it.meta] || {}), ...{feita:!!reg.feito, em:reg.em || null, na:!!reg.na}}; m.feita = metaConcluida(m); }
   else { p.rota = p.rota || {}; p.rota[k] = reg; }
   const antes = progressoRota(p).pct;
   salvar(); renderPlano();
   const depois = progressoRota(p).pct;
-  if (depois === 100 && antes < 100) avisar('Roteiro pronto: ROTA te levou, VEM aconteceu.', 'ok', 6000);
+  if (depois === 100 && antes < 100) avisar('Jornada completa: ROTA te levou, VEM aconteceu.', 'ok', 6000);
 }
+const ROTULO_IR = {editar:'Preencher', dias:'Montar', emissao:'Registrar', fabricar:'Como fabricar', monitor:'Criar monitor'};
 function irDoItemRota(k){
   const it = ROTA_ITENS.find(i => i.k === k); const p = P(); if (!it || !p) return;
   if (it.ir === 'editar') editarPlanoViagem(p.id);
   else if (it.ir === 'dias'){ modoRoteiro = 'dias'; renderPlano(); }
-  else if (it.ir === 'emissao') editarViagem();
+  else if (it.ir === 'emissao'){
+    /* Registrar a emissão já ligada a esta jornada: programa, milhas e data vêm dela. */
+    const m = metaDoPlano(p);
+    editarReserva(null, {tipo:'voo', quem:'proprio', cliente:'', desc:p.destino || p.nome, data:p.inicio, prog:m ? m.prog : 'smiles',
+      milhas:m ? m.precisa || 0 : 0, taxas:0, cobrado:0, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO(), metaId:p.metaId || ''});
+  }
+  else if (it.ir === 'monitor'){ const m = metaDoPlano(p); abrirMonitor(null, {des:(m && m.destino) || '', ida:p.inicio, volta:p.fim, pax:p.pax || 1}); }
+  else if (it.ir === 'fabricar'){ const m = metaDoPlano(p); if (m){ const f = Math.max(0, m.precisa - (saldoPorPrograma()[m.prog] || 0)); if (f) fabricarParaMeta(m.id, f); } }
 }
 
 let filtroRoteiro = 'todas', modoRoteiro = 'jornada', etapaRota = null, roteiroAberto = false;
+
+/* Uma viagem é uma jornada só. Por baixo, cada jornada tem a sua meta de milhas
+   (é ela que o Painel, a Fábrica e os avisos já conhecem), mas a pessoa nunca
+   cadastra a meta à parte: ela é a etapa R. Esta função garante o par:
+   jornada sem meta ganha uma; meta sem jornada (as criadas antes desta versão)
+   vira jornada, com o que a meta já sabia. Roda a cada atualização e é segura
+   de repetir. */
+function sincronizarJornadas(){
+  DB.planos = DB.planos || []; DB.metas = DB.metas || [];
+  let mudou = false;
+  const usadas = new Set(DB.planos.map(p => p.metaId).filter(Boolean));
+  DB.metas.forEach(m => {
+    if (usadas.has(m.id)) return;
+    const a = AEROPORTOS[(m.destino || '').toUpperCase()];
+    const ini = m.prazo && m.prazo >= hojeISO() ? m.prazo : somaDias(90);
+    DB.planos.push({id:uid(), nome:m.n || 'Viagem', destino:a ? a.c : (m.destino || ''), escopo:escopoMeta(m) || 'nac',
+      inicio:ini, fim:somaDias(7, ini), pax:1, moeda:'BRL', fx:{}, paradas:[], prazos:[], feito:false, metaId:m.id});
+    usadas.add(m.id); mudou = true;
+  });
+  DB.planos.forEach(p => {
+    if (p.metaId && DB.metas.some(m => m.id === p.metaId)) return;
+    const m = {id:uid(), n:p.nome || 'Viagem', destino:'', prog:'smiles', precisa:0, prazo:p.inicio, emitida:false, hospedagem:false, feita:false, obs:'', etapas:{}};
+    DB.metas.push(m); p.metaId = m.id; mudou = true;
+  });
+  /* O que a jornada sabe manda no que a meta mostra para o resto da Torre. */
+  DB.planos.forEach(p => { const m = metaDoPlano(p); if (!m) return;
+    if (m.n !== p.nome){ m.n = p.nome; mudou = true; }
+    if (p.inicio && m.prazo !== p.inicio){ m.prazo = p.inicio; mudou = true; }
+    const e = escopoPlano(p); if (m.escopo !== e){ m.escopo = e; mudou = true; } });
+  if (mudou) salvar();
+}
+function abrirJornadaDaMeta(idMeta){
+  sincronizarJornadas();
+  const p = (DB.planos || []).find(x => x.metaId === idMeta);
+  if (p){ filtroRoteiro = 'todas'; abrirRoteiroViagem(p.id); }
+}
 function abrirRoteiroViagem(id){ planoAtual = id; planoDia = null; roteiroAberto = true; modoRoteiro = 'jornada'; etapaRota = null; renderPlano(); window.scrollTo({top:0, behavior:'smooth'}); }
 function voltarListaRoteiros(){ roteiroAberto = false; renderPlano(); }
 
@@ -23918,10 +23990,10 @@ function renderListaRoteiros(){
   const nomeLado = filtroRoteiro === 'nac' ? 'nacional' : filtroRoteiro === 'int' ? 'internacional' : '';
   if (!lista.length){
     host.innerHTML = `<div class="vazio" style="padding:34px"><svg><use href="#i-mapa"/></svg>
-      <h4>Nenhum roteiro${nomeLado ? ' ' + nomeLado : ''}</h4>
-      <p>Cada roteiro é uma jornada pelo Método ROTA: Rumo, Otimização, Timing e Ação levam à Viagem planejada, à Emissão realizada e à Mensuração da economia. Quando a lista fecha, a viagem está pronta.</p>
+      <h4>Nenhuma jornada${nomeLado ? ' ' + nomeLado : ''}</h4>
+      <p>Cada viagem é uma jornada pelo Método ROTA: Rumo, Otimização, Timing e Ação levam à Viagem planejada, à Emissão realizada e à Mensuração da economia. Quando a lista fecha, a viagem está pronta.</p>
       <div class="linha" style="justify-content:center;gap:9px">
-        <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Novo Roteiro</button>
+        <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Nova Jornada</button>
         <button class="bt fantasma" onclick="abrirCompositor()"><svg><use href="#i-faisca"/></svg>Compor com IA</button>
       </div></div>`;
     return;
@@ -23937,7 +24009,7 @@ function renderListaRoteiros(){
       </div>
       ${trilhoRota(pr, false)}
       <div class="rt-cartao-pe"><div class="barra"><i class="${pr.pct === 100 ? 'jade' : ''}" style="width:${pr.pct}%"></i></div>
-        <span>${pr.pct === 100 ? 'Roteiro pronto' : `${pr.feitos} de ${pr.total} itens`}</span></div>
+        <span>${pr.pct === 100 ? 'Viagem pronta' : `${pr.feitos} de ${pr.total} itens`}</span></div>
     </button>`;
   }).join('')}</div>`;
 }
@@ -23956,7 +24028,7 @@ function renderJornadaRota(p){
   const selo = seloPrazoPlano(p);
   host.innerHTML = `
     <div class="rt-topo">
-      <button type="button" class="rt-voltar" onclick="voltarListaRoteiros()"><svg><use href="#i-seta-e"/></svg>${filtroRoteiro === 'nac' ? 'Roteiros nacionais' : filtroRoteiro === 'int' ? 'Roteiros internacionais' : 'Todos os roteiros'}</button>
+      <button type="button" class="rt-voltar" onclick="voltarListaRoteiros()"><svg><use href="#i-seta-e"/></svg>${filtroRoteiro === 'nac' ? 'Jornadas nacionais' : filtroRoteiro === 'int' ? 'Jornadas internacionais' : 'Todas as jornadas'}</button>
       <div class="esticar"></div>
       <div class="seg" id="segModoRoteiro"><button class="${modoRoteiro === 'jornada' ? 'on' : ''}" onclick="modoRoteiro='jornada';renderPlano()">Jornada ROTA</button><button class="${modoRoteiro === 'dias' ? 'on' : ''}" onclick="modoRoteiro='dias';renderPlano()">Dia a dia</button></div>
     </div>
@@ -23970,7 +24042,7 @@ function renderJornadaRota(p){
     ${modoRoteiro === 'jornada' ? `
     ${pr.pct === 100 ? `<div class="rt-embarque">
         <div class="rt-emb-esq">
-          <div class="rt-emb-tag">Cartão de embarque · Roteiro pronto</div>
+          <div class="rt-emb-tag">Cartão de embarque · Jornada completa</div>
           <div class="rt-emb-dest">${esc(p.destino || p.nome)}</div>
           <div class="rt-emb-grade">
             <div><span>Ida</span><b>${dataBR(p.inicio)}</b></div><div><span>Volta</span><b>${dataBR(p.fim)}</b></div>
@@ -23981,6 +24053,18 @@ function renderJornadaRota(p){
         <div class="rt-emb-dir"><svg><use href="#i-ok"/></svg><b>ROTA te levou.</b><span>VEM aconteceu.</span></div>
       </div>` : `<div class="rt-geral"><div class="rt-geral-num">${pr.pct}%</div><div><b>${pr.feitos} de ${pr.total} itens</b><span>Quando todos fecharem, a viagem ganha o cartão de embarque.</span></div>
         <div class="barra" style="flex:1;min-width:120px"><i style="width:${pr.pct}%"></i></div></div>`}
+    ${(() => { const prox = proximoPassoRota(pr); if (!prox) return '';
+      const e = ROTA_ETAPAS.find(x => x.k === prox.et);
+      return `<div class="rt-proximo et-${prox.et}">
+        <span class="rt-proximo-letra">${prox.et}</span>
+        <div class="rt-proximo-corpo"><div class="rt-proximo-rot">Próximo passo · ${esc(e.n)}</div>
+          <div class="rt-proximo-nome">${esc(prox.n)}</div><div class="rt-proximo-dica">${esc(prox.info || prox.d)}</div></div>
+        <div class="rt-proximo-acoes">
+          ${prox.ir ? `<button type="button" class="bt p primario" onclick="irDoItemRota('${prox.k}')">${ROTULO_IR[prox.ir] || 'Preencher'}</button>` : ''}
+          ${!prox.auto ? `<button type="button" class="bt p ${prox.ir ? 'fantasma' : 'primario'}" onclick="marcarItemRota('${prox.k}', true)"><svg><use href="#i-ok"/></svg>Feito</button>
+            <button type="button" class="rt-na" onclick="marcarItemRota('${prox.k}', 'na')">Não se aplica</button>` : ''}
+          ${prox.auto && prox.aceitavel ? `<button type="button" class="rt-na" onclick="marcarItemRota('${prox.k}', 'aceito')">Seguir mesmo assim</button>` : ''}
+        </div></div>`; })()}
     ${trilhoRota(pr, true, et.k)}
     <div class="cartao rt-etapa et-${et.k}">
       <div class="rt-etapa-cab">
@@ -23996,8 +24080,10 @@ function renderJornadaRota(p){
             <div class="rt-item-nome">${esc(i.n)}${i.auto ? ' <span class="rt-auto">pela Torre</span>' : ''}${i.int ? ' <span class="rt-auto int">internacional</span>' : ''}</div>
             <div class="rt-item-dica">${esc(i.estado === 'na' ? 'Não se aplica a esta viagem.' : (i.info || i.d))}</div>
           </div>
-          ${i.ir && i.estado !== 'feito' ? `<button type="button" class="bt p fantasma" onclick="irDoItemRota('${i.k}')">${i.ir === 'dias' ? 'Montar' : i.ir === 'emissao' ? 'Registrar' : 'Preencher'}</button>` : ''}
+          ${i.ir && i.estado !== 'feito' ? `<button type="button" class="bt p fantasma" onclick="irDoItemRota('${i.k}')">${ROTULO_IR[i.ir] || 'Preencher'}</button>` : ''}
           ${!i.auto && i.estado !== 'feito' ? `<button type="button" class="rt-na" onclick="marcarItemRota('${i.k}', ${i.estado === 'na' ? 'false' : "'na'"})">${i.estado === 'na' ? 'Voltar a valer' : 'Não se aplica'}</button>` : ''}
+          ${i.auto && i.aceitavel && i.estado === 'pendente' ? `<button type="button" class="rt-na" onclick="marcarItemRota('${i.k}', 'aceito')">Seguir mesmo assim</button>` : ''}
+          ${i.aceito ? `<button type="button" class="rt-na" onclick="marcarItemRota('${i.k}', false)">Desfazer</button>` : ''}
         </div>`).join('')}</div>
       <div class="rt-etapa-pe">
         ${ROTA_ETAPAS.indexOf(et) > 0 ? `<button type="button" class="bt p fantasma" onclick="etapaRota='${ROTA_ETAPAS[ROTA_ETAPAS.indexOf(et) - 1].k}';renderPlano()"><svg><use href="#i-seta-e"/></svg>${esc(ROTA_ETAPAS[ROTA_ETAPAS.indexOf(et) - 1].n)}</button>` : '<span></span>'}
@@ -24183,7 +24269,7 @@ function editarPlanoViagem(id){
   const p = id ? (DB.planos || []).find(x => x.id === id)
               : {nome:'', inicio:hojeISO(), fim:somaDias(6), pax:2, moeda:'BRL', fx:{}, paradas:[], prazos:[], feito:false};
   abrirFolha({
-    titulo: id ? 'Editar Viagem' : 'Nova Viagem', largura:'larga',
+    titulo: id ? 'Editar Jornada' : 'Nova Jornada', largura:'larga',
     corpo:`<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
       <div class="campo" style="grid-column:1 / -1"><label>Nome da viagem</label><input type="text" id="pvNome" value="${esc(p.nome)}" placeholder="Japão em outubro"></div>
       <div class="campo"><label>Destino</label><input type="text" id="pvDest" value="${esc(p.destino || '')}" placeholder="Lisboa e Porto"></div>
@@ -24191,7 +24277,10 @@ function editarPlanoViagem(id){
         <option value="nac"${escopoPlano(p) === 'nac' ? ' selected' : ''}>Nacional</option>
         <option value="int"${escopoPlano(p) === 'int' ? ' selected' : ''}>Internacional</option></select></div>
       <div class="campo"><label>Orçamento total (R$)</label><input type="text" inputmode="decimal" data-moeda id="pvOrc" value="${moedaTxt(p.orcamento || 0)}"></div>
-      <div class="campo"><label>Meta de milhas</label><select id="pvMeta" data-ordem="natural"><option value="">Nenhuma</option>${(DB.metas || []).map(m => `<option value="${m.id}"${m.id === p.metaId ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select></div>
+      ${(() => { const mm = p.metaId ? (DB.metas || []).find(x => x.id === p.metaId) : null;
+        return `<div class="campo"><label>Programa da emissão</label><select id="pvProg">${PROG_IDS.filter(k => prog(k).tipo === 'milhas').map(k => `<option value="${k}"${k === (mm ? mm.prog : 'smiles') ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+        <div class="campo"><label>Milhas necessárias</label><input type="number" id="pvMilhas" value="${mm ? mm.precisa || '' : ''}" step="5000" placeholder="100.000"></div>
+        <div class="campo"><label>Aeroporto de destino (IATA)</label><input type="text" id="pvIata" value="${esc(mm ? mm.destino || '' : '')}" maxlength="3" style="text-transform:uppercase" placeholder="LIS"></div>`; })()}
       ${campoPeriodo('pvIni', 'pvFim', 'Ida e volta')}
       <div class="campo"><label>Viajantes</label><input type="number" id="pvPax" value="${p.pax || 1}" min="1" max="20"></div>
       <div class="campo"><label>Moeda no destino</label><select id="pvMoeda">${Object.keys(MOEDAS).map(m => `<option value="${m}"${m === (p.moeda || 'BRL') ? ' selected' : ''}>${m} · ${MOEDAS[m]}</option>`).join('')}</select></div>
@@ -24216,6 +24305,7 @@ function editarPlanoViagem(id){
   $('#pvIni').value = p.inicio; $('#pvFim').value = p.fim;
   ligarPeriodo('pvIni', 'pvFim', 'Ida e volta');
   ligarCampoMoeda('#pvOrc');
+  ligarCampoContagem('#pvMilhas');
   /* Moeda estrangeira sugere internacional; real sugere nacional. */
   $('#pvMoeda').addEventListener('change', () => { if (!id) $('#pvEsc').value = $('#pvMoeda').value === 'BRL' ? 'nac' : 'int'; });
 
@@ -24248,20 +24338,26 @@ function editarPlanoViagem(id){
       const v = Number($('#fx-' + m).value) || 0; if (v > 0) fx[m] = v;
     });
     const novo = {...p, id:p.id || uid(), nome:$('#pvNome').value.trim() || 'Viagem sem nome',
-      destino:$('#pvDest').value.trim(), escopo:$('#pvEsc').value, orcamento:moedaNum($('#pvOrc').value), metaId:$('#pvMeta').value,
+      destino:$('#pvDest').value.trim(), escopo:$('#pvEsc').value, orcamento:moedaNum($('#pvOrc').value),
       inicio:ini, fim, pax:Number($('#pvPax').value) || 1, moeda:$('#pvMoeda').value, fx,
       prazos:prazos.filter(z => z.quando), paradas:p.paradas || []};
     DB.planos = DB.planos || [];
     if (id) DB.planos[DB.planos.findIndex(x => x.id === id)] = novo; else DB.planos.unshift(novo);
+    /* A meta da jornada: programa, milhas e aeroporto vêm daqui. */
+    let mm = novo.metaId ? (DB.metas || []).find(x => x.id === novo.metaId) : null;
+    if (!mm){ mm = {id:uid(), n:novo.nome, destino:'', prog:'smiles', precisa:0, prazo:novo.inicio, emitida:false, hospedagem:false, feita:false, obs:'', etapas:{}}; DB.metas = DB.metas || []; DB.metas.push(mm); novo.metaId = mm.id; }
+    mm.n = novo.nome; mm.prog = $('#pvProg').value; mm.precisa = rgNum($('#pvMilhas').value); mm.destino = $('#pvIata').value.toUpperCase().trim(); mm.prazo = novo.inicio; mm.escopo = novo.escopo;
     planoAtual = novo.id; planoDia = null; roteiroAberto = true;
     salvar(); fecharFolha(); renderRota(); renderFita();
-    avisar('Viagem salva.', 'ok');
+    avisar('Jornada salva.', 'ok');
   };
 }
 function apagarPlano(id){
-  confirmar('Apagar a viagem', 'O roteiro inteiro, com todas as paradas e prazos, sai do sistema. Não dá para desfazer.', () => {
+  confirmar('Apagar a jornada', 'A jornada inteira sai do sistema: etapas, paradas, prazos e as milhas necessárias. As emissões registradas ficam em Resultados. Não dá para desfazer.', () => {
+    const alvo = (DB.planos || []).find(x => x.id === id);
     DB.planos = (DB.planos || []).filter(x => x.id !== id);
-    planoAtual = null; salvar(); fecharFolha(); renderRota(); renderFita();
+    if (alvo && alvo.metaId) DB.metas = (DB.metas || []).filter(m => m.id !== alvo.metaId);
+    planoAtual = null; roteiroAberto = false; salvar(); fecharFolha(); renderRota(); renderFita();
     avisar('Viagem apagada.', 'ok');
   }, 'Apagar');
 }
@@ -24837,7 +24933,7 @@ function numerosViagens(esc){
 function renderMetas(){
   const sal = saldoPorPrograma();
   const abertasTodas = DB.metas.filter(m => !m.feita);
-  $('#contMetas').textContent = abertasTodas.length;
+  if ($('#contMetas')) $('#contMetas').textContent = abertasTodas.length;
   const T = numerosViagens(null), N = numerosViagens('nac'), I = numerosViagens('int');
 
   segLados('#segMetas', filtroMetas, N.abertas.length, I.abertas.length, f => { filtroMetas = f; renderMetas(); });
@@ -27207,7 +27303,7 @@ function editarReserva(id, rascunho){
            contra o que a passagem custaria em dinheiro e contra a meta que ela
            realiza; emissão vendida se mede contra o que o cliente pagou. Cada par
            aparece no seu caso. -->
-      <div class="campo" id="rsMetaBox"><label>Meta de viagem</label><select id="rsMeta"><option value="">— avulsa —</option>${
+      <div class="campo" id="rsMetaBox"><label>Jornada</label><select id="rsMeta"><option value="">— avulsa —</option>${
         (DB.metas || []).map(m => `<option value="${m.id}"${m.id === r.metaId ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select></div>
       <div class="campo" id="rsVistaBox"><label>Preço à vista que pagaria (R$)</label>
         <input type="text" inputmode="decimal" data-moeda id="rsVista" value="${moedaTxt(r.precoVista || 0)}"></div>
@@ -27414,7 +27510,7 @@ function editarReserva(id, rascunho){
     sincronizarSaidaDaEmissao(novo);
     salvar(); fecharFolha();
     renderBalcao(); renderEmissoes(); renderFita();
-    avisar('Emissão salva.', 'ok');
+    if (vistaAtual === 'rota' && typeof renderRota === 'function') renderRota(); avisar('Emissão salva.', 'ok');
   };
 }
 
@@ -29730,7 +29826,7 @@ function pintarFaixaModulo(v){
     vendas:   () => plural((DB.reservas || []).filter(r => r.quem === 'terceiro').length, 'emissão para cliente', 'emissões para cliente'),
     clientes: () => plural((DB.pessoas || []).length, 'passageiro cadastrado', 'passageiros cadastrados'),
     cartoes:  () => plural((DB.cartoes || []).length, 'cartão', 'cartões'),
-    rota:     () => plural((DB.metas || []).length, 'meta', 'metas'),
+    rota:     () => plural((DB.planos || []).length, 'jornada', 'jornadas'),
     radar:    () => plural((DB.monitores || []).length, 'monitor', 'monitores')
   };
   res.textContent = resumo[v] ? resumo[v]() : '';
@@ -31706,7 +31802,7 @@ function comandos(){
     {t:'Nova assinatura de clube', s:'', i:'#i-etiqueta', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); editarAssinatura(); }},
     {t:'Abrir o bumerangue', s:'Simular a volta dos pontos com bônus nas duas pontas', i:'#i-atualizar', g:'ir', f:abrirBumerangueFolha},
     {t:'Registrar Compra Bonificada', s:'', i:'#i-caixa', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-compras'); novaCompra(); }},
-    {t:'Nova Meta de Viagem', s:'', i:'#i-alvo', g:'criar', f:() => { irPara('rota'); irParaAba('rota', 'rt-metas'); editarMeta(); }},
+    {t:'Nova Jornada de Viagem', s:'', i:'#i-alvo', g:'criar', f:() => { irPara('rota'); irParaAba('rota', 'rt-plano'); editarPlanoViagem(); }},
     {t:'Registrar Emissão', s:'Própria ou para cliente', i:'#i-balcao', g:'criar', f:() => { irPara('emissoes'); irParaAba('emissoes', 'em-resgates'); editarReserva(); }},
     {t:'Novo monitor de rota', s:'', i:'#i-radar', g:'criar', f:() => { irPara('radar'); irParaAba('radar', 'rd-monitores'); abrirMonitor(); }},
     {t:'Lançar saldo', s:'', i:'#i-saldo', g:'criar', f:() => { irPara('saldo'); editarSaldo(); }},
@@ -32241,6 +32337,7 @@ const RENDER = { mesa:() => { renderMesa(); renderVender(); renderLancamentos();
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 function aplicarTudo(){
   aplicarCondicoesCampanhas();
+  sincronizarJornadas();
   setTimeout(ajustarLarguraMenu, 0);
   document.documentElement.dataset.theme = DB.cfg.tema || 'breu';
   /* O tamanho do meio era 1.14 e ficou grande demais; passou a 1.07. Quem tinha
