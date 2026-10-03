@@ -3614,7 +3614,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
   font-size:calc(11.5px * var(--esc)); letter-spacing:.14em; text-transform:uppercase; color:var(--anil-claro); }
 .lp-lin{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--fio-suave); font-size:calc(13.5px * var(--esc)); }
 .lp-lin:last-child{ border-bottom:0; }
-.lp-lin span{ color:var(--grafite); } .lp-lin b{ font-family:var(--f-m); color:var(--giz); font-weight:600; text-align:right; }
+.lp-lin span{ color:var(--grafite); } .lp-lin b{ font-family:var(--f-m); color:var(--giz); font-weight:600; text-align:right; white-space:nowrap; }
 .lp-lin.forte b{ font-size:calc(17px * var(--esc)); }
 .lp-versus{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-align:center; padding:0 6px;
   font-size:calc(12px * var(--esc)); color:var(--grafite); min-width:110px; }
@@ -3625,6 +3625,16 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .lp-pago svg{ width:16px; height:16px; fill:none; stroke:var(--jade); stroke-width:2.4; flex-shrink:0; margin-top:2px; }
 .lp-campos .campo.falta input, .lp-campos .campo.falta select{ border-color:var(--brasa); box-shadow:0 0 0 2px color-mix(in oklab, var(--brasa) 18%, transparent); }
 .lp-campos label em{ font-style:normal; color:var(--brasa); text-transform:none; letter-spacing:0; margin-left:4px; }
+.lp-base{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-top:12px; padding:10px 14px; border-radius:12px;
+  border:1px solid var(--fio); font-size:calc(13.5px * var(--esc)); color:var(--giz-2); }
+.lp-base > span:first-child{ font-weight:600; }
+.lp-base label{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:99px; border:1px solid var(--fio); cursor:pointer; font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); }
+.lp-base label.on{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 12%, transparent); color:var(--giz); }
+.lp-base label.off{ opacity:.5; cursor:not-allowed; }
+.lp-base input[type=radio]{ margin:0; }
+.lp-outro{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; } .lp-outro input{ width:110px !important; flex:0 0 110px; padding:6px 10px; }
+.lp-outro[hidden]{ display:none; }
+.lp-base em{ font-style:normal; font-size:calc(12.5px * var(--esc)); }
 .lp-rodape{ margin:12px 0 0; font-size:calc(13px * var(--esc)); }
 .lp-fontes{ display:flex; flex-direction:column; gap:6px; margin-top:12px; padding:12px 14px; border-radius:12px; border:1px solid color-mix(in oklab, var(--ouro) 45%, var(--fio));
   background:color-mix(in oklab, var(--ouro) 8%, transparent); font-size:calc(13.5px * var(--esc)); color:var(--giz-2); }
@@ -8592,7 +8602,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 05:30';
+const BUILD = '2026-10-04 07:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24013,6 +24023,19 @@ const FORMAS_TRECHO = {milhas:'Milhas', dinheiro:'Dinheiro', misto:'Milhas + din
 const SITUACOES_TRECHO = {planejado:'Planejado', emitido:'Emitido', voado:'Voado'};
 let trechoEmRegistro = null;
 const trechosDe = p => (p && p.trechos) || [];
+/* Quanto vale cada mil milhas na conta do trecho. Para viagem própria, o certo é
+   o CUSTO REAL (o que as milhas custaram, o milheiro médio do programa); é o
+   padrão. Dá para escolher o valor-alvo do programa, ou o VALOR DE COTAÇÃO (o
+   milheiro cotado ao cliente, que pode ficar acima do alvo, com a margem
+   desejada), mas nunca abaixo do custo real. */
+const BASES_MILHEIRO = {custo:'Custo real', alvo:'Valor-alvo', outro:'Valor de cotação'};
+function milheiroDaBase(base, programa, outro){
+  const custo = (cpmPorPrograma() || {})[programa];
+  const alvo = programa ? faixasDe(programa).alvo : null;
+  if (base === 'alvo') return alvo;
+  if (base === 'outro') return Math.max(Number(outro) || 0, custo || 0) || null;
+  return custo != null ? custo : null;
+}
 function custoMilhasTrecho(milhas, programa){
   const c = (cpmPorPrograma() || {})[programa];
   return c != null ? c * (Number(milhas) || 0) / 1000 : null;
@@ -24022,13 +24045,14 @@ function economiaTrecho(t){
   if (t.forma === 'dinheiro'){
     if (t.semAlt) return {valor:0, nota:'Sem opção em milhas'};
     if (!(Number(t.altMilhas) > 0)) return {valor:null, nota:'Informe quanto custaria em milhas para medir a economia'};
-    /* As milhas que não saíram da conta valem o que custa repô-las: o valor-alvo
-       do programa, não o custo antigo delas. */
-    const cm = (Number(t.altMilhas) || 0) / 1000 * faixasDe(t.altProg).alvo;
+    const mil = milheiroDaBase(t.baseMilheiro || 'custo', t.altProg, t.milheiroOutro);
+    if (mil == null) return {valor:null, nota:'Sem custo lançado no programa da alternativa'};
+    const cm = (Number(t.altMilhas) || 0) / 1000 * mil;
     return {valor:cm + (Number(t.altTaxas) || 0) - pago, nota:'Pagando em dinheiro'};
   }
   if (!(vista > 0)) return {valor:null, nota:'Informe o preço em dinheiro do mesmo voo'};
-  const cm = custoMilhasTrecho(t.milhas, t.prog);
+  const milB = milheiroDaBase(t.baseMilheiro || 'custo', t.prog, t.milheiroOutro);
+  const cm = milB != null ? (Number(t.milhas) || 0) / 1000 * milB : null;
   if (cm == null) return {valor:null, nota:'Sem custo lançado no programa'};
   return {valor:vista - taxas - pago - cm, nota:t.forma === 'misto' ? 'Milhas + dinheiro' : 'Com milhas'};
 }
@@ -24191,6 +24215,8 @@ function editarTrecho(id){
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
       <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
       <div class="campo tr-sem"><label for="trSemAlt">Opção em milhas</label><label class="ck cd-caixa"><input type="checkbox" id="trSemAlt"${t.semAlt ? ' checked' : ''}> Não havia</label></div>
+      <div class="campo"><label>Milhas valem</label><select id="trBase" data-ordem="natural"></select></div>
+      <div class="campo tr-outro"><label>Cotação (R$ por mil)</label><input type="text" inputmode="decimal" data-moeda id="trOutro" value="${moedaTxt(t.milheiroOutro || 0)}"></div>
       <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"></div>
       <div class="campo"><label>Situação</label><select id="trSit" data-ordem="natural">${Object.entries(SITUACOES_TRECHO).map(([k, v]) => `<option value="${k}"${k === (t.situacao || 'planejado') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
     </div>
@@ -24228,7 +24254,19 @@ function editarTrecho(id){
       : f === 'misto' ? 'A economia é o preço do voo em dinheiro, menos o que foi pago, as taxas e o custo das milhas.'
       : 'A economia é o preço do voo em dinheiro, menos as taxas e o custo das milhas ao seu milheiro médio.';
   };
-  $('#trForma').onchange = aplicar; $('#trSemAlt').onchange = aplicar; aplicar();
+  /* As opções mostram o valor de cada base para o programa do trecho. */
+  const progDaConta = () => $('#trForma').value === 'dinheiro' ? $('#trAltProg').value : $('#trProg').value;
+  const montarBase = () => {
+    const pg = progDaConta(), atual = $('#trBase').value || t.baseMilheiro || 'custo';
+    const custo = milheiroDaBase('custo', pg), alvo = milheiroDaBase('alvo', pg);
+    $('#trBase').innerHTML = `<option value="custo"${custo == null ? ' disabled' : ''}>Custo real${custo != null ? ' · ' + brl2(custo) : ' · sem custo lançado'}</option>
+      <option value="alvo">Valor-alvo${alvo != null ? ' · ' + brl2(alvo) : ''}</option><option value="outro">Valor de cotação</option>`;
+    $('#trBase').value = custo == null && atual === 'custo' ? 'alvo' : atual;
+    $$('.tr-outro').forEach(e => e.style.display = $('#trBase').value === 'outro' ? '' : 'none');
+  };
+  ['#trProg', '#trAltProg', '#trBase'].forEach(sel => $(sel).addEventListener('change', montarBase));
+  $('#trForma').onchange = () => { aplicar(); montarBase(); }; $('#trSemAlt').onchange = aplicar; aplicar(); montarBase();
+  ligarCampoMoeda('#trOutro');
   $('#btSalvarTrecho').onclick = () => {
     const f = $('#trForma').value;
     const novo = {...t, id:t.id || uid(), origem:$('#trOri').value.toUpperCase().trim(), destino:$('#trDes').value.toUpperCase().trim(),
@@ -24236,9 +24274,15 @@ function editarTrecho(id){
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
+      baseMilheiro:$('#trBase').value, milheiroOutro:$('#trBase').value === 'outro' ? moedaNum($('#trOutro').value) : 0,
       altMilhas:f === 'dinheiro' && !$('#trSemAlt').checked ? rgNum($('#trAltMilhas').value) : 0, altProg:$('#trAltProg').value,
       altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
     if (!novo.origem || !novo.destino){ avisar('Informe a origem e o destino do trecho.', 'alerta'); return; }
+    if (novo.baseMilheiro === 'outro'){
+      const pgC = f === 'dinheiro' ? novo.altProg : novo.prog, custoR = milheiroDaBase('custo', pgC);
+      if (!(novo.milheiroOutro > 0)){ avisar('Informe o valor de cotação: quanto vale cada mil milhas.', 'alerta'); return; }
+      if (custoR != null && novo.milheiroOutro < custoR){ avisar(`A cotação não pode ficar abaixo do custo real das milhas (${brl2(custoR)} por mil).`, 'alerta', 7000); return; }
+    }
     if (f === 'dinheiro' && !(novo.pago > 0)){ avisar('Informe quanto foi pago em dinheiro.', 'alerta'); return; }
     if (f !== 'dinheiro' && !(novo.milhas > 0)){ avisar('Informe as milhas do trecho.', 'alerta'); return; }
     const outros = trechosDe(p).filter(x => x.id !== novo.id);
@@ -24496,7 +24540,8 @@ function desenharRevisaoPrints(){
   const pax = Number(d.passageiros) || 0;
   const totalDin = Number(din.total) || ((Number(din.tarifa) || 0) + (Number(din.taxas) || 0)) || 0;
   const pts = Number(mi.pontos) || 0, txM = Number(mi.taxas) || 0, extraM = Number(mi.dinheiro) || 0;
-  const alvo = progId ? faixasDe(progId).alvo : 0;
+  if (!_leitura.base) _leitura.base = progId && milheiroDaBase('custo', progId) != null ? 'custo' : 'alvo';
+  const alvo = progId ? milheiroDaBase(_leitura.base, progId, _leitura.outro) : 0;
   const valorMilhas = pts && alvo ? pts / 1000 * alvo + txM + extraM : null;
   const dif = valorMilhas != null && totalDin ? totalDin - valorMilhas : null;
   const milheiroObtido = pts && totalDin ? (totalDin - txM - extraM) / pts * 1000 : null;
@@ -24540,9 +24585,15 @@ function desenharRevisaoPrints(){
       <div class="lp-versus">${dif == null ? 'vs' : dif > 0 ? `<b class="jade">${brl(dif)}</b><span>a favor das milhas</span>` : `<b class="ouro">${brl(-dif)}</b><span>a favor do dinheiro</span>`}</div>
       ${cartao('mi', 'Em milhas', temMi ? [
           ['Total', `${nBR(pts)} ${progId ? esc(prog(progId).n) : 'pontos'}`, true], txM ? ['Taxas', brl(txM)] : null, extraM ? ['Mais em dinheiro', brl(extraM)] : null,
-          alvo ? ['Valor ao alvo', `${brl(valorMilhas)} (R$ ${alvo.toFixed(2).replace('.', ',')}/mil)`] : null,
+          alvo ? [_leitura.base === 'custo' ? 'Ao custo real' : _leitura.base === 'alvo' ? 'Ao valor-alvo' : 'À cotação', brl(valorMilhas)] : null,
+          alvo ? ['Milheiro usado', `${brl2(alvo)}/mil`] : null,
           milheiroObtido ? ['Cada milheiro rende', brl2(milheiroObtido)] : null, mi.obs ? ['Obs.', esc(mi.obs)] : null] : [['Não apareceu nos prints', '—']], dif != null && dif > 0)}
     </div>
+    ${progId ? `<div class="lp-base"><span>As milhas valem:</span>
+      ${['custo', 'alvo', 'outro'].map(k => { const v = milheiroDaBase(k, progId, _leitura.outro); const off = k === 'custo' && v == null;
+        return `<label class="${_leitura.base === k ? 'on' : ''}${off ? ' off' : ''}"><input type="radio" name="lpBase" value="${k}"${_leitura.base === k ? ' checked' : ''}${off ? ' disabled' : ''}>${BASES_MILHEIRO[k]}${k !== 'outro' ? (v != null ? ' · ' + brl2(v) : ' · sem custo lançado') : ''}</label>`; }).join('')}
+      <span class="lp-outro"${_leitura.base === 'outro' ? '' : ' hidden'}><input type="text" inputmode="decimal" data-moeda id="lpOutro" value="${moedaTxt(_leitura.outro || 0)}"> por mil</span>
+      <em class="fraco">${_leitura.base === 'custo' ? 'Viagem sua: o que as milhas custaram.' : _leitura.base === 'alvo' ? 'O valor-alvo do programa.' : 'O valor cotado ao cliente; nunca abaixo do custo real.'}</em></div>` : ''}
     ${pg ? `<div class="lp-pago"><svg><use href="#i-ok"/></svg><div><b>Pagamento identificado:</b> ${[pg.pontos ? nBR(pg.pontos) + ' pontos' : '', pg.dinheiro ? brl(pg.dinheiro) : ''].filter(Boolean).join(' + ')}${pg.cartao_final ? ` · cartão final ${esc(pg.cartao_final)}` : ''}${pg.parcelas ? ` · ${pg.parcelas}x` : ''}${pg.obs ? ` · ${esc(pg.obs)}` : ''}</div></div>` : ''}
     ${avisos.length ? `<div class="nota ouro" style="margin-top:12px"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">${avisos.map(a => `<div>${esc(a)}</div>`).join('')}</div></div>` : ''}
     ${_leitura.fontes ? `<div class="lp-fontes">
@@ -24584,6 +24635,22 @@ function desenharRevisaoPrints(){
     $('#btLpOk').disabled = faltam.length > 0;
   };
   $('#lpCorpo').addEventListener('input', conferir); $('#lpCorpo').addEventListener('change', conferir);
+  const refazer = () => {
+    const guarda = {}; $$('#lpCorpo .lp-campos input, #lpCorpo .lp-campos select').forEach(e => guarda[e.id] = e.value);
+    desenharRevisaoPrints();
+    Object.entries(guarda).forEach(([id, v]) => { const e = $('#' + id); if (e) e.value = v; });
+    $('#lpCorpo').dispatchEvent(new Event('input'));
+  };
+  $$('input[name="lpBase"]').forEach(r => r.onchange = () => { _leitura.base = r.value; refazer(); });
+  if ($('#lpOutro')){
+    ligarCampoMoeda('#lpOutro');
+    $('#lpOutro').addEventListener('change', () => {
+      const custoR = milheiroDaBase('custo', progId), v = moedaNum($('#lpOutro').value);
+      if (custoR != null && v < custoR){ avisar(`A cotação não pode ficar abaixo do custo real das milhas (${brl2(custoR)} por mil).`, 'alerta', 7000); $('#lpOutro').value = moedaTxt(custoR); _leitura.outro = custoR; }
+      else _leitura.outro = v;
+      refazer();
+    });
+  }
   $$('input[name="lpFonte"]').forEach(r => r.onchange = () => {
     const f = _leitura.fontes[r.value];
     $('#lpMilhas').value = nBR(f.pts); $('#lpTaxas').value = moedaTxt(f.taxas); conferir();
@@ -24605,6 +24672,7 @@ function aplicarLeituraPrints(){
     prog:$('#lpProg').value, milhas:rgNum($('#lpMilhas').value), taxas:$('#lpTaxas').value, pago:$('#lpPago').value, vista:$('#lpVista').value,
     alt:rgNum($('#lpAltMilhas').value), altTaxas:$('#lpAltTaxas').value, loc:$('#lpLoc').value.toUpperCase().trim()};
   const progAlt = $('#lpProg').value || (_leitura.pre && _leitura.pre.prog) || '';
+  const base = _leitura.base || 'custo', outro = _leitura.outro || 0;
   const pai = _leitura.pai; _leitura = null;
   devolverFolhaGuardada(pai);
   const set = (sel, val) => { const e = $(sel); if (e && val !== undefined && val !== null) e.value = val; };
@@ -24616,6 +24684,8 @@ function aplicarLeituraPrints(){
     if (v.alt > 0){ $('#trSemAlt').checked = false; set('#trAltMilhas', v.alt); if (progAlt) set('#trAltProg', progAlt); set('#trAltTaxas', v.altTaxas); }
     $('#trSemAlt').dispatchEvent(new Event('change'));
   }
+  $('#trBase').value = base; $('#trBase').dispatchEvent(new Event('change'));
+  if (base === 'outro') $('#trOutro').value = moedaTxt(outro);
   $('#folhaCorpo').dispatchEvent(new Event('input', {bubbles:true}));
   avisar('Formulário preenchido pelos prints. Confira e toque em Salvar.', 'ok', 6000);
 }
