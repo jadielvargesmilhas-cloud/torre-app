@@ -8339,7 +8339,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 05:00';
+const BUILD = '2026-10-03 05:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11832,6 +11832,7 @@ function detalheEquivalencia(){
    Por isso o ponto é precificado pela melhor rota de saída viva: paridade (com
    a do clube, se você assina), mais o bônus da maior campanha aberta, avaliado
    ao alvo do programa de destino. Sem rota conhecida, cai na própria faixa. */
+const DESTINOS_VALOR = ['latampass', 'smiles', 'azul'];
 function valorPrograma(p, saldo){
   if (!saldo) return {valor:0, via:'', destino:''};
   if (prog(p).tipo !== 'pontos') return {valor:(saldo / 1000) * faixasDe(p).alvo, milhas:saldo, via:'valor-alvo do próprio programa', destino:p};
@@ -11840,7 +11841,14 @@ function valorPrograma(p, saldo){
      melhor, mas quem opera precisa ver de quanto foi a diferença. Rota que perde
      por pouco muda de lado com uma campanha, e é isso que se quer saber. */
   const temClube = DB.assinaturas.some(a => a.status === 'ativa' && a.prog === p);
-  const rotas = PARIDADES.filter(x => x.de === p).map(x => {
+  /* Só valem os destinos que se usa ou vende: LATAM Pass, Smiles e Azul. Rota para
+     Iberia, TAP e afins dava número maior pelo alvo, mas são milhas sem mercado
+     de venda aqui, e o valor da carteira ficava inflado. Programa sem rota para
+     esses três continua avaliado pelas rotas que tiver. */
+  const usados = DB.cfg.destinosValor || DESTINOS_VALOR;
+  const todas = PARIDADES.filter(x => x.de === p);
+  const daLista = todas.filter(x => usados.includes(x.para));
+  const rotas = (daLista.length ? daLista : todas).map(x => {
     const par = (temClube && x.clube) ? x.clube : x.p;
     const camps = campanhasVivas('transferencia').filter(c => c.de === p && c.para === x.para);
     const bonus = camps.length ? Math.max(...camps.map(c => c.bonus || 0)) : 0;
