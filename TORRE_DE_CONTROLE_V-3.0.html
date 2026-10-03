@@ -3602,9 +3602,17 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .bt.up-feito{ border-color:color-mix(in oklab, var(--jade) 50%, var(--fio)); color:var(--jade); }
 .ee{ margin-bottom:14px; }
 .ee-cab{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
-.ee-graf{ position:relative; display:flex; gap:clamp(8px, 2vw, 22px); height:clamp(190px, 26vw, 260px); padding:30px 4px 0; align-items:stretch; }
-.ee-zero{ position:absolute; left:0; right:0; bottom:calc(64px + (100% - 94px) * var(--zf)); height:0; border-top:1px dashed var(--fio); }
+.ee-graf{ position:relative; display:flex; gap:clamp(8px, 2vw, 22px); height:clamp(214px, 28vw, 284px); padding:54px 4px 0; align-items:stretch; }
+.ee-zero{ position:absolute; left:0; right:0; bottom:calc(64px + (100% - 118px) * var(--zf)); height:0; border-top:1px dashed var(--fio); }
 .ee-col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+/* Separador entre os degraus (como a economia foi construída) e os resultados
+   (contra a mesma companhia e contra o mercado). */
+.ee-sep{ position:relative; flex:0 0 18px; display:flex; justify-content:center; margin-bottom:64px; }
+.ee-sep::before{ content:''; position:absolute; top:-30px; bottom:-10px; left:50%; border-left:2px dashed var(--fio-forte); }
+.ee-sep span{ position:absolute; top:-24px; left:50%; transform:translateX(-50%); white-space:nowrap; font-family:var(--f-m); font-size:calc(10px * var(--esc));
+  letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); background:var(--sup-0); padding:2px 8px; border:1px solid var(--fio); border-radius:99px; }
+.ee-sep span{ top:-50px; }
+@media (max-width:640px){ .ee-sep{ margin-bottom:52px; flex-basis:10px; } .ee-sep span{ display:none; } }
 .ee-area{ position:relative; flex:1; }
 .ee-rot{ height:64px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; padding-top:9px; text-align:center; }
 .ee-rot b{ font-size:calc(13px * var(--esc)); color:var(--giz); line-height:1.2; }
@@ -3643,7 +3651,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 /* No celular as colunas ficam estreitas demais para os valores: o gráfico mostra
    só as barras e os nomes, e os valores ficam na lista logo abaixo. */
 @media (max-width:640px){ .ee-valor, .ee-rot-v, .ee-rot span{ display:none !important; } .ee-rot{ height:52px; } .ee-rot b{ font-size:calc(11px * var(--esc)); }
-  .ee-zero{ bottom:calc(52px + (100% - 82px) * var(--zf)); } .ee-graf{ gap:6px; height:200px; } }
+  .ee-zero{ bottom:calc(52px + (100% - 82px) * var(--zf)); } .ee-graf{ gap:6px; height:200px; padding-top:30px; } }
 .ec-faixa{ display:grid; grid-template-columns:minmax(220px, 0.9fr) 2.6fr; gap:16px 22px; align-items:center; margin-bottom:14px; padding:18px 22px; border-radius:16px; color:#fff;
   background:linear-gradient(115deg, #0F2B4D 0%, #14506B 55%, #1C7A6A 100%); box-shadow:0 8px 24px rgba(15,43,77,.22); }
 @media (max-width:980px){ .ec-faixa{ grid-template-columns:1fr; } }
@@ -3700,6 +3708,9 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .lp-espera{ display:flex; gap:28px; align-items:center; flex-wrap:wrap; padding:10px 4px 6px; }
 .lp-miniaturas{ display:flex; gap:10px; flex-wrap:wrap; }
 .lp-mini{ position:relative; width:74px; height:130px; border-radius:10px; overflow:hidden; border:1px solid var(--fio); background:var(--sup-1); }
+.lp-pdf{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px; text-align:center; background:color-mix(in oklab, var(--brasa) 7%, var(--sup-1)); }
+.lp-pdf svg{ width:24px; height:24px; fill:none; stroke:var(--brasa); stroke-width:1.6; } .lp-pdf b{ font-family:var(--f-m); font-size:calc(12px * var(--esc)); color:var(--brasa); }
+.lp-pdf small{ font-size:calc(9.5px * var(--esc)); color:var(--grafite); line-height:1.2; word-break:break-all; }
 .lp-mini img{ width:100%; height:100%; object-fit:cover; object-position:top; opacity:.85; }
 .lp-varredura{ position:absolute; left:0; right:0; height:28%; background:linear-gradient(180deg, transparent, color-mix(in oklab, var(--anil-claro) 45%, transparent), transparent);
   animation:lpVarre 1.6s ease-in-out infinite; }
@@ -8721,7 +8732,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 17:20';
+const BUILD = '2026-10-04 20:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24692,7 +24703,7 @@ function escadaEconomiaHTML(ts){
       ${!E.completo ? `<span class="etq ouro">falta preço de comparação em ${E.linhas.filter(l => l.compra == null || l.total == null).length} trecho(s)</span>` : ''}</div>
     <div class="ee-graf" style="--zf:${(y(0) / 100).toFixed(4)}">
       <i class="ee-zero"></i>
-      ${colunas.map(coluna).join('')}
+      ${colunas.map((c, i) => (c.k === 'total' ? `<div class="ee-sep" aria-hidden="true"><span>resultado</span></div>` : '') + coluna(c, i)).join('')}
     </div>
     <details class="ee-det"${detalhesEscadaAbertos ? ' open' : ''} ontoggle="detalhesEscadaAbertos = this.open">
       <summary><span class="ee-det-ab">Ver o passo a passo</span><span class="ee-det-fe">Ocultar o passo a passo</span><svg><use href="#i-baixo"/></svg></summary>
@@ -24798,8 +24809,8 @@ function editarTrecho(id){
     titulo: id ? 'Editar Trecho' : 'Novo Trecho', largura:'larga',
     corpo:`<div class="tr-leitor" id="trLeitor">
       <svg><use href="#i-imagem"/></svg>
-      <div class="tr-leitor-txt"><b>Preencher pelos prints</b><span>Anexe as telas da companhia (busca, resumo, pagamento). A Torre lê no seu navegador, sem custo, compara dinheiro e milhas e mostra tudo antes de preencher.</span></div>
-      <label class="bt primario tr-leitor-bt"><svg><use href="#i-faisca"/></svg>Anexar prints<input type="file" id="trPrints" accept="image/*" multiple hidden></label>
+      <div class="tr-leitor-txt"><b>Preencher pelos prints e PDFs</b><span>Anexe as telas da companhia (busca, resumo, pagamento) e os bilhetes em PDF. A Torre lê no seu navegador, sem custo, compara dinheiro e milhas e mostra tudo antes de preencher.</span></div>
+      <label class="bt primario tr-leitor-bt"><svg><use href="#i-faisca"/></svg>Anexar prints ou PDFs<input type="file" id="trPrints" accept="image/*,application/pdf,.pdf" multiple hidden></label>
     </div>
     <div class="grade tr-grade">
       <div class="campo"><label>Origem (IATA)</label><input type="text" id="trOri" maxlength="3" style="text-transform:uppercase" value="${esc(t.origem || '')}" placeholder="SSA"></div>
@@ -24844,7 +24855,7 @@ function editarTrecho(id){
     window._colaTrechoLigada = true;
     document.addEventListener('paste', e => {
       if (!$('#trLeitor') || !$('#veu').classList.contains('aberto')) return;
-      const fs = [...((e.clipboardData || {}).files || [])].filter(f => f.type.startsWith('image/'));
+      const fs = [...((e.clipboardData || {}).files || [])].filter(f => f.type.startsWith('image/') || ehPDF(f));
       if (fs.length){ e.preventDefault(); lerPrintsTrecho(fs); }
     });
   }
@@ -25034,40 +25045,125 @@ async function prepararLeitorOCR(aoProgresso){
 const CIAS_PROG = [[/\bazul\b/i, 'Azul', 'azul'], [/\bgol\b|smiles/i, 'GOL', 'smiles'], [/latam/i, 'LATAM', 'latampass'], [/\btap\b|miles&go/i, 'TAP', 'tap'],
   [/iberia/i, 'Iberia', 'iberia'], [/\bcopa\b|connectmiles/i, 'Copa', 'connect'], [/air france|klm|flying blue/i, 'Air France-KLM', 'flyingblue'], [/avianca|lifemiles/i, 'Avianca', 'lifemiles']];
 /* Lê o texto de todas as telas e devolve os mesmos campos que a revisão usa. */
-function interpretarTextosPrints(textos){
+/* ── INTERPRETADOR DE PRINTS E PDFs ────────────────────────────────────────────
+   Lê o texto das telas de compra (Azul, TAP, Air Europa e outras) e dos recibos
+   de bilhete eletrônico em PDF, e devolve os campos que a revisão usa. Cada
+   documento é classificado (bilhete, pagamento, tela de milhas, tela de
+   dinheiro, itinerário) e cada regra só olha o tipo certo. O que não aparece
+   fica vazio: a revisão marca como obrigatório. */
+const MESES_LEITURA = {jan:1, janeiro:1, january:1, fev:2, feb:2, fevereiro:2, february:2, mar:3, marco:3, março:3, march:3, abr:4, apr:4, abril:4, april:4,
+  mai:5, may:5, maio:5, jun:6, junho:6, june:6, jul:7, julho:7, july:7, ago:8, aug:8, agosto:8, august:8, set:9, sep:9, setembro:9, september:9,
+  out:10, oct:10, outubro:10, october:10, nov:11, novembro:11, november:11, dez:12, dec:12, dezembro:12, december:12};
+const PREFIXO_CIA = {AD:['Azul', 'azul'], G3:['GOL', 'smiles'], LA:['LATAM', 'latampass'], JJ:['LATAM', 'latampass'], TP:['TAP', 'tap'], UX:['Air Europa', 'suma'],
+  IB:['Iberia', 'iberia'], AF:['Air France', 'flyingblue'], KL:['KLM', 'flyingblue'], CM:['Copa', 'connect'], AV:['Avianca', 'lifemiles'], UA:['United', 'united'],
+  AC:['Air Canada', 'aeroplan'], BA:['British Airways', 'british'], QR:['Qatar Airways', 'qatar'], AY:['Finnair', 'finnair'], AM:['Aeromexico', 'aeromexico'],
+  LH:['Lufthansa', ''], LX:['Swiss', ''], AZ:['ITA', ''], TK:['Turkish', ''], EK:['Emirates', ''], AA:['American', ''], DL:['Delta', ''], ET:['Ethiopian', ''], AT:['Royal Air Maroc', '']};
+function dataDoTexto(t, ref){
+  const pad = n => String(n).padStart(2, '0');
+  const ok = (a, m, d) => a && m >= 1 && m <= 12 && d >= 1 && d <= 31 ? `${a}-${pad(m)}-${pad(d)}` : null;
+  /* linhas de emissão e de compra não são a data do voo */
+  const linhas = String(t).split('\n').filter(l => !/(Date:|Data \/|emiss[aã]o|Issue|Data de compra)/i.test(l));
+  const u = linhas.join('\n');
+  let m = u.match(/\b(\d{2})\/(\d{2})\/(20\d{2})\b/); if (m) return ok(m[3], +m[2], +m[1]);
+  m = u.match(/\b(\d{2})\/(\d{2})\/(\d{2})\b/); if (m) return ok('20' + m[3], +m[2], +m[1]);
+  m = u.match(/\b(\d{1,2})\s?([A-Za-zçÇ]{3,9})\.?\s?(20\d{2})\b/);
+  if (m && MESES_LEITURA[semAcento(m[2])]) return ok(m[3], MESES_LEITURA[semAcento(m[2])], +m[1]);
+  /* sem ano: "SEG 05 JULHO", "Seg, Jul 5" -> o ano vem da referência (a data do trecho) ou da próxima ocorrência */
+  m = u.match(/\b(\d{1,2})\s+([A-Za-zçÇ]{3,9})\b/); let dia, mes;
+  if (m && MESES_LEITURA[semAcento(m[2])]){ dia = +m[1]; mes = MESES_LEITURA[semAcento(m[2])]; }
+  else { m = u.match(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2})\b/); if (m && MESES_LEITURA[semAcento(m[1])]){ mes = MESES_LEITURA[semAcento(m[1])]; dia = +m[2]; } }
+  if (mes){
+    let ano = ref ? Number(String(ref).slice(0, 4)) : new Date().getFullYear();
+    let iso = ok(ano, mes, dia);
+    if (!ref && iso < hojeISO()) iso = ok(ano + 1, mes, dia);
+    return iso;
+  }
+  return null;
+}
+/* Valores em reais nos dois formatos: "R$ 3.503,85", "545,42 BRL" e "BRL 194.39". */
+function valoresReais(t){
+  const out = [];
+  for (const m of String(t).matchAll(/(?:R\$|BRL)\s*(\d{1,3}(?:\.\d{3})*,\d{2})|(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:R\$|BRL)|BRL\s*(\d+\.\d{2})(?!\d)/g)){
+    const neg = /-\s*$/.test(String(t).slice(Math.max(0, m.index - 3), m.index));
+    const v = m[3] ? Number(m[3]) : numBR(m[1] || m[2]);
+    if (v > 0) out.push(neg ? -v : v);
+  }
+  return out;
+}
+function interpretarTextosPrints(textos, ref){
   const tudo = textos.join('\n');
   const d = {voos:[], avisos:[]};
-  /* rota: o primeiro "AAA > BBB" do cabeçalho; conexões são os outros aeroportos entre parênteses */
-  /* Só vale par de códigos que existem como aeroporto: o leitor às vezes junta
-     letras de outras palavras em maiúsculas. */
-  const pares = [...tudo.matchAll(/\b([A-Z]{3})\s*[-–>→€<«»]+\s*([A-Z]{3})\b/g)].filter(m => AEROPORTOS[m[1]] && AEROPORTOS[m[2]]);
-  const par = pares[0];
-  if (par){ d.origem = par[1]; d.destino = par[2]; }
-  const entreParenteses = [...tudo.matchAll(/\(([A-Z]{3})\)/g)].map(m => m[1]);
-  const escalas = [...new Set(entreParenteses.filter(c => c !== d.origem && c !== d.destino))];
-  /* data: dd/mm/aaaa, ou dd/mm/aa */
-  let dm = tudo.match(/\b(\d{2})\/(\d{2})\/(20\d{2})\b/) || tudo.match(/\b(\d{2})\/(\d{2})\/(\d{2})\b/);
-  if (dm){ const ano = dm[3].length === 2 ? '20' + dm[3] : dm[3]; d.data = `${ano}-${dm[2]}-${dm[1]}`; }
-  /* voos e companhia */
-  const numerosVoo = [...new Set([...tudo.matchAll(/\bVoo\s*(\d{3,4})\b/gi)].map(m => m[1]))];
+  const ehAero = c => !!AEROPORTOS[c];
+  /* ── rota ── a linha de cálculo de tarifa do bilhete é a fonte mais segura;
+     depois, os pares "AAA > BBB", "AAA AAA" sozinhos numa linha, e os códigos entre parênteses */
+  let rota = null;
+  const calc = tudo.match(/Fare Calculation:\s*([^\n]+)/i);
+  if (calc){ const cods = (calc[1].match(/(?<![A-Z])[A-Z]{3}(?![A-Z])/g) || []).filter(c => ehAero(c) && !/^(END|NUC|ROE|USD|BRL|EUR)$/.test(c)); if (cods.length >= 2) rota = cods; }
+  if (!rota){
+    const pares = [...tudo.matchAll(/\b([A-Z]{3})\s*[-–—>→€<«»]+\s*([A-Z]{3})\b/g)].filter(m => ehAero(m[1]) && ehAero(m[2]) && m[1] !== m[2]);
+    if (pares.length) rota = [pares[0][1], pares[0][2]];
+  }
+  if (!rota){
+    const soltos = tudo.split('\n').map(l => l.trim().match(/^([A-Z]{3})\s+([A-Z]{3})$/)).find(m => m && ehAero(m[1]) && ehAero(m[2]) && m[1] !== m[2]);
+    if (soltos) rota = [soltos[1], soltos[2]];
+  }
+  const parent = [...new Set([...tudo.matchAll(/\(([A-Z]{3})\)/g)].map(m => m[1]).filter(ehAero))];
+  if (!rota && parent.length >= 2) rota = parent;
+  if (rota){
+    d.origem = rota[0]; d.destino = rota[rota.length - 1];
+    const meio = rota.slice(1, -1).concat(parent.filter(c => c !== d.origem && c !== d.destino));
+    rota = [d.origem].concat([...new Set(meio)]).concat([d.destino]);
+  }
+  d.data = dataDoTexto(tudo, ref);
+  /* ── voos e companhia ── */
+  const numeros = [];
+  /* número de voo: prefixo da companhia e de 2 a 4 dígitos, sem ser um horário (TP 06:00) */
+  for (const m of tudo.matchAll(/\b([A-Z][A-Z0-9])\s?0*(\d{2,4})\b(?![:.,]\d)/g)) if (PREFIXO_CIA[m[1]] && !/^\d+$/.test(m[1])) { const k = m[1] + ' ' + m[2]; if (!numeros.includes(k)) numeros.push(k); }
+  for (const m of tudo.matchAll(/\bVoo\s*(\d{3,4})\b/gi)) if (!numeros.some(n => n.split(' ').pop() === m[1])) numeros.push(m[1]);
+  const porPrefixo = numeros.map(n => (PREFIXO_CIA[n.split(' ')[0]] || [])).filter(x => x.length);
   const contagem = CIAS_PROG.map(([re, nome, pg]) => ({nome, pg, n:(tudo.match(new RegExp(re.source, 'gi')) || []).length})).sort((a, b) => b.n - a.n);
-  const cia = contagem[0] && contagem[0].n ? contagem[0] : null;
+  const cia = porPrefixo.length ? {nome:porPrefixo[0][0], pg:porPrefixo[0][1]} : (contagem[0] && contagem[0].n ? contagem[0] : null);
   if (cia) d.cia = cia.nome;
-  const rota = [d.origem].concat(escalas).concat([d.destino]).filter(Boolean);
-  for (let i = 0; i < rota.length - 1; i++) d.voos.push({origem:rota[i], destino:rota[i + 1], voo:numerosVoo[i] || '', cia:d.cia || ''});
-  const pax = tudo.match(/(\d+)\s*passageiros?/i); if (pax) d.passageiros = Number(pax[1]);
-  /* cada tela é de um tipo: pagamento, milhas ou dinheiro */
+  if (rota) for (let i = 0; i < rota.length - 1; i++) d.voos.push({origem:rota[i], destino:rota[i + 1], voo:numeros[i] || '', cia:d.cia || ''});
+  /* ── localizador e passageiros ── */
+  /* localizador: o que mais se repete entre os documentos (o PDF e as telas
+     costumam trazer o mesmo; um erro de leitura num print perde na contagem) */
+  const locs = [];
+  for (const m of tudo.matchAll(/\b[A-Z0-9]{2}\/([A-Z0-9]{6})\b/g)) locs.push(m[1]);
+  for (const m of tudo.matchAll(/(?:C[óo]digo de reserva|Booking ref|N[úu]mero da reserva|Localizador|Reserva n[ºo°]?)\s*:?\s*(?:[A-Z0-9]{2}\/)?([A-Z0-9]{6})\b/gi)) locs.push(m[1].toUpperCase());
+  const contaLoc = {}; locs.filter(x => /[A-Z]/.test(x) && /\d/.test(x)).forEach(x => contaLoc[x] = (contaLoc[x] || 0) + 1);
+  const melhorLoc = Object.keys(contaLoc).sort((a, b) => contaLoc[b] - contaLoc[a])[0];
+  if (melhorLoc) d.localizador = melhorLoc;
+  const bilhetes = [...new Set([...tudo.matchAll(/(?:Ticket number|bilhete electr[óo]nico|bilhete eletr[ôo]nico)[^0-9]{0,20}(\d{3}[\s-]?\d{10})/gi)].map(m => m[1].replace(/\D/g, '')))];
+  const pax = tudo.match(/(\d+)\s*passageiros?/i);
+  d.passageiros = Math.max(pax ? Number(pax[1]) : 0, bilhetes.length) || undefined;
+  /* ── cada documento ── */
+  const resgate = /AWARD|REDEMPTION|\bFFR\b|\bFFS\b|MILES AND GO/i.test(tudo);
+  let taxasBilhetes = 0; const vistos = new Set();
   textos.forEach(t => {
-    const pontos = [...t.matchAll(/(\d{1,3}(?:\.\d{3})+)\s*(?:pontos|pts|milhas)\b/gi)].map(m => numBR(m[1]));
-    const reais = (re) => { const m = t.match(re); return m ? numBR(m[1]) : null; };
-    const ehPagamento = /pagamento|parcelamento|finalizar/i.test(t) && /(VISA|MASTER|ELO|AMEX|\*{3,}|Venc\.)/i.test(t);
-    if (ehPagamento){
-      const pg = {};
+    const valores = valoresReais(t);
+    const pontos = [];
+    for (const m of t.matchAll(/(\d{1,3}(?:\.\d{3})+)\s*(?:pontos|pts|milhas)\b/gi)) pontos.push(numBR(m[1]));
+    for (const m of t.matchAll(/\b(\d{1,3}(?:\.\d{3})*)\s*M\s*\+/g)) pontos.push(numBR(m[1]));
+    const reais = re => { const m = t.match(re); return m ? numBR(m[1]) : null; };
+    /* recibo de bilhete eletrônico: as taxas de cada bilhete (uma vez por número de bilhete) */
+    if (/RECIBO DE BILHETE|ELECTRONIC TICKET RECEIPT|E-TICKET RECEIPT/i.test(t)){
+      const nb = (t.match(/Ticket number[^0-9]{0,10}(\d{3}[\s-]?\d{10})/i) || [])[1];
+      const chave = nb ? nb.replace(/\D/g, '') : t.length + ':' + t.slice(0, 40);
+      if (vistos.has(chave)) return; vistos.add(chave);
+      const taxas = [...t.matchAll(/BRL\s*(\d+\.\d{2})[A-Z][A-Z0-9]\b/g)].reduce((a, m) => a + Number(m[1]), 0);
+      const ob = t.match(/Total (?:taxas )?OB[^:]*:\s*BRL\s*(\d+\.\d{2})/i) || t.match(/OBT\d+[^\n]*?BRL\s*(\d+\.\d{2})/i);
+      taxasBilhetes += taxas + (ob ? Number(ob[1]) : 0);
+      return;
+    }
+    const ehCartao = /pagamento|parcelamento|finalizar/i.test(t) && /(VISA|MASTER|ELO|AMEX|\*{3,}|Venc\.)/i.test(t);
+    const ehConfirmacao = /pagamento feito|pagamento (confirmado|aprovado)|payment (successful|confirmed)/i.test(t);
+    if (ehCartao || ehConfirmacao){
+      const pg = d.pagamento || {};
       const totalPts = t.match(/Total[^\n]*?\n?[^\n]*?(\d{1,3}(?:\.\d{3})+)\s*pontos/i) || t.match(/(\d{1,3}(?:\.\d{3})+)\s*pontos/i);
       if (totalPts) pg.pontos = numBR(totalPts[1]);
-      const din = t.match(/pontos[^\n]*\n?[^\n]*?\+\s*R\$\s*([\d.]+,\d{2})/i) || t.match(/\+\s*R\$\s*([\d.]+,\d{2})/);
+      const din = t.match(/pontos[^\n]*\n?[^\n]*?\+\s*R\$\s*([\d.]+,\d{2})/i) || t.match(/\+\s*R\$\s*([\d.]+,\d{2})/) || t.match(/Valor:?\s*R?\$?\s*([\d.]+,\d{2})\s*(?:R\$|BRL)?/i);
       if (din) pg.dinheiro = numBR(din[1]);
-      pg.forma = pg.pontos ? 'milhas' : 'dinheiro';
       const cart = t.match(/(?:VISA|MASTERCARD|ELO|AMEX|\*{3,})\s*(\d{4})\b/i); if (cart) pg.cartao_final = cart[1];
       const parc = t.match(/R\$\s*[\d.]+,\d{2}\s*\+\s*(\d{1,2})\s*[xX]/); const parc2 = t.match(/(\d{1,2})\s*[xX]\s*(?:de\s*)?R\$/);
       if (parc) pg.parcelas = Number(parc[1]) + 1; else if (parc2) pg.parcelas = Number(parc2[1]);
@@ -25075,43 +25171,92 @@ function interpretarTextosPrints(textos){
       d.pagamento = pg;
       return;
     }
-    if (pontos.length){
+    const grandes = pontos.filter(p => p >= 1000);
+    if (grandes.length){
       const mi = d.milhas || {};
-      /* o total é o valor de pontos que mais aparece na tela (o riscado não tem ponto de milhar e fica de fora) */
-      const freq = {}; pontos.forEach(p => freq[p] = (freq[p] || 0) + 1);
-      const total = Number(Object.keys(freq).sort((a, b) => freq[b] - freq[a] || b - a)[0]);
-      mi.pontos = mi.pontos || total;
-      const tx = reais(/Taxas e impostos\s*R\$\s*([\d.]+,\d{2})/i) || reais(/(?:pontos|pts)\s*\n?\s*\+\s*R\$\s*([\d.]+,\d{2})/i);
+      const freq = {}; grandes.forEach(p => freq[p] = (freq[p] || 0) + 1);
+      mi.pontos = mi.pontos || Number(Object.keys(freq).sort((a, b) => freq[b] - freq[a] || b - a)[0]);
+      const tx = reais(/Taxas e impostos\s*R\$\s*([\d.]+,\d{2})/i) || reais(/(?:pontos|pts)\s*\n?\s*\+\s*R\$\s*([\d.]+,\d{2})/i) || reais(/\bM\s*\+\s*([\d.]+,\d{2})\s*BRL/);
       const txTot = reais(/Total a pagar[^\n]*\n?[^\n]*?\+\s*R\$\s*([\d.]+,\d{2})/i) || reais(/Total\s*\d+\s*passageiros[\s\S]{0,80}?\+\s*R\$\s*([\d.]+,\d{2})/i);
       mi.taxas = Math.max(mi.taxas || 0, tx || 0, txTot || 0) || undefined;
-      if (cia) mi.programa = cia.pg;
+      if (cia && cia.pg) mi.programa = cia.pg;
       d.milhas = mi;
-    } else {
-      const total = reais(/Total a pagar\s*R\$\s*([\d.]+,\d{2})/i) || reais(/Total\s*\d+\s*passageiros[\s\S]{0,40}?R\$\s*([\d.]+,\d{2})/i);
-      if (total){
-        const dn = d.dinheiro || {};
-        dn.total = Math.max(dn.total || 0, total);
-        const tar = reais(/Pre[çc]o da Tarifa\s*R\$\s*([\d.]+,\d{2})/i); if (tar) dn.tarifa = tar;
-        const tx = reais(/Taxas e impostos\s*R\$\s*([\d.]+,\d{2})/i); if (tx) dn.taxas = tx;
-        d.dinheiro = dn;
-      }
+      return;
+    }
+    const total = reais(/Total a pagar\s*R\$\s*([\d.]+,\d{2})/i) || reais(/Total\s*\d+\s*passageiros[\s\S]{0,40}?R\$\s*([\d.]+,\d{2})/i)
+      || (/total para todos|total a pagar|pre[çc]o detalhado/i.test(t) ? Math.max(0, ...valores.filter(v => v > 0)) || null : null);
+    if (total){
+      const dn = d.dinheiro || {};
+      dn.total = Math.max(dn.total || 0, total);
+      const tar = reais(/Pre[çc]o da Tarifa\s*R\$\s*([\d.]+,\d{2})/i); if (tar) dn.tarifa = tar;
+      const tx = reais(/Taxas e impostos\s*R\$\s*([\d.]+,\d{2})/i); if (tx) dn.taxas = tx;
+      const promo = t.match(/(\d{1,3})\s*M\s*\+\s*([\d.]+,\d{2})\s*BRL/);
+      if (promo && Number(promo[1]) < 1000) d.avisos.push(`Com a promoção da tela, sairia ${promo[1]} milhas + ${brl(numBR(promo[2]))}; a comparação usa o preço só em dinheiro, ${brl(dn.total)}.`);
+      d.dinheiro = dn;
     }
   });
+  /* bilhetes emitidos com milhas: forma e taxas vêm deles quando as telas não trazem */
+  if (vistos.size){
+    if (resgate){
+      d.pagamento = d.pagamento || {};
+      d.pagamento.forma = 'milhas';
+      if (d.pagamento.dinheiro == null && taxasBilhetes > 0) d.pagamento.dinheiro = Math.round(taxasBilhetes * 100) / 100;
+      d.avisos.push(`Bilhete emitido com milhas (resgate)${bilhetes.length ? `: ${bilhetes.length} ${bilhetes.length === 1 ? 'bilhete' : 'bilhetes'}` : ''}. As taxas somadas dos bilhetes dão ${brl(taxasBilhetes)}.`);
+      if (!d.milhas){ d.milhas = {programa:cia ? cia.pg : ''}; }
+      if (!d.milhas.taxas && taxasBilhetes) d.milhas.taxas = Math.round(taxasBilhetes * 100) / 100;
+    }
+  } else if (d.pagamento && !d.pagamento.forma) d.pagamento.forma = d.pagamento.pontos ? 'milhas' : (resgate ? 'milhas' : 'dinheiro');
+  if (d.pagamento && d.pagamento.pontos == null && resgate && d.milhas && d.milhas.pontos) d.pagamento.pontos = d.milhas.pontos;
   if (/cortesia/i.test(tudo)){
     d.cortesia = {qtd:1, valor:(d.dinheiro && d.dinheiro.tarifa) || 0};
     d.avisos.push('Uma das passagens é cortesia: o preço mostrado vale para os pagantes.');
     if (d.dinheiro) d.dinheiro.obs = 'com passagem cortesia';
     if (d.milhas) d.milhas.obs = 'com passagem cortesia';
   }
-  if (d.pagamento && d.milhas && d.pagamento.pontos && Math.abs(d.pagamento.pontos - d.milhas.pontos) > d.milhas.pontos * 0.02)
+  if (d.pagamento && d.milhas && d.pagamento.pontos && d.milhas.pontos && Math.abs(d.pagamento.pontos - d.milhas.pontos) > d.milhas.pontos * 0.02)
     d.avisos.push(`A tela de pagamento mostra ${nBR(d.pagamento.pontos)} pontos${d.pagamento.dinheiro ? ' + ' + brl(d.pagamento.dinheiro) : ''}, diferente da busca (${nBR(d.milhas.pontos)} pontos). Confira se a compra incluiu outro trecho.`);
+  if (d.milhas && !d.milhas.pontos && resgate) d.avisos.push('A quantidade de milhas não aparece nos documentos: informe no campo Milhas.');
   d.avisos.push('Leitura feita no seu navegador, sem custo. Confira os números antes de preencher.');
   return d;
 }
 
+/* PDF: o texto do próprio arquivo, pelo PDF.js (código aberto da Mozilla, o
+   leitor do Firefox), linha por linha na ordem da página. PDF sem texto (uma
+   foto salva como PDF) tem cada página desenhada e lida como imagem. */
+const PDFJS_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+async function prepararPDFjs(){
+  if (window.pdfjsLib) return window.pdfjsLib;
+  await new Promise((ok, err) => { const sc = document.createElement('script'); sc.src = PDFJS_URL; sc.onload = ok; sc.onerror = () => err(new Error('Não deu para baixar o leitor de PDF. Confira a internet e tente de novo.')); document.head.appendChild(sc); });
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+  return window.pdfjsLib;
+}
+const ehPDF = f => f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
+async function textoDoArquivo(f, worker){
+  if (!ehPDF(f)){ const {data} = await worker.recognize(f); return data.text || ''; }
+  const lib = await prepararPDFjs();
+  const doc = await lib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+  let texto = '';
+  for (let p = 1; p <= Math.min(doc.numPages, 6); p++){
+    const pg = await doc.getPage(p);
+    const c = await pg.getTextContent();
+    const linhas = {};
+    c.items.forEach(it => { if (!it.str || !it.str.trim()) return; const y = Math.round(it.transform[5] / 3) * 3; (linhas[y] = linhas[y] || []).push([it.transform[4], it.str]); });
+    const t = Object.keys(linhas).map(Number).sort((a, b) => b - a).map(y => linhas[y].sort((a, b) => a[0] - b[0]).map(x => x[1]).join(' ').replace(/\s+/g, ' ').trim()).join('\n');
+    if (t.replace(/\s/g, '').length > 30) texto += t + '\n';
+    else {
+      const vp = pg.getViewport({scale:2});
+      const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      await pg.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise;
+      const {data} = await worker.recognize(cv); texto += (data.text || '') + '\n';
+    }
+  }
+  return texto;
+}
+
 async function lerPrintsTrecho(arquivos){
-  const lista = [...arquivos].filter(f => f.type && f.type.startsWith('image/')).slice(0, 8);
-  if (!lista.length){ avisar('Escolha imagens (PNG, JPG ou WEBP).', 'alerta'); return; }
+  const lista = [...arquivos].filter(f => (f.type && f.type.startsWith('image/')) || ehPDF(f)).slice(0, 12);
+  if (!lista.length){ avisar('Escolha imagens (PNG, JPG ou WEBP) ou PDFs.', 'alerta'); return; }
   /* O que já está no formulário: numa edição, os prints só completam ou
      corrigem; o que eles não mostram continua como estava. */
   const atual = {};
@@ -25126,7 +25271,9 @@ async function lerPrintsTrecho(arquivos){
      longa (com várias imagens, costuma levar de 20 a 60 segundos), e um
      cronômetro mostra que ela está andando. */
   const desenharEspera = (i, urls) => { if (!$('#lpCorpo')) return; $('#lpCorpo').innerHTML = `<div class="lp-espera">
-      <div class="lp-miniaturas">${(urls || lista.map(() => '')).map(u => `<div class="lp-mini${u ? '' : ' vazia'}">${u ? `<img src="${u}" alt="">` : ''}<span class="lp-varredura"></span></div>`).join('')}</div>
+      <div class="lp-miniaturas">${lista.map((f, k) => { const u = urls && urls[k]; return ehPDF(f)
+        ? `<div class="lp-mini lp-pdf"><svg><use href="#i-livro"/></svg><b>PDF</b><small>${esc((f.name || '').replace(/\.pdf$/i, '').slice(0, 22))}</small><span class="lp-varredura"></span></div>`
+        : `<div class="lp-mini${u ? '' : ' vazia'}">${u ? `<img src="${u}" alt="">` : ''}<span class="lp-varredura"></span></div>`; }).join('')}</div>
       <div class="lp-passos">${passos.map((p, k) => `<div class="${k < i ? 'feito' : k === i ? 'agora' : ''}"><span class="lp-bola">${k < i ? '<svg><use href="#i-ok"/></svg>' : ''}</span>${p}${k === 1 && i === 1 ? ' <span class="lp-tempo" id="lpTempo">0 s</span>' : ''}</div>`).join('')}
         ${i === 0 ? `<div class="lp-dica">Na primeira vez, o leitor é baixado (uns 4 MB). Depois fica guardado no navegador.</div>` : ''}
         ${i === 1 ? `<div class="lp-dica" id="lpQual">Lendo a imagem 1 de ${lista.length}. Tudo acontece no seu navegador, sem custo.</div>` : ''}</div>
@@ -25134,7 +25281,7 @@ async function lerPrintsTrecho(arquivos){
   desenharEspera(0);
   let cron = null;
   try{
-    _leitura.imagens = await Promise.all(lista.map(async f => ({url:await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = err; fr.readAsDataURL(f); })})));
+    _leitura.imagens = await Promise.all(lista.map(async f => ({pdf:ehPDF(f), nome:f.name || '', url:ehPDF(f) ? '' : await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = err; fr.readAsDataURL(f); })})));
     desenharEspera(0, _leitura.imagens.map(i => i.url));
     const worker = await prepararLeitorOCR();
     if (!_leitura) return;
@@ -25144,13 +25291,12 @@ async function lerPrintsTrecho(arquivos){
     const textos = [];
     for (let k = 0; k < lista.length; k++){
       if ($('#lpQual')) $('#lpQual').textContent = `Lendo a imagem ${k + 1} de ${lista.length}. Tudo acontece no seu navegador, sem custo.`;
-      const {data} = await worker.recognize(lista[k]);
-      textos.push(data.text || '');
+      textos.push(await textoDoArquivo(lista[k], worker));
       if (!_leitura) return;
     }
     clearInterval(cron);
     desenharEspera(2, _leitura.imagens.map(i => i.url));
-    const d = interpretarTextosPrints(textos);
+    const d = interpretarTextosPrints(textos, (_leitura.atual && _leitura.atual.trData) || (P() && P().inicio) || '');
     _leitura.textos = textos;
     await new Promise(ok => setTimeout(ok, 250));
     desenharEspera(3, _leitura.imagens.map(i => i.url));
@@ -25214,7 +25360,8 @@ function desenharRevisaoPrints(){
   };
   /* Edição: campo que o print não trouxe fica com o valor que já estava. */
   const at = _leitura.atual || {};
-  const temAt = !!(at.trOri || at.trMilhas || at.trPago);
+  /* edição de verdade: o formulário já tinha dados (um formulário novo vem com zeros) */
+  const temAt = !!((at.trOri || '').trim() || rgNum(at.trMilhas || '') > 0 || moedaNum(at.trPago || '') > 0);
   if (temAt){
     const vazio = v => v === '' || v == null || v === 0;
     const mapa = {origem:'trOri', destino:'trDes', data:'trData', cia:'trCia', prog:'trProg', loc:'trLoc'};
