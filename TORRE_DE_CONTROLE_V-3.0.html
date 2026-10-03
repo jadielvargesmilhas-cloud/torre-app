@@ -1992,6 +1992,11 @@ html[data-theme="papel"] .destaque-suave{ text-shadow:none; }
 .bt.fantasma:hover{ color:var(--giz); border-color:var(--fio-forte); background:var(--fio-suave); }
 .bt.perigo{ border-color:color-mix(in oklab,var(--brasa) 40%,transparent); color:var(--brasa); background:var(--lavagem-brasa); }
 .bt.perigo:hover{ background:color-mix(in oklab,var(--brasa) 22%,transparent); }
+/* Excluir: vermelho preenchido, padrão do sistema para apagar (o Fechar fica só
+   com borda e texto). */
+.bt.vermelho-solido{ background:var(--brasa); border-color:var(--brasa); color:#fff; font-weight:600; }
+.bt.vermelho-solido:hover{ background:color-mix(in oklab,var(--brasa) 85%,black); border-color:color-mix(in oklab,var(--brasa) 85%,black); }
+.bt.vermelho-solido svg{ stroke:#fff; }
 .bt.p{ height:calc(29px * var(--esc)); padding:0 calc(10px * var(--esc)); font-size:calc(13.5px * var(--esc)); border-radius:7px; }
 .bt.p svg{ width:13px;height:13px; }
 .bt.icone{ width:36px; padding:0; }
@@ -2325,8 +2330,11 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
    direita. Fio fino em cima separa do total. */
 .mp-contas{ margin:6px 0 4px; padding-top:6px; border-top:1px solid var(--fio); display:flex; flex-direction:column; gap:2px;
   font-size:calc(12.5px * var(--esc)); }
-.mp-contas > div{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:baseline; }
-.mp-contas span{ color:var(--giz-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Nome inteiro, nunca cortado: se a linha não comporta nome, pontos e milheiro,
+   os números descem para a linha de baixo, alinhados à direita. */
+.mp-contas > div{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; column-gap:8px; }
+.mp-contas span{ color:var(--giz-2); white-space:nowrap; }
+.mp-contas em{ font-style:normal; display:inline-flex; gap:8px; align-items:baseline; margin-left:auto; white-space:nowrap; }
 .mp-contas b{ font-weight:600; color:var(--giz); font-variant-numeric:tabular-nums; }
 .mp-contas small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); min-width:7ch; text-align:right; white-space:nowrap; }
 
@@ -8316,7 +8324,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 01:10';
+const BUILD = '2026-10-03 01:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19066,11 +19074,12 @@ function renderClubes(){
     ${metrica('Milheiro médio dos clubes', cpmMedio ? brl2(cpmMedio) : '—', 'Só a mensalidade, sem bônus de adesão', cpmMedio && cpmMedio < 20 ? 'jade' : 'ouro')}
     ${metrica('Próxima cobrança', proxima !== undefined ? prazoTexto(proxima) : '—', proxima !== undefined ? 'Confira o cartão antes' : 'Nenhuma renovação marcada', proxima !== undefined && proxima <= 3 ? 'brasa' : '')}`;
 
+  const orfas = avisoCreditosOrfaos();
   if (!DB.assinaturas.length){
-    $('#fbAssinaturas').innerHTML = `<div class="vazio"><svg><use href="#i-etiqueta"/></svg><h4>Nenhum clube assinado</h4><p>Clube costuma ser o milheiro mais barato do mercado, mas o volume é limitado e a carência prende. Cadastre para a Torre avisar antes de cada renovação.</p><button class="bt primario" onclick="editarAssinatura()">Cadastrar Assinatura</button></div>`;
+    $('#fbAssinaturas').innerHTML = orfas + `<div class="vazio"><svg><use href="#i-etiqueta"/></svg><h4>Nenhum clube assinado</h4><p>Clube costuma ser o milheiro mais barato do mercado, mas o volume é limitado e a carência prende. Cadastre para a Torre avisar antes de cada renovação.</p><button class="bt primario" onclick="editarAssinatura()">Cadastrar Assinatura</button></div>`;
     return;
   }
-  $('#fbAssinaturas').innerHTML = DB.assinaturas.sort((a, b) => (a.status === 'ativa' ? 0 : 1) - (b.status === 'ativa' ? 0 : 1)).map(a => {
+  $('#fbAssinaturas').innerHTML = orfas + DB.assinaturas.sort((a, b) => (a.status === 'ativa' ? 0 : 1) - (b.status === 'ativa' ? 0 : 1)).map(a => {
     const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(p => p.id === a.planoId);
     const cpm = cpmAssinatura(a), f = faixasDe(a.prog);
     const dias = diasAte(a.renova);
@@ -21143,6 +21152,51 @@ function igualarSaldoAoDiario(saldoId){
   conferirSaldoComDiario();
 }
 
+/* Créditos de clube cuja assinatura não existe mais. Até a versão de 03/10, apagar
+   uma assinatura deixava para trás os créditos que ela tinha lançado, e o saldo
+   seguia contando esses pontos. Aqui eles aparecem agrupados por conta e
+   programa, para sair com um toque. */
+function creditosOrfaos(){
+  const ids = new Set((DB.assinaturas || []).map(a => a.id));
+  return (DB.lancamentos || []).filter(l => l.assinaturaId && !ids.has(l.assinaturaId));
+}
+function avisoCreditosOrfaos(){
+  const ls = creditosOrfaos();
+  if (!ls.length) return '';
+  const grupos = {};
+  ls.forEach(l => { const k = l.contaId + '|' + l.prog; (grupos[k] = grupos[k] || {conta:l.contaId, prog:l.prog, n:0, qtd:0}); grupos[k].n++; grupos[k].qtd += Number(l.qtd) || 0; });
+  return `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">
+    <div><b>Créditos de um clube que foi apagado</b></div>
+    ${Object.values(grupos).map(g => `<div>${esc(prog(g.prog).n)} de ${esc(nomeCurtoConta(g.conta))}: ${g.n} ${g.n === 1 ? 'crédito' : 'créditos'}, ${nBR(g.qtd)} pontos que ainda contam no saldo.</div>`).join('')}
+    <div style="margin-top:8px"><button type="button" class="bt p vermelho-solido" onclick="removerCreditosOrfaos()"><svg><use href="#i-lixo"/></svg>Excluir estes créditos</button></div>
+  </div></div>`;
+}
+/* Tira os créditos do Diário e devolve o saldo. Vale para os órfãos e para os de
+   uma assinatura que está sendo apagada. */
+function tirarCreditosDeClube(lancs){
+  const afetados = new Set();
+  lancs.forEach(l => {
+    if (l.mexeuSaldo !== false) mexerSaldo(l.contaId, l.prog, -(Number(l.qtd) || 0));
+    afetados.add(l.contaId + '|' + l.prog);
+  });
+  const ids = new Set(lancs.map(l => l.id));
+  DB.lancamentos = (DB.lancamentos || []).filter(l => !ids.has(l.id));
+  afetados.forEach(k => { const [c, p] = k.split('|'); acertarSaldoDe(c, p); });
+}
+function removerCreditosOrfaos(){
+  const ls = creditosOrfaos(); if (!ls.length) return;
+  const qtd = soma(ls.map(l => Number(l.qtd) || 0));
+  confirmar('Excluir os créditos do clube apagado?',
+    `Saem ${ls.length} ${ls.length === 1 ? 'lançamento' : 'lançamentos'} do Diário de Bordo e ${nBR(qtd)} pontos do saldo. Não dá para desfazer.`,
+    () => {
+      tirarCreditosDeClube(ls);
+      salvar();
+      if (RENDER[vistaAtual]) RENDER[vistaAtual]();
+      renderFita();
+      avisar('Créditos excluídos e saldo acertado.', 'ok');
+    }, 'Excluir');
+}
+
 function apagar(colecao, id, oQue){
   /* Apagar um lançamento que somou à carteira precisa devolver o que ele somou.
      Sem isso o saldo ficava órfão: o Diário esquecia a compra e a carteira
@@ -21162,9 +21216,14 @@ function apagar(colecao, id, oQue){
      que esses lançamentos foram feitos. */
   const legado = !!l && l.mexeuSaldo === undefined && l.tipo !== 'inicial';
   const mexeu = !!(l && l.mexeuSaldo);
+  /* Apagar a assinatura leva junto os créditos que ela lançou: o clube errado
+     não pode continuar somando pontos na carteira. */
+  const doClube = colecao === 'assinaturas' ? (DB.lancamentos || []).filter(x => x.assinaturaId === id) : [];
   const aviso = mexeu
     ? `Isso remove ${oQue} e devolve ${nBR(Math.abs(l.qtd))} ao saldo de ${prog(l.prog).n}. Não dá para desfazer.`
-    : `Isso remove ${oQue} de forma definitiva. Não dá para desfazer.`;
+    : doClube.length
+      ? `Isso remove ${oQue} e ${doClube.length === 1 ? 'o crédito lançado' : 'os ' + doClube.length + ' créditos lançados'} por ela, ${nBR(soma(doClube.map(x => Number(x.qtd) || 0)))} pontos que saem do Diário e do saldo. Não dá para desfazer.`
+      : `Isso remove ${oQue} de forma definitiva. Não dá para desfazer.`;
 
   const extra = legado ? {
     html: `<label class="ck" style="margin-top:13px;align-items:flex-start;gap:9px">
@@ -21207,6 +21266,10 @@ function apagar(colecao, id, oQue){
       (DB.lancamentos || []).filter(x => x.daEmissao === id && x.mexeuSaldo)
         .forEach(x => mexerSaldo(x.contaId, x.prog, -Number(x.qtd || 0)));
       DB.lancamentos = (DB.lancamentos || []).filter(x => x.daEmissao !== id);
+    }
+    if (colecao === 'assinaturas'){
+      const ligados = (DB.lancamentos || []).filter(x => x.assinaturaId === id);
+      if (ligados.length) tirarCreditosDeClube(ligados);
     }
     DB[colecao] = DB[colecao].filter(x => x.id !== id);
     /* Depois de apagar, a carteira volta a bater com o Diário. O desfazer acima
@@ -34801,8 +34864,8 @@ function contasDoPrograma(p){
   const cpms = (cpmPorProgramaConta() || {})[p] || {};
   return `<div class="mp-contas">${ids.map(id => `<div>
       <span>${id ? esc(nomeCurtoConta(id)) : 'Sem conta'}</span>
-      <b class="num">${nBR(porConta[id])}</b>
-      <small>${cpms[id] ? brl2(cpms[id]) + '/mil' : 'sem custo'}</small></div>`).join('')}</div>`;
+      <em><b class="num">${nBR(porConta[id])}</b>
+      <small>${cpms[id] ? brl2(cpms[id]) + '/mil' : 'sem custo'}</small></em></div>`).join('')}</div>`;
 }
 
 /* O nome do programa de destino sai do meio da frase em azul: é ele que a pessoa
