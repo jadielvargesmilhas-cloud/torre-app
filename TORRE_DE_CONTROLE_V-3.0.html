@@ -8339,7 +8339,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 04:20';
+const BUILD = '2026-10-03 05:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -18296,6 +18296,7 @@ function editarCampanha(id, tipoPadrao){
         .sort((x, y) => x.total - y.total);
       novo.naoCumulativo = !!($('#cpNaoCum') || {}).checked;
     }
+    if (!conferirAntesDeSalvar('campanhas', novo, 'uma campanha')) return;
     if (id) DB.campanhas[DB.campanhas.findIndex(x => x.id === id)] = novo; else DB.campanhas.push(novo);
     salvar(); fecharFolha(); abaCampanha = novo.tipo;
     $$('#segCampanha button').forEach(b => b.classList.toggle('on', b.dataset.t === abaCampanha));
@@ -19751,6 +19752,7 @@ function editarAssinatura(id, pre){
       /* guarda o mês escolhido, ou vazio quando a intenção não está marcada */
       cancelarAntes: $('#asCancelarCk').checked ? Number($('#asCancelarMes').value) || 0 : 0,
       cartao:nomeCartao($('#asCartao').value) || '', obs:$('#asObs').value.trim() };
+    if (!conferirAntesDeSalvar('assinaturas', novo, 'uma assinatura')) return;
     if (id) DB.assinaturas[DB.assinaturas.findIndex(x => x.id === id)] = novo; else DB.assinaturas.push(novo);
 
     /* Salvar garante que o livro reflita a assinatura: o crédito de adesão, se
@@ -20127,6 +20129,7 @@ function editarLoja(id){
     const novo = { id:l.id || uid(), n:$('#ljN').value.trim() || 'Loja', prog:$('#ljProg').value, cat:$('#ljCat').value,
       base:Number($('#ljBase').value) || 0, promo:Number($('#ljPromo').value) || 0, fim:$('#ljFim').value, obs:$('#ljObs').value.trim(),
       faixas: faixas.filter(f => f.cat), em:$('#ljEm').value, conf:$('#ljConf').value, fonte:$('#ljFonte').value.trim() };
+    if (!conferirAntesDeSalvar('lojas', novo, 'uma loja')) return;
     if (id) DB.lojas[DB.lojas.findIndex(x => x.id === id)] = novo; else DB.lojas.push(novo);
     /* A loja aparece em duas telas: a vitrine desta aba e a lista de Compras
        Inteligentes. Redesenhar só uma deixava a outra com o número velho. */
@@ -20165,7 +20168,10 @@ function novaCompra(){
     const valor = moedaNum($('#cmValor').value), mult = Number($('#cmMult').value) || 0;
     if (!valor){ avisar('Informe o valor da compra.', 'alerta'); return; }
     const pts = Math.round(valor * mult);
-    DB.compras.push({id:uid(), lojaId:l.id, prog:l.prog, data:$('#cmData').value, valor, mult, pts});
+    const compra = {id:uid(), lojaId:l.id, prog:l.prog, data:$('#cmData').value, valor, mult, pts};
+    DB.compras = DB.compras || [];
+    if (!conferirAntesDeSalvar('compras', compra, 'uma compra')) return;
+    DB.compras.push(compra);
     DB.lancamentos.push({id:uid(), criadoEm:Date.now(), data:$('#cmData').value, contaId:(DB.contas[0] || {}).id, prog:l.prog,
       tipo:'organico', qtd:pts, custo:0, nota:`Compra bonificada em ${l.n}`});
     salvar(); fecharFolha(); renderCompras(); renderLancamentos(); renderFita();
@@ -21074,6 +21080,7 @@ function editarLancamento(id, pre){
     }
     if (!novo.qtd){ avisar('Informe a quantidade.', 'alerta'); return; }
     if (origem && saiu <= 0){ avisar('Informe quanto saiu do programa de origem.', 'alerta'); $('#lcSaiu').focus(); return; }
+    if (!conferirAntesDeSalvar('lancamentos', novo, 'um lançamento')) return;
     if (id) DB.lancamentos[DB.lancamentos.findIndex(x => x.id === id)] = novo; else DB.lancamentos.push(novo);
 
     /* A saída entra como lançamento de sinal trocado: o custo médio é média
@@ -21261,6 +21268,75 @@ function removerCreditosOrfaos(){
       renderFita();
       avisar('Créditos excluídos e saldo acertado.', 'ok');
     }, 'Excluir');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CONTRA DUPLICAÇÃO
+   ──────────────────────────────────────────────────────────────────────────────
+   Nenhum cadastro é gravado se for idêntico a outro que já existe: para salvar
+   um segundo registro parecido, pelo menos um dado precisa mudar (a data, por
+   exemplo). Editar e salvar sem mudar nada também não grava: só fecha.
+
+   A comparação olha o que a pessoa digitou ou escolheu, sem os campos que a
+   própria Torre preenche (identificador, hora de criação, marcas internas).
+   Texto é comparado sem acento e sem diferença de maiúscula; número, com duas
+   casas; quantidade de lançamento, sem o sinal, porque a saída é gravada com
+   sinal de menos depois da conferência. */
+const CAMPOS_DA_TORRE = ['id', 'criadoEm', 'mexeuSaldo', 'saldoAntes', 'hist', 'ultimo', 'criado',
+  'descontoBase', 'cartaoUsado', 'atualizadoEm', 'confirmouNome'];
+function digitalRegistro(r, colecao){
+  const o = {};
+  Object.keys(r || {}).sort().forEach(k => {
+    if (CAMPOS_DA_TORRE.includes(k)) return;
+    let v = r[k];
+    if (typeof v === 'string') v = semAcento(v);
+    else if (typeof v === 'number') v = Math.round((colecao === 'lancamentos' && k === 'qtd' ? Math.abs(v) : v) * 100) / 100;
+    if (v === '' || v === null || v === undefined || v === false || (Array.isArray(v) && !v.length)) return;
+    o[k] = v;
+  });
+  return JSON.stringify(o);
+}
+/* true: pode gravar. false: já avisou e não grava. */
+function conferirAntesDeSalvar(colecao, novo, oQue){
+  const lista = DB[colecao] || [];
+  const d = digitalRegistro(novo, colecao);
+  const antigo = lista.find(x => x.id === novo.id);
+  if (antigo && digitalRegistro(antigo, colecao) === d){
+    fecharFolha();
+    avisar('Nada foi alterado, então nada foi salvo.', 'ok');
+    return false;
+  }
+  const igual = lista.find(x => x.id !== novo.id && digitalRegistro(x, colecao) === d);
+  if (igual){
+    avisar(`Já existe ${oQue} com exatamente as mesmas informações. Para salvar outro, mude pelo menos um dado, como a data.`, 'alerta', 8000);
+    return false;
+  }
+  return true;
+}
+const soDigitosFinal = v => String(v || '').replace(/\D/g, '');
+/* Cartões com o mesmo final, agrupados. */
+function cartoesRepetidos(){
+  const g = {};
+  (DB.cartoes || []).forEach(c => { const f = soDigitosFinal(c.final); if (f) (g[f] = g[f] || []).push(c); });
+  return Object.entries(g).filter(([, cs]) => cs.length > 1);
+}
+/* Junta os repetidos: fica o primeiro cadastrado de cada final, os registros que
+   apontavam para as cópias passam a apontar para ele, e as cópias saem. */
+function juntarCartoesRepetidos(){
+  const grupos = cartoesRepetidos(); if (!grupos.length) return;
+  const n = grupos.reduce((a, [, cs]) => a + cs.length - 1, 0);
+  confirmar('Juntar os cartões repetidos?',
+    `Fica um cartão por final, o primeiro cadastrado. Lançamentos, assinaturas, emissões e pagamentos das ${n === 1 ? 'cópia' : n + ' cópias'} passam para ele, e ${n === 1 ? 'a cópia sai' : 'as cópias saem'}.`,
+    () => {
+      grupos.forEach(([, cs]) => {
+        const fica = cs[0], saem = new Set(cs.slice(1).map(c => c.id));
+        ['lancamentos', 'assinaturas', 'reservas', 'pagamentos'].forEach(col =>
+          (DB[col] || []).forEach(x => { if (saem.has(x.cartaoId)) x.cartaoId = fica.id; }));
+        DB.cartoes = DB.cartoes.filter(c => !saem.has(c.id));
+      });
+      salvar(); renderCartoes();
+      avisar('Cartões repetidos juntados.', 'ok');
+    }, 'Juntar', false);
 }
 
 function apagar(colecao, id, oQue){
@@ -22442,6 +22518,7 @@ function editarLote(id){
     const novo = {id:l.id || uid(), contaId:$('#ltConta').value, prog:$('#ltProg').value,
       qtd:rgNum($('#ltQtd').value), entrada:$('#ltEntrada').value,
       vence:$('#ltVence').value, origem:$('#ltOrigem').value.trim()};
+    if (!conferirAntesDeSalvar('lotes', novo, 'um lote')) return;
     if (id) DB.lotes[DB.lotes.findIndex(x => x.id === id)] = novo; else DB.lotes.push(novo);
     salvar(); fecharFolha(); renderSaldo(); renderFita(); avisar('Lote anotado.', 'ok');
   };
@@ -22598,6 +22675,9 @@ function editarConta(id){
     const nv = {};
     $$('#folhaCorpo select[data-nivel]').forEach(el => { if (el.value) nv[el.dataset.nivel] = el.value; });
     const novo = {id:c.id || uid(), nome, papel, cpf:formatarCPF(cpf), email, obs:$('#ctO').value.trim(), niveis:nv};
+    const mesmoCpfConta = soDigitos(novo.cpf) && (DB.contas || []).find(x => x.id !== novo.id && soDigitos(x.cpf) === soDigitos(novo.cpf));
+    if (mesmoCpfConta){ avisar(`Esse CPF já é da conta de ${mesmoCpfConta.nome}.`, 'alerta', 7000); return; }
+    if (!conferirAntesDeSalvar('contas', novo, 'uma conta')) return;
     if (id) DB.contas[DB.contas.findIndex(x => x.id === id)] = novo; else DB.contas.push(novo);
     salvar(); fecharFolha(); renderSaldo(); renderFita(); avisar('Conta salva.', 'ok');
   };
@@ -23026,6 +23106,7 @@ function abrirMonitor(id, pre){
       regra:$('#mnRegra').value, alvo:Number($('#mnAlvo').value) || 0, prog:$('#mnProg').value,
       ativo:m.ativo !== false, intervalo:Math.max(15, Number($('#mnInt').value) || 60), hist:m.hist || [], ultimo:m.ultimo || null};
     if (!AEROPORTOS[novo.ori] || !AEROPORTOS[novo.des]){ avisar('Origem ou destino desconhecido.', 'alerta'); return; }
+    if (!conferirAntesDeSalvar('monitores', novo, 'um monitor')) return;
     if (id) DB.monitores[DB.monitores.findIndex(x => x.id === id)] = novo; else DB.monitores.push(novo);
     salvar(); fecharFolha(); verificarMonitor(novo.id); renderMonitores();
     avisar('Monitor armado.', 'ok');
@@ -24217,6 +24298,7 @@ function editarMeta(id){
     const novo = {id:m.id || uid(), n:$('#mtN').value.trim() || 'Meta sem nome', destino:$('#mtD').value.toUpperCase().trim(),
       prog:$('#mtP').value, precisa:rgNum($('#mtQ').value), prazo:$('#mtPz').value,
       emitida:$('#mtE').checked, hospedagem:$('#mtH').checked, feita:$('#mtF').checked, obs:$('#mtO').value.trim()};
+    if (!conferirAntesDeSalvar('metas', novo, 'uma meta')) return;
     if (id) DB.metas[DB.metas.findIndex(x => x.id === id)] = novo; else DB.metas.push(novo);
     salvar(); fecharFolha(); renderMetas(); renderFita(); avisar('Meta salva.', 'ok');
   };
@@ -25263,7 +25345,13 @@ function renderMeusCartoes(){
     <button type="button" class="bt-linha" onclick="irPara('cartoes');irParaAba('cartoes','cr-catalogo')">procure lá primeiro</button>.
     Se ele não estiver no catálogo, use <b>Novo Cartão</b> e informe os dados à mão.</div>`;
   const cs = DB.cartoes || [];
-  $('#crMeus').innerHTML = cs.length ? cs.map(c => `<div class="cartao crd-ficha">
+  const rep = cartoesRepetidos();
+  const avisoRep = rep.length ? `<div class="nota ouro" style="grid-column:1/-1"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">
+      <div><b>Cartões repetidos</b></div>
+      ${rep.map(([f, g]) => `<div>Final ${esc(f)}: ${g.length} cadastros (${esc(g[0].banco)} ${esc(g[0].produto)}).</div>`).join('')}
+      <div style="margin-top:8px"><button type="button" class="bt p primario" onclick="juntarCartoesRepetidos()">Juntar em um só</button></div>
+    </div></div>` : '';
+  $('#crMeus').innerHTML = avisoRep + (cs.length ? cs.map(c => `<div class="cartao crd-ficha">
     <div class="linha" style="gap:9px;align-items:flex-start;margin-bottom:12px">
       <div class="esticar" style="min-width:0">
         <b style="display:block;font-size:calc(15px * var(--esc))">${esc(c.banco)} — ${esc(c.produto)}</b>
@@ -25283,7 +25371,7 @@ function renderMeusCartoes(){
       <div><span>Vence</span><b>dia ${c.vencimento || '—'}</b></div>
     </div>
     ${c.beneficios ? `<div class="crd-benef">${linhasFrase(c.beneficios, 'item-sub')}</div>` : ''}
-  </div>`).join('') : `<div class="vazio" style="grid-column:1/-1"><p>Nenhum cartão cadastrado.</p></div>`;
+  </div>`).join('') : `<div class="vazio" style="grid-column:1/-1"><p>Nenhum cartão cadastrado.</p></div>`);
 }
 
 /* Nomes curtos de propósito: o seletor tem a largura de uma coluna da folha, e
@@ -25335,6 +25423,13 @@ function editarCartao(id){
       isento:$('#cdIsento').checked, isencaoTipo:$('#cdIsento').checked ? $('#cdIsencaoTipo').value : '',
       beneficios:$('#cdBenef').value.trim(), ativo:true};
     DB.cartoes = DB.cartoes || [];
+    /* O final identifica o cartão: obrigatório, quatro dígitos, e nunca repetido. */
+    const fin = soDigitosFinal(novo.final);
+    if (fin.length !== 4){ avisar('Informe os 4 últimos dígitos do cartão, no campo Final.', 'alerta', 6000); $('#cdFinal').focus(); return; }
+    novo.final = fin;
+    const mesmoFinal = DB.cartoes.find(x => x.id !== novo.id && soDigitosFinal(x.final) === fin);
+    if (mesmoFinal){ avisar(`Já existe um cartão com final ${fin}: ${mesmoFinal.banco} ${mesmoFinal.produto}. Cada final só pode aparecer uma vez.`, 'alerta', 8000); $('#cdFinal').focus(); return; }
+    if (!conferirAntesDeSalvar('cartoes', novo, 'um cartão')) return;
     const i = DB.cartoes.findIndex(x => x.id === novo.id);
     if (i >= 0) DB.cartoes[i] = novo; else DB.cartoes.push(novo);
     /* Cartão novo pode destravar desconto de campanha (o 65% da LATAM). */
@@ -25857,6 +25952,7 @@ function editarViagemAntigo(id, fechando){
       precoVista:moedaNum($('#viVista').value), metaId:$('#viMeta').value, cartaoId:$('#viCartao').value, contaId:$('#viConta').value,
       parcelas:Number($('#viParcelas').value) || 1,
       status:$('#viFeita').checked ? 'usada' : 'emitida'};
+    if (!conferirAntesDeSalvar('reservas', novo, 'uma emissão')) return;
     const i = DB.reservas.findIndex(x => x.id === novo.id);
     if (i >= 0) DB.reservas[i] = novo; else DB.reservas.push(novo);
     /* A saída de milhas acompanha a emissão em toda gravação: criada com ela,
@@ -26552,6 +26648,7 @@ function editarReserva(id, rascunho){
          quem lança uma emissão de semana passada precisa registrar o dia certo. */
       status:$('#rsStatus').value, criada:($('#rsCriada') && $('#rsCriada').value) || r.criada || hojeISO(),
       itin:$('#rsItin').value.trim()};
+    if (!conferirAntesDeSalvar('reservas', novo, 'uma emissão')) return;
     if (id) DB.reservas[DB.reservas.findIndex(x => x.id === id)] = novo; else DB.reservas.push(novo);
     /* A emissão alimenta três telas ao mesmo tempo: a lista, o controle de CPF e
        o resultado do balcão. Redesenhar só a lista deixava o controle mostrando o
@@ -26831,6 +26928,7 @@ function editarPessoa(id, semente){
 
     const novo = novoRegistroPessoa(p, nome, cpf, semente);
     DB.pessoas = DB.pessoas || [];
+    if (!conferirAntesDeSalvar('pessoas', novo, 'um passageiro')) return;
     if (id) DB.pessoas[DB.pessoas.findIndex(x => x.id === id)] = novo;
     else DB.pessoas.push(novo);
     salvar(); fecharFolha(); renderBalcao(); renderEmissoes();
@@ -33523,6 +33621,7 @@ function editarDesejo(id){
       feito:d.feito || false, criado:d.criado || hojeISO()};
     if (!novo.valor){ avisar('Informe o preço estimado: sem ele não dá para medir o retorno.', 'alerta'); return; }
     DB.desejos = DB.desejos || [];
+    if (!conferirAntesDeSalvar('desejos', novo, 'um item igual na lista')) return;
     if (id) DB.desejos[DB.desejos.findIndex(x => x.id === id)] = novo; else DB.desejos.push(novo);
     salvar(); fecharFolha(); renderCompras(); renderFita();
     avisar('Item na lista. A Torre passa a vigiar a vitrine por ele.', 'ok');
