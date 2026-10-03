@@ -6485,7 +6485,9 @@ body.folha-aberta{
 .fechar:hover{ color:var(--brasa); border-color:color-mix(in oklab,var(--brasa) 40%,transparent); background:var(--lavagem-brasa); }
 
 /* ── avisos flutuantes ────────────────────────────────────────────────────── */
-.avisos{ position:fixed; bottom:20px; right:20px; z-index:300; display:flex; flex-direction:column; gap:9px; pointer-events:none; max-width:min(400px,calc(100vw - 40px)); }
+.campo.erro-campo input, .campo.erro-campo select{ border-color:var(--brasa) !important; box-shadow:0 0 0 3px color-mix(in oklab, var(--brasa) 20%, transparent); }
+.erro-msg{ margin-top:6px; font-size:calc(12.5px * var(--esc)); line-height:1.4; color:var(--brasa); }
+.avisos{ position:fixed; bottom:20px; right:20px; z-index:1400; display:flex; flex-direction:column; gap:9px; pointer-events:none; max-width:min(400px,calc(100vw - 40px)); }
 .aviso{
   display:flex; align-items:flex-start; gap:10px; padding:12px 15px;
   background:var(--sup-2); border:1px solid var(--fio-forte); border-radius:var(--r);
@@ -8655,7 +8657,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 13:00';
+const BUILD = '2026-10-04 13:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11157,6 +11159,23 @@ function linhasNota(txt, cls, estilo){
     .map(l => `<div class="${cls || 'fraco'}"${estilo ? ` style="${estilo}"` : ''}>${esc(l)}</div>`).join('');
 }
 
+/* Erro de preenchimento mostrado no próprio campo: borda vermelha, a frase logo
+   abaixo, e a folha rola até ele. O aviso do canto continua, mas não é mais o
+   único sinal: com a folha aberta ele ficava atrás da área escura. */
+function erroNoCampo(sel, msg){
+  document.querySelectorAll('.campo.erro-campo').forEach(c => { c.classList.remove('erro-campo'); const m = c.querySelector('.erro-msg'); if (m) m.remove(); });
+  const el = typeof sel === 'string' ? document.querySelector(sel) : sel;
+  const campo = el && el.closest('.campo');
+  if (campo){
+    campo.classList.add('erro-campo');
+    campo.insertAdjacentHTML('beforeend', `<div class="erro-msg">${msg}</div>`);
+    campo.scrollIntoView({block:'center', behavior:'smooth'});
+    if (el.focus) setTimeout(() => el.focus(), 250);
+    const limpar = () => { campo.classList.remove('erro-campo'); const m = campo.querySelector('.erro-msg'); if (m) m.remove(); };
+    el.addEventListener('input', limpar, {once:true}); el.addEventListener('change', limpar, {once:true});
+  }
+  avisar(msg, 'alerta', 7000);
+}
 function avisar(msg, tipo = 'ok', ms = 3600){
   const host = $('#avisos'); if (!host) return;
   const el = document.createElement('div');
@@ -24405,7 +24424,7 @@ function editarUpgrade(id){
   $('#btSalvarUp').onclick = () => {
     const nu = ler();
     if ($('#upPara').value === $('#upDe').value){ avisar('A nova cabine precisa ser diferente da comprada.', 'alerta'); return; }
-    if (!(nu.vista > 0)){ avisar('Informe o preço da nova cabine em dinheiro: é com ele que a economia é medida.', 'alerta', 7000); $('#upVista').focus(); return; }
+    if (!(nu.vista > 0)){ erroNoCampo('#upVista', 'Informe o preço da nova cabine em dinheiro: é com ele que a economia é medida.'); return; }
     t.cabine = $('#upDe').value; t.upgrade = nu;
     salvar(); fecharFolha(); renderPlano(); avisar('Upgrade registrado. Antes e depois ficam guardados no trecho.', 'ok', 6000);
   };
@@ -24684,19 +24703,20 @@ function editarTrecho(id){
       baseMilheiro:$('#trBase').value, milheiroOutro:$('#trBase').value === 'outro' ? moedaNum($('#trOutro').value) : 0,
       altMilhas:f === 'dinheiro' && !$('#trSemAlt').checked ? rgNum($('#trAltMilhas').value) : 0, altProg:$('#trAltProg').value,
       altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
-    if (!novo.origem || !novo.destino){ avisar('Informe a origem e o destino do trecho.', 'alerta'); return; }
-    if (novo.cartaoId && !novo.dataCompra){ avisar('Informe a data da compra: é dela que a Torre conta as parcelas na fatura do cartão.', 'alerta', 7000); $('#trDataCompra').focus(); return; }
-    if (novo.cortesiaQtd && !(novo.cortesiaValor > 0)){ avisar('Informe o valor da tarifa que a cortesia cobriu, por pessoa.', 'alerta', 7000); return; }
+    if (!novo.origem){ erroNoCampo('#trOri', 'Informe a origem do trecho.'); return; }
+    if (!novo.destino){ erroNoCampo('#trDes', 'Informe o destino do trecho.'); return; }
+    if (novo.cartaoId && !novo.dataCompra){ erroNoCampo('#trDataCompra', 'Informe a data da compra: é dela que a Torre conta as parcelas na fatura do cartão.'); return; }
+    if (novo.cortesiaQtd && !(novo.cortesiaValor > 0)){ erroNoCampo('#trCortValor', 'Com passagem cortesia, informe quanto a tarifa dela custaria, por pessoa (o "Preço da Tarifa" do resumo da compra). Se não houve cortesia, escolha "Nenhuma".'); return; }
     if (novo.baseMilheiro === 'outro'){
       const pgC = f === 'dinheiro' ? novo.altProg : novo.prog, custoR = milheiroDaBase('custo', pgC);
-      if (!(novo.milheiroOutro > 0)){ avisar('Informe o valor de cotação: quanto vale cada mil milhas.', 'alerta'); return; }
-      if (custoR != null && novo.milheiroOutro < custoR){ avisar(`A cotação não pode ficar abaixo do custo real das milhas (${brl2(custoR)} por mil).`, 'alerta', 7000); return; }
+      if (!(novo.milheiroOutro > 0)){ erroNoCampo('#trOutro', 'Informe o valor de cotação: quanto vale cada mil milhas.'); return; }
+      if (custoR != null && novo.milheiroOutro < custoR){ erroNoCampo('#trOutro', `A cotação não pode ficar abaixo do custo real das milhas (${brl2(custoR)} por mil).`); return; }
     }
-    if (f === 'dinheiro' && !(novo.pago > 0)){ avisar('Informe quanto foi pago em dinheiro.', 'alerta'); return; }
-    if (f !== 'dinheiro' && !(novo.milhas > 0)){ avisar('Informe as milhas do trecho.', 'alerta'); return; }
+    if (f === 'dinheiro' && !(novo.pago > 0)){ erroNoCampo('#trPago', 'Informe quanto foi pago em dinheiro.'); return; }
+    if (f !== 'dinheiro' && !(novo.milhas > 0)){ erroNoCampo('#trMilhas', 'Informe as milhas do trecho.'); return; }
     const outros = trechosDe(p).filter(x => x.id !== novo.id);
     if (outros.some(x => x.origem === novo.origem && x.destino === novo.destino && x.data === novo.data)){
-      avisar('Já existe um trecho com a mesma origem, destino e data nesta jornada.', 'alerta', 7000); return; }
+      erroNoCampo('#trData', 'Já existe um trecho com a mesma origem, destino e data nesta jornada.'); return; }
     p.trechos = outros.concat([novo]);
     sincronizarJornadas(); salvar(); fecharFolha(); modoRoteiro = 'trechos'; renderPlano();
     avisar('Trecho salvo.', 'ok');
