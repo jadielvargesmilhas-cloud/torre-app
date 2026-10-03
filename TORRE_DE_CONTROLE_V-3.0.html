@@ -8341,7 +8341,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 07:20';
+const BUILD = '2026-10-03 08:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11871,7 +11871,7 @@ function detalheEquivalencia(){
    Por isso o ponto é precificado pela melhor rota de saída viva: paridade (com
    a do clube, se você assina), mais o bônus da maior campanha aberta, avaliado
    ao alvo do programa de destino. Sem rota conhecida, cai na própria faixa. */
-const DESTINOS_VALOR = ['latampass', 'smiles', 'azul'];
+const DESTINOS_VALOR = ['latampass', 'smiles', 'azul', 'iberia', 'connect'];
 function valorPrograma(p, saldo){
   if (!saldo) return {valor:0, via:'', destino:''};
   if (prog(p).tipo !== 'pontos') return {valor:(saldo / 1000) * faixasDe(p).alvo, milhas:saldo, via:'valor-alvo do próprio programa', destino:p};
@@ -11884,9 +11884,13 @@ function valorPrograma(p, saldo){
      Iberia, TAP e afins dava número maior pelo alvo, mas são milhas sem mercado
      de venda aqui, e o valor da carteira ficava inflado. Programa sem rota para
      esses três continua avaliado pelas rotas que tiver. */
+  /* Destinos considerados: os de uso (LATAM, Smiles, Azul) e os preferidos para
+     transferir (Iberia e ConnectMiles), mais qualquer destino que esteja com
+     campanha aberta agora. */
   const usados = DB.cfg.destinosValor || DESTINOS_VALOR;
+  const comCampanha = new Set(campanhasVivas('transferencia').filter(c => c.de === p && (c.bonus || 0) > 0).map(c => c.para));
   const todas = PARIDADES.filter(x => x.de === p);
-  const daLista = todas.filter(x => usados.includes(x.para));
+  const daLista = todas.filter(x => usados.includes(x.para) || comCampanha.has(x.para));
   const rotas = (daLista.length ? daLista : todas).map(x => {
     const par = (temClube && x.clube) ? x.clube : x.p;
     /* Ponto de banco só se transfere com campanha. Então o valor usa o bônus da
@@ -11910,6 +11914,10 @@ function valorPrograma(p, saldo){
   }).sort((a, b) => b.valor - a.valor);
 
   if (!rotas.length) return {valor:(saldo / 1000) * faixasDe(p).alvo, milhas:0, via:'sem rota de saída conhecida; vale a própria faixa', destino:p, rotas:[]};
+  /* Cada rota já entra com o bônus certo: o da campanha aberta, quando há, ou o
+     típico de 12 meses. Vale a melhor delas. Uma campanha aberta mais fraca que
+     o típico de outra rota não rebaixa o valor: nesse caso a decisão certa é
+     esperar a outra rota, e o valor mostra isso. */
   return {...rotas[0], rotas};
 }
 function valorEstoque(){
