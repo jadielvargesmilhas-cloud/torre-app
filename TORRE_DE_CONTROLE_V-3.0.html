@@ -4242,6 +4242,12 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
 
 .crd-campos{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr)); gap:10px 14px; }
 .crd-campos > div{ min-width:0; }
+/* Ficha do registro nas janelas de apagar: fundo neutro, com a descrição na
+   linha inteira e os demais dados lado a lado. */
+.conf-ficha{ margin:4px 0 14px; padding:12px 14px; border-radius:10px; background:var(--fio-suave); border:1px solid var(--fio); }
+.conf-ficha .crd-campos{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.conf-ficha .crd-campos > .largo{ grid-column:1 / -1; }
+.conf-ficha .crd-campos b{ overflow-wrap:anywhere; }
 .crd-campos span{
   display:block; font-family:var(--f-m); font-size:calc(10.5px * var(--esc));
   letter-spacing:.1em; text-transform:uppercase; color:var(--grafite-dim); margin-bottom:2px;
@@ -8324,7 +8330,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 01:50';
+const BUILD = '2026-10-03 02:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11087,7 +11093,50 @@ const ACAO_DESTRUTIVA = /apagar|remover|excluir/i;
    ela responde é lido no clique do primeiro botão e entregue a `aoSim`, porque a
    segunda folha substitui a primeira e leva o campo junto: ler depois seria ler
    um elemento que já saiu da tela. */
-function confirmar(titulo, texto, aoSim, rotulo = 'Confirmar', duplo = ACAO_DESTRUTIVA.test(rotulo), extra = null){
+/* Ficha do que vai ser apagado: as duas janelas de confirmação mostram o
+   registro em si (data, programa, conta, quantidade, descrição), e não só o
+   tipo dele. "Apagar o lançamento" não diz qual; a ficha diz. */
+function fichaParaApagar(colecao, id){
+  const r = (DB[colecao] || []).find(x => x.id === id);
+  if (!r) return '';
+  const campos = [];
+  const add = (rot, val, largo) => { if (val !== undefined && val !== null && String(val).trim() !== '') campos.push({rot, val, largo}); };
+  const pg = p => p ? prog(p).n : '';
+  const conta = c => c ? nomeCurtoConta(c) : '';
+  if (colecao === 'lancamentos'){
+    add('O que é', r.nota || (r.tipo ? r.tipo.charAt(0).toUpperCase() + r.tipo.slice(1) : 'Lançamento'), true);
+    add('Data', dataBR(r.data)); add('Programa', pg(r.prog)); add('Conta', conta(r.contaId));
+    add('Quantidade', (Number(r.qtd) > 0 ? '+' : Number(r.qtd) < 0 ? '−' : '') + nBR(Math.abs(Number(r.qtd) || 0)));
+    if (Number(r.custo)) add('Custo', brl2(Number(r.custo)));
+  } else if (colecao === 'assinaturas'){
+    const cat = catalogoDe(r.prog), pl = cat && (cat.planos || []).find(p => p.id === r.planoId);
+    add('O que é', `Clube ${pg(r.prog)}${pl ? ' ' + pl.n : ''}`, true);
+    add('Conta', conta(r.contaId)); add('Início', r.inicio ? dataBR(r.inicio) : '');
+    const n = (DB.lancamentos || []).filter(l => l.assinaturaId === r.id).length;
+    add('Créditos lançados', n ? `${n}` : 'nenhum');
+  } else if (colecao === 'reservas'){
+    add('O que é', r.desc || [r.origem, r.destino].filter(Boolean).join(' para ') || r.titulo || 'Emissão', true);
+    add('Data', r.data ? dataBR(r.data) : ''); add('Programa', pg(r.prog));
+    if (Number(r.milhas)) add('Milhas', nBR(Number(r.milhas)));
+    const pax = (r.pax || []).map(id => ((DB.pessoas || []).find(p => p.id === id) || {}).nome).filter(Boolean);
+    add(pax.length > 1 ? 'Passageiros' : 'Passageiro', pax.join(', '));
+  } else if (colecao === 'cartoes'){
+    add('O que é', `${r.banco || ''} ${r.produto || ''}`.trim(), true);
+    add('Final', r.final); add('Titular', r.titular);
+  } else if (colecao === 'saldos'){
+    add('O que é', `Saldo ${pg(r.prog)}`, true); add('Conta', conta(r.contaId)); add('Quantidade', nBR(Number(r.qtd) || 0));
+  } else {
+    add('O que é', r.titulo || r.nome || r.n || r.descricao || r.nota || '', true);
+    if (r.para || r.prog) add('Programa', pg(r.para || r.prog));
+    if (r.fim) add('Até', dataBR(r.fim));
+    if (r.data) add('Data', dataBR(r.data));
+  }
+  if (!campos.length) return '';
+  return `<div class="conf-ficha"><div class="crd-campos">${campos.map(c =>
+    `<div${c.largo ? ' class="largo"' : ''}><span>${esc(c.rot)}</span><b>${esc(String(c.val))}</b></div>`).join('')}</div></div>`;
+}
+
+function confirmar(titulo, texto, aoSim, rotulo = 'Confirmar', duplo = ACAO_DESTRUTIVA.test(rotulo), extra = null, ficha = ''){
   const paragrafo = t => `<p style="font-size:calc(14.5px * var(--esc));line-height:1.55;color:var(--giz-2)">${t}</p>`;
   /* O título da primeira folha já diz o que vai sumir; na segunda ele vira a
      primeira linha, afirmativa: sai o ponto de interrogação, que lá perguntava,
@@ -11100,17 +11149,17 @@ function confirmar(titulo, texto, aoSim, rotulo = 'Confirmar', duplo = ACAO_DEST
       /* Três frases, três linhas. Emendadas num parágrafo só elas viravam um
          bloco que se lê na diagonal, e esta é justamente a tela em que ninguém
          pode ler na diagonal. */
-      corpo: paragrafo(`<b>${esc(oQue)}</b>`)
+      corpo: paragrafo(`<b>${esc(oQue)}</b>`) + ficha
         + `<p style="font-size:calc(13.5px * var(--esc));line-height:1.5;color:var(--grafite);margin-top:10px">Depois daqui não há como desfazer: a Torre não tem lixeira.</p>`
         + `<p style="font-size:calc(13.5px * var(--esc));line-height:1.5;color:var(--grafite);margin-top:6px">Se restar dúvida, feche e baixe uma cópia em Sistema → Dados antes.</p>`,
-      pe: `<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt perigo" id="btConfirmarFinal">Sim, ${esc(rotulo.toLowerCase())}</button>`
+      pe: `<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt vermelho-solido" id="btConfirmarFinal">Sim, ${esc(rotulo.toLowerCase())}</button>`
     });
     $('#btConfirmarFinal').onclick = () => { fecharFolha(); aoSim(resposta); };
   };
 
   abrirFolha({
     titulo: esc(titulo), largura:'estreita',
-    corpo: paragrafo(texto) + (extra ? extra.html : ''),
+    corpo: ficha + paragrafo(texto) + (extra ? extra.html : ''),
     pe: `<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt perigo" id="btConfirmarAcao">${esc(rotulo)}</button>`
   });
   $('#btConfirmarAcao').onclick = () => {
@@ -21285,7 +21334,7 @@ function apagar(colecao, id, oQue){
     if (RENDER[vistaAtual]) RENDER[vistaAtual]();
     renderFita();
     avisar('Removido.', 'ok');
-  }, 'Apagar', undefined, extra);
+  }, 'Apagar', undefined, extra, fichaParaApagar(colecao, id));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
