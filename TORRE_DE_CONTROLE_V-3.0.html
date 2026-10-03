@@ -7600,12 +7600,20 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba on" id="p-rt-metas">
           <div class="pilha" style="gap:18px">
-            <div class="grade g4" id="rtResumoMetas"></div>
-            <div class="linha">
-              <div class="esticar"><div class="olho anil" style="margin-bottom:0">Metas em curso</div></div>
+            <!-- Panorama geral, Nacional e Internacional: o geral é só o painel de
+                 números; os outros dois mostram números, metas e viagens daquele lado. -->
+            <div class="linha" style="flex-wrap:wrap;gap:11px">
+              <div class="seg" id="segMetas"></div>
+              <div class="esticar"></div>
               <button class="bt primario" id="btNovaMeta"><svg><use href="#i-mais"/></svg>Nova Meta</button>
             </div>
-            <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));align-items:start" id="rtMetas"></div>
+            <div class="grade g4" id="rtResumoMetas"></div>
+            <div id="rtPanorama"></div>
+            <div id="rtMetasBloco" class="pilha" style="gap:14px">
+              <div class="olho anil" style="margin-bottom:0" id="rtMetasTit">Metas em curso</div>
+              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));align-items:start" id="rtMetas"></div>
+            </div>
+            <div id="rtViagensEscopo"></div>
           </div>
         </div>
 
@@ -8371,7 +8379,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 14:40';
+const BUILD = '2026-10-03 15:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11671,6 +11679,8 @@ function irParaAba(grupo, aba){
   /* Entrar em Faturas abre sempre no mês atual; a escolha de outro mês vale
      enquanto se está na aba. */
   if (aba === 'cr-faturas' && !jaEstava){ mesFatura = null; setTimeout(renderFaturas, 0); }
+  /* Entrar em Metas de viagem abre sempre o Panorama geral. */
+  if (aba === 'rt-metas' && !jaEstava){ filtroMetas = 'todas'; setTimeout(renderMetas, 0); }
   /* Uma aba pode responder por mais de um painel: o botão fica marcado se o
      painel aberto for o dela ou o de um irmão declarado em data-irmas. */
   $$('.aba', cx).forEach(b => {
@@ -24332,24 +24342,125 @@ function religarMeta(lanc){
   if (!falta) metaEmFoco = null;
 }
 
-function renderMetas(){
-  const abertas = DB.metas.filter(m => !m.feita);
-  $('#contMetas').textContent = abertas.length;
+/* ── metas de viagem: panorama, nacional e internacional ─────────────────────
+   Nacional é a viagem com origem e destino no Brasil; internacional, a que tem
+   uma ponta fora. A Torre decide pelo código do aeroporto; a meta pode fixar o
+   tipo à mão quando o destino não está na tabela. O que não dá para classificar
+   entra no panorama geral, contado à parte. */
+let filtroMetas = 'todas';
+function escopoPorAeroportos(codigos, fixado){
+  if (fixado === 'nac' || fixado === 'int') return fixado;
+  const conhecidos = codigos.map(c => AEROPORTOS[String(c || '').toUpperCase()]).filter(Boolean);
+  if (!conhecidos.length) return null;
+  return conhecidos.every(a => a.p === 'BR') ? 'nac' : 'int';
+}
+const escopoMeta = m => escopoPorAeroportos([m.origem, m.destino], m.escopo);
+const escopoViagem = r => escopoPorAeroportos([r.origem, r.destino], r.escopo);
+
+/* Números de um lado (ou de todos, com escopo nulo). */
+function numerosViagens(esc){
   const sal = saldoPorPrograma();
-  const precisaTotal = soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0))));
-  const prontas = abertas.filter(m => (sal[m.prog] || 0) >= m.precisa).length;
+  const metas = (DB.metas || []).filter(m => !esc || escopoMeta(m) === esc);
+  const abertas = metas.filter(m => !m.feita);
+  const viagens = viagensProprias().filter(r => !esc || escopoViagem(r) === esc);
+  const feitas = viagens.filter(r => r.status === 'usada');
+  const vals = feitas.map(valorResgate);
+  const comValor = vals.filter(v => v.porMilheiro != null);
+  const milhas = soma(feitas.map(r => Number(r.milhas) || 0));
+  const liquido = soma(comValor.map(v => v.liquido));
+  return {
+    metas, abertas, viagens, feitas,
+    realizadas:metas.filter(m => m.feita).length,
+    prontas:abertas.filter(m => (sal[m.prog] || 0) >= m.precisa).length,
+    faltam:soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)))),
+    custoFechar:soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)) / 1000 * faixasDe(m.prog).alvo)),
+    milhas, vista:soma(vals.map(v => v.vista)), taxas:soma(vals.map(v => v.taxas)),
+    ganho:soma(comValor.filter(v => v.ganho != null).map(v => v.ganho)),
+    medio: milhas && liquido ? liquido / milhas * 1000 : 0,
+    agenda:viagens.filter(r => r.status !== 'usada').length
+  };
+}
 
-  $('#rtResumoMetas').innerHTML = `
-    ${metrica('Metas em curso', String(abertas.length), `${DB.metas.filter(m => m.feita).length} já realizadas`, '')}
-    ${metrica('Prontas para emitir', String(prontas), prontas ? 'Saldo já cobre a necessidade' : 'Nenhuma com saldo completo', prontas ? 'jade' : '')}
-    ${metrica('Milhas que faltam', nBR(precisaTotal), 'Somando todas as metas abertas', '')}
-    ${metrica('Custo de fechar tudo', brl(soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)) / 1000 * faixasDe(m.prog).alvo))), 'Ao valor-alvo de cada programa', 'ouro')}`;
+function renderMetas(){
+  const sal = saldoPorPrograma();
+  const abertasTodas = DB.metas.filter(m => !m.feita);
+  $('#contMetas').textContent = abertasTodas.length;
+  const T = numerosViagens(null), N = numerosViagens('nac'), I = numerosViagens('int');
 
-  if (!DB.metas.length){
-    $('#rtMetas').innerHTML = `<div class="vazio"><svg><use href="#i-alvo"/></svg><h4>Nenhuma meta</h4><p>Meta é o que dá sentido ao estoque. Diga para onde quer ir, quantas milhas precisa e até quando, a Torre calcula o quanto falta e quanto custa fechar.</p><button class="bt primario" onclick="editarMeta()">Criar a primeira meta</button></div>`;
+  const seg = $('#segMetas');
+  if (seg){
+    seg.innerHTML = [['todas', 'Panorama geral', null], ['nac', 'Nacional', N.abertas.length], ['int', 'Internacional', I.abertas.length]]
+      .map(([k, n, c]) => `<button class="${k === filtroMetas ? 'on' : ''}" data-f="${k}">${n}${c != null ? ` <span class="cont-disco">${c}</span>` : ''}</button>`).join('');
+    seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; filtroMetas = b.dataset.f; renderMetas(); if (typeof marcarColunaMenu === 'function') marcarColunaMenu(); };
+  }
+  const geral = filtroMetas === 'todas';
+  const X = geral ? T : filtroMetas === 'nac' ? N : I;
+  const lado = filtroMetas === 'nac' ? 'nacionais' : 'internacionais';
+
+  $('#rtResumoMetas').innerHTML = geral ? `
+    ${metrica('Metas em curso', String(T.abertas.length), `${T.realizadas} já realizada${T.realizadas === 1 ? '' : 's'}`, '')}
+    ${metrica('Viagens realizadas', String(T.feitas.length), T.agenda ? `${T.agenda} reservada${T.agenda > 1 ? 's' : ''} à frente` : 'Nada reservado à frente', '')}
+    ${metrica('Passagens pagas com milhas', T.vista ? brl(T.vista) : '—', T.vista ? `Preço à vista de ${nBR(T.milhas)} milhas` : 'Informe o preço à vista dos resgates', '')}
+    ${metrica('Economizou', T.ganho ? brl(T.ganho) : '—', T.ganho ? 'À vista, menos taxas e custo das milhas' : 'Precisa do preço à vista e do custo', T.ganho > 0 ? 'jade' : '')}`
+  : `
+    ${metrica('Metas em curso', String(X.abertas.length), `${X.prontas} pronta${X.prontas === 1 ? '' : 's'} para emitir`, X.prontas ? 'jade' : '')}
+    ${metrica('Milhas que faltam', nBR(X.faltam), X.faltam ? `${brl(X.custoFechar)} ao alvo` : 'Nada a fabricar', '')}
+    ${metrica('Viagens realizadas', String(X.feitas.length), X.milhas ? `${nBR(X.milhas)} milhas usadas` : 'Nenhum resgate registrado', '')}
+    ${metrica('Economizou', X.ganho ? brl(X.ganho) : '—', X.ganho ? `Em viagens ${lado}` : 'Precisa do preço à vista e do custo', X.ganho > 0 ? 'jade' : '')}`;
+
+  /* Panorama: nacional e internacional lado a lado, com o total. */
+  const semTipo = {metas:T.metas.length - N.metas.length - I.metas.length, viagens:T.viagens.length - N.viagens.length - I.viagens.length};
+  const lin = (rot, f, fmt) => `<tr><td>${rot}</td><td class="n">${fmt(f(N))}</td><td class="n">${fmt(f(I))}</td><td class="n"><b>${fmt(f(T))}</b></td></tr>`;
+  const num = v => v ? nBR(v) : '<span class="fraco">—</span>';
+  const din = v => v ? brl(v) : '<span class="fraco">—</span>';
+  const mil = v => v ? brl2(v) : '<span class="fraco">—</span>';
+  $('#rtPanorama').innerHTML = geral ? `<div class="cartao" style="padding:0;overflow:hidden">
+      <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
+        <h3 style="color:var(--anil-claro)">Nacional e internacional<div class="sub">Metas e viagens de cada lado. Para ver as metas e as viagens de um lado só, escolha Nacional ou Internacional acima.</div></h3>
+      </div>
+      <div class="rolo" style="margin:0;padding:0"><table class="tb-dados tb-mes">
+        <thead><tr><th></th><th class="n">Nacional</th><th class="n">Internacional</th><th class="n">Total</th></tr></thead>
+        <tbody>
+          ${lin('Metas em curso', x => x.abertas.length, num)}
+          ${lin('Prontas para emitir', x => x.prontas, num)}
+          ${lin('Milhas que faltam', x => x.faltam, num)}
+          ${lin('Custo de fechar, ao alvo', x => x.custoFechar, din)}
+          ${lin('Viagens realizadas', x => x.feitas.length, num)}
+          ${lin('Milhas usadas', x => x.milhas, num)}
+          ${lin('Passagens à vista', x => x.vista, din)}
+          ${lin('Taxas pagas', x => x.taxas, din)}
+          ${lin('Valor médio do milheiro', x => x.medio, mil)}
+          ${lin('Economizou', x => x.ganho, din)}
+        </tbody></table></div>
+      ${semTipo.metas || semTipo.viagens ? `<div class="nota" style="margin:12px 16px 16px"><svg><use href="#i-info"/></svg><div>${[
+        semTipo.metas ? `${semTipo.metas} meta${semTipo.metas > 1 ? 's' : ''}` : '', semTipo.viagens ? `${semTipo.viagens} viage${semTipo.viagens > 1 ? 'ns' : 'm'}` : ''].filter(Boolean).join(' e ')}
+        sem destino reconhecido: ${semTipo.metas + semTipo.viagens > 1 ? 'entram' : 'entra'} só no total. Na meta, escolha Nacional ou Internacional no campo Viagem.</div></div>` : ''}
+    </div>` : '';
+
+  $('#rtMetasBloco').style.display = geral ? 'none' : '';
+  if ($('#rtMetasTit')) $('#rtMetasTit').textContent = `Metas ${lado}`;
+
+  /* Viagens realizadas do lado escolhido. */
+  $('#rtViagensEscopo').innerHTML = geral ? '' : `<div class="cartao" style="padding:0;overflow:hidden">
+      <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
+        <h3 style="color:var(--anil-claro)">Viagens ${lado} realizadas<div class="sub">Cada resgate, o que ele valeu à vista e quanto sobrou depois do custo das milhas.</div></h3>
+      </div>
+      ${X.feitas.length ? `<div class="rolo" style="margin:0;padding:0"><table class="tb-dados">
+        <thead><tr><th class="c">Data</th><th>O quê</th><th class="n">Milhas</th><th class="n">Preço à vista</th><th class="n">Sobrou</th></tr></thead>
+        <tbody>${X.feitas.slice().sort((a, b) => (b.data || '').localeCompare(a.data || '')).map(r => { const v = valorResgate(r); return `<tr>
+          <td class="c">${dataBR(r.data)}</td><td><b>${esc(r.desc || '')}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(prog(r.prog).n)}</div></td>
+          <td class="n">${nBR(r.milhas || 0)}</td><td class="n">${v.vista ? brl(v.vista) : '<span class="fraco">—</span>'}</td>
+          <td class="n">${v.ganho == null ? '<span class="fraco">—</span>' : `<span class="${v.ganho >= 0 ? 'jade' : 'brasa'}">${brl(v.ganho)}</span>`}</td></tr>`; }).join('')}</tbody></table></div>`
+      : `<div class="vazio" style="border:0;padding:26px"><p>Nenhuma viagem ${filtroMetas === 'nac' ? 'nacional' : 'internacional'} realizada ainda.</p></div>`}
+    </div>`;
+
+  if (geral) return;
+  const lista = X.metas;
+  if (!lista.length){
+    $('#rtMetas').innerHTML = `<div class="vazio"><svg><use href="#i-alvo"/></svg><h4>Nenhuma meta ${filtroMetas === 'nac' ? 'nacional' : 'internacional'}</h4><p>Diga para onde quer ir, quantas milhas precisa e até quando: a Torre calcula o quanto falta e quanto custa fechar.</p><button class="bt primario" onclick="editarMeta()">Criar meta</button></div>`;
     return;
   }
-  $('#rtMetas').innerHTML = DB.metas.sort((a, b) => (a.feita ? 1 : 0) - (b.feita ? 1 : 0) || (a.prazo || '').localeCompare(b.prazo || '')).map(m => {
+  $('#rtMetas').innerHTML = lista.sort((a, b) => (a.feita ? 1 : 0) - (b.feita ? 1 : 0) || (a.prazo || '').localeCompare(b.prazo || '')).map(m => {
     const s = sal[m.prog] || 0;
     const p = clamp(s / Math.max(1, m.precisa) * 100, 0, 100);
     const falta = Math.max(0, m.precisa - s);
@@ -24477,6 +24588,10 @@ function editarMeta(id){
       <div class="campo"><label>Programa</label><select id="mtP">${PROG_IDS.map(p => `<option value="${p}"${p === m.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
       <div class="campo"><label>Milhas necessárias</label><input type="number" id="mtQ" value="${m.precisa}" step="5000"></div>
       <div class="campo"><label>Até quando</label><input type="date" id="mtPz" value="${m.prazo}"></div>
+      <div class="campo"><label>Viagem</label><select id="mtEsc" data-ordem="natural">
+        <option value=""${!m.escopo ? ' selected' : ''}>Pelo destino</option>
+        <option value="nac"${m.escopo === 'nac' ? ' selected' : ''}>Nacional</option>
+        <option value="int"${m.escopo === 'int' ? ' selected' : ''}>Internacional</option></select></div>
     </div>
     <div class="linha" style="margin-top:14px;gap:16px">
       <label class="ck"><input type="checkbox" id="mtE"${m.emitida ? ' checked' : ''}> Passagem emitida</label>
@@ -24492,6 +24607,7 @@ function editarMeta(id){
     const novo = {id:m.id || uid(), n:$('#mtN').value.trim() || 'Meta sem nome', destino:$('#mtD').value.toUpperCase().trim(),
       prog:$('#mtP').value, precisa:rgNum($('#mtQ').value), prazo:$('#mtPz').value,
       emitida:$('#mtE').checked, hospedagem:$('#mtH').checked, feita:$('#mtF').checked, obs:$('#mtO').value.trim()};
+    if ($('#mtEsc').value) novo.escopo = $('#mtEsc').value;
     if (!conferirAntesDeSalvar('metas', novo, 'uma meta')) return;
     if (id) DB.metas[DB.metas.findIndex(x => x.id === id)] = novo; else DB.metas.push(novo);
     salvar(); fecharFolha(); renderMetas(); renderFita(); avisar('Meta salva.', 'ok');
@@ -29227,7 +29343,8 @@ const SUBMENUS = {
   'fb-campanhas':  {seg:'#segCampClube'},
   'fb-mural':      {seg:'#segMural'},
   'rd-arsenal':    {seg:'#segArsenal'},
-  'em-controle':   {seg:'#segCtrVista'}
+  'em-controle':   {seg:'#segCtrVista'},
+  'rt-metas':      {seg:'#segMetas'}
 };
 
 /* As opções de uma seção, lidas da própria página (ou dos modos da calculadora,
