@@ -3576,6 +3576,12 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 @media (max-width:900px){ .tr-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){ .tr-grade{ grid-template-columns:1fr; } }
 .rt-sit{ cursor:pointer; border:0; font:inherit; }
+.lu-grade{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+@media (max-width:700px){ .lu-grade{ grid-template-columns:1fr; } }
+.lu-confere{ display:flex; flex-direction:column; gap:8px; font-size:calc(13.5px * var(--esc)); }
+.lu-confere > div{ display:flex; align-items:flex-start; gap:8px; }
+.lu-confere svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.2; flex-shrink:0; margin-top:2px; }
+.lu-confere .jade{ color:var(--jade); } .lu-confere .brasa{ color:var(--brasa); } .lu-confere .fraco{ color:var(--grafite); }
 .up-cab{ display:flex; align-items:center; gap:5px; margin-top:4px; }
 .up-cab svg{ width:12px; height:12px; fill:none; stroke:var(--grafite); stroke-width:2; }
 .up-cab .etq{ font-size:calc(10px * var(--esc)); padding:1px 7px; }
@@ -8636,7 +8642,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 08:50';
+const BUILD = '2026-10-04 09:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24254,7 +24260,12 @@ function editarUpgrade(id){
   const progsMilhas = PROG_IDS.filter(k => prog(k).tipo === 'milhas');
   abrirFolha({
     titulo:`Upgrade · ${esc(rotuloTrecho(t))}`, largura:'larga',
-    corpo:`<div id="upComp"></div>
+    corpo:`<div class="tr-leitor" id="upLeitor">
+      <svg><use href="#i-imagem"/></svg>
+      <div class="tr-leitor-txt"><b>Preço da nova cabine pelos prints</b><span>Anexe as telas do mesmo voo na nova cabine (app ou site da companhia). A Torre lê no seu navegador, sem custo, e confere com o trecho.</span></div>
+      <label class="bt primario tr-leitor-bt"><svg><use href="#i-faisca"/></svg>Anexar prints<input type="file" id="upPrints" accept="image/*" multiple hidden></label>
+    </div>
+    <div id="upComp"></div>
     <div class="olho anil" style="margin:20px 0 10px">O upgrade</div>
     <div class="grade tr-grade">
       <div class="campo"><label>Cabine comprada</label><select id="upDe" data-ordem="natural">${Object.entries(CABINES_TRECHO).map(([k, v]) => `<option value="${k}"${k === (t.cabine || 'economica') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
@@ -24274,6 +24285,7 @@ function editarUpgrade(id){
     milhas:['milhas', 'outro'].includes($('#upOrigem').value) ? rgNum($('#upMilhas').value) : 0, prog:$('#upProg').value,
     dinheiro:['dinheiro', 'outro'].includes($('#upOrigem').value) ? moedaNum($('#upDinheiro').value) : 0, obs:$('#upObs').value.trim()});
   const desenhar = () => {
+    if (!$('#upComp') || !$('#upOrigem')) return;
     const o = $('#upOrigem').value;
     $$('.up-mi').forEach(e => e.style.display = ['milhas', 'outro'].includes(o) ? '' : 'none');
     $$('.up-di').forEach(e => e.style.display = ['dinheiro', 'outro'].includes(o) ? '' : 'none');
@@ -24300,6 +24312,11 @@ function editarUpgrade(id){
   };
   $('#folhaCorpo').addEventListener('input', desenhar); $('#folhaCorpo').addEventListener('change', desenhar);
   desenhar();
+  $('#upPrints').onchange = e => { if (e.target.files.length) lerPrintsUpgrade(t, e.target.files); e.target.value = ''; };
+  const zonaUp = $('#upLeitor');
+  zonaUp.addEventListener('dragover', e => { e.preventDefault(); zonaUp.classList.add('arrastando'); });
+  zonaUp.addEventListener('dragleave', () => zonaUp.classList.remove('arrastando'));
+  zonaUp.addEventListener('drop', e => { e.preventDefault(); zonaUp.classList.remove('arrastando'); if (e.dataTransfer.files.length) lerPrintsUpgrade(t, e.dataTransfer.files); });
   $('#btSalvarUp').onclick = () => {
     const nu = ler();
     if ($('#upPara').value === $('#upDe').value){ avisar('A nova cabine precisa ser diferente da comprada.', 'alerta'); return; }
@@ -24309,6 +24326,91 @@ function editarUpgrade(id){
   };
   if ($('#btTirarUp')) $('#btTirarUp').onclick = () => { delete t.upgrade; salvar(); fecharFolha(); renderPlano(); avisar('Upgrade desfeito. O trecho volta à cabine comprada.', 'ok'); };
 }
+
+/* Leitura dos prints da nova cabine: o mesmo leitor gratuito do trecho. Mostra
+   o que o print traz (rota, data, cabine, preço em dinheiro e em milhas),
+   confere com o trecho e, com o OK, leva o preço e a cabine para o upgrade. */
+let _leituraUp = null;
+function cabineDoTexto(txt){
+  const n = k => (txt.match(k) || []).length;
+  const c = [['primeira', n(/primeira classe|\bfirst\b/gi)], ['executiva', n(/\bbusiness\b|executiva|\bbusiness class\b/gi)], ['premium', n(/premium/gi)], ['economica', n(/\beconomy\b|econ[oô]mica/gi)]];
+  const achada = c.find(([, q]) => q > 0);
+  return achada ? achada[0] : '';
+}
+async function lerPrintsUpgrade(t, arquivos){
+  const lista = [...arquivos].filter(f => f.type && f.type.startsWith('image/')).slice(0, 8);
+  if (!lista.length){ avisar('Escolha imagens (PNG, JPG ou WEBP).', 'alerta'); return; }
+  const pai = guardarFolhaAberta();
+  _leituraUp = {pai, t};
+  abrirFolha({titulo:'Leitura dos prints da nova cabine', largura:'larga', tipo:'formulario', corpo:`<div id="luCorpo"></div>`,
+    pe:`<button class="bt fantasma" onclick="fecharLeituraUpgrade()">Fechar</button><button class="bt primario" id="btLuOk" disabled>Usar no upgrade</button>`});
+  const urls = await Promise.all(lista.map(f => new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = err; fr.readAsDataURL(f); })));
+  const passos = ['Preparando o leitor', 'Lendo rota, cabine e preço', 'Conferindo com o trecho'];
+  const espera = i => { if (!$('#luCorpo')) return; $('#luCorpo').innerHTML = `<div class="lp-espera">
+      <div class="lp-miniaturas">${urls.map(u => `<div class="lp-mini"><img src="${u}" alt=""><span class="lp-varredura"></span></div>`).join('')}</div>
+      <div class="lp-passos">${passos.map((p, k) => `<div class="${k < i ? 'feito' : k === i ? 'agora' : ''}"><span class="lp-bola">${k < i ? '<svg><use href="#i-ok"/></svg>' : ''}</span>${p}</div>`).join('')}
+        <div class="lp-dica" id="luQual">${i === 0 ? 'Na primeira vez, o leitor é baixado (uns 4 MB).' : 'Tudo acontece no seu navegador, sem custo.'}</div></div></div>`; };
+  try{
+    espera(0);
+    const w = await prepararLeitorOCR();
+    if (!_leituraUp) return;
+    espera(1);
+    const textos = [];
+    for (let k = 0; k < lista.length; k++){
+      if ($('#luQual')) $('#luQual').textContent = `Lendo a imagem ${k + 1} de ${lista.length}. Tudo acontece no seu navegador, sem custo.`;
+      const {data} = await w.recognize(lista[k]); textos.push(data.text || '');
+      if (!_leituraUp) return;
+    }
+    espera(2);
+    const d = interpretarTextosPrints(textos);
+    d.cabine = cabineDoTexto(textos.join('\n'));
+    _leituraUp.d = d;
+    desenharLeituraUpgrade();
+  }catch(e){
+    if (!$('#luCorpo')) return;
+    $('#luCorpo').innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div><b>Não deu para ler os prints.</b></div><div>${esc(e.message || String(e))}</div><div>Feche e digite o preço: nada do que estava no upgrade se perdeu.</div></div></div>`;
+  }
+}
+function desenharLeituraUpgrade(){
+  const {d, t} = _leituraUp;
+  const din = d.dinheiro || {}, mi = d.milhas || {};
+  const total = Number(din.total) || 0;
+  const confere = [];
+  const ok = (cond, sim, nao) => confere.push(`<div class="${cond ? 'jade' : 'brasa'}"><svg><use href="#${cond ? 'i-ok' : 'i-alerta'}"/></svg>${cond ? sim : nao}</div>`);
+  if (d.origem && d.destino) ok(d.origem === t.origem && d.destino === t.destino, `Mesma rota do trecho: ${esc(d.origem)} → ${esc(d.destino)}`, `Rota diferente: o print é ${esc(d.origem)} → ${esc(d.destino)}, o trecho é ${esc(rotuloTrecho(t))}`);
+  else confere.push(`<div class="fraco"><svg><use href="#i-info"/></svg>A rota não apareceu no print</div>`);
+  if (d.data) ok(d.data === t.data, `Mesma data: ${dataBR(d.data)}`, `Data diferente: o print é de ${dataBR(d.data)}, o trecho é de ${dataBR(t.data)}`);
+  else confere.push(`<div class="fraco"><svg><use href="#i-info"/></svg>A data não apareceu no print</div>`);
+  if (d.cabine) ok(d.cabine !== 'economica', `Cabine do print: ${CABINES_TRECHO[d.cabine]}`, `O print mostra ${CABINES_TRECHO[d.cabine]}, não a cabine do upgrade`);
+  else confere.push(`<div class="fraco"><svg><use href="#i-info"/></svg>A cabine não apareceu no print: confirme abaixo</div>`);
+  const pax = Number(d.passageiros) || 0;
+  $('#luCorpo').innerHTML = `
+    <div class="lu-grade">
+      <div class="lp-lado"><div class="lp-lado-cab"><span>O que o print mostra</span></div>
+        ${[['Rota', d.origem && d.destino ? `${esc(d.origem)} → ${esc(d.destino)}` : '—'], ['Data', d.data ? dataBR(d.data) : '—'], ['Cabine', d.cabine ? CABINES_TRECHO[d.cabine] : '—'],
+          ['Em dinheiro', total ? brl(total) : '—'], din.tarifa ? ['Tarifa', brl(din.tarifa)] : null, din.taxas ? ['Taxas', brl(din.taxas)] : null,
+          pax ? ['Passageiros', String(pax)] : null, mi.pontos ? ['Em milhas', `${nBR(mi.pontos)}${mi.taxas ? ' + ' + brl(mi.taxas) : ''}`] : null]
+          .filter(Boolean).map(([r, v]) => `<div class="lp-lin"><span>${r}</span><b>${v}</b></div>`).join('')}</div>
+      <div class="lp-lado"><div class="lp-lado-cab"><span>Conferência com o trecho</span></div><div class="lu-confere">${confere.join('')}</div>
+        ${pax && t.forma ? `<p class="fraco" style="margin:10px 0 0;font-size:calc(12.5px * var(--esc))">O preço deve cobrir os mesmos passageiros do trecho.</p>` : ''}</div>
+    </div>
+    <div class="olho anil" style="margin:20px 0 10px">O que vai para o upgrade</div>
+    <div class="grade tr-grade lp-campos">
+      <div class="campo"><label>Nova cabine</label><select id="luCab" data-ordem="natural">${Object.entries(CABINES_TRECHO).filter(([k]) => k !== 'economica').map(([k, v]) => `<option value="${k}"${k === (d.cabine && d.cabine !== 'economica' ? d.cabine : 'executiva') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="campo${total ? '' : ' falta'}"><label>Preço em dinheiro (R$)${total ? '' : ' <em>obrigatório</em>'}</label><input type="text" inputmode="decimal" data-moeda id="luVista" value="${moedaTxt(total)}"></div>
+    </div>`;
+  ligarCampoMoeda('#luVista');
+  const conferir = () => { const v = moedaNum($('#luVista').value); $('#btLuOk').disabled = !(v > 0); $('#luVista').closest('.campo').classList.toggle('falta', !(v > 0)); };
+  $('#luCorpo').addEventListener('input', conferir); conferir();
+  $('#btLuOk').onclick = () => {
+    const v = moedaNum($('#luVista').value), cab = $('#luCab').value, pai = _leituraUp.pai; _leituraUp = null;
+    devolverFolhaGuardada(pai);
+    $('#upVista').value = moedaTxt(v); $('#upPara').value = cab;
+    $('#folhaCorpo').dispatchEvent(new Event('input', {bubbles:true}));
+    avisar('Preço e cabine levados para o upgrade. Confira e toque em Salvar upgrade.', 'ok', 6000);
+  };
+}
+function fecharLeituraUpgrade(){ const pai = _leituraUp && _leituraUp.pai; _leituraUp = null; if (pai) devolverFolhaGuardada(pai); else fecharFolha(); }
 
 function avancarTrecho(id){
   const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
@@ -24547,7 +24649,10 @@ function interpretarTextosPrints(textos){
   const tudo = textos.join('\n');
   const d = {voos:[], avisos:[]};
   /* rota: o primeiro "AAA > BBB" do cabeçalho; conexões são os outros aeroportos entre parênteses */
-  const par = tudo.match(/\b([A-Z]{3})\s*[-–>→€<«»]+\s*([A-Z]{3})\b/);
+  /* Só vale par de códigos que existem como aeroporto: o leitor às vezes junta
+     letras de outras palavras em maiúsculas. */
+  const pares = [...tudo.matchAll(/\b([A-Z]{3})\s*[-–>→€<«»]+\s*([A-Z]{3})\b/g)].filter(m => AEROPORTOS[m[1]] && AEROPORTOS[m[2]]);
+  const par = pares[0];
   if (par){ d.origem = par[1]; d.destino = par[2]; }
   const entreParenteses = [...tudo.matchAll(/\(([A-Z]{3})\)/g)].map(m => m[1]);
   const escalas = [...new Set(entreParenteses.filter(c => c !== d.origem && c !== d.destino))];
