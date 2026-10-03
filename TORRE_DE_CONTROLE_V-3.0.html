@@ -84,7 +84,7 @@
   --trilho:calc(72px * var(--esc));
   /* Barra fixa da direita: vendas, financeiro e conta (tema, atalhos, sair). */
   --trilho-dir:calc(68px * var(--esc));
-  --menu:calc(244px * var(--esc));  /* 244: cabe "Transferência Bonificada 79" como sub-item, numa linha */
+  --menu:calc(238px * var(--esc));  /* 238: medido. É o mínimo em que "Transferência Bonificada" cabe inteiro com contador de três dígitos (188), nas três escalas de letra, depois de enxugar os recuos dos sub-itens */
   --topo-h:calc(62px * var(--esc));
   --ease:cubic-bezier(.22,.68,.32,1);
   --mola:linear(0,.25 8%,.64 18%,.91 27%,1.03 36%,1.05 46%,1.01 62%,1);
@@ -1243,7 +1243,7 @@ p:last-child{ margin-bottom:0; }
 
 
 /* ── sub-itens da coluna de menu ──────────────────────────────────────────── */
-.cm-sub{ display:flex; flex-direction:column; gap:1px; margin:2px 0 8px 10px; padding-left:8px;
+.cm-sub{ display:flex; flex-direction:column; gap:1px; margin:2px 0 8px 6px; padding-left:6px;
   border-left:1px solid var(--fio); }
 /* Folga interna um pouco menor desde que o contador virou balão: com 10px de
    cada lado, "Transferência Bonificada" perdia 7px e ganhava reticências. */
@@ -1252,7 +1252,7 @@ p:last-child{ margin-bottom:0; }
   font-family:inherit; font-size:calc(13.5px * var(--esc)); color:var(--grafite); appearance:none; }
 .cm-subitem:hover{ background:var(--sup-1); color:var(--giz); }
 .cm-subitem.on{ color:var(--anil-claro); background:var(--sel-fundo, color-mix(in oklab, var(--anil-claro) 12%, transparent)); font-weight:600; }
-.cm-subitem.on::before{ content:''; position:absolute; margin-left:-19px; width:3px; height:18px; border-radius:2px; background:var(--anil-claro); }
+.cm-subitem.on::before{ content:''; position:absolute; margin-left:-15px; width:3px; height:18px; border-radius:2px; background:var(--anil-claro); }
 .cm-subitem{ position:relative; }
 .cm-subitem > span:first-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* O contador num balãozinho — o mesmo do "4" da aba Regras, na janela de
@@ -1463,7 +1463,7 @@ p:last-child{ margin-bottom:0; }
   line-height:1.35; margin-top:3px;
 }
 .cm-vazio{ padding:10px 9px; font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
-.cm-nav{ display:flex; flex-direction:column; gap:1px; padding:0 9px; }
+.cm-nav{ display:flex; flex-direction:column; gap:1px; padding:0 7px; }
 .cm-item{
   display:flex; align-items:center; gap:10px;
   padding:8px 9px; border-radius:9px; cursor:pointer;
@@ -1664,6 +1664,9 @@ p:last-child{ margin-bottom:0; }
 /* cada texto precisa de largura própria para o corte com reticências funcionar
    dentro de uma célula centralizada */
 .fita-cel > *{ max-width:100%; }
+/* Separador maior entre os saldos (Milhas, Pontos) e o milheiro de cada
+   programa (Smiles, Azul, LATAM): são dois assuntos diferentes. */
+.fita-cel.sep-dir{ border-right:3px solid var(--fio); }
 .fita-rot{
   font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); letter-spacing:.11em;
   text-transform:uppercase; color:var(--grafite-dim);
@@ -3332,6 +3335,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .campo > label.cd-caixa{ font-family:var(--f-b); font-size:calc(14.5px * var(--esc)); text-transform:none;
   letter-spacing:normal; color:var(--giz); margin:0; }
 .cd-grade select:disabled, .cd-grade input:disabled{ opacity:.5; cursor:not-allowed; }
+.fat-cab{ margin-top:12px; }
 .crd-fat-isen{ display:flex; gap:9px; align-items:flex-start; margin-top:10px; font-size:calc(13px * var(--esc)); line-height:1.45; color:var(--giz-2); }
 .crd-fat-isen .etq{ flex-shrink:0; }
 .crd-fat-isen small{ display:block; }
@@ -7282,7 +7286,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="seg" id="segCampClube">
-                <button class="on" data-t="clube">Clube (Pontos ou Milhas) <span class="cont-disco" id="cnClu">0</span></button>
+                <button class="on" data-t="clube">Clube (Pontos/Milhas) <span class="cont-disco" id="cnClu">0</span></button>
                 <button data-t="loja">Lojas Parceiras <span class="cont-disco" id="cnLoj">0</span></button>
               </div>
             </div>
@@ -7917,6 +7921,12 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
               <div class="esticar"></div>
             </div>
             <div class="grade g4" id="crFatResumo"></div>
+            <!-- Cabeçalho da lista de cartões: separa o resumo do mês, acima, das
+                 faturas de cada cartão, abaixo. -->
+            <div class="fat-cab">
+              <div class="olho anil" style="margin:0">Fatura de cada cartão</div>
+              <p class="fraco" id="crFatSub" style="font-size:calc(13px * var(--esc));margin:5px 0 0"></p>
+            </div>
             <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:13px" id="crFaturas"></div>
           </div>
         </div>
@@ -8342,7 +8352,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 11:20';
+const BUILD = '2026-10-03 12:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11639,6 +11649,9 @@ function irParaAba(grupo, aba){
   setTimeout(marcarColunaMenu, 0);
   /* Se esta aba já era a aberta, a navegação é um redesenho e não uma entrada. */
   const jaEstava = !!$(`.abas[data-grupo="${grupo}"] .aba.on[data-aba="${aba}"]`);
+  /* Entrar em Faturas abre sempre no mês atual; a escolha de outro mês vale
+     enquanto se está na aba. */
+  if (aba === 'cr-faturas' && !jaEstava){ mesFatura = null; setTimeout(renderFaturas, 0); }
   /* Uma aba pode responder por mais de um painel: o botão fica marcado se o
      painel aberto for o dela ou o de um irmão declarado em data-irmas. */
   $$('.aba', cx).forEach(b => {
@@ -12432,7 +12445,7 @@ function renderFita(){
     dica: comp
       ? `${nBR(comp)} já estão amarradas a resgates de viagens em preparo.\nO resto está livre para emitir ou vender.`
       : 'Saldo já nos programas aéreos. Não rende mais bônus: daqui em diante só sai como passagem.' });
-  cels.push({ r:'Pontos', v:nBR(saldoTotal('pontos')), s:'a direcionar',
+  cels.push({ r:'Pontos', sep:true, v:nBR(saldoTotal('pontos')), s:'a direcionar',
     dicaTit:'Ainda sem destino',
     dica:'Saldo em Livelo, Esfera e afins. Pode virar milha em qualquer parceiro, e é aqui que a campanha de bônus age.' });
   /* Na fita é "melhores opções": o número é a soma do que cada programa rende na
@@ -12494,7 +12507,7 @@ function renderFita(){
       dica:`${prox.desc}, em ${dataBR(prox.data)}.\nClique para abrir a reserva.` });
   }
 
-  $('#fita').innerHTML = cels.map(c => `<div class="fita-cel${c.d ? ' destaque' : ''}${c.acao ? ' clicavel' : ''}"${
+  $('#fita').innerHTML = cels.map(c => `<div class="fita-cel${c.d ? ' destaque' : ''}${c.acao ? ' clicavel' : ''}${c.sep ? ' sep-dir' : ''}"${
     c.acao ? ` role="button" tabindex="0" onclick="${c.acao}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${c.acao}}"` : ''}${
     c.dicaTab ? ` data-dica-tabela="${esc(c.dicaTab)}" data-dica-lado="baixo"`
     : c.dica ? ` data-dica="${esc(c.dicaTit ? c.dicaTit + '|' + c.dica : c.dica)}" data-dica-lado="baixo"` : ''}>
@@ -25222,11 +25235,21 @@ function renderFaturas(){
   if (!mesFatura || !meses.includes(mesFatura)) mesFatura = mesAtual();
   const sel = $('#crMes');
   if (sel){
-    sel.innerHTML = meses.map(m => `<option value="${m}"${m === mesFatura ? ' selected' : ''}>${nomeMes(m)}</option>`).join('');
+    /* Do mais novo para o mais antigo, em três grupos: os próximos vencimentos no
+       alto, o mês atual no meio, e embaixo os meses que já passaram. */
+    const hoje = mesAtual();
+    const op = m => `<option value="${m}"${m === mesFatura ? ' selected' : ''}>${nomeMes(m)}</option>`;
+    const desc = meses.slice().reverse();
+    sel.innerHTML = `<optgroup label="Próximos vencimentos">${desc.filter(m => m > hoje).map(op).join('')}</optgroup>`
+      + `<optgroup label="Mês atual">${op(hoje)}</optgroup>`
+      + `<optgroup label="Meses anteriores">${desc.filter(m => m < hoje).map(op).join('')}</optgroup>`;
     sel.onchange = () => { mesFatura = sel.value; renderFaturas(); };
   }
 
   const est = cs.map(c => ({c, e:estadoFatura(c, mesFatura)})).filter(x => x.e.total > 0 || x.e.pg || isencaoPorGasto(x.c));
+  if ($('#crFatSub')) $('#crFatSub').textContent = est.length
+    ? `${est.length} ${est.length === 1 ? 'cartão' : 'cartões'} com fatura em ${nomeMes(mesFatura)}: valor, vencimento, situação do pagamento e de onde veio o gasto.`
+    : `Nenhum cartão com fatura em ${nomeMes(mesFatura)}.`;
   const total = soma(est.map(x => x.e.total));
   const pagas = soma(est.map(x => x.e.pago));
   const prox = est.filter(x => x.e.venc && x.e.dias !== null && x.e.dias >= 0 && x.e.estado !== 'paga')
