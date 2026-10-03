@@ -1459,7 +1459,7 @@ p:last-child{ margin-bottom:0; }
 }
 /* O nome da tela aberta, no alto da coluna: é ele que dá contexto às seções
    listadas abaixo — sem ele, "Campanhas" e "Mural" ficariam soltos. */
-.cm-titulo{ padding:2px 16px 0; margin-bottom:16px; flex-shrink:0; }
+.cm-titulo{ padding:2px 16px 0; margin-bottom:9px; flex-shrink:0; }
 .cm-tit-nome{
   font-size:calc(20px * var(--esc)); font-weight:600; color:var(--giz);
   line-height:1.15; letter-spacing:-.01em;
@@ -1468,6 +1468,9 @@ p:last-child{ margin-bottom:0; }
   font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim);
   line-height:1.35; margin-top:3px;
 }
+html.restaurando .palco, html.restaurando .coluna-menu .cm-nav, html.restaurando .coluna-menu .cm-titulo{ visibility:hidden; }
+.cm-sep{ height:1px; background:var(--fio); margin:7px 4px; flex-shrink:0; }
+.cm-sep:first-child{ margin-top:0; }
 .cm-vazio{ padding:10px 9px; font-size:calc(13px * var(--esc)); color:var(--grafite-dim); }
 .cm-nav{ display:flex; flex-direction:column; gap:1px; padding:0 6px; }
 .cm-item{
@@ -6588,6 +6591,16 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 </style>
 </head>
 <body>
+<script>
+/* F5: se há uma tela guardada para voltar, o miolo fica escondido até a volta
+   terminar. Sem isso, o Painel aparecia por um instante antes da tela certa. */
+try {
+  const e = JSON.parse(sessionStorage.getItem('torre:tela') || 'null');
+  if (e && e.v === 1 && e.vista && e.vista !== 'mesa' && Date.now() - (e.em || 0) < 12 * 3600e3 && !/#mercado=/.test(location.hash))
+    document.documentElement.classList.add('restaurando');
+} catch (_) {}
+setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000);
+</script>
 
 <!-- ═══ ícones ═══════════════════════════════════════════════════════════════ -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -8358,7 +8371,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-03 13:50';
+const BUILD = '2026-10-03 14:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -29297,43 +29310,45 @@ function ligarSubmenus(){
 function ajustarLarguraMenu(){
   const col = document.querySelector('.coluna-menu');
   if (!col || getComputedStyle(col).display === 'none') return;
-  const raiz = document.documentElement;
-  const guardaVista = vistaAtual;
-  raiz.style.setProperty('--menu-medido', '480px');
-  col.classList.add('medindo');
-  const cl = col.getBoundingClientRect().left;
-  const nav = col.querySelector('.cm-nav');
+  /* A medição é feita numa cópia invisível, fora da tela. A coluna de verdade
+     não é tocada: nada pisca e a tela aberta não muda. */
+  const sombra = col.cloneNode(true);
+  sombra.classList.add('medindo');
+  sombra.removeAttribute('id');
+  Object.assign(sombra.style, {position:'fixed', left:'-10000px', top:'0', width:'480px', visibility:'hidden', pointerEvents:'none'});
+  document.body.appendChild(sombra);
+  const cl = sombra.getBoundingClientRect().left;
+  const nav = sombra.querySelector('.cm-nav');
   const navPadR = nav ? parseFloat(getComputedStyle(nav).paddingRight) || 0 : 0;
   let maior = 0;
   const larguraTexto = el => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; };
   Object.keys(TITULOS).forEach(v => {
     if (!document.getElementById('v-' + v)) return;
-    vistaAtual = v;
-    montarColunaMenu();
-    const t = col.querySelector('.cm-tit-nome');
+    montarColunaMenu(sombra, v);
+    const t = sombra.querySelector('.cm-tit-nome');
     if (t){ const ps = getComputedStyle(t.parentElement); maior = Math.max(maior, t.getBoundingClientRect().left - cl + larguraTexto(t) + (parseFloat(ps.paddingRight) || 0)); }
-    col.querySelectorAll('.cm-item, .cm-subitem').forEach(it => {
+    sombra.querySelectorAll('.cm-item, .cm-subitem').forEach(it => {
       const st = getComputedStyle(it);
       const filhos = [...it.children];
       const gap = parseFloat(st.columnGap || st.gap) || 0;
-      const conteudo = filhos.reduce((a, f) => a + (f.children.length ? f.getBoundingClientRect().width : Math.max(larguraTexto(f), f.getBoundingClientRect().width * (f.className ? 1 : 0))), 0) + gap * Math.max(0, filhos.length - 1);
+      const conteudo = filhos.reduce((a, f) => a + (f.className ? f.getBoundingClientRect().width : larguraTexto(f)), 0) + gap * Math.max(0, filhos.length - 1);
       const precisa = it.getBoundingClientRect().left - cl + (parseFloat(st.paddingLeft) || 0) + conteudo + (parseFloat(st.paddingRight) || 0) + (parseFloat(st.borderRightWidth) || 0) + navPadR;
       maior = Math.max(maior, precisa);
     });
   });
-  col.classList.remove('medindo');
-  vistaAtual = guardaVista;
-  raiz.style.setProperty('--menu-medido', Math.ceil(maior + 2) + 'px');
-  montarColunaMenu();
-  marcarColunaMenu();
+  sombra.remove();
+  const nova = Math.ceil(maior + 2) + 'px';
+  if (document.documentElement.style.getPropertyValue('--menu-medido') !== nova)
+    document.documentElement.style.setProperty('--menu-medido', nova);
 }
 
-function montarColunaMenu(){
-  const nav = document.querySelector('.cm-nav');
-  const tit = document.querySelector('.cm-titulo');
+function montarColunaMenu(raiz, vistaMedida){
+  const base = raiz || document;
+  const nav = base.querySelector('.cm-nav');
+  const tit = base.querySelector('.cm-titulo');
   if (!nav) return;
 
-  const v = vistaAtual;
+  const v = vistaMedida || vistaAtual;
   if (tit){
     tit.querySelector('.cm-tit-nome').textContent = (TITULOS[v] || ['—'])[0];
     /* A frase de cada tela fica só no cabeçalho; na coluna de menu, só o nome. */
@@ -29359,6 +29374,9 @@ function montarColunaMenu(){
     const primeiro = aba.childNodes[0];
     const nome = (primeiro && primeiro.nodeType === 3 ? primeiro.textContent : aba.textContent).trim();
 
+    /* Separador antes de cada seção: entre o nome da tela e a primeira seção,
+       e entre uma seção e a seguinte, em todos os menus. */
+    nav.insertAdjacentHTML('beforeend', '<div class="cm-sep" aria-hidden="true"></div>');
     const b = document.createElement('button');
     b.className = 'cm-item' + (aba.classList.contains('on') ? ' on' : '');
     b.dataset.aba = aba.dataset.aba;
@@ -34666,14 +34684,15 @@ function guardarEstadoTela(){
 window.addEventListener('beforeunload', guardarEstadoTela);
 window.addEventListener('pagehide', guardarEstadoTela);
 
+const fimRestauracao = () => document.documentElement.classList.remove('restaurando');
 function restaurarEstadoTela(){
   let e = null;
   try { e = JSON.parse(sessionStorage.getItem(CHAVE_TELA) || 'null'); } catch(_){}
-  if (!e || e.v !== 1) return;
+  if (!e || e.v !== 1) return fimRestauracao();
   /* Leitura chegando pelo favorito do Rota 360: ela decide para onde ir. */
-  if (/#mercado=/.test(location.hash)) return;
+  if (/#mercado=/.test(location.hash)) return fimRestauracao();
   /* Estado de mais de 12 horas é de outro momento de trabalho: abre no Painel. */
-  if (Date.now() - (e.em || 0) > 12 * 3600e3) return;
+  if (Date.now() - (e.em || 0) > 12 * 3600e3) return fimRestauracao();
 
   if (e.abaCampanha) abaCampanha = e.abaCampanha;
   if (e.janelaRadar) janelaRadar = e.janelaRadar;
@@ -34686,7 +34705,7 @@ function restaurarEstadoTela(){
     const a = (e.abas || {}).balcao;
     e.vista = a === 'bl-clientes' ? 'clientes' : a === 'bl-ir' ? 'imposto' : 'vendas';
   }
-  if (!e.vista || !TITULOS[e.vista]) return;
+  if (!e.vista || !TITULOS[e.vista]) return fimRestauracao();
   irPara(e.vista);
   /* A troca de tela é animada: abas, rolagem e janela esperam ela terminar. */
   setTimeout(() => {
@@ -34721,6 +34740,7 @@ function restaurarEstadoTela(){
         abrirRadarCampanha(e.radarCamp.id);
         if (e.radarCamp.jan) radarCampanhaPeriodo(e.radarCamp.jan);
       }
+      fimRestauracao();
     }, 380);
   }, 420);
 }
