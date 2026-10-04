@@ -3585,8 +3585,12 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 @media (max-width:560px){ .mk-campos{ grid-template-columns:1fr; } }
 .mk-cab{ display:flex; flex-direction:column; gap:2px; } .mk-cab b{ color:var(--giz); font-size:calc(15px * var(--esc)); } .mk-cab span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
 .mk-ofertas{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
-.mk-oferta{ border:1px solid var(--fio); background:none; border-radius:99px; padding:4px 10px; cursor:pointer; font:inherit; font-size:calc(12.5px * var(--esc)); color:var(--giz-2); }
+.mk-oferta{ display:inline-flex; align-items:center; border:1px solid var(--fio); border-radius:99px; overflow:hidden; font-size:calc(12.5px * var(--esc)); color:var(--giz-2); }
 .mk-oferta.on{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 12%, transparent); }
+.mk-oferta.sem-cia .mk-usar{ font-style:italic; }
+.mk-usar{ border:0; background:none; padding:4px 6px 4px 11px; cursor:pointer; font:inherit; color:inherit; }
+.mk-tirar{ border:0; border-left:1px solid var(--fio); background:none; width:26px; align-self:stretch; cursor:pointer; font:inherit; font-size:calc(15px * var(--esc)); line-height:1; color:var(--grafite); }
+.mk-tirar:hover{ color:var(--brasa); background:color-mix(in oklab, var(--brasa) 10%, transparent); }
 .mk-oferta b{ font-family:var(--f-m); }
 .mk-dif{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); margin-top:3px; white-space:nowrap; }
 .mk-dif b{ font-family:var(--f-m); } .mk-dif b.jade{ color:var(--jade); } .mk-dif b.brasa{ color:var(--brasa); }
@@ -3698,7 +3702,9 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-meio b{ font-family:var(--f-m); font-size:calc(18px * var(--esc)); }
 .up-meio b.jade{ color:var(--jade); } .up-meio b.brasa{ color:var(--brasa); }
 /* Leitura de prints */
-.oq-curto{ white-space:nowrap; }
+.oq-curto{ white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+.oq-curto .oq-marca{ flex-shrink:0; }
+.oq-cia{ font-weight:600; color:var(--giz); }
 .info-i{ display:inline-grid; place-items:center; width:18px; height:18px; margin-left:4px; vertical-align:-3px; border-radius:50%; cursor:help; color:var(--grafite); }
 .info-i svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; }
 .info-i:hover, .info-i:focus{ color:var(--anil-claro); outline:none; }
@@ -8776,7 +8782,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 07:50';
+const BUILD = '2026-10-05 08:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24875,10 +24881,24 @@ function editarMercado(id){
       const ofertas = ofertasDoTexto(txt);
       if (!$('#mkLidos_' + k)) return;
       if (!ofertas.length){ alvo.innerHTML = `<div class="brasa" style="font-size:calc(13px * var(--esc))">Nenhum preço encontrado no print. Confira se a lista de voos aparece inteira, ou digite o valor.</div>`; return; }
-      const melhor = ofertas[0];
-      $('#mkCia_' + k).value = melhor.cia || ''; $('#mkPreco_' + k).value = moedaTxt(melhor.preco);
-      alvo.innerHTML = `<div class="mk-ofertas"><span>Lidas no print, da mais barata para a mais cara:</span>${ofertas.slice(0, 5).map((o, i) => `<button type="button" class="mk-oferta${i === 0 ? ' on' : ''}" data-cia="${esc(o.cia || '')}" data-preco="${o.preco}">${esc(o.cia || 'Companhia não lida')} · <b>${brl(o.preco)}</b></button>`).join('')}</div>`;
-      $$('.mk-oferta', alvo).forEach(b => b.onclick = () => { $$('.mk-oferta', alvo).forEach(x => x.classList.remove('on')); b.classList.add('on'); $('#mkCia_' + k).value = b.dataset.cia; $('#mkPreco_' + k).value = moedaTxt(Number(b.dataset.preco)); });
+      /* Cada oferta tem um X: uma opção que não serve de referência (25 horas de
+         viagem para um trecho de 3, uma companhia não lida) sai da lista, e a
+         escolha passa para a próxima mais barata. */
+      let lista = ofertas.slice(0, 8), escolhida = 0;
+      const usar = i => { const o = lista[i]; $('#mkCia_' + k).value = o ? (o.cia || '') : ''; $('#mkPreco_' + k).value = moedaTxt(o ? o.preco : 0); };
+      const desenharOfertas = () => {
+        if (!lista.length){ alvo.innerHTML = `<div class="fraco" style="font-size:calc(13px * var(--esc))">Todas as ofertas foram descartadas. Leia outro print ou digite o valor.</div>`; usar(-1); return; }
+        alvo.innerHTML = `<div class="mk-ofertas"><span>Lidas no print, da mais barata para a mais cara:</span>${lista.map((o, i) => `<span class="mk-oferta${i === escolhida ? ' on' : ''}${o.cia ? '' : ' sem-cia'}">
+            <button type="button" class="mk-usar" data-i="${i}">${esc(o.cia || 'Companhia não lida')} · <b>${brl(o.preco)}</b></button>
+            <button type="button" class="mk-tirar" data-i="${i}" aria-label="Descartar esta oferta" data-dica="Descartar: não serve de referência">×</button></span>`).join('')}</div>`;
+        $$('.mk-usar', alvo).forEach(b => b.onclick = () => { escolhida = +b.dataset.i; usar(escolhida); desenharOfertas(); });
+        $$('.mk-tirar', alvo).forEach(b => b.onclick = () => {
+          const i = +b.dataset.i; lista.splice(i, 1);
+          if (i === escolhida) escolhida = 0; else if (i < escolhida) escolhida--;
+          usar(escolhida); desenharOfertas();
+        });
+      };
+      usar(0); desenharOfertas();
     }catch(err){ if ($('#mkLidos_' + k)) alvo.innerHTML = `<div class="brasa">${esc(err.message || String(err))}</div>`; }
   });
   $('#btSalvarMk').onclick = () => {
@@ -24898,7 +24918,9 @@ function ofertasDoTexto(txt){
       const v = numBR(m[1]); if (!(v >= 100)) return;
       /* a companhia mais perto do preço: a mesma linha, depois as de cima, por último a de baixo */
       const acha = txt => CIAS_MERCADO.find(c => new RegExp('\\b' + c.replace(/ /g, '\\s+') + '\\b', 'i').test(txt || ''));
-      const cia = acha(linhas[i]) || acha(linhas[i - 1]) || acha(linhas[i - 2]) || acha(linhas[i + 1]) || '';
+      /* linha vizinha só vale se não tiver preço próprio: senão a companhia é do voo de cima ou de baixo */
+      const semPreco = l => l != null && !/R\$\s*[\d.]/.test(l);
+      const cia = acha(linhas[i]) || (semPreco(linhas[i - 1]) && acha(linhas[i - 1])) || (semPreco(linhas[i + 1]) && acha(linhas[i + 1])) || '';
       out.push({preco:v, cia});
     });
   });
@@ -25903,7 +25925,7 @@ function renderListaRoteiros(){
     const demo = {porEt:Object.fromEntries(ROTA_ETAPAS.map((e, i) => [e.k, {total:4, feitos:Math.max(0, 4 - i)}]))};
     host.innerHTML = `<div class="vazio rt-vazio" style="padding:34px">${trilhoRota(demo, false)}
       <h4>Nenhuma jornada${nomeLado ? ' ' + nomeLado : ''}</h4>
-      <p>Cada viagem é uma jornada pelo Método ROTA: Rumo, Otimização, Timing e Ação levam à Viagem planejada, à Emissão realizada e à Mensuração da economia.</p>
+      <p>Cada viagem é uma jornada pelo Método ROTA:<br>Rumo, Otimização, Timing e Ação levam à Viagem planejada,<br>à Emissão realizada e à Mensuração da economia.</p>
       <p>Quando a lista fecha, a viagem está pronta.</p>
       <div class="linha" style="justify-content:center;gap:9px">
         <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Nova Jornada</button>
@@ -28679,10 +28701,19 @@ function ordemNaAgenda(a, b){
 }
 /* "O quê" curto: a rota e a companhia; os voos, a escala e o localizador
    ficam no "i", ao passar o mouse (ou tocar, no celular). */
+/* A companhia aparece pela marca: o disco do programa dela, com a logo que
+   estiver cadastrada em Ajustes (ou a sigla, sem logo). O nome fica na dica.
+   Companhia sem programa na Torre continua escrita por extenso. */
+const CIA_PARA_PROG = [[/^azul/i, 'azul'], [/^gol/i, 'smiles'], [/^latam/i, 'latampass'], [/^tap/i, 'tap'], [/^air europa/i, 'suma'], [/^iberia/i, 'iberia'],
+  [/^copa/i, 'connect'], [/^(air france|klm)/i, 'flyingblue'], [/^avianca/i, 'lifemiles'], [/^united/i, 'united'], [/^air canada/i, 'aeroplan'],
+  [/^british/i, 'british'], [/^qatar/i, 'qatar'], [/^finnair/i, 'finnair'], [/^aeromexico/i, 'aeromexico']];
+const progDaCia = nome => { const x = CIA_PARA_PROG.find(([re]) => re.test(String(nome || '').trim())); return x && PROGRAMAS[x[1]] ? x[1] : ''; };
 function oQueCurto(desc){
   const partes = String(desc || '').split(' · ').map(x => x.trim()).filter(Boolean);
-  const principal = partes.slice(0, 2).join(' · '), resto = partes.slice(2).join(' · ');
-  return `<span class="oq-curto"><b>${esc(principal || desc || '')}</b>${resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : ''}</span>`;
+  const rota = partes[0] || desc || '', cia = partes[1] || '', resto = partes.slice(2).join(' · ');
+  const pg = progDaCia(cia);
+  const marca = cia ? (pg ? discoProg(pg, 'p oq-marca', cia) : `<span class="oq-cia"> · ${esc(cia)}</span>`) : '';
+  return `<span class="oq-curto"><b>${esc(rota)}</b>${marca}${resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : ''}</span>`;
 }
 function apagarTrechoDaAgenda(planoId, trechoId){
   const p = (DB.planos || []).find(x => x.id === planoId); const t = p && trechosDe(p).find(x => x.id === trechoId); if (!t) return;
@@ -28763,7 +28794,7 @@ function renderViagens(){
           <button class="bt p fantasma icone" onclick="apagar('reservas','${r.id}','o resgate')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
         </div></td></tr>`;
     }).join('')}</tbody></table>`
-    : `<div class="vazio" style="border:0;padding:26px"><p>Nada reservado à frente. Ao emitir uma passagem sua, registre aqui para acompanhar até a viagem acontecer.</p></div>`;
+    : `<div class="vazio" style="border:0;padding:26px"><p>Nada reservado à frente.<br>Ao emitir uma passagem sua, registre aqui para acompanhar até a viagem acontecer.</p></div>`;
 
   $('#viFeitas').innerHTML = feitas.length ? `<table class="tb-dados">
     <thead><tr><th class="c">Data</th><th>O quê</th><th class="n">Milhas</th><th class="n">Preço à vista</th><th class="n">Valeu</th><th class="n">Sobrou</th><th class="c">Meta</th><th></th></tr></thead>
@@ -28791,7 +28822,7 @@ function renderViagens(){
           <button class="bt p fantasma icone" onclick="apagar('reservas','${r.id}','o resgate')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
         </div></td></tr>`;
     }).join('')}</tbody></table>`
-    : `<div class="vazio" style="border:0;padding:26px"><p>Nenhuma viagem realizada ainda. Quando a data passar, marque o resgate como realizado para a Torre calcular quanto ele valeu.</p></div>`;
+    : `<div class="vazio" style="border:0;padding:26px"><p>Nenhuma viagem realizada ainda.<br>Quando a data passar, marque o resgate como realizado para a Torre calcular quanto ele valeu.</p></div>`;
 }
 
 /* Marcar como realizada é o momento de pedir o preço à vista: antes da viagem
