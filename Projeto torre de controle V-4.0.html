@@ -7418,6 +7418,11 @@ table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before
   table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td .n,
   table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td.n{ text-align:left; }
 }
+
+/* peças de destaque das áreas: mesma pele do Painel, com folga para as abas */
+.heroi-area{ margin-bottom:18px; }
+.heroi-area[hidden]{ display:none !important; }
+.heroi-valor small{ font-size:.42em; letter-spacing:-.01em; font-weight:600; color:rgba(242,193,78,.8); margin-left:.15em; }
 </style>
 </head>
 <body>
@@ -7533,7 +7538,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-mesa"/></svg><span class="sg">Início</span></button>
       <button class="tb" data-area="milhas" data-vista="saldo" data-dica="Milhas: carteira, comprar e transferir, fábrica e cartões" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Milhas</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas, emissões e radar de voos" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
-      <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="negocio" data-vista="vendas" data-dica="Negócio: clientes, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
     </nav>
   </aside>
@@ -7841,6 +7846,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
       <!-- ══════════════ TANQUE ═════════════════════════════════════════════ -->
       <section class="vista" id="v-saldo">
+        <section class="heroi heroi-area" id="heroiMilhas" aria-label="Suas milhas"></section>
         <div class="abas" data-grupo="saldo">
           <!-- Carteira primeiro: ela responde a pergunta que se faz ao abrir o
                Tanque — quanto há e a que custo. O grupo de contas é de quem está,
@@ -8411,6 +8417,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
       <!-- ══════════════ ROTA ══════════════════════════════════════════════ -->
       <section class="vista" id="v-rota">
+        <section class="heroi heroi-area" id="heroiViagens" aria-label="Suas viagens"></section>
         <div class="abas" data-grupo="rota">
           <!-- Jornadas (ROTA, o método) e Resultados (VEM, a transformação). A meta
                de milhas deixou de ser item próprio: virou a etapa R de cada jornada. -->
@@ -8857,6 +8864,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       </section>
 
       <section class="vista" id="v-vendas">
+        <section class="heroi heroi-area" id="heroiNegocio" aria-label="Seu negócio"></section>
         <!-- O mesmo botão dos dois lados: registrar emissão é o gesto que alimenta
              tanto o controle de milha quanto a conta do balcão, e obrigar a trocar
              de menu para fazê-lo separa o que na prática é um movimento só.
@@ -9212,7 +9220,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 19:00';
+const BUILD = '2026-10-06 21:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12349,13 +12357,14 @@ function grLinha(pontos, {altura = 150, cor = 'var(--ouro)', fmt = v => nBR(v), 
     eixoY += `<text x="${(L - 9).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
   }
 
-  const passo = Math.max(1, Math.ceil(pontos.length / 7));
+  /* quantos rótulos de mês cabem na largura real, com ~58px para cada um */
+  const passo = Math.max(1, Math.ceil(pontos.length / Math.max(2, Math.min(7, Math.floor((W - L - R) / 66)))));
   /* a primeira e a última marca ancoram pela ponta, senão metade do rótulo cai
      fora da caixa e o mês some na borda */
   const eixoX = pontos.map((p, i) => {
     if (!(i % passo === 0 || i === pontos.length - 1)) return '';
     /* rótulo colado no último some: dois meses encostados viravam "setout/26" */
-    if (i !== pontos.length - 1 && px(pontos.length - 1) - px(i) < 52 * k) return '';
+    if (i !== pontos.length - 1 && px(pontos.length - 1) - px(i) < 78) return '';
     const fim = i === pontos.length - 1, ini = i === 0;
     return `<text x="${px(i).toFixed(1)}" y="${H - 10}" text-anchor="${ini ? 'start' : fim ? 'end' : 'middle'}">${esc(rotulos ? rotulos[i] : p.r || '')}</text>`;
   }).join('');
@@ -12526,7 +12535,7 @@ const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-mesa',    vistas:['mesa']},
   {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica', 'cartoes']},
   {k:'viagens', n:'Viagens', sub:'Jornadas e emissões',  ic:'#i-aviao',   vistas:['rota', 'emissoes', 'radar']},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'vendas', 'imposto']},
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['vendas', 'clientes', 'imposto']},
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
 ];
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-saldo', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
@@ -12593,6 +12602,7 @@ function irPara(v){
     $('#topoSub').dataset.vista = v;
     window.scrollTo({top:0, behavior:'instant'});
     if (RENDER[v]) RENDER[v]();
+    renderHeroiDaVista(v);
   };
   if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches){
     document.startViewTransition(trocar);
@@ -13642,6 +13652,146 @@ function renderMesaHeroi(){
       <div class="heroi-curva" id="mesaHeroiCurva">${serie.length >= 2 ? '' : '<p class="heroi-sub" style="padding:24px 0">A curva aparece a partir do segundo mês com compra lançada.</p>'}</div>
     </div>`;
   if (serie.length >= 2) $('#mesaHeroiCurva').innerHTML = grLinha(serie, {altura:170, fmt:v => 'R$ ' + v.toFixed(0), cor:'#F2C14E', alvo:'#mesaHeroiCurva'});
+}
+
+/* ── PEÇAS DE DESTAQUE DAS ÁREAS (06/10/2026) ─────────────────────────────────
+   A mesma dinâmica do Painel ("Sua carteira vale hoje"), uma por área, no módulo
+   que a área abre: Milhas → Carteira, Viagens → Jornadas, Negócio → Vendas.
+   Um número grande, a comparação que dá sentido a ele, três números de apoio, a
+   composição e, à direita, a curva mês a mês. */
+const CORES_HEROI = ['#F2C14E', '#6FB7FF', '#5FD3A6', '#C79BFF', 'rgba(226,233,245,.35)'];
+function fatiasHeroi(itens, nome){
+  const v = itens.filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const top = v.slice(0, 4), resto = soma(v.slice(4).map(x => x.v));
+  return top.map((x, i) => ({n:nome(x), v:x.v, cor:CORES_HEROI[i]})).concat(resto > 0 ? [{n:'Outros', v:resto, cor:CORES_HEROI[4]}] : []);
+}
+function montarHeroi(alvo, o){
+  if (!alvo) return;
+  if (o.vazio){
+    alvo.innerHTML = `<div class="heroi-vazio"><div class="heroi-rot">${esc(o.rot)}</div><p>${o.vazio}</p></div>`;
+    return;
+  }
+  const tot = soma((o.fatias || []).map(f => f.v));
+  const idc = alvo.id + 'Curva';
+  alvo.innerHTML = `
+    <div class="heroi-esq">
+      <div class="heroi-rot">${esc(o.rot)}</div>
+      <div class="heroi-valor">${o.valor}</div>
+      <div class="heroi-linha">${o.linha || ''}</div>
+      <div class="heroi-numeros">${o.numeros.map(([b, sp]) => `<div><b>${b}</b><span>${esc(sp)}</span></div>`).join('')}</div>
+      ${tot > 0 ? `<div class="heroi-comp" role="img" aria-label="${esc(o.compRot || 'Composição')}">
+        <div class="heroi-barra">${o.fatias.map(f => `<i style="flex:${f.v.toFixed(2)};background:${f.cor}" data-dica="${esc(f.n)}: ${esc(o.fmtFatia ? o.fmtFatia(f.v) : nBR(f.v))} (${esc(pct(f.v / tot * 100, 1))})"></i>`).join('')}</div>
+        <div class="heroi-leg">${o.fatias.map(f => `<span><i style="background:${f.cor}"></i>${esc(f.n)} <b>${pct(f.v / tot * 100, 0)}</b></span>`).join('')}</div>
+      </div>` : ''}
+    </div>
+    <div class="heroi-dir">
+      <div class="heroi-dir-cab">
+        <div><div class="heroi-rot">${esc(o.dirRot)}</div><div class="heroi-sub">${esc(o.dirSub || '')}</div></div>
+        ${o.ult ? `<div class="heroi-ult"><b>${o.ult.b}</b><span>${esc(o.ult.sp)}</span></div>` : ''}
+      </div>
+      <div class="heroi-curva" id="${idc}">${o.serie && o.serie.length >= 2 ? '' : `<p class="heroi-sub" style="padding:24px 0">${esc(o.semSerie || 'A curva aparece a partir do segundo mês com movimento.')}</p>`}</div>
+    </div>`;
+  if (o.serie && o.serie.length >= 2) document.getElementById(idc).innerHTML = grLinha(o.serie, {altura:170, fmt:o.fmtSerie || (v => nBR(v)), cor:'#F2C14E', alvo:'#' + idc});
+}
+const rotuloMes = k => MESES[Number(k.slice(5, 7)) - 1] + '/' + k.slice(2, 4);
+const milCurto = v => Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('pt-BR', {maximumFractionDigits:0}) + ' mil' : nBR(Math.round(v));
+
+/* Milhas: o estoque pronto para emitir, o custo médio contra o alvo, e o que
+   entrou a cada mês. */
+function renderHeroiMilhas(){
+  const alvo = $('#heroiMilhas'); if (!alvo) return;
+  const sal = saldoPorPrograma() || {}, cpm = cpmPorPrograma() || {};
+  const aereos = Object.keys(sal).filter(p => sal[p] > 0 && prog(p).tipo !== 'pontos');
+  const milhas = soma(aereos.map(p => sal[p]));
+  const pontos = soma(Object.keys(sal).filter(p => sal[p] > 0 && prog(p).tipo === 'pontos').map(p => sal[p]));
+  if (!milhas && !pontos){ montarHeroi(alvo, {rot:'Milhas prontas para emitir', vazio:'Nenhuma milha em estoque ainda. Lance uma compra, uma transferência ou um clube e a Torre mostra aqui o estoque e o custo de cada milheiro.'}); return; }
+  /* custo e alvo médios ponderados pelo saldo, só onde há custo conhecido */
+  const comCusto = aereos.filter(p => cpm[p] != null && cpm[p] > 0);
+  const peso = soma(comCusto.map(p => sal[p]));
+  const custoMedio = peso ? soma(comCusto.map(p => sal[p] * cpm[p])) / peso : null;
+  const alvoMedio = peso ? soma(comCusto.map(p => sal[p] * faixasDe(p).alvo)) / peso : null;
+  const clubes = (DB.assinaturas || []).filter(a => a.status === 'ativa');
+  const mensal = soma(clubes.map(a => Number(a.valor) || 0));
+  const vencem = soma(lotesEmRisco(90).map(l => Number(l.qtd) || 0));
+  const porMes = {};
+  (DB.lancamentos || []).forEach(l => { const k = (l.data || '').slice(0, 7); if (!k || !(Number(l.qtd) > 0) || prog(l.prog).tipo === 'pontos') return; porMes[k] = (porMes[k] || 0) + Number(l.qtd); });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  const media = meses.length ? soma(meses.map(k => porMes[k])) / meses.length : null;
+  const dif = custoMedio != null && alvoMedio ? (custoMedio - alvoMedio) / alvoMedio * 100 : null;
+  montarHeroi(alvo, {
+    rot:'Milhas prontas para emitir',
+    valor:`${nBR(milhas)}<small> milhas</small>`,
+    linha: custoMedio != null ? `<span>Custo médio do milheiro <b>${brl2(custoMedio)}</b></span>
+      <span class="heroi-chip ${dif <= 0 ? 'sobe' : 'desce'}">${dif <= 0 ? pct(Math.abs(dif), 0) + ' abaixo do alvo' : pct(dif, 0) + ' acima do alvo'}</span>` : '<span>Sem custo lançado nas milhas em estoque.</span>',
+    numeros:[[nBR(pontos), 'pontos a direcionar'], [brl(mensal), clubes.length ? `${clubes.length} ${clubes.length === 1 ? 'clube ativo' : 'clubes ativos'}, por mês` : 'nenhum clube ativo'], [nBR(vencem), 'vencem em 90 dias']],
+    fatias:fatiasHeroi(aereos.map(p => ({p, v:sal[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas por programa',
+    dirRot:'Milhas que entraram, mês a mês', dirSub:'Compras, clubes e transferências nos programas aéreos.',
+    ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:`${serie[serie.length - 1].r}${media != null ? ' · média ' + milCurto(media) : ''}`} : null,
+    serie, fmtSerie:milCurto
+  });
+}
+
+/* Viagens: a próxima viagem, o que ela já economizou, e as milhas usadas. */
+function renderHeroiViagens(){
+  const alvo = $('#heroiViagens'); if (!alvo) return;
+  alvo.hidden = typeof roteiroAberto !== 'undefined' && roteiroAberto;
+  if (alvo.hidden) return;
+  const hoje = hojeISO();
+  const futuras = (DB.planos || []).filter(p => (p.fim || p.inicio || '') >= hoje).sort((a, b) => String(a.inicio || '').localeCompare(String(b.inicio || '')));
+  const prox = futuras.find(p => (p.inicio || '') >= hoje) || futuras[0];
+  const emitidas = (DB.reservas || []).filter(r => r.quem !== 'terceiro' && r.status !== 'cancelada' && Number(r.milhas) > 0);
+  if (!prox && !emitidas.length){ montarHeroi(alvo, {rot:'Próxima viagem', vazio:'Nenhuma viagem planejada ainda. Crie uma jornada e a Torre acompanha prazos, trechos e quanto cada emissão economizou.'}); return; }
+  const dias = prox ? diasAte(prox.inicio) : null;
+  const ecoProx = prox ? economiaJornada(prox) : 0;
+  const ts = futuras.flatMap(p => trechosDe(p));
+  const emit = ts.filter(t => (t.situacao || 'planejado') !== 'planejado').length;
+  const ecoTodas = soma((DB.planos || []).map(p => economiaJornada(p) || 0));
+  const porProg = {}; emitidas.forEach(r => { porProg[r.prog] = (porProg[r.prog] || 0) + Number(r.milhas); });
+  const porMes = {}; emitidas.forEach(r => { const k = String(r.criada || r.data || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + Number(r.milhas); });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot: prox ? 'Próxima viagem' : 'Viagens',
+    valor: prox ? (dias === 0 ? 'hoje' : dias > 0 ? `em ${nBR(dias)}<small> ${dias === 1 ? 'dia' : 'dias'}</small>` : 'em andamento') : `${nBR(emitidas.length)}<small> emissões</small>`,
+    linha: prox ? `<span><b>${esc(prox.nome || 'Viagem')}</b>${prox.inicio ? ' · ' + dataBR(prox.inicio) : ''}</span>${ecoProx ? `<span class="heroi-chip ${ecoProx >= 0 ? 'sobe' : 'desce'}">${ecoProx >= 0 ? '+' : '−'}${brl(Math.abs(ecoProx))} de economia</span>` : ''}` : '',
+    numeros:[[nBR(futuras.length), futuras.length === 1 ? 'jornada à frente' : 'jornadas à frente'], [`${nBR(emit)} de ${nBR(ts.length)}`, 'trechos emitidos'], [brl(ecoTodas), 'economia em todas']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas usadas por programa',
+    dirRot:'Milhas usadas em emissões, mês a mês', dirSub:'Pela data da emissão, nas suas viagens.',
+    ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com emissão.'
+  });
+}
+
+/* Negócio: o resultado das vendas no ano, a receita, e o resultado mês a mês. */
+function renderHeroiNegocio(){
+  const alvo = $('#heroiNegocio'); if (!alvo) return;
+  const ano = String(new Date().getFullYear());
+  const vendas = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && String(r.criada || r.data || '').startsWith(ano));
+  if (!vendas.length){ montarHeroi(alvo, {rot:`Resultado das vendas em ${ano}`, vazio:'Nenhuma venda registrada neste ano. Ao registrar uma emissão para cliente, a Torre mostra aqui a receita, o resultado e a margem.'}); return; }
+  const rec = soma(vendas.map(r => Number(r.cobrado) || 0)), cus = soma(vendas.map(r => custoReserva(r)));
+  const res = rec - cus, mg = rec ? res / rec * 100 : null;
+  const clientes = {}; vendas.forEach(r => { const c = r.cliente || 'sem nome'; clientes[c] = (clientes[c] || 0) + ((Number(r.cobrado) || 0) - custoReserva(r)); });
+  const porMes = {}; vendas.forEach(r => { const k = String(r.criada || r.data).slice(0, 7); porMes[k] = (porMes[k] || 0) + (Number(r.cobrado) || 0) - custoReserva(r); });
+  const mesAtual = hojeISO().slice(0, 7);
+  const chaves = Array.from({length:12}, (_, i) => `${ano}-${String(i + 1).padStart(2, '0')}`).filter(k => k <= mesAtual);
+  const serie = chaves.map(k => ({r:rotuloMes(k), v:porMes[k] || 0}));
+  montarHeroi(alvo, {
+    rot:`Resultado das vendas em ${ano}`,
+    valor:brl(res),
+    linha:`<span>Receita <b>${brl(rec)}</b></span>${mg != null ? `<span class="heroi-chip ${mg >= 0 ? 'sobe' : 'desce'}">margem de ${pct(mg, 1)}</span>` : ''}`,
+    numeros:[[nBR(vendas.length), vendas.length === 1 ? 'venda no ano' : 'vendas no ano'], [nBR(Object.keys(clientes).length), 'clientes atendidos'], [brl(rec / vendas.length), 'ticket médio']],
+    fatias:fatiasHeroi(Object.keys(clientes).map(c => ({c, v:clientes[c]})), x => x.c.length > 22 ? x.c.slice(0, 21) + '…' : x.c), fmtFatia:v => brl(v), compRot:'Resultado por cliente',
+    dirRot:'Resultado, mês a mês', dirSub:'Pelo mês da venda, de janeiro até agora.',
+    /* o destaque é o melhor mês: o mês corrente pode ainda não ter venda */
+    ult: (() => { const m = serie.filter(x => x.v !== 0).sort((a, b) => b.v - a.v)[0]; return m ? {b:brl(m.v), sp:'melhor mês: ' + m.r} : null; })(),
+    serie, fmtSerie:v => 'R$ ' + milCurto(v)
+  });
+}
+function renderHeroiDaVista(v){
+  if (v === 'saldo') renderHeroiMilhas();
+  if (v === 'rota') renderHeroiViagens();
+  if (v === 'vendas') renderHeroiNegocio();
 }
 
 function renderMesa(){
@@ -26746,6 +26896,7 @@ function renderPlano(){
   const p = roteiroAberto ? P() : null;
   if (!p){
     roteiroAberto = false;
+    if (typeof renderHeroiViagens === 'function') renderHeroiViagens();
     if ($('#rtJornada')) $('#rtJornada').innerHTML = '';
     if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
     renderListaRoteiros();
@@ -26754,6 +26905,7 @@ function renderPlano(){
   }
   if ($('#rtRoteiroLista')) $('#rtRoteiroLista').innerHTML = '';
   renderJornadaRota(p);
+  if (typeof renderHeroiViagens === 'function') renderHeroiViagens();
   requestAnimationFrame(() => {
     const tr = document.querySelector('.rt-trilho.grande'), on = tr && tr.querySelector('.rt-no.on');
     if (!tr || !on || tr.scrollWidth <= tr.clientWidth) return;
