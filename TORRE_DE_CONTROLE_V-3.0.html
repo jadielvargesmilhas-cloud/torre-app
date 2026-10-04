@@ -3605,6 +3605,31 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-cab .etq{ font-size:calc(10px * var(--esc)); padding:1px 7px; }
 .up-antes{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); text-decoration:line-through; margin-top:2px; }
 .bt.up-feito{ border-color:color-mix(in oklab, var(--jade) 50%, var(--fio)); color:var(--jade); }
+.ga{ margin:0; padding:18px 20px 20px; border-top:1px solid var(--fio); background:linear-gradient(180deg, color-mix(in oklab, var(--sup-1) 70%, transparent), transparent); }
+.ga-cab{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px 24px; flex-wrap:wrap; }
+.ga-cab p{ margin:6px 0 0; font-size:calc(13px * var(--esc)); max-width:640px; }
+.ga-total{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; text-align:right; }
+.ga-total span{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.ga-total b{ font-family:var(--f-m); font-size:calc(26px * var(--esc)); color:var(--giz); letter-spacing:-.02em; }
+.ga-total em{ font-style:normal; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.ga-barra{ display:flex; height:14px; margin:16px 0 14px; border-radius:99px; overflow:hidden; background:var(--sup-1); box-shadow:inset 0 0 0 1px var(--fio-suave); }
+.ga-barra i{ display:block; width:var(--w); background:var(--c); transform-origin:left; animation:gaEnche .8s cubic-bezier(.2,.8,.2,1) both; animation-delay:calc(var(--i) * .12s); }
+.ga-barra i + i{ box-shadow:inset 2px 0 0 color-mix(in oklab, var(--sup-0) 70%, transparent); }
+@keyframes gaEnche{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+@media (prefers-reduced-motion: reduce){ .ga-barra i{ animation:none; } }
+.ga-itens{ display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:8px 12px; }
+@media (max-width:560px){ .ga-itens{ grid-template-columns:1fr; } .ga-item{ flex-wrap:wrap; } .ga-val{ flex:1 0 100%; flex-direction:row; justify-content:space-between; padding-left:30px; } }
+.ga-item{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:12px; border:1px solid var(--fio-suave); background:var(--sup-0); }
+.ga-ponto{ width:10px; height:10px; border-radius:50%; background:var(--c); flex-shrink:0; display:grid; place-items:center; }
+.ga-ponto:has(.disco-prog){ width:auto; height:auto; background:none; }
+.ga-ponto .disco-prog{ box-shadow:0 0 0 2px var(--c); }
+.ga-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.ga-txt b{ font-size:calc(13.5px * var(--esc)); color:var(--giz); }
+.ga-txt span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.ga-val{ display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+.ga-val b{ font-family:var(--f-m); font-size:calc(14.5px * var(--esc)); color:var(--giz); white-space:nowrap; }
+.ga-val span{ font-family:var(--f-m); font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.ga-nota{ margin:12px 0 0; font-size:calc(12.5px * var(--esc)); color:var(--ouro); }
 .ee{ margin-bottom:14px; }
 .ee-cab{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
 .ee-graf{ position:relative; display:flex; gap:clamp(8px, 2vw, 22px); height:clamp(214px, 28vw, 284px); padding:54px 4px 0; align-items:stretch; }
@@ -3702,7 +3727,9 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-meio b{ font-family:var(--f-m); font-size:calc(18px * var(--esc)); }
 .up-meio b.jade{ color:var(--jade); } .up-meio b.brasa{ color:var(--brasa); }
 /* Leitura de prints */
-.oq-curto{ white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+.oq-curto{ white-space:nowrap; display:flex; align-items:center; gap:10px; width:100%; }
+.oq-dir{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; }
+.oq-dir .info-i{ margin-left:0; }
 .oq-curto .oq-marca{ flex-shrink:0; }
 .oq-cia{ font-weight:600; color:var(--giz); }
 .info-i{ display:inline-grid; place-items:center; width:18px; height:18px; margin-left:4px; vertical-align:-3px; border-radius:50%; cursor:help; color:var(--grafite); }
@@ -8782,7 +8809,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 08:50';
+const BUILD = '2026-10-05 10:05';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24530,6 +24557,62 @@ function ordenarTrechos(lista){
     return A.i - B.i;
   }).map(x => x.t);
 }
+/* ── GASTO ATÉ AGORA ───────────────────────────────────────────────────────────
+   O que de fato saiu do bolso e da conta nos trechos já comprados (emitidos ou
+   voados): as milhas ao CUSTO REAL de cada programa (o que custaram, não o
+   alvo nem a cotação), as passagens pagas em dinheiro, as taxas e o que o
+   upgrade custou. Trecho só planejado ainda não gastou nada e fica de fora,
+   avisado embaixo. */
+function gastoDaViagem(ts){
+  const comprados = ts.filter(t => (t.situacao || 'planejado') !== 'planejado');
+  const porProg = {}; let passagens = 0, taxas = 0, semCusto = [];
+  const somaMilhas = (pg, qtd) => {
+    if (!pg || !(qtd > 0)) return;
+    const e = porProg[pg] = porProg[pg] || {milhas:0, custo:0, semCusto:false};
+    const mil = milheiroDaBase('custo', pg);
+    e.milhas += qtd;
+    if (mil == null){ e.semCusto = true; if (!semCusto.includes(pg)) semCusto.push(pg); } else e.custo += qtd / 1000 * mil;
+  };
+  comprados.forEach(t => {
+    if (t.forma === 'dinheiro'){
+      const tx = Number(t.taxasDinheiro) || 0;
+      passagens += (Number(t.pago) || 0) - tx; taxas += tx;
+    } else {
+      somaMilhas(t.prog, Number(t.milhas) || 0);
+      taxas += Number(t.taxas) || 0;
+      if (t.forma === 'misto') passagens += Number(t.pago) || 0;
+    }
+    if (t.upgrade){ passagens += Number(t.upgrade.dinheiro) || 0; somaMilhas(t.upgrade.prog || t.prog, Number(t.upgrade.milhas) || 0); }
+  });
+  const milhasCusto = soma(Object.values(porProg).map(e => e.custo));
+  return {comprados:comprados.length, planejados:ts.length - comprados.length, porProg, passagens, taxas, milhasCusto,
+    total:milhasCusto + passagens + taxas, semCusto};
+}
+function gastoAteAgoraHTML(p, ts){
+  const G = gastoDaViagem(ts);
+  if (!G.comprados) return '';
+  const pax = Number(p.pax) || 1;
+  const partes = Object.entries(G.porProg).sort((a, b) => b[1].custo - a[1].custo).map(([pg, e]) => ({k:'mi-' + pg, cor:prog(pg).cor || 'var(--anil-claro)', rot:prog(pg).n,
+      det:`${nBR(e.milhas)} milhas${e.semCusto ? ' · sem custo lançado' : ` · ${brl2(milheiroDaBase('custo', pg))}/mil`}`, v:e.custo, disco:pg}))
+    .concat([{k:'pass', cor:'#C9822B', rot:'Passagens em dinheiro', det:'tarifas pagas', v:G.passagens},
+             {k:'tax', cor:'#B6463A', rot:'Taxas', det:'de todos os trechos', v:G.taxas}])
+    .filter(x => x.v > 0.004 || (x.disco && G.porProg[x.disco].semCusto));
+  const pct = v => G.total > 0 ? v / G.total * 100 : 0;
+  return `<div class="ga">
+    <div class="ga-cab">
+      <div><div class="olho anil" style="margin:0">Gasto até agora</div>
+        <p class="fraco">O que realmente saiu: milhas ao custo real de cada programa, passagens pagas e taxas. ${G.comprados} ${G.comprados === 1 ? 'trecho comprado' : 'trechos comprados'}${G.planejados ? `; ${G.planejados} ainda ${G.planejados === 1 ? 'planejado fica' : 'planejados ficam'} de fora` : ''}.</p></div>
+      <div class="ga-total"><span>Total</span><b>${brl(G.total)}</b>${pax > 1 ? `<em>${brl(G.total / pax)} por pessoa</em>` : ''}</div>
+    </div>
+    <div class="ga-barra" role="img" aria-label="Composição do gasto">${partes.filter(x => x.v > 0).map((x, i) => `<i style="--c:${x.cor};--w:${pct(x.v).toFixed(2)}%;--i:${i}" data-dica="${esc(x.rot)}: ${esc(brl(x.v))} (${Math.round(pct(x.v))}%)"></i>`).join('')}</div>
+    <div class="ga-itens">${partes.map(x => `<div class="ga-item">
+        <span class="ga-ponto" style="--c:${x.cor}">${x.disco ? discoProg(x.disco, 'p') : ''}</span>
+        <div class="ga-txt"><b>${esc(x.rot)}</b><span>${esc(x.det)}</span></div>
+        <div class="ga-val"><b>${x.v > 0 ? brl(x.v) : '—'}</b><span>${x.v > 0 ? Math.round(pct(x.v)) + '%' : ''}</span></div>
+      </div>`).join('')}</div>
+    ${G.semCusto.length ? `<p class="ga-nota">Sem custo lançado em ${G.semCusto.map(pg => esc(prog(pg).n)).join(', ')}: essas milhas entram no total quando houver compra registrada no Diário.</p>` : ''}
+  </div>`;
+}
 function renderTrechos(p){
   const host = $('#rtPlano'); if (!host) return;
   const ts = ordenarTrechos(trechosDe(p));
@@ -24594,7 +24677,8 @@ function renderTrechos(p){
         ${dinheiro ? `<span><b>${brl(dinheiro)}</b> em dinheiro</span>` : ''}${taxas ? `<span><b>${brl(taxas)}</b> de taxas</span>` : ''}
         ${(ms => ms.length ? `<span>Contra o mais barato do mercado <b class="${soma(ms.map(x => x.valor)) >= 0 ? 'jade' : 'brasa'}">${brl(soma(ms.map(x => x.valor)))}</b>${ms.length < ts.length ? ` <em class="fraco">(${ms.length} de ${ts.length} trechos)</em>` : ''}</span>` : '')(ts.map(economiaMercado).filter(Boolean))}
         <span class="esticar"></span><span>Economia da viagem <b class="${eco >= 0 ? 'jade' : 'brasa'}">${brl(eco)}</b>${comUp.length ? ` <em class="fraco">(antes dos upgrades ${brl(ecoAntes)})</em>` : ''}</span>
-      </div>`
+      </div>
+      ${gastoAteAgoraHTML(p, ts)}`
     : `<div class="vazio" style="border:0;padding:26px"><p>Nenhum trecho ainda. Lance cada voo: a ida, os internos e a volta, cada um com o que vai ser usado para pagar.</p></div>`}
   </div>`;
 }
@@ -25117,12 +25201,12 @@ function editarTrecho(id){
       <div class="campo tr-mi"><label>Milhas (total)</label><input type="number" id="trMilhas" step="1000" value="${t.milhas || ''}"></div>
       <div class="campo tr-mi"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxas" value="${moedaTxt(t.taxas || 0)}"></div>
       <div class="campo tr-di"><label>Pago em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trPago" value="${moedaTxt(t.pago || 0)}"></div>
+      <div class="campo tr-sem"><label>Taxas incluídas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxasDin" value="${moedaTxt(Number(t.taxasDinheiro) || 0)}"></div>
       <div class="campo tr-mi"><label>Preço do voo em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trVista" value="${moedaTxt(t.vista || 0)}"></div>
       <div class="campo tr-alt"><label>Em milhas custaria</label><input type="number" id="trAltMilhas" step="1000" value="${t.altMilhas || ''}" placeholder="Milhas"></div>
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
       <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
       <div class="campo tr-sem"><label for="trSemAlt">Opção em milhas</label><label class="ck cd-caixa"><input type="checkbox" id="trSemAlt"${t.semAlt ? ' checked' : ''}> Não havia</label></div>
-      <input type="hidden" id="trTaxasDin" value="${Number(t.taxasDinheiro) || 0}">
       <div class="campo"><label>Cartão que pagou</label><select id="trCartao" data-ordem="natural"><option value="">Não foi no cartão</option>${(DB.cartoes || []).filter(c => c.ativo !== false || c.id === t.cartaoId).map(c => `<option value="${c.id}"${c.id === t.cartaoId ? ' selected' : ''}>${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · final ' + esc(c.final) : ''}</option>`).join('')}</select></div>
       ${campoParcelas('trParcelas', t.parcelas || 1)}
       <div class="campo"><label>Data da compra</label><input type="date" id="trDataCompra" value="${t.dataCompra || ''}"></div>
@@ -25180,7 +25264,7 @@ function editarTrecho(id){
     $$('.tr-outro').forEach(e => e.style.display = $('#trBase').value === 'outro' ? '' : 'none');
   };
   ['#trProg', '#trAltProg', '#trBase'].forEach(sel => $(sel).addEventListener('change', montarBase));
-  ligarCampoMoeda('#trCortValor');
+  ligarCampoMoeda('#trCortValor'); ligarCampoMoeda('#trTaxasDin');
   const verCartao = () => { const tem = !!$('#trCartao').value; $('#trParcelas').disabled = !tem; $$('.parc-bt[data-parc="trParcelas"]').forEach(b => b.disabled = !tem); if (!tem) $('#trParcelas').value = 1; };
   $('#trCartao').addEventListener('change', verCartao); verCartao();
   /* Com o valor em branco, a Torre mostra o que vai usar: o que a cortesia
@@ -25211,7 +25295,7 @@ function editarTrecho(id){
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
-      taxasDinheiro:f === 'dinheiro' ? (Number($('#trTaxasDin').value) || 0) : 0,
+      taxasDinheiro:f === 'dinheiro' ? moedaNum($('#trTaxasDin').value) : 0,
       cartaoId:$('#trCartao').value, parcelas:$('#trCartao').value ? (Number($('#trParcelas').value) || 1) : 1, dataCompra:$('#trDataCompra').value,
       cortesiaQtd:Number($('#trCortQtd').value) || 0, cortesiaValor:Number($('#trCortQtd').value) ? moedaNum($('#trCortValor').value) : 0,
       cortesiaOrigem:Number($('#trCortQtd').value) ? $('#trCortOrigem').value : '',
@@ -25228,6 +25312,7 @@ function editarTrecho(id){
       if (custoR != null && novo.milheiroOutro < custoR){ erroNoCampo('#trOutro', `A cotação não pode ficar abaixo do custo real das milhas (${brl2(custoR)} por mil).`); return; }
     }
     if (f === 'dinheiro' && !(novo.pago > 0)){ erroNoCampo('#trPago', 'Informe quanto foi pago em dinheiro.'); return; }
+    if (f === 'dinheiro' && novo.taxasDinheiro > novo.pago){ erroNoCampo('#trTaxasDin', 'As taxas incluídas não podem passar do valor pago.'); return; }
     if (f !== 'dinheiro' && !(novo.milhas > 0)){ erroNoCampo('#trMilhas', 'Informe as milhas do trecho.'); return; }
     const outros = trechosDe(p).filter(x => x.id !== novo.id);
     if (outros.some(x => x.origem === novo.origem && x.destino === novo.destino && x.data === novo.data)){
@@ -25833,7 +25918,7 @@ function aplicarLeituraPrints(){
   }
   $('#trBase').value = base; $('#trBase').dispatchEvent(new Event('change'));
   /* taxas do bilhete pago em dinheiro (estão dentro do total; ficam guardadas para a agenda) */
-  if (f === 'dinheiro' && taxasDinLidas && $('#trTaxasDin')) $('#trTaxasDin').value = taxasDinLidas;
+  if (f === 'dinheiro' && taxasDinLidas && $('#trTaxasDin')) $('#trTaxasDin').value = moedaTxt(taxasDinLidas);
   /* Pagamento lido: o cartão pelo final e as parcelas. */
   if (pgLido && pgLido.cartao_final){
     const c = (DB.cartoes || []).find(x => String(x.final || '') === String(pgLido.cartao_final));
@@ -28713,7 +28798,9 @@ function oQueCurto(desc){
   const rota = partes[0] || desc || '', cia = partes[1] || '', resto = partes.slice(2).join(' · ');
   const pg = progDaCia(cia);
   const marca = cia ? (pg ? discoProg(pg, 'p oq-marca', cia) : `<span class="oq-cia"> · ${esc(cia)}</span>`) : '';
-  return `<span class="oq-curto"><b>${esc(rota)}</b>${marca}${resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : ''}</span>`;
+  const info = resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : '';
+  /* a rota à esquerda; a marca da companhia e o "i" juntos, encostados à direita da célula */
+  return `<span class="oq-curto"><b>${esc(rota)}</b>${marca || info ? `<span class="oq-dir">${marca}${info}</span>` : ''}</span>`;
 }
 function apagarTrechoDaAgenda(planoId, trechoId){
   const p = (DB.planos || []).find(x => x.id === planoId); const t = p && trechosDe(p).find(x => x.id === trechoId); if (!t) return;
@@ -28770,8 +28857,8 @@ function renderViagens(){
         <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">em dinheiro</div></td>
         <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Voo</span></td>
         <td class="n"><span class="fraco">—</span></td>
-        <td class="n">${brl(r.pago)}</td>
-        <td class="n">${r.taxas ? brl(r.taxas) : '<span class="fraco" data-dica="Incluídas no valor pago em dinheiro">—</span>'}</td>
+        <td class="n"${r.taxas ? ` data-dica="Tarifa. Com as taxas, o total pago foi ${esc(brl(r.pago))}"` : ' data-dica="Total pago; as taxas não foram informadas no trecho"'}>${brl(r.pago - (r.taxas || 0))}</td>
+        <td class="n">${r.taxas ? brl(r.taxas) : '<span class="fraco" data-dica="Informe as taxas incluídas no trecho (lápis)">—</span>'}</td>
         <td class="c"><span class="etq aco">${esc(r.plano)}</span></td>
         <td><div class="acoes-cel">
           <button class="bt p primario" onclick="trechoJaOcorreu('${r.planoId}','${r.trechoId}')" data-dica="Marcar o trecho como voado"><svg><use href="#i-ok"/></svg>Já ocorreu</button>
