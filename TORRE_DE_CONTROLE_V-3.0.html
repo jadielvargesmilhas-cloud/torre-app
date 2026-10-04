@@ -8809,7 +8809,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 10:05';
+const BUILD = '2026-10-05 10:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -28795,7 +28795,8 @@ const CIA_PARA_PROG = [[/^azul/i, 'azul'], [/^gol/i, 'smiles'], [/^latam/i, 'lat
 const progDaCia = nome => { const x = CIA_PARA_PROG.find(([re]) => re.test(String(nome || '').trim())); return x && PROGRAMAS[x[1]] ? x[1] : ''; };
 function oQueCurto(desc){
   const partes = String(desc || '').split(' · ').map(x => x.trim()).filter(Boolean);
-  const rota = partes[0] || desc || '', cia = partes[1] || '', resto = partes.slice(2).join(' · ');
+  /* no "i", "voo"/"voos" começam com maiúscula: "Voos 4997 e 8002 · via REC" */
+  const rota = partes[0] || desc || '', cia = partes[1] || '', resto = partes.slice(2).map(x => x.replace(/^voo(s?)\b/i, 'Voo$1')).join(' · ');
   const pg = progDaCia(cia);
   const marca = cia ? (pg ? discoProg(pg, 'p oq-marca', cia) : `<span class="oq-cia"> · ${esc(cia)}</span>`) : '';
   const info = resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : '';
