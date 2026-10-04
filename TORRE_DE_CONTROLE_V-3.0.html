@@ -8809,7 +8809,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 10:10';
+const BUILD = '2026-10-05 10:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24563,6 +24563,17 @@ function ordenarTrechos(lista){
    alvo nem a cotação), as passagens pagas em dinheiro, as taxas e o que o
    upgrade custou. Trecho só planejado ainda não gastou nada e fica de fora,
    avisado embaixo. */
+/* Taxas de um bilhete pago em dinheiro: as informadas no trecho; se não
+   foram informadas, as do mesmo voo que já estão no próprio trecho, no campo
+   "Com taxas de" da opção em milhas (taxa de embarque e de serviço são do voo,
+   não da forma de pagamento). Devolve o valor e de onde ele veio. */
+function taxasDoTrechoDinheiro(t){
+  const proprias = Number(t.taxasDinheiro) || 0;
+  if (proprias > 0) return {v:proprias, origem:'informadas'};
+  const alt = !t.semAlt ? Number(t.altTaxas) || 0 : 0;
+  if (alt > 0 && alt < (Number(t.pago) || 0)) return {v:alt, origem:'do mesmo voo, na opção em milhas'};
+  return {v:0, origem:''};
+}
 function gastoDaViagem(ts){
   const comprados = ts.filter(t => (t.situacao || 'planejado') !== 'planejado');
   const porProg = {}; let passagens = 0, taxas = 0, semCusto = [];
@@ -24575,7 +24586,7 @@ function gastoDaViagem(ts){
   };
   comprados.forEach(t => {
     if (t.forma === 'dinheiro'){
-      const tx = Number(t.taxasDinheiro) || 0;
+      const tx = taxasDoTrechoDinheiro(t).v;
       passagens += (Number(t.pago) || 0) - tx; taxas += tx;
     } else {
       somaMilhas(t.prog, Number(t.milhas) || 0);
@@ -25045,7 +25056,7 @@ async function lerDocumentosEmissao(arquivos){
     const hora = seg.linhas.length ? seg.linhas[0].split(' ')[4].replace(/(\d{2})(\d{2})/, '$1:$2') : ((seg.horas || [])[0] || '').padStart(5, '0').replace(/^0+:/, '00:');
     const voos = (d.voos || []).map(v => v.voo).filter(Boolean);
     const escalas = (d.voos || []).slice(0, -1).map(v => v.destino);
-    const desc = [d.origem && d.destino ? `${d.origem} → ${d.destino}` : '', d.cia || '', voos.length ? 'voo' + (voos.length > 1 ? 's ' : ' ') + voos.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : '', d.localizador || ''].filter(Boolean).join(' · ');
+    const desc = [d.origem && d.destino ? `${d.origem} → ${d.destino}` : '', d.cia || '', voos.length ? 'Voo' + (voos.length > 1 ? 's ' : ' ') + voos.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : '', d.localizador || ''].filter(Boolean).join(' · ');
     const pg = d.pagamento || {}, mi = d.milhas || {};
     const pre = {criada:emissao, data:d.data || '', hora, desc, prog:(mi.programa || '') || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : ''),
       milhas:pg.pontos || mi.pontos || atual.milhas || 0, taxas:pg.dinheiro != null ? pg.dinheiro : (mi.taxas || atual.taxas || 0), vista:(d.dinheiro && d.dinheiro.total) || 0, itin:seg.linhas.join('\n')};
@@ -25201,7 +25212,7 @@ function editarTrecho(id){
       <div class="campo tr-mi"><label>Milhas (total)</label><input type="number" id="trMilhas" step="1000" value="${t.milhas || ''}"></div>
       <div class="campo tr-mi"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxas" value="${moedaTxt(t.taxas || 0)}"></div>
       <div class="campo tr-di"><label>Pago em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trPago" value="${moedaTxt(t.pago || 0)}"></div>
-      <div class="campo tr-sem"><label>Taxas incluídas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxasDin" value="${moedaTxt(Number(t.taxasDinheiro) || 0)}"></div>
+      <div class="campo tr-sem"><label>Taxas incluídas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxasDin" value="${moedaTxt(taxasDoTrechoDinheiro(t).v)}"></div>
       <div class="campo tr-mi"><label>Preço do voo em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trVista" value="${moedaTxt(t.vista || 0)}"></div>
       <div class="campo tr-alt"><label>Em milhas custaria</label><input type="number" id="trAltMilhas" step="1000" value="${t.altMilhas || ''}" placeholder="Milhas"></div>
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
@@ -25769,7 +25780,7 @@ function desenharRevisaoPrints(){
   _leitura.fontes = divergente ? {busca:{pts, taxas:txM + extraM}, pagamento:{pts:Number(pg.pontos) || pts, taxas:Number(pg.dinheiro) || 0}} : null;
   const pre = {
     origem:(d.origem || (voos[0] || {}).origem || '').toUpperCase(), destino:(d.destino || (voos[voos.length - 1] || {}).destino || '').toUpperCase(),
-    data:d.data || (voos[0] || {}).data || '', cia:[cia, numeros.length ? 'voo' + (numeros.length > 1 ? 's ' : ' ') + numeros.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : ''].filter(Boolean).join(' · '),
+    data:d.data || (voos[0] || {}).data || '', cia:[cia, numeros.length ? 'Voo' + (numeros.length > 1 ? 's ' : ' ') + numeros.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : ''].filter(Boolean).join(' · '),
     forma:formaSug, prog:progId, milhas:pagoPts || '', taxas:formaSug === 'dinheiro' ? 0 : (pagoDin != null && formaSug === 'milhas' ? pagoDin : txM),
     pago:formaSug === 'dinheiro' ? totalDin : formaSug === 'misto' ? (pagoDin || extraM) : 0,
     vista:totalDin || '', altMilhas:formaSug === 'dinheiro' ? pts : '', altTaxas:formaSug === 'dinheiro' ? txM : 0, loc:d.localizador || ''
@@ -27014,7 +27025,7 @@ function trechosEmDinheiroNaAgenda(esc){
   return (DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(p => trechosDe(p)
     .filter(t => t.forma === 'dinheiro' && t.situacao !== 'voado' && !t.reservaId)
     .map(t => ({trecho:true, id:'t:' + p.id + ':' + t.id, planoId:p.id, trechoId:t.id, data:t.data, hora:horaDoTrecho(t),
-      desc:[rotuloTrecho(t), t.cia].filter(Boolean).join(' · '), pago:Number(t.pago) || 0, taxas:Number(t.taxasDinheiro) || 0, plano:p.nome})));
+      desc:[rotuloTrecho(t), t.cia].filter(Boolean).join(' · '), pago:Number(t.pago) || 0, taxas:taxasDoTrechoDinheiro(t).v, taxasOrigem:taxasDoTrechoDinheiro(t).origem, plano:p.nome})));
 }
 function numerosViagens(esc){
   const sal = saldoPorPrograma();
@@ -28859,7 +28870,7 @@ function renderViagens(){
         <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Voo</span></td>
         <td class="n"><span class="fraco">—</span></td>
         <td class="n"${r.taxas ? ` data-dica="Tarifa. Com as taxas, o total pago foi ${esc(brl(r.pago))}"` : ' data-dica="Total pago; as taxas não foram informadas no trecho"'}>${brl(r.pago - (r.taxas || 0))}</td>
-        <td class="n">${r.taxas ? brl(r.taxas) : '<span class="fraco" data-dica="Informe as taxas incluídas no trecho (lápis)">—</span>'}</td>
+        <td class="n">${r.taxas ? `<span${r.taxasOrigem && r.taxasOrigem !== 'informadas' ? ` data-dica="Taxas ${esc(r.taxasOrigem)}"` : ''}>${brl(r.taxas)}</span>` : '<span class="fraco" data-dica="Informe as taxas incluídas no trecho (lápis)">—</span>'}</td>
         <td class="c"><span class="etq aco">${esc(r.plano)}</span></td>
         <td><div class="acoes-cel">
           <button class="bt p primario" onclick="trechoJaOcorreu('${r.planoId}','${r.trechoId}')" data-dica="Marcar o trecho como voado"><svg><use href="#i-ok"/></svg>Já ocorreu</button>
@@ -29186,6 +29197,16 @@ function mexerSaldo(contaId, prog, delta){
 /* As milhas saem da conta no dia da emissão, não no dia do voo. Com a data do
    voo, o resgate ficava como "ainda vai acontecer" por meses: o saldo já tinha
    baixado, mas o custo médio e o Diário fingiam que não. */
+/* Regra de texto: "Voo" e "Voos" começam com maiúscula quando abrem uma parte
+   da descrição ("Azul · Voos 4997 e 8002 · via REC"). Corrige o que já estava
+   gravado; seguro de repetir. */
+function corrigirMaiusculaVoo(){
+  const ajusta = t => String(t || '').replace(/(^|·\s)voo(s?)\b/g, '$1Voo$2');
+  let mudou = false;
+  (DB.reservas || []).forEach(r => { const n = ajusta(r.desc); if (r.desc && n !== r.desc){ r.desc = n; mudou = true; } });
+  (DB.planos || []).forEach(p => (p.trechos || []).forEach(t => { const n = ajusta(t.cia); if (t.cia && n !== t.cia){ t.cia = n; mudou = true; } }));
+  if (mudou) salvar();
+}
 function dataDaSaidaDaEmissao(r){
   if (r.criada) return String(r.criada).slice(0, 10);
   const h = hojeISO();
@@ -34632,6 +34653,7 @@ const RENDER = { mesa:() => { renderMesa(); renderVender(); renderLancamentos();
 function aplicarTudo(){
   aplicarCondicoesCampanhas();
   corrigirDatasDasSaidasDeEmissao();
+  corrigirMaiusculaVoo();
   sincronizarJornadas();
   setTimeout(ajustarLarguraMenu, 0);
   document.documentElement.dataset.theme = DB.cfg.tema || 'breu';
