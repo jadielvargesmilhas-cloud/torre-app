@@ -8772,7 +8772,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 05:40';
+const BUILD = '2026-10-05 07:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -9475,7 +9475,7 @@ function validadePadrao(prog, entradaISO){
   if (!meses) return null;
   const d = entradaISO ? new Date(entradaISO + 'T12:00:00') : new Date();
   d.setMonth(d.getMonth() + meses);
-  return d.toISOString().slice(0, 10);
+  return isoLocal(d);
 }
 
 function loteProtegido(lote){
@@ -11039,9 +11039,13 @@ const DESTINOS = {
    ARMAZENAMENTO
    ══════════════════════════════════════════════════════════════════════════════ */
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-const hojeISO = () => new Date().toISOString().slice(0,10);
-const somaDias = (n, base) => { const d = base ? new Date(base+'T12:00:00') : new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
-const somaMeses = (n, base) => { const d = base ? new Date(base+'T12:00:00') : new Date(); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); };
+/* A data de hoje é a do relógio de quem usa, não a de Greenwich. Com
+   toISOString, a partir das 21h no Brasil (UTC−3) "hoje" já virava amanhã, e
+   todo lançamento feito à noite nascia com a data errada. */
+const isoLocal = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const hojeISO = () => isoLocal(new Date());
+const somaDias = (n, base) => { const d = base ? new Date(base+'T12:00:00') : new Date(); d.setDate(d.getDate()+n); return isoLocal(d); };
+const somaMeses = (n, base) => { const d = base ? new Date(base+'T12:00:00') : new Date(); d.setMonth(d.getMonth()+n); return isoLocal(d); };
 
 function bancoVazio(){
   return {
@@ -24496,9 +24500,29 @@ function abrirJornadaDaMeta(idMeta){
   if (p){ filtroRoteiro = 'todas'; abrirRoteiroViagem(p.id); }
 }
 /* A lista de trechos da viagem: cada voo, como foi pago, a situação e a economia. */
+/* Ordem dos trechos: pela data; no mesmo dia, pela hora do voo (a do trecho ou
+   a da emissão ligada a ele); sem hora, pela emenda da viagem: o trecho que
+   chega onde o outro parte vem antes (BER → LIS antes de LIS → SSA). */
+function horaDoTrecho(t){
+  if (t.hora) return t.hora;
+  const r = t.reservaId && (DB.reservas || []).find(x => x.id === t.reservaId);
+  if (r && r.hora) return r.hora;
+  const m = String((r && r.itin) || '').match(/\b(\d{2})(\d{2})\b(?=\s+\d{4})/);
+  return m ? `${m[1]}:${m[2]}` : '';
+}
+function ordenarTrechos(lista){
+  return lista.slice().map((t, i) => ({t, i, h:horaDoTrecho(t)})).sort((A, B) => {
+    const a = A.t, b = B.t;
+    const d = (a.data || '').localeCompare(b.data || ''); if (d) return d;
+    if (A.h && B.h && A.h !== B.h) return A.h.localeCompare(B.h);
+    if (a.destino && a.destino === b.origem && b.destino !== a.origem) return -1;
+    if (b.destino && b.destino === a.origem && a.destino !== b.origem) return 1;
+    return A.i - B.i;
+  }).map(x => x.t);
+}
 function renderTrechos(p){
   const host = $('#rtPlano'); if (!host) return;
-  const ts = trechosDe(p).slice().sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  const ts = ordenarTrechos(trechosDe(p));
   const porProg = {};
   ts.filter(t => t.forma !== 'dinheiro').forEach(t => { porProg[t.prog] = (porProg[t.prog] || 0) + (Number(t.milhas) || 0); });
   const dinheiro = soma(ts.map(t => (Number(t.pago) || 0)));
@@ -26170,7 +26194,7 @@ function editarPlanoViagem(id){
     <!-- Trechos: cada voo com a sua forma de pagamento. São lançados na aba Trechos
          da jornada, que abre sozinha depois de salvar uma jornada nova. -->
     <div class="olho anil" style="margin:22px 0 8px">Trechos da viagem</div>
-    ${trechosDe(p).length ? `<div class="pv-trechos">${trechosDe(p).slice().sort((a, b) => (a.data || '').localeCompare(b.data || '')).map(t =>
+    ${trechosDe(p).length ? `<div class="pv-trechos">${ordenarTrechos(trechosDe(p)).map(t =>
         `<div><b>${esc(rotuloTrecho(t))}</b><span>${t.data ? dataBR(t.data) : ''}</span><span>${t.forma === 'dinheiro' ? 'dinheiro, ' + brl(t.pago || 0) : nBR(t.milhas || 0) + ' milhas ' + esc(prog(t.prog).n) + (t.forma === 'misto' ? ' + ' + brl(t.pago || 0) : '')}</span></div>`).join('')}</div>
       <p class="fraco" style="font-size:calc(13px * var(--esc));margin:8px 0 0">Programa e milhas necessárias são calculados pelos trechos. Para incluir, mudar ou apagar um trecho, use a aba <b>Trechos</b> da jornada.</p>`
     : `<div class="nota" style="margin:0"><svg><use href="#i-info"/></svg><div class="pilha compacta">
@@ -26867,6 +26891,15 @@ const escopoViagem = r => {
 };
 
 /* Números de um lado (ou de todos, com escopo nulo). */
+/* Trechos de jornada comprados em dinheiro não viram emissão (não há milha a
+   descontar), mas são viagem marcada: entram na agenda de Resultados até serem
+   voados. Cada um vira uma linha com o que foi pago. */
+function trechosEmDinheiroNaAgenda(esc){
+  return (DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(p => trechosDe(p)
+    .filter(t => t.forma === 'dinheiro' && t.situacao !== 'voado' && !t.reservaId)
+    .map(t => ({trecho:true, id:'t:' + p.id + ':' + t.id, planoId:p.id, trechoId:t.id, data:t.data, hora:horaDoTrecho(t),
+      desc:[rotuloTrecho(t), t.cia].filter(Boolean).join(' · '), pago:Number(t.pago) || 0, plano:p.nome})));
+}
 function numerosViagens(esc){
   const sal = saldoPorPrograma();
   const metas = (DB.metas || []).filter(m => !esc || escopoMeta(m) === esc);
@@ -26888,7 +26921,7 @@ function numerosViagens(esc){
       + soma((DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
           .filter(t => t.forma === 'dinheiro' && t.situacao === 'voado').map(t => economiaTrecho(t).valor).filter(v => v != null)),
     medio: milhas && liquido ? liquido / milhas * 1000 : 0,
-    agenda:viagens.filter(r => r.status !== 'usada').length
+    agenda:viagens.filter(r => r.status !== 'usada').length + trechosEmDinheiroNaAgenda(esc).length
   };
 }
 
@@ -28625,6 +28658,24 @@ function renderHospedagens(){
     : `<div class="vazio"><p>Nenhum registro de hospedagem${emAno !== 'todos' ? ' em ' + emAno : ''}. Ao registrar um resgate, escolha o tipo Hospedagem.</p></div>`;
 }
 
+/* Mesma regra dos trechos: data; no mesmo dia, a hora quando as duas existem;
+   sem ela, a emenda da viagem lida na descrição (BER → LIS antes de LIS → SSA). */
+function ordemNaAgenda(a, b){
+  const d = (a.data || '').localeCompare(b.data || ''); if (d) return d;
+  if (a.hora && b.hora && a.hora !== b.hora) return a.hora.localeCompare(b.hora);
+  const rota = x => { const m = String(x.desc || '').match(/([A-Z]{3})\s*[→>-]\s*([A-Z]{3})/); return m ? [m[1], m[2]] : null; };
+  const ra = rota(a), rb = rota(b);
+  if (ra && rb){ if (ra[1] === rb[0] && rb[1] !== ra[0]) return -1; if (rb[1] === ra[0] && ra[1] !== rb[0]) return 1; }
+  return 0;
+}
+function trechoJaOcorreu(planoId, trechoId){
+  const p = (DB.planos || []).find(x => x.id === planoId); const t = p && trechosDe(p).find(x => x.id === trechoId); if (!t) return;
+  t.situacao = 'voado'; salvar(); renderViagens(); avisar(`${rotuloTrecho(t)} marcado como voado.`, 'ok');
+}
+function abrirTrechoDaAgenda(planoId, trechoId){
+  irPara('rota'); irParaAba('rota', 'rt-plano');
+  setTimeout(() => { abrirRoteiroViagem(planoId); modoRoteiro = 'trechos'; renderPlano(); editarTrecho(trechoId); }, 60);
+}
 function renderViagens(){
   const T = numerosViagens(null), N = numerosViagens('nac'), I = numerosViagens('int');
   if ($('#contViagens')) $('#contViagens').textContent = T.viagens.length;
@@ -28633,7 +28684,9 @@ function renderViagens(){
   const X = geral ? T : filtroViagens === 'nac' ? N : I;
   const todas = X.viagens;
   const feitas = todas.filter(r => r.status === 'usada');
-  const agenda = todas.filter(r => r.status !== 'usada').sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  const agenda = todas.filter(r => r.status !== 'usada')
+    .concat(trechosEmDinheiroNaAgenda(geral ? null : filtroViagens))
+    .sort(ordemNaAgenda);
 
   $('#viResumo').innerHTML = `
     ${metrica('Viagens realizadas', String(X.feitas.length), X.agenda ? `${X.agenda} reservada${X.agenda > 1 ? 's' : ''} à frente` : 'Nada reservado à frente', '')}
@@ -28659,6 +28712,17 @@ function renderViagens(){
     <thead><tr><th class="c">Data</th><th>O quê</th><th class="c">Tipo</th><th class="n">Milhas</th><th class="n">Taxas</th><th>Meta</th><th></th></tr></thead>
     <tbody>${agenda.map(r => {
       const d = diasAte(r.data);
+      if (r.trecho) return `<tr>
+        <td class="c">${dataBR(r.data)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${d === null ? '' : prazoTexto(d)}</div></td>
+        <td><b>${esc(r.desc)}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">em dinheiro</div></td>
+        <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Voo</span></td>
+        <td class="n"><span class="fraco">—</span></td>
+        <td class="n" data-dica="Pago em dinheiro">${brl(r.pago)}<div class="fraco" style="font-size:calc(11.5px * var(--esc))">pago, não é taxa</div></td>
+        <td><span class="etq aco">${esc(r.plano)}</span></td>
+        <td><div class="acoes-cel">
+          <button class="bt p primario" onclick="trechoJaOcorreu('${r.planoId}','${r.trechoId}')" data-dica="Marcar o trecho como voado"><svg><use href="#i-ok"/></svg>Já ocorreu</button>
+          <button class="bt p fantasma icone" onclick="abrirTrechoDaAgenda('${r.planoId}','${r.trechoId}')" data-dica="Abrir o trecho na jornada"><svg><use href="#i-lapis"/></svg></button>
+        </div></td></tr>`;
       const meta = DB.metas.find(m => m.id === r.metaId);
       const t = TIPOS_VIAGEM[r.tipo] || TIPOS_VIAGEM.voo;
       return `<tr>
