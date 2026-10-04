@@ -7486,11 +7486,28 @@ table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]::
 table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]{ flex:1 1 calc(50% - 16px); position:static; min-width:0; }
 
 /* trecho: rota, logo da companhia, "i" com os voos e o localizador, numa linha */
-.tr-linha{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.tr-linha{ display:inline-flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; max-width:100%; }
+.tr-linha *, table.tb-cartao.em-cartao td .tr-linha *{ white-space:nowrap; }
+.tr-linha > b{ flex-shrink:0; }
+/* no celular, o trecho ocupa a largura toda do cartão para caber numa linha só */
+@media (max-width:560px){ table.tb-trechos.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td[data-r="Trecho"]{ grid-column:1 / -1; } }
 .tr-cia{ display:inline-flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 .tr-cia .info-i{ margin-left:0; }
 .tr-ponto{ color:var(--grafite-dim); }
 .tr-loc{ font-family:var(--f-m); letter-spacing:.04em; }
+
+/* etiqueta longa no cabeçalho da economia ("falta preço de comparação em 2 trechos") quebra em vez de empurrar a tela para o lado no celular */
+.ee-cab .etq{ white-space:normal; height:auto; max-width:100%; line-height:1.35; padding-top:3px; padding-bottom:3px; }
+
+.tr-parcela{ display:flex; align-items:center; gap:7px; font-size:calc(12px * var(--esc)); margin-top:4px; white-space:nowrap; }
+.tr-parcela .tr-cartao{ margin-left:0; width:20px; height:20px; }
+.tr-parcela .tr-cartao svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+
+/* trecho no cartão: sempre com o rótulo em cima e a linha à esquerda (antes um
+   cartão alinhava à esquerda e o seguinte à direita, conforme a medida) */
+table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"]{ padding-left:0; padding-top:7px; text-align:left; }
+table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"]::before{ position:static; display:block; width:auto; margin-bottom:5px; }
+table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"] .up-cab{ justify-content:flex-start; }
 </style>
 </head>
 <body>
@@ -9269,7 +9286,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 06:40';
+const BUILD = '2026-10-07 07:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25492,7 +25509,10 @@ function renderTrechos(p){
           ${vooDoTrecho(t) ? `<button type="button" class="rs-voo-bt${vooTrechoAberto.has(t.id) ? ' aberto' : ''}" onclick="alternarVooTrecho('${t.id}')"><svg><use href="#i-aviao"/></svg><span>${vooTrechoAberto.has(t.id) ? 'Ocultar o voo' : 'Ver o voo'}</span><svg class="seta"><use href="#i-baixo"/></svg></button>` : ''}</td>
         <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq">dinheiro</span> <span class="tr-pg-val">${brl(t.pago || 0)}</span>`
           : `<span class="etq aco">${esc(prog(t.prog).n)}</span> <span class="tr-pg-val">${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}</span>`}
-          ${(c => c ? `<div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:3px">${(Number(t.parcelas) || 1) > 1 ? `${t.parcelas}x de ${brl(valorCobradoTrecho(t) / t.parcelas)}` : `${brl(valorCobradoTrecho(t))} à vista`} no ${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · ' + esc(c.final) : ''}</div>` : '')((DB.cartoes || []).find(c => c.id === t.cartaoId))}</td>
+          ${(c => { if (!c) return '';
+            /* o valor fica à vista; o cartão vira um ícone, e o nome dele aparece ao passar o mouse (ou tocar) */
+            const nome = `${c.banco} ${c.produto}${c.final ? ' · ' + c.final : ''}`;
+            return `<div class="fraco tr-parcela">${(Number(t.parcelas) || 1) > 1 ? `${t.parcelas}x de ${brl(valorCobradoTrecho(t) / t.parcelas)}` : `${brl(valorCobradoTrecho(t))} à vista`}<span class="info-i tr-cartao" tabindex="0" data-dica="${esc(nome)}" aria-label="${esc(nome)}"><svg><use href="#i-cartao"/></svg></span></div>`; })((DB.cartoes || []).find(c => c.id === t.cartaoId))}</td>
         <td class="c" data-r="Situação"><button type="button" class="etq ${sit === 'voado' ? 'jade' : sit === 'emitido' ? 'ouro' : ''} rt-sit" onclick="avancarTrecho('${t.id}')" data-dica="Tocar para avançar a situação">${SITUACOES_TRECHO[sit]}</button></td>
         <td class="n" data-r="Economia">${e.valor == null ? `<span class="fraco" data-dica="${esc(e.nota)}">n/d</span>` : `<span class="${e.valor >= 0 ? 'jade' : 'brasa'}">${e.valor >= 0 ? '' : '−'}${brl(Math.abs(e.valor))}</span><div class="fraco" style="font-size:calc(11.5px * var(--esc))">${esc(e.nota)}</div>`}
           ${t.upgrade ? (eb => eb.valor != null ? `<div class="up-antes">antes ${eb.valor >= 0 ? '' : '−'}${brl(Math.abs(eb.valor))}</div>` : '')(economiaTrechoBase(t)) : ''}
