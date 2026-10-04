@@ -7484,6 +7484,13 @@ table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td:empty{ dis
 table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]::before{
   content:attr(data-rt); display:block; position:static; width:auto; top:auto; left:auto; font-family:var(--f-b); font-size:calc(11.5px * var(--esc)); font-weight:500; color:var(--grafite-dim); margin-bottom:2px; }
 table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]{ flex:1 1 calc(50% - 16px); position:static; min-width:0; }
+
+/* trecho: rota, logo da companhia, "i" com os voos e o localizador, numa linha */
+.tr-linha{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.tr-cia{ display:inline-flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.tr-cia .info-i{ margin-left:0; }
+.tr-ponto{ color:var(--grafite-dim); }
+.tr-loc{ font-family:var(--f-m); letter-spacing:.04em; }
 </style>
 </head>
 <body>
@@ -9262,7 +9269,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 05:20';
+const BUILD = '2026-10-07 06:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25471,7 +25478,15 @@ function renderTrechos(p){
       <tbody>${ts.map(t => { const e = economiaTrecho(t); const sit = t.situacao || 'planejado';
         return `<tr>
         <td class="c" data-r="Data">${t.data ? dataBR(t.data) : 'n/d'}</td>
-        <td data-r="Trecho"><b>${esc(rotuloTrecho(t))}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(t.cia || '')}${t.loc ? ` · ${esc(t.loc)}` : ''}</div>
+        <td data-r="Trecho"><div class="tr-linha"><b>${esc(rotuloTrecho(t))}</b>${(() => {
+          /* companhia vira logo; o texto inteiro (voos, escala) vai para o "i" */
+          const nomeCia = String(t.cia || '').split(' · ')[0].trim();
+          const pc = nomeCia ? progDaCia(nomeCia) : '';
+          const logo = pc ? discoProg(pc, 'p tr-logo', nomeCia) : nomeCia ? `<span class="fraco">${esc(nomeCia)}</span>` : '';
+          /* o "i" só aparece quando há mais que o nome da companhia (voos, escala) */
+          const info = /\s·\s/.test(t.cia || '') ? `<span class="info-i" tabindex="0" data-dica="${esc(t.cia)}" aria-label="${esc(t.cia)}"><svg><use href="#i-info"/></svg></span>` : '';
+          return logo || info || t.loc ? `<span class="tr-cia">${logo}${info}${t.loc ? `<span class="tr-ponto">·</span><span class="tr-loc">${esc(t.loc)}</span>` : ''}</span>` : '';
+        })()}</div>
           <div class="up-cab">${t.upgrade ? `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span><svg><use href="#i-seta"/></svg><span class="etq jade">${CABINES_TRECHO[t.upgrade.cabine]}</span>`
             : `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span>`}</div>
           ${vooDoTrecho(t) ? `<button type="button" class="rs-voo-bt${vooTrechoAberto.has(t.id) ? ' aberto' : ''}" onclick="alternarVooTrecho('${t.id}')"><svg><use href="#i-aviao"/></svg><span>${vooTrechoAberto.has(t.id) ? 'Ocultar o voo' : 'Ver o voo'}</span><svg class="seta"><use href="#i-baixo"/></svg></button>` : ''}</td>
@@ -25938,8 +25953,9 @@ function alternarVooTrecho(id){ vooTrechoAberto.has(id) ? vooTrechoAberto.delete
 function vooDoTrecho(t){
   const rs = DB.reservas || [];
   const r = rs.find(x => x.id === t.reservaId) || (t.loc ? rs.find(x => String(x.loc || locDaDescricao(x.desc) || '').toUpperCase() === String(t.loc).toUpperCase()) : null);
-  if (!r || !r.itin) return null;
-  const todos = lerItinerario(r.itin, anoDe(r.data)) || [];
+  const fonte = r && r.itin ? {itin:r.itin, ano:anoDe(r.data)} : t.itin ? {itin:t.itin, ano:anoDe(t.data)} : null;
+  if (!fonte) return null;
+  const todos = lerItinerario(fonte.itin, fonte.ano) || [];
   if (!todos.length) return null;
   const o = String(t.origem || '').toUpperCase(), d = String(t.destino || '').toUpperCase();
   for (let i = 0; i < todos.length; i++){
@@ -26057,7 +26073,7 @@ function editarTrecho(id){
       <div class="tr-cort cort-calc" id="trCortCalc"></div>
       <div class="campo"><label>Milhas valem</label><select id="trBase" data-ordem="natural"></select></div>
       <div class="campo tr-outro"><label>Cotação (R$ por mil)</label><input type="text" inputmode="decimal" data-moeda id="trOutro" value="${moedaTxt(t.milheiroOutro || 0)}"></div>
-      <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"></div>
+      <div class="campo"><label>Localizador</label><input type="text" id="trLoc" value="${esc(t.loc || '')}" style="text-transform:uppercase" placeholder="ABC123"><input type="hidden" id="trItin" value="${esc(t.itin || '')}"></div>
       <div class="campo"><label>Situação</label><select id="trSit" data-ordem="natural">${Object.entries(SITUACOES_TRECHO).map(([k, v]) => `<option value="${k}"${k === (t.situacao || 'planejado') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
     </div>
     <div class="nota" id="trNota" style="margin-top:14px"><svg><use href="#i-info"/></svg><div id="trNotaTxt"></div></div>`,
@@ -26133,6 +26149,7 @@ function editarTrecho(id){
     const f = $('#trForma').value;
     const novo = {...t, id:t.id || uid(), origem:$('#trOri').value.toUpperCase().trim(), destino:$('#trDes').value.toUpperCase().trim(),
       data:$('#trData').value, cia:$('#trCia').value.trim(), forma:f, loc:$('#trLoc').value.toUpperCase().trim(), situacao:$('#trSit').value,
+      itin:($('#trItin') || {}).value || t.itin || '',
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
@@ -26293,6 +26310,12 @@ function interpretarTextosPrints(textos, ref){
   const tabOk = tab.length > 0 && tab.every(x => x.de && x.para);
   const iv = tabOk ? idaEVoltaDaTabela(tab) : null;
   let rota = tabOk ? [tab[0].de].concat(tab.map(x => x.para)) : null;
+  /* Voos completos (origem, destino e os dois horários de cada um) valem mais
+     que os códigos soltos entre parênteses: "Salvador (SSA)" e "Recife (REC)"
+     no cabeçalho faziam a rota virar SSA → REC, quando o destino era Porto. */
+  const cvPri = tabOk ? [] : cartoesDeVoo(textos);
+  const cvPriOk = cvPri.length > 0 && cvPri.every(x => x.de && x.para && x.dep && x.arr);
+  if (cvPriOk) rota = [cvPri[0].de].concat(cvPri.map(x => x.para));
   const calc = tabOk ? null : tudo.match(/Fare Calculation:\s*([^\n]+)/i);
   if (calc){ const cods = (calc[1].match(/(?<![A-Z])[A-Z]{3}(?![A-Z])/g) || []).filter(c => ehAero(c) && !/^(END|NUC|ROE|USD|BRL|EUR)$/.test(c)); if (cods.length >= 2) rota = cods; }
   if (!rota){
@@ -26317,7 +26340,7 @@ function interpretarTextosPrints(textos, ref){
       }
     }
   }
-  let cvRota = null;
+  let cvRota = cvPriOk ? cvPri : null;
   if (!rota){
     const cv = cartoesDeVoo(textos);
     if (cv.length && cv.every(x => x.de && x.para)){ cvRota = cv; rota = [cv[0].de].concat(cv.map(x => x.para)); }
@@ -26325,6 +26348,8 @@ function interpretarTextosPrints(textos, ref){
   if (rota && tabOk){
     d.origem = rota[0]; d.destino = iv ? iv.destino : rota[rota.length - 1];
     if (iv) d.volta = {data:iv.data, hora:iv.hora};
+  } else if (rota && cvPriOk){
+    d.origem = rota[0]; d.destino = rota[rota.length - 1];
   } else if (rota){
     d.origem = rota[0]; d.destino = rota[rota.length - 1];
     const meio = rota.slice(1, -1).concat(parent.filter(c => c !== d.origem && c !== d.destino));
@@ -26798,7 +26823,7 @@ function aplicarLeituraPrints(){
   const base = _leitura.base || 'custo', outro = _leitura.outro || 0;
   const pgLido = (_leitura.dados || {}).pagamento || null;
   const taxasDinLidas = (((_leitura.dados || {}).dinheiro) || {}).taxas || 0;
-  const pai = _leitura.pai; _leitura = null;
+  const pai = _leitura.pai, textosLidos = _leitura.textos || []; _leitura = null;
   devolverFolhaGuardada(pai);
   const set = (sel, val) => { const e = $(sel); if (e && val !== undefined && val !== null) e.value = val; };
   set('#trOri', v.ori); set('#trDes', v.des); set('#trData', v.data); set('#trCia', v.cia); set('#trLoc', v.loc);
@@ -26819,6 +26844,12 @@ function aplicarLeituraPrints(){
     if (c){ $('#trCartao').value = c.id; $('#trCartao').dispatchEvent(new Event('change')); if (pgLido.parcelas) $('#trParcelas').value = Math.min(PARC_MAX, pgLido.parcelas); }
   }
   if (base === 'outro') $('#trOutro').value = moedaTxt(outro);
+  /* os voos lidos (horários de cada um) ficam guardados no trecho: é deles que
+     sai o cartão do "Ver o voo" quando o trecho não tem emissão ligada */
+  try{
+    const seg = segmentosDoTexto(textosLidos, v.data || '');
+    if (seg.linhas && seg.linhas.length && $('#trItin')) $('#trItin').value = seg.linhas.join('\n');
+  }catch(e){}
   $('#folhaCorpo').dispatchEvent(new Event('input', {bubbles:true}));
   avisar('Formulário preenchido pelos prints. Confira e toque em Salvar.', 'ok', 6000);
 }
@@ -34868,6 +34899,24 @@ function cartoesDeVoo(textos){
       const x = {voo:mv[1], de:cidades[0] || '', para:cidades.length > 1 ? cidades[cidades.length - 1] : '', dep:dep.padStart(5, '0'), arr:arr.padStart(5, '0'), cab};
       if (!vistos[x.voo]){ vistos[x.voo] = x; ordem.push(x.voo); }
       else if (!vistos[x.voo].de || !vistos[x.voo].para) vistos[x.voo] = x;
+    });
+  });
+  /* Segundo formato: uma linha por voo com os códigos e os horários, "SSA •
+     15:35 ✈ REC • 16:55", e o número do voo ("Voo 4997") logo antes ou logo
+     depois. É o detalhe do voo no site da Azul. O leitor troca os símbolos por
+     lixo («, », +, )-), por isso entre código e hora vale qualquer coisa curta. */
+  if (!ordem.length) textos.forEach(t => {
+    const L = String(t || '').split('\n');
+    L.forEach((l, k) => {
+      const m = l.match(/\b([A-Z]{3})\b[^A-Za-z0-9]{0,8}(\d{1,2}:\d{2})\b.{0,14}?\b([A-Z]{3})\b[^A-Za-z0-9]{0,8}(\d{1,2}:\d{2})\b/);
+      if (!m || !AEROPORTOS[m[1]] || !AEROPORTOS[m[3]] || m[1] === m[3]) return;
+      const perto = [L[k], L[k + 1] || '', L[k - 1] || '', L[k + 2] || ''];
+      let voo = '';
+      for (const x of perto){ const mv = x.match(/\bVoo\s+(?:[A-Z]{2}\s?)?(\d{3,4})\b/i); if (mv && !Object.values(vistos).some(y => y.voo === mv[1])){ voo = mv[1]; break; } }
+      const chave = voo || `${m[1]}${m[3]}${m[2]}`;
+      if (vistos[chave]) return;
+      vistos[chave] = {voo, de:m[1], para:m[3], dep:m[2].padStart(5, '0'), arr:m[4].padStart(5, '0'), cab:''};
+      ordem.push(chave);
     });
   });
   const v = ordem.map(k => vistos[k]);
