@@ -7508,6 +7508,9 @@ table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]{ 
 table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"]{ padding-left:0; padding-top:7px; text-align:left; }
 table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"]::before{ position:static; display:block; width:auto; margin-bottom:5px; }
 table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"] .up-cab{ justify-content:flex-start; }
+
+/* "Na Pagante" vai grafado assim, sem a caixa alta das etiquetas */
+.etq.tal-qual{ text-transform:none; letter-spacing:0; font-family:var(--f-b); font-weight:600; }
 </style>
 </head>
 <body>
@@ -9286,7 +9289,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 07:30';
+const BUILD = '2026-10-07 08:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25014,7 +25017,7 @@ const ROTA_ITENS = [
    auto:(p, x) => ({ok:!!(x.meta && x.meta.precisa > 0), info:x.meta && x.meta.precisa > 0 ? `${nBR(x.meta.precisa)} milhas ${prog(x.meta.prog).n}` : 'Informe na jornada, ou monte os trechos'}), ir:'editar'},
   {k:'r-trechos', et:'R', n:'Trechos da viagem definidos', d:'Cada voo, com como vai ser pago: milhas, dinheiro ou os dois.',
    auto:p => { const ts = trechosDe(p); const m = ts.filter(t => t.forma !== 'dinheiro').length, d = ts.length - m;
-     return {ok:ts.length > 0, info:ts.length ? `${ts.length} trecho${ts.length > 1 ? 's' : ''}: ${m} com milhas, ${d} em dinheiro` : 'Monte os trechos: ida, internos e volta'}; }, ir:'trechos'},
+     return {ok:ts.length > 0, info:ts.length ? `${ts.length} trecho${ts.length > 1 ? 's' : ''}: ${m} com milhas, ${d} na pagante` : 'Monte os trechos: ida, internos e volta'}; }, ir:'trechos'},
 
   {k:'o-programa', et:'O', n:'Programa da emissão escolhido', d:'Onde as milhas vão estar na hora de emitir.',
    auto:(p, x) => ({ok:!!(x.meta && x.meta.prog), info:x.meta ? prog(x.meta.prog).n : 'Vem da meta'})},
@@ -25043,14 +25046,14 @@ const ROTA_ITENS = [
      return {ok, info:ok ? 'Monitor ativo para o destino' : 'Crie um monitor de preço para o destino'}; }, ir:'monitor'},
   {k:'t-janela', et:'T', n:'Janela de emissão definida', d:'Até quando emitir para pegar a melhor tarifa.'},
 
-  {k:'a-comparar', et:'A', n:'Preço em dinheiro comparado', d:'A emissão com milhas tem de valer mais que pagar.'},
+  {k:'a-comparar', et:'A', n:'Preço na pagante comparado', d:'A emissão com milhas tem de valer mais que pagar.'},
   {k:'a-passaporte', et:'A', n:'Passaporte válido', int:true,
    d:'Muitos países pedem validade de 6 meses além da volta.',
    info:p => p.fim ? `Precisa valer até ${dataBR(somaMeses(6, p.fim))}` : ''},
   {k:'a-visto', et:'A', n:'Visto ou autorização de entrada verificados', int:true, d:'Visto, eTA, ESTA ou isenção para o destino.'},
   {k:'a-ida', et:'A', n:'Ida emitida', meta:'ida', semTrechos:true, d:'Bilhete emitido e localizador em mãos.'},
   {k:'a-volta', et:'A', n:'Volta emitida', meta:'volta', semTrechos:true, d:'Se for só ida, marque que não se aplica.'},
-  {k:'a-trechos', et:'A', n:'Todos os trechos comprados ou emitidos', comTrechos:true, d:'Com milhas ou em dinheiro, cada voo garantido.',
+  {k:'a-trechos', et:'A', n:'Todos os trechos comprados ou emitidos', comTrechos:true, d:'Com milhas ou na pagante, cada voo garantido.',
    auto:p => { const ts = trechosDe(p), e = ts.filter(t => (t.situacao || 'planejado') !== 'planejado').length;
      return {ok:ts.length > 0 && e === ts.length, info:`${e} de ${ts.length} garantidos`}; }, ir:'trechos'},
   {k:'a-seguro', et:'A', n:'Seguro viagem contratado', int:true, d:'Obrigatório em vários destinos; cheque o do cartão.'},
@@ -25078,7 +25081,7 @@ const ROTA_ITENS = [
   {k:'e-estadia', et:'E', n:'Hospedagem cumprida', meta:'hospedou', d:'A estadia aconteceu como reservada.'},
   {k:'e-volta', et:'E', n:'Volta voada', meta:'voou_volta', semTrechos:true, d:'O voo de volta aconteceu. Se foi só ida, marque que não se aplica.'},
 
-  {k:'m-vista', et:'M', n:'Preço à vista registrado', d:'Quanto a passagem custaria em dinheiro.',
+  {k:'m-vista', et:'M', n:'Preço à vista registrado', d:'Quanto a passagem custaria na pagante.',
    auto:(p, x) => trechosDe(p).length ? (() => { const ts = trechosDe(p), ok = ts.filter(t => economiaTrecho(t).valor != null).length;
        return {ok:ok === ts.length, info:`${ok} de ${ts.length} trechos com a comparação completa`}; })() : ({ok:x.res.some(r => Number(r.precoVista) > 0), info:x.res.some(r => Number(r.precoVista) > 0) ? brl(soma(x.res.map(r => Number(r.precoVista) || 0))) : 'Informe na emissão'}), ir:'emissao'},
   {k:'m-economia', et:'M', aceitavel:true, n:'Economia calculada', d:'À vista, menos taxas e o custo das milhas.',
@@ -25159,7 +25162,10 @@ const ROTULO_IR = {editar:'Preencher', dias:'Montar', emissao:'Registrar', fabri
      mais barato também é economia, e entra na conta da viagem;
    · milhas mais dinheiro: preço em dinheiro, menos o pago, as taxas e o custo
      das milhas. */
-const FORMAS_TRECHO = {milhas:'Milhas', dinheiro:'Dinheiro', misto:'Milhas + dinheiro'};
+/* "Na Pagante" (06/10/2026, pedido do Jadiel): a passagem comprada na tarifa
+   paga, que pode ser no cartão; "dinheiro" dava a ideia de espécie. O valor
+   gravado continua 'dinheiro', só o nome mudou. */
+const FORMAS_TRECHO = {milhas:'Milhas', dinheiro:'Na Pagante', misto:'Milhas + valor pago'};
 const SITUACOES_TRECHO = {planejado:'Planejado', emitido:'Emitido', voado:'Voado'};
 let trechoEmRegistro = null;
 const trechosDe = p => (p && p.trechos) || [];
@@ -25207,7 +25213,7 @@ function custoUpgradeReais(t){
 function economiaTrecho(t){
   if (!t.upgrade) return economiaTrechoBase(t);
   const vistaUp = Number(t.upgrade.vista) || 0;
-  if (!(vistaUp > 0)) return {valor:null, nota:`Informe o preço da ${(CABINES_TRECHO[t.upgrade.cabine] || 'nova cabine').toLowerCase()} em dinheiro`};
+  if (!(vistaUp > 0)) return {valor:null, nota:`Informe o preço da ${(CABINES_TRECHO[t.upgrade.cabine] || 'nova cabine').toLowerCase()} na pagante`};
   const c = custoTrechoReais(t), cu = custoUpgradeReais(t);
   if (c == null || cu == null) return {valor:null, nota:'Sem custo lançado no programa'};
   return {valor:vistaUp - c - cu, nota:`${CABINES_TRECHO[t.upgrade.cabine] || 'Upgrade'}, com upgrade`};
@@ -25285,13 +25291,13 @@ function economiaTrechoCompra(t){
     const mil = milheiroDaBase(t.baseMilheiro || 'custo', t.altProg, t.milheiroOutro);
     if (mil == null) return {valor:null, nota:'Sem custo lançado no programa da alternativa'};
     const cm = (Number(t.altMilhas) || 0) / 1000 * mil;
-    return {valor:cm + (Number(t.altTaxas) || 0) - pago, nota:'Pagando em dinheiro'};
+    return {valor:cm + (Number(t.altTaxas) || 0) - pago, nota:'Na pagante'};
   }
-  if (!(vista > 0)) return {valor:null, nota:'Informe o preço em dinheiro do mesmo voo'};
+  if (!(vista > 0)) return {valor:null, nota:'Informe o preço do mesmo voo na pagante'};
   const milB = milheiroDaBase(t.baseMilheiro || 'custo', t.prog, t.milheiroOutro);
   const cm = milB != null ? (Number(t.milhas) || 0) / 1000 * milB : null;
   if (cm == null) return {valor:null, nota:'Sem custo lançado no programa'};
-  return {valor:vista - taxas - pago - cm, nota:t.forma === 'misto' ? 'Milhas + dinheiro' : 'Com milhas'};
+  return {valor:vista - taxas - pago - cm, nota:t.forma === 'misto' ? 'Milhas + valor pago' : 'Com milhas'};
 }
 function economiaJornada(p, antes){
   const ts = trechosDe(p);
@@ -25434,7 +25440,7 @@ function gastoAteAgoraHTML(p, ts){
   const pax = Number(p.pax) || 1;
   const partes = Object.entries(G.porProg).sort((a, b) => b[1].custo - a[1].custo).map(([pg, e]) => ({k:'mi-' + pg, cor:prog(pg).cor || 'var(--anil-claro)', rot:prog(pg).n,
       det:`${nBR(e.milhas)} milhas${e.semCusto ? ' · sem custo lançado' : ` · ${brl2(milheiroDaBase('custo', pg))}/mil`}`, v:e.custo, disco:pg}))
-    .concat([{k:'pass', cor:'#C9822B', rot:'Passagens', det:'tarifas pagas em dinheiro', v:G.passagens},
+    .concat([{k:'pass', cor:'#C9822B', rot:'Passagens', det:'tarifas pagas na pagante', v:G.passagens},
              {k:'tax', cor:'#B6463A', rot:'Taxas', det:'de todos os trechos', v:G.taxas}])
     .filter(x => x.v > 0.004 || (x.disco && G.porProg[x.disco].semCusto));
   const pct = v => G.total > 0 ? v / G.total * 100 : 0;
@@ -25487,7 +25493,7 @@ function renderTrechos(p){
           : `<b class="ec-vazio">a pesquisar</b><em>toque na lupa de cada trecho</em>`}</div>
       </div></div>${escadaEconomiaHTML(ts)}` : ''}<div class="cartao" style="padding:0;overflow:hidden">
     <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
-      <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar.<br>Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato em dinheiro: tudo entra na conta.</div></h3>
+      <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar.<br>Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato na pagante: tudo entra na conta.</div></h3>
       <button class="bt primario" onclick="editarTrecho()"><svg><use href="#i-mais"/></svg>Novo Trecho</button>
     </div>
     ${ts.length ? `<div class="rolo" style="margin:0;padding:0"><table class="tb-dados tb-trechos">
@@ -25507,7 +25513,7 @@ function renderTrechos(p){
           <div class="up-cab">${t.upgrade ? `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span><svg><use href="#i-seta"/></svg><span class="etq jade">${CABINES_TRECHO[t.upgrade.cabine]}</span>`
             : `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span>`}</div>
           ${vooDoTrecho(t) ? `<button type="button" class="rs-voo-bt${vooTrechoAberto.has(t.id) ? ' aberto' : ''}" onclick="alternarVooTrecho('${t.id}')"><svg><use href="#i-aviao"/></svg><span>${vooTrechoAberto.has(t.id) ? 'Ocultar o voo' : 'Ver o voo'}</span><svg class="seta"><use href="#i-baixo"/></svg></button>` : ''}</td>
-        <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq">dinheiro</span> <span class="tr-pg-val">${brl(t.pago || 0)}</span>`
+        <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq tal-qual">Na Pagante</span> <span class="tr-pg-val">${brl(t.pago || 0)}</span>`
           : `<span class="etq aco">${esc(prog(t.prog).n)}</span> <span class="tr-pg-val">${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}</span>`}
           ${(c => { if (!c) return '';
             /* o valor fica à vista; o cartão vira um ícone, e o nome dele aparece ao passar o mouse (ou tocar) */
@@ -25526,7 +25532,7 @@ function renderTrechos(p){
         </div></td></tr>${vooTrechoAberto.has(t.id) ? (v => v ? `<tr class="tr-voo" data-sem-cartao><td colspan="6">${cardVoo(contasItinerario(v))}</td></tr>` : '')(vooDoTrecho(t)) : ''}`; }).join('')}</tbody></table></div>
       <div class="rt-trechos-pe">
         ${Object.keys(porProg).map(k => `<span><b>${nBR(porProg[k])}</b> milhas ${esc(prog(k).n)}</span>`).join('')}
-        ${dinheiro ? `<span><b>${brl(dinheiro)}</b> em dinheiro</span>` : ''}${taxas ? `<span><b>${brl(taxas)}</b> de taxas</span>` : ''}
+        ${dinheiro ? `<span><b>${brl(dinheiro)}</b> na pagante</span>` : ''}${taxas ? `<span><b>${brl(taxas)}</b> de taxas</span>` : ''}
         ${(ms => ms.length ? `<span>Contra o mais barato do mercado <b class="${soma(ms.map(x => x.valor)) >= 0 ? 'jade' : 'brasa'}">${brl(soma(ms.map(x => x.valor)))}</b>${ms.length < ts.length ? ` <em class="fraco">(${ms.length} de ${ts.length} trechos)</em>` : ''}</span>` : '')(ts.map(economiaMercado).filter(Boolean))}
         <span class="esticar"></span><span>Economia da viagem <b class="${eco >= 0 ? 'jade' : 'brasa'}">${brl(eco)}</b>${comUp.length ? ` <em class="fraco">(antes dos upgrades ${brl(ecoAntes)})</em>` : ''}</span>
       </div>
@@ -25554,7 +25560,7 @@ function editarUpgrade(id){
       <div class="campo"><label>Nova cabine</label><select id="upPara" data-ordem="natural">${Object.entries(CABINES_TRECHO).map(([k, v]) => `<option value="${k}"${k === u.cabine ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Como veio</label><select id="upOrigem" data-ordem="natural">${Object.entries(ORIGENS_UPGRADE).map(([k, v]) => `<option value="${k}"${k === u.origem ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Data do upgrade</label><input type="date" id="upData" value="${u.data || hojeISO()}"></div>
-      <div class="campo"><label>Preço da nova cabine em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="upVista" value="${moedaTxt(u.vista || 0)}" data-dica="Para todos os passageiros, sem cortesia"></div>
+      <div class="campo"><label>Preço da nova cabine na pagante (R$)</label><input type="text" inputmode="decimal" data-moeda id="upVista" value="${moedaTxt(u.vista || 0)}" data-dica="Para todos os passageiros, sem cortesia"></div>
       <div class="campo up-mi"><label>Milhas extras</label><input type="number" id="upMilhas" step="1000" value="${u.milhas || ''}"></div>
       <div class="campo up-mi"><label>Programa</label><select id="upProg">${progsMilhas.map(k => `<option value="${k}"${k === (u.prog || t.prog || t.altProg) ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
       <div class="campo up-di"><label>Dinheiro extra (R$)</label><input type="text" inputmode="decimal" data-moeda id="upDinheiro" value="${moedaTxt(u.dinheiro || 0)}"></div>
@@ -25582,14 +25588,14 @@ function editarUpgrade(id){
     const dif = eb.valor != null && ed.valor != null ? ed.valor - eb.valor : null;
     $('#upComp').innerHTML = `<div class="up-comp">
       ${lado('antes', 'Antes do upgrade', $('#upDe').value, [
-        ['Como foi pago', t.forma === 'dinheiro' ? 'dinheiro' : `${nBR(t.milhas || 0)} milhas`],
+        ['Como foi pago', t.forma === 'dinheiro' ? 'na pagante' : `${nBR(t.milhas || 0)} milhas`],
         ['Custo do trecho', c != null ? brl(c) : 'n/d'],
         t.forma === 'dinheiro' ? (t.semAlt ? ['Alternativa em milhas', 'não havia'] : ['Em milhas custaria', `${nBR(t.altMilhas || 0)} + ${brl(t.altTaxas || 0)}`]) : ['Preço em dinheiro', vistaAntes ? brl(vistaAntes) : 'n/d']], eb.valor, eb.nota)}
       <div class="up-meio"><svg><use href="#i-subir"/></svg>${dif == null ? '<span>upgrade</span>' : `<b class="${dif >= 0 ? 'jade' : 'brasa'}">${dif >= 0 ? '+' : '−'}${brl(Math.abs(dif))}</b><span>o upgrade rendeu</span>`}</div>
       ${lado('depois', 'Depois do upgrade', $('#upPara').value, [
         ['Custo do upgrade', cu != null ? (cu ? brl(cu) : 'grátis') : 'n/d'],
         ['Custo total', c != null && cu != null ? brl(c + cu) : 'n/d'],
-        ['Preço em dinheiro', Number(sim.upgrade.vista) ? brl(sim.upgrade.vista) : '<span class="fraco">informe abaixo</span>']], ed.valor, ed.nota)}
+        ['Preço na pagante', Number(sim.upgrade.vista) ? brl(sim.upgrade.vista) : '<span class="fraco">informe abaixo</span>']], ed.valor, ed.nota)}
     </div>`;
   };
   $('#folhaCorpo').addEventListener('input', desenhar); $('#folhaCorpo').addEventListener('change', desenhar);
@@ -25602,7 +25608,7 @@ function editarUpgrade(id){
   $('#btSalvarUp').onclick = () => {
     const nu = ler();
     if ($('#upPara').value === $('#upDe').value){ avisar('A nova cabine precisa ser diferente da comprada.', 'alerta'); return; }
-    if (!(nu.vista > 0)){ erroNoCampo('#upVista', 'Informe o preço da nova cabine em dinheiro: é com ele que a economia é medida.'); return; }
+    if (!(nu.vista > 0)){ erroNoCampo('#upVista', 'Informe o preço da nova cabine na pagante: é com ele que a economia é medida.'); return; }
     t.cabine = $('#upDe').value; t.upgrade = nu;
     salvar(); fecharFolha(); renderPlano(); avisar('Upgrade registrado. Antes e depois ficam guardados no trecho.', 'ok', 6000);
   };
@@ -25679,7 +25685,7 @@ function desenharLeituraUpgrade(){
     <div class="olho anil" style="margin:20px 0 10px">O que vai para o upgrade</div>
     <div class="grade tr-grade lp-campos">
       <div class="campo"><label>Nova cabine</label><select id="luCab" data-ordem="natural">${Object.entries(CABINES_TRECHO).filter(([k]) => k !== 'economica').map(([k, v]) => `<option value="${k}"${k === (d.cabine && d.cabine !== 'economica' ? d.cabine : 'executiva') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div class="campo${total ? '' : ' falta'}"><label>Preço em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="luVista" value="${moedaTxt(total)}"></div>
+      <div class="campo${total ? '' : ' falta'}"><label>Preço na pagante (R$)</label><input type="text" inputmode="decimal" data-moeda id="luVista" value="${moedaTxt(total)}"></div>
     </div>`;
   ligarCampoMoeda('#luVista');
   $('#luCorpo').insertAdjacentHTML('beforeend', '<p class="ast-nota" id="luAst">* Obrigatório: não veio nos prints. Preencha para continuar.</p>');
@@ -25750,10 +25756,10 @@ function escadaEconomiaHTML(ts){
   const cabUp = [...new Set(ups.map(l => CABINES_TRECHO[l.t.upgrade.cabine]))];
   const origUp = [...new Set(ups.map(l => (ORIGENS_UPGRADE[l.t.upgrade.origem] || '').toLowerCase()).filter(Boolean))];
   const frase = {
-    compra:L.map(l => l.compra == null ? `${rotuloTrecho(l.t)}: falta o preço de comparação` : `${rotuloTrecho(l.t)} ${l.t.forma === 'dinheiro' ? 'em dinheiro' : 'com milhas'}, ${l.compra >= 0 ? '' : '−'}${brl(Math.abs(l.compra))}`).join(' · '),
+    compra:L.map(l => l.compra == null ? `${rotuloTrecho(l.t)}: falta o preço de comparação` : `${rotuloTrecho(l.t)} ${l.t.forma === 'dinheiro' ? 'na pagante' : 'com milhas'}, ${l.compra >= 0 ? '' : '−'}${brl(Math.abs(l.compra))}`).join(' · '),
     cortesia:`${cortes.reduce((a, l) => a + (Number(l.t.cortesiaQtd) || 0), 0)} ${cortes.reduce((a, l) => a + (Number(l.t.cortesiaQtd) || 0), 0) === 1 ? 'passagem' : 'passagens'} de graça, por ${origensCort.join(', ')}: ${cortes.map(l => `${rotuloTrecho(l.t)} ${brl(l.cort)}`).join(' · ')}`,
     upgrade:`${cabUp.join(', ')} em ${ups.length === L.length && L.length > 1 ? 'todos os trechos' : ups.length + (ups.length === 1 ? ' trecho' : ' trechos')}, por ${origUp.join(', ')}: ${ups.map(l => `${rotuloTrecho(l.t)} +${brl(l.up)}`).join(' · ')}`,
-    total:'O que a viagem rendeu, contra comprar o mesmo voo em dinheiro',
+    total:'O que a viagem rendeu, contra comprar o mesmo voo na pagante',
     mercado:`Contra a opção mais barata de qualquer companhia: ${L.filter(l => l.merc).map(l => `${rotuloTrecho(l.t)} ${esc(l.merc.cia || '')} ${brl(l.merc.preco)}`).join(' · ')}`
   };
   const coluna = (c, i) => {
@@ -25919,7 +25925,7 @@ async function lerDocumentosEmissao(arquivos){
         ${campo('leCriada', 'Data da emissão', pre.criada, 'data', false)}
         ${campo('leData', 'Data do voo', pre.data, 'data', true)}
         ${campo('leHora', 'Hora do voo', pre.hora, 'hora', false)}
-        <div class="campo${pre.prog ? '' : ' falta'}"><label>Programa</label><select id="leProg"><option value="">em dinheiro</option>${PROG_MILHAS.map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+        <div class="campo${pre.prog ? '' : ' falta'}"><label>Programa</label><select id="leProg"><option value="">na pagante</option>${PROG_MILHAS.map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
         ${campo('leMilhas', 'Milhas usadas', pre.milhas, 'numero', true)}
         ${campo('leTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false)}
         ${campo('leVista', 'Preço na pagante (R$)', pre.vista, 'moeda', false).replace('class="campo', 'class="campo le-largo')}
@@ -26077,9 +26083,9 @@ function editarTrecho(id){
       <div class="campo tr-mi"><label>Programa</label><select id="trProg">${opP(t.prog)}</select></div>
       <div class="campo tr-mi"><label>Milhas (total)</label><input type="number" id="trMilhas" step="1000" value="${t.milhas || ''}"></div>
       <div class="campo tr-mi"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxas" value="${moedaTxt(t.taxas || 0)}"></div>
-      <div class="campo tr-di"><label>Pago em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trPago" value="${moedaTxt(t.pago || 0)}"></div>
+      <div class="campo tr-di"><label>Pago na pagante (R$)</label><input type="text" inputmode="decimal" data-moeda id="trPago" value="${moedaTxt(t.pago || 0)}"></div>
       <div class="campo tr-sem"><label>Taxas incluídas (R$)</label><input type="text" inputmode="decimal" data-moeda id="trTaxasDin" value="${moedaTxt(taxasDoTrechoDinheiro(t).v)}"></div>
-      <div class="campo tr-mi"><label>Preço do voo em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="trVista" value="${moedaTxt(t.vista || 0)}"></div>
+      <div class="campo tr-mi"><label>Preço do voo na pagante (R$)</label><input type="text" inputmode="decimal" data-moeda id="trVista" value="${moedaTxt(t.vista || 0)}"></div>
       <div class="campo tr-alt"><label>Em milhas custaria</label><input type="number" id="trAltMilhas" step="1000" value="${t.altMilhas || ''}" placeholder="Milhas"></div>
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
       <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
@@ -26126,9 +26132,9 @@ function editarTrecho(id){
     $$('.tr-alt').forEach(e => e.style.display = f === 'dinheiro' && !sem ? '' : 'none');
     $$('.tr-sem').forEach(e => e.style.display = f === 'dinheiro' ? '' : 'none');
     $('#trNotaTxt').innerHTML = f === 'dinheiro'
-      ? (sem ? 'Sem opção em milhas: o trecho entra na viagem sem economia nem perda.' : 'Comprado em dinheiro porque saiu mais barato? Informe quanto custaria em milhas: a diferença, com as milhas pelo valor escolhido em <b>Milhas valem</b>, entra como <b>economia da viagem</b>.')
-      : f === 'misto' ? 'A economia é o preço do voo em dinheiro, menos o que foi pago, as taxas e o custo das milhas.'
-      : 'A economia é o preço do voo em dinheiro, menos as taxas e o custo das milhas ao seu milheiro médio.';
+      ? (sem ? 'Sem opção em milhas: o trecho entra na viagem sem economia nem perda.' : 'Comprado na pagante porque saiu mais barato? Informe quanto custaria em milhas: a diferença, com as milhas pelo valor escolhido em <b>Milhas valem</b>, entra como <b>economia da viagem</b>.')
+      : f === 'misto' ? 'A economia é o preço do voo na pagante, menos o que foi pago, as taxas e o custo das milhas.'
+      : 'A economia é o preço do voo na pagante, menos as taxas e o custo das milhas ao seu milheiro médio.';
   };
   /* As opções mostram o valor de cada base para o programa do trecho. */
   const progDaConta = () => $('#trForma').value === 'dinheiro' ? $('#trAltProg').value : $('#trProg').value;
@@ -26189,7 +26195,7 @@ function editarTrecho(id){
       if (!(novo.milheiroOutro > 0)){ erroNoCampo('#trOutro', 'Informe o valor de cotação: quanto vale cada mil milhas.'); return; }
       if (custoR != null && novo.milheiroOutro < custoR){ erroNoCampo('#trOutro', `A cotação não pode ficar abaixo do custo real das milhas (${brl2(custoR)} por mil).`); return; }
     }
-    if (f === 'dinheiro' && !(novo.pago > 0)){ erroNoCampo('#trPago', 'Informe quanto foi pago em dinheiro.'); return; }
+    if (f === 'dinheiro' && !(novo.pago > 0)){ erroNoCampo('#trPago', 'Informe quanto foi pago na pagante.'); return; }
     if (f === 'dinheiro' && novo.taxasDinheiro > novo.pago){ erroNoCampo('#trTaxasDin', 'As taxas incluídas não podem passar do valor pago.'); return; }
     if (f !== 'dinheiro' && !(novo.milhas > 0)){ erroNoCampo('#trMilhas', 'Informe as milhas do trecho.'); return; }
     const outros = trechosDe(p).filter(x => x.id !== novo.id);
@@ -26747,7 +26753,7 @@ function desenharRevisaoPrints(){
           pax > 1 ? ['Por passageiro', brl(totalDin / pax)] : null, din.obs ? ['Obs.', esc(din.obs)] : null] : [['Não apareceu nos prints', 'n/d']], dif != null && dif <= 0)}
       <div class="lp-versus">${dif == null ? 'vs' : dif > 0 ? `<b class="jade">${brl(dif)}</b><span>a favor das milhas</span>` : `<b class="ouro">${brl(-dif)}</b><span>a favor do dinheiro</span>`}</div>
       ${cartao('mi', 'Em milhas', temMi ? [
-          ['Total', `${nBR(pts)} ${progId ? esc(prog(progId).n) : 'pontos'}`, true], txM ? ['Taxas', brl(txM)] : null, extraM ? ['Mais em dinheiro', brl(extraM)] : null,
+          ['Total', `${nBR(pts)} ${progId ? esc(prog(progId).n) : 'pontos'}`, true], txM ? ['Taxas', brl(txM)] : null, extraM ? ['Mais o valor pago', brl(extraM)] : null,
           alvo ? [_leitura.base === 'custo' ? 'Ao custo real' : _leitura.base === 'alvo' ? 'Ao valor-alvo' : 'À cotação', brl(valorMilhas)] : null,
           alvo ? ['Milheiro usado', `${brl2(alvo)}/mil`] : null,
           milheiroObtido ? ['Cada milheiro rende', brl2(milheiroObtido)] : null, mi.obs ? ['Obs.', esc(mi.obs)] : null] : [['Não apareceu nos prints', 'n/d']], dif != null && dif > 0)}
@@ -26772,8 +26778,8 @@ function desenharRevisaoPrints(){
       <div class="campo lp-mi${!pre.prog ? ' falta' : ''}"><label>Programa</label><select id="lpProg"><option value="">escolha</option>${PROG_IDS.filter(k => prog(k).tipo === 'milhas').map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
       ${campoLeitura('lpMilhas', 'Milhas (total)', pre.milhas, 'numero', true, 'lp-mi')}
       ${campoLeitura('lpTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false, 'lp-mi')}
-      ${campoLeitura('lpPago', 'Pago em dinheiro (R$)', pre.pago, 'moeda', true, 'lp-di')}
-      ${campoLeitura('lpVista', 'Preço em dinheiro (R$)', pre.vista, 'moeda', false, 'lp-mi')}
+      ${campoLeitura('lpPago', 'Pago na pagante (R$)', pre.pago, 'moeda', true, 'lp-di')}
+      ${campoLeitura('lpVista', 'Preço na pagante (R$)', pre.vista, 'moeda', false, 'lp-mi')}
       ${campoLeitura('lpAltMilhas', 'Em milhas custaria', pre.altMilhas, 'numero', false, 'lp-alt')}
       ${campoLeitura('lpAltTaxas', 'Com taxas de (R$)', pre.altTaxas, 'moeda', false, 'lp-alt')}
       ${campoLeitura('lpLoc', 'Localizador', pre.loc, 'texto', false)}
@@ -26792,7 +26798,7 @@ function desenharRevisaoPrints(){
     const faltam = [];
     if (!$('#lpOri').value.trim()) faltam.push('origem'); if (!$('#lpDes').value.trim()) faltam.push('destino'); if (!$('#lpData').value) faltam.push('data');
     if (f !== 'dinheiro'){ if (!$('#lpProg').value) faltam.push('programa'); if (!(rgNum($('#lpMilhas').value) > 0)) faltam.push('milhas'); }
-    if (f !== 'milhas' && !(moedaNum($('#lpPago').value) > 0)) faltam.push('valor pago em dinheiro');
+    if (f !== 'milhas' && !(moedaNum($('#lpPago').value) > 0)) faltam.push('valor pago na pagante');
     $$('#lpCorpo .campo').forEach(c => { const i = c.querySelector('input, select'); if (!i) return;
       const vazio = !String(i.value || '').trim() || i.value === '0' || i.value === '0,00';
       const obrig = ({lpOri:1, lpDes:1, lpData:1})[i.id] || (i.id === 'lpProg' && f !== 'dinheiro') || (i.id === 'lpMilhas' && f !== 'dinheiro') || (i.id === 'lpPago' && f !== 'milhas');
@@ -27264,7 +27270,7 @@ function editarPlanoViagem(id){
          da jornada, que abre sozinha depois de salvar uma jornada nova. -->
     <div class="olho anil" style="margin:22px 0 8px">Trechos da viagem</div>
     ${trechosDe(p).length ? `<div class="pv-trechos">${ordenarTrechos(trechosDe(p)).map(t =>
-        `<div><b>${esc(rotuloTrecho(t))}</b><span>${t.data ? dataBR(t.data) : ''}</span><span>${t.forma === 'dinheiro' ? 'dinheiro, ' + brl(t.pago || 0) : nBR(t.milhas || 0) + ' milhas ' + esc(prog(t.prog).n) + (t.forma === 'misto' ? ' + ' + brl(t.pago || 0) : '')}</span></div>`).join('')}</div>
+        `<div><b>${esc(rotuloTrecho(t))}</b><span>${t.data ? dataBR(t.data) : ''}</span><span>${t.forma === 'dinheiro' ? 'na pagante, ' + brl(t.pago || 0) : nBR(t.milhas || 0) + ' milhas ' + esc(prog(t.prog).n) + (t.forma === 'misto' ? ' + ' + brl(t.pago || 0) : '')}</span></div>`).join('')}</div>
       <p class="fraco" style="font-size:calc(13px * var(--esc));margin:8px 0 0">Programa e milhas necessárias são calculados pelos trechos. Para incluir, mudar ou apagar um trecho, use a aba <b>Trechos</b> da jornada.</p>`
     : `<div class="nota" style="margin:0"><svg><use href="#i-info"/></svg><div class="pilha compacta">
         <div>Ida, voos internos e volta, <b>cada um com milhas, dinheiro ou os dois</b>, entram como trechos.</div>
@@ -29490,7 +29496,7 @@ function renderEmissoesPorConta(){
             return `<tr>
               <td class="c">${dataBR(r.data)}</td>
               <td class="c"><span class="etq">${esc(t.n)}</span></td>
-              <td>${r.prog ? `<div class="linha" style="gap:7px">${discoProg(r.prog, 'p')}<span>${esc(prog(r.prog).n)}</span></div>` : '<span class="fraco">em dinheiro</span>'}
+              <td>${r.prog ? `<div class="linha" style="gap:7px">${discoProg(r.prog, 'p')}<span>${esc(prog(r.prog).n)}</span></div>` : '<span class="fraco">na pagante</span>'}
                 <div class="fraco" style="font-size:calc(12px * var(--esc))">${esc(r.desc || '')}</div></td>
               <td class="n">${c.milhas ? nBR(c.milhas) : '<span class="fraco">n/d</span>'}</td>
               <td class="n">${c.milhas ? brl2(c.cpm) : '<span class="fraco">n/d</span>'}</td>
@@ -29739,7 +29745,7 @@ function renderHospedagens(){
         <div class="item-tit">${esc(r.desc || 'Hospedagem')}
           <span class="etq">${dataBR(r.data)}</span>
           ${r.status === 'usada' ? '<span class="etq jade">cumprida</span>' : '<span class="etq">reservada</span>'}</div>
-        <div class="item-sub">${r.prog ? esc(prog(r.prog).n) + ' · ' + nBR(c.milhas) + ' pontos' : 'em dinheiro'}${
+        <div class="item-sub">${r.prog ? esc(prog(r.prog).n) + ' · ' + nBR(c.milhas) + ' pontos' : 'na pagante'}${
           conta ? ' · ' + esc(conta) : ''}${c.emDinheiro ? ' · ' + brl(c.emDinheiro) + ' de taxas' : ''}</div>
       </div>
       <div class="item-acoes">
@@ -29869,7 +29875,7 @@ function renderViagens(){
       const d = diasAte(r.data);
       if (r.trecho) return `<tr>
         <td class="c">${dataBR(r.data)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${d === null ? '' : prazoTexto(d)}</div></td>
-        <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">em dinheiro</div></td>
+        <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">na pagante</div></td>
         <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Voo</span></td>
         <td class="n"><span class="fraco">n/d</span></td>
         <td class="n"${r.taxas ? ` data-dica="Tarifa. Com as taxas, o total pago foi ${esc(brl(r.pago))}"` : ' data-dica="Total pago; as taxas não foram informadas no trecho"'}>${brl(r.pago - (r.taxas || 0))}</td>
@@ -29884,7 +29890,7 @@ function renderViagens(){
       const t = TIPOS_VIAGEM[r.tipo] || TIPOS_VIAGEM.voo;
       return `<tr>
         <td class="c">${dataBR(r.data)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${d === null ? '' : prazoTexto(d)}</div></td>
-        <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(r.prog ? prog(r.prog).n : 'em dinheiro')}</div></td>
+        <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(r.prog ? prog(r.prog).n : 'na pagante')}</div></td>
         <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#${t.ico}"/></svg>${esc(t.n)}</span></td>
         <td class="n">${Number(r.milhas) ? nBR(r.milhas) : '<span class="fraco">n/d</span>'}</td>
         <td class="n">${Number(r.custoExtra) ? brl(r.custoExtra) : '<span class="fraco">n/d</span>'}</td>
@@ -30135,7 +30141,7 @@ function renderBalcao(){
                dinheiro. Sem esse número não há com o que comparar, e aí a lista
                volta a mostrar o volume de milhas, que é o dado que sempre existe. */
             const vista = Number(r.precoVista) || 0;
-            if (!vista) return `<div class="item-num fraco">${r.milhas ? nBR(r.milhas) : brl(r.custoExtra)}<small>${r.milhas ? 'milhas' : 'em dinheiro'}</small></div>`;
+            if (!vista) return `<div class="item-num fraco">${r.milhas ? nBR(r.milhas) : brl(r.custoExtra)}<small>${r.milhas ? 'milhas' : 'na pagante'}</small></div>`;
             const eco = vista - c;
             return `<div class="item-num" style="color:${eco >= 0 ? 'var(--jade)' : 'var(--brasa)'}">${brl(Math.abs(eco))}<small>${eco >= 0 ? 'economia' : 'a mais que a tarifa'}</small></div>`;
           })()}
@@ -30552,7 +30558,7 @@ function editarReserva(id, rascunho){
         </div>
         <div id="rsPaxLista"></div>
       </div>
-      <div class="campo"><label>Programa</label><select id="rsProg"><option value="">em dinheiro</option>${PROG_MILHAS.map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Programa</label><select id="rsProg"><option value="">na pagante</option>${PROG_MILHAS.map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
       <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="rsMilhas" value="${qtdTxt(r.milhas)}"></div>
       <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="rsTaxas" value="${moedaTxt(r.taxas)}"></div>
       <div class="campo"><label>Cartão (pagamento/taxas)</label><select id="rsCartao"><option value="">não informado</option>${
@@ -32099,7 +32105,7 @@ function renderVendas(){
               <td class="c">${dataBR(r.data)}</td>
               <td>${r.prog
                 ? `<div class="linha" style="gap:7px">${discoProg(r.prog, 'p')}<span>${esc(prog(r.prog).n)}</span></div>`
-                : `<span class="fraco">${esc(TIPOS_VIAGEM[r.tipo] ? TIPOS_VIAGEM[r.tipo].n.toLowerCase() : 'em dinheiro')}, sem milhas</span>`}</td>
+                : `<span class="fraco">${esc(TIPOS_VIAGEM[r.tipo] ? TIPOS_VIAGEM[r.tipo].n.toLowerCase() : 'na pagante')}, sem milhas</span>`}</td>
               <td>${esc(r.cliente || 'n/d')}</td>
               <td class="n">${m ? nBR(m) : '<span class="fraco">n/d</span>'}</td>
               <td class="n">${m ? brl2(tot / m * 1000) : '<span class="fraco">n/d</span>'}</td>
