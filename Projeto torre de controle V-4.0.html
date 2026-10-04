@@ -7040,7 +7040,7 @@ html[data-theme="papel"] .selo-vem-txt{ color:var(--anil); }
 .cd-datas svg{ width:14px; height:14px; fill:none; stroke:var(--grafite); stroke-width:2; }
 table.tb-trechos.em-cartao td[data-r="Pagamento"]{ text-align:left; padding:7px 0 6px; }
 table.tb-trechos.em-cartao td[data-r="Pagamento"]::before{ position:static; display:block; width:auto; margin-bottom:6px; }
-table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
+table.tb-trechos .tr-pg-val{ display:block; margin-top:5px; }
 @media (max-width:560px){
   /* Gasto até agora: nome e valor na primeira linha, detalhe e percentual na
      segunda. Antes o valor descia para uma linha própria e o cartão dobrava. */
@@ -7574,8 +7574,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
            (no computador) ou na barra logo acima desta (no celular). -->
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-mesa"/></svg><span class="sg">Início</span></button>
       <button class="tb" data-area="milhas" data-vista="saldo" data-dica="Milhas: carteira, comprar e transferir, fábrica e cartões" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Milhas</span></button>
-      <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas, emissões e radar de voos" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
-      <button class="tb" data-area="negocio" data-vista="vendas" data-dica="Negócio: vendas, cotações, clientes e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas, controle de CPF e radar de voos" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
+      <button class="tb" data-area="negocio" data-vista="vendas" data-dica="Negócio: vendas, cotações, emitidos, clientes e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
     </nav>
   </aside>
@@ -8537,46 +8537,14 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                de CPF. Mas quem abre o menu vem ver o que já foi emitido, não montar
                cotação — então a aba que carrega por padrão é Emitidos. Ordem e
                ponto de entrada respondem a perguntas diferentes. -->
-          <button class="aba on" data-aba="em-resgates">Emitidos <span class="cont" id="contEmissoes">0</span></button>
-          <button class="aba" data-aba="em-controle">Controle de CPF</button>
-        </div>
-
-        <div class="painel-aba on" id="p-em-resgates">
-          <div class="pilha" style="gap:18px">
-            <!-- Uma lista só, com o recorte no filtro. Antes eram duas telas em
-                 menus diferentes lendo a mesma tabela: o que separava era o campo
-                 "para quem", e recorte é trabalho de filtro, não de menu. -->
-            <div class="linha" style="flex-wrap:wrap;gap:11px">
-              <!-- Mesmo cabeçalho do Controle de emissões: o rótulo abre a aba e os
-                   filtros seguem na mesma linha, porque são o recorte dele. -->
-              <div class="seg em-so-lista" id="segEmQuem">
-                <button class="on" data-q="todos">Todas</button>
-                <button data-q="proprio">Minhas</button>
-                <button data-q="terceiro">De cliente</button>
-              </div>
-              <div class="seg em-so-lista" id="segReservas">
-                <button class="on" data-t="todas">Tudo</button>
-                <button data-t="voo">Voos</button>
-                <button data-t="hospedagem">Hospedagem</button>
-                <button data-t="carro">Carros</button>
-              </div>
-              <div class="esticar"></div>
-              <button class="bt primario" id="btNovaEmissao"><svg><use href="#i-mais"/></svg>Registrar Emissão</button>
-            </div>
-            <div class="pilha em-so-lista" style="gap:18px" id="emParteLista">
-            <div class="grade g4" id="emResumo"></div>
-            <!-- Entre os cards e a lista: o aviso pertence ao conteúdo que vem
-                 abaixo dele, e é ali que se lê antes de percorrer as emissões. -->
-            <div id="emAvisoPax"></div>
-            <div class="pilha" style="gap:10px" id="blReservas"></div>
-            </div>
-            
-          </div>
+          <button class="aba on" data-aba="em-controle">Controle de CPF</button>
         </div>
 
         
 
-        <div class="painel-aba" id="p-em-controle">
+        
+
+        <div class="painel-aba on" id="p-em-controle">
           <div class="pilha" style="gap:14px">
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="olho destaque" style="margin:0;flex:0 0 auto">Controle de emissões</div>
@@ -8904,6 +8872,39 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="olho anil">Cotações salvas</div>
               <div class="pilha" style="gap:10px" id="blCotacoes"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EMITIDOS em Negócio (06/10/2026, pedido do Jadiel): aqui ficam só as
+           emissões para clientes. As próprias já moram nas Jornadas (Viagens), e
+           a cota de CPF de todas continua em Viagens → Controle de CPF. -->
+      <section class="vista" id="v-emitidos">
+        <div class="painel-aba on" id="p-em-resgates">
+          <div class="pilha" style="gap:18px">
+            <!-- Uma lista só, com o recorte no filtro. Antes eram duas telas em
+                 menus diferentes lendo a mesma tabela: o que separava era o campo
+                 "para quem", e recorte é trabalho de filtro, não de menu. -->
+            <div class="linha" style="flex-wrap:wrap;gap:11px">
+              <!-- Mesmo cabeçalho do Controle de emissões: o rótulo abre a aba e os
+                   filtros seguem na mesma linha, porque são o recorte dele. -->
+              <div class="seg em-so-lista" id="segReservas">
+                <button class="on" data-t="todas">Tudo</button>
+                <button data-t="voo">Voos</button>
+                <button data-t="hospedagem">Hospedagem</button>
+                <button data-t="carro">Carros</button>
+              </div>
+              <div class="esticar"></div>
+              <button class="bt primario" id="btNovaEmissao"><svg><use href="#i-mais"/></svg>Registrar Emissão</button>
+            </div>
+            <div class="pilha em-so-lista" style="gap:18px" id="emParteLista">
+            <div class="grade g4" id="emResumo"></div>
+            <!-- Entre os cards e a lista: o aviso pertence ao conteúdo que vem
+                 abaixo dele, e é ali que se lê antes de percorrer as emissões. -->
+            <div id="emAvisoPax"></div>
+            <div class="pilha" style="gap:10px" id="blReservas"></div>
+            </div>
+            
           </div>
         </div>
       </section>
@@ -9237,7 +9238,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 02:00';
+const BUILD = '2026-10-07 04:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -10504,7 +10505,9 @@ function itensDaFatura(cartaoId, mes){
      Reserva cancelada sai da conta — o valor volta para o cartão e não é mais
      cobrança a prever. */
   (DB.reservas || []).filter(r => r.cartaoId === cartaoId && (r.taxas || 0) > 0 && r.status !== 'cancelada').forEach(r => {
-    const ini = mesDe(r.data); if (!ini) return;
+    /* a taxa é cobrada quando se emite, não quando se voa: conta da data da
+       emissão (antes contava do mês do voo, meses depois da cobrança real) */
+    const ini = mesDe(r.criada || r.data); if (!ini) return;
     const n = Number(r.parcelas) > 0 ? Number(r.parcelas) : 1;
     const [a0, m0] = ini.split('-').map(Number);
     for (let i = 0; i < n; i++){
@@ -10537,9 +10540,22 @@ function itensDaFatura(cartaoId, mes){
   return itens;
 }
 /* O que o trecho cobrou no cartão. */
+/* O que o trecho cobrou no cartão, para mostrar ao lado dele: a passagem em
+   dinheiro, ou as taxas (mais a parte em dinheiro, no misto). Diferente de
+   valorNoCartaoTrecho, que zera quando o trecho está ligado a uma emissão: lá o
+   zero evita contar duas vezes na fatura, porque a emissão já leva a cobrança.
+   Aqui o zero aparecia como "5x de R$ 0,00", que não é o que foi cobrado. */
+function valorCobradoTrecho(t){
+  if (t.forma === 'dinheiro') return Number(t.pago) || 0;
+  return (Number(t.taxas) || 0) + (t.forma === 'misto' ? Number(t.pago) || 0 : 0);
+}
 function valorNoCartaoTrecho(t){
   if (t.forma === 'dinheiro') return Number(t.pago) || 0;
-  if (t.reservaId && (DB.reservas || []).some(r => r.id === t.reservaId)) return t.forma === 'misto' ? Number(t.pago) || 0 : 0;
+  /* Só zera quando a emissão ligada leva a cobrança no cartão dela; se a emissão
+     não tem cartão, quem leva as taxas para a fatura é o trecho, senão elas não
+     entrariam em fatura nenhuma. */
+  const rl = t.reservaId && (DB.reservas || []).find(r => r.id === t.reservaId);
+  if (rl && rl.cartaoId) return t.forma === 'misto' ? Number(t.pago) || 0 : 0;
   return (Number(t.taxas) || 0) + (t.forma === 'misto' ? Number(t.pago) || 0 : 0);
 }
 function totalFatura(cartaoId, mes){ return soma(itensDaFatura(cartaoId, mes).map(i => i.valor)); }
@@ -12538,7 +12554,8 @@ const TITULOS = {
   rota:    ['Jornadas', 'Jornadas pelo Método ROTA e seus resultados'],
   /* Emissões estava declarada três vezes, e só a última valia — as duas
      primeiras eram texto morto, de versões anteriores do módulo. */
-  emissoes:['Emissões', 'O que foi emitido e a cota de CPF'],
+  emissoes:['Controle de CPF', 'Quem já ocupou vaga de CPF em cada programa'],
+  emitidos:['Emitidos', 'Passagens emitidas para clientes'],
   cotacoes:['Cotações', 'Orçamentos de passagem com milhas para clientes'],
   cartoes: ['Cartões', 'Faturas, limites e o que a operação compromete'],
   clientes:['Clientes', 'Passageiros cadastrados e documentos'],
@@ -12552,14 +12569,14 @@ const TITULOS = {
 const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-mesa',    vistas:['mesa']},
   {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica', 'cartoes']},
-  {k:'viagens', n:'Viagens', sub:'Jornadas e emissões',  ic:'#i-aviao',   vistas:['rota', 'emissoes', 'radar']},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['vendas', 'cotacoes', 'clientes', 'imposto']},
+  {k:'viagens', n:'Viagens', sub:'Jornadas e cota de CPF',  ic:'#i-aviao',   vistas:['rota', 'emissoes', 'radar']},
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['vendas', 'cotacoes', 'emitidos', 'clientes', 'imposto']},
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
 ];
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-saldo', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
-  emissoes:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-vendas', imposto:'#i-imposto', ajustes:'#i-ajustes'};
+  emissoes:'#i-usuarios', emitidos:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-vendas', imposto:'#i-imposto', ajustes:'#i-ajustes'};
 /* nome curto para a barra de módulos do celular, onde cabe pouco */
-const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'Emissões', cotacoes:'Cotações',
+const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'CPF', emitidos:'Emitidos', cotacoes:'Cotações',
   radar:'Radar', clientes:'Clientes', vendas:'Vendas', imposto:'Imposto'};
 const areaDe = v => AREAS.find(a => a.vistas.includes(v)) || AREAS[0];
 const ultimaDaArea = {};
@@ -12581,7 +12598,7 @@ const ABA_INICIAL = {
   saldo:    'sl-resumo',        /* quanto há, em uma tela */
   radar:    'rd-monitores',     /* o que está sendo vigiado */
   rota:     'rt-plano',         /* as jornadas: para onde se está indo */
-  emissoes: 'em-resgates',      /* o que já foi emitido */
+  emissoes: 'em-controle',      /* a cota de CPF (os emitidos foram para Negócio) */
   cartoes:  'cr-painel'         /* o estado das faturas */
 };
 
@@ -13329,7 +13346,7 @@ function avisos(){
           curto:`${esc0(r.desc)} decola hoje`,
           t:`${r.desc} ${r.dataVolta && r.dataVolta > r.data ? 'volta' : 'decola'} hoje às ${esc(horaUltima)}`,
           s:`${r.quem === 'terceiro' ? `Cliente: ${r.cliente || 'sem nome'}` : 'Emissão própria'}. Confira o check-in antes da hora.`,
-          ir:['emissoes','em-resgates'], fn:`editarReserva('${r.id}')` });
+          ir:r.quem === 'terceiro' ? ['emitidos'] : ['rota','rt-plano'], fn:`editarReserva('${r.id}')` });
         return;
       }
     }
@@ -13340,7 +13357,7 @@ function avisos(){
         curto:`${esc0(r.desc)} · marcar`,
         t:`${r.desc} já voou${horaUltima ? ` — ${r.dataVolta && r.dataVolta > r.data ? 'voltou' : 'decolou'} às ${esc(horaUltima)}` : ''} e continua como emitida`,
         s:`${quem}. Marque como realizada para ela sair do que está em aberto e entrar no que já voou.`,
-        ir:['emissoes','em-resgates'], fn:`marcarRealizada('${r.id}')` });
+        ir:r.quem === 'terceiro' ? ['emitidos'] : ['rota','rt-plano'], fn:`marcarRealizada('${r.id}')` });
       return;
     }
 
@@ -13349,7 +13366,7 @@ function avisos(){
         curto:`Check-in ${esc0(r.desc)}`,
         t: dias === 0 ? `${r.desc} é hoje: faça o check-in` : `${r.desc} ${prazoTexto(dias)}: check-in`,
         s:`${quem}. A maioria das companhias abre o check-in 48 horas antes; confira no aplicativo da cia e garanta o assento.`,
-        ir:['emissoes','em-resgates'] });
+        ir:r.quem === 'terceiro' ? ['emitidos'] : ['rota','rt-plano'] });
       return;
     }
 
@@ -13357,7 +13374,7 @@ function avisos(){
       L.push({ grau:1, tipo:'reserva', dias,
         curto:esc0(r.desc),
         t:`${r.desc} ${prazoTexto(dias)}`,
-        s:quem, ir:['emissoes','em-resgates'] });
+        s:quem, ir:r.quem === 'terceiro' ? ['emitidos'] : ['rota','rt-plano'] });
     }
   });
 
@@ -13573,7 +13590,7 @@ function renderFita(){
   if (false && prox){
     const d = diasAte(prox.data);
     cels.push({ r:'Próx. saída', v:dataCurta(prox.data), s:prox.desc.split(' · ')[0],
-      acao:"irPara('emissoes');irParaAba('emissoes','em-resgates')",
+      acao:"irPara('emitidos')",
       dicaTit: d === 0 ? 'Embarque hoje' : d === 1 ? 'Embarque amanhã' : `Embarque ${prazoTexto(d)}`,
       dica:`${prox.desc}, em ${dataBR(prox.data)}.\nClique para abrir a reserva.` });
   }
@@ -13888,7 +13905,7 @@ function renderMesa(){
          outra tela, não é passo nenhum. */
       return metrica('Prontas para emitir', nBR(total),
         total ? `Valem ${brl(vale)} ao alvo` : 'Nada nos programas aéreos',
-        total ? 'jade' : '', dica, true, "irPara('emissoes');irParaAba('emissoes','em-resgates')");
+        total ? 'jade' : '', dica, true, "irPara('emitidos')");
     })()}
     ${metrica('Resultado das vendas', brl(lucro), `${DB.reservas.filter(r => r.quem === 'terceiro').length} reservas para terceiros`, !lucro ? '' : lucro > 0 ? 'jade' : 'brasa', '', false, `irPara('vendas')`)}
     ${metrica('Vencendo em 90 dias', nBR(soma(ativos.map(l => l.qtd))), ativos.length ? `${ativos.length} lote${ativos.length > 1 ? 's' : ''} em contagem regressiva` : 'Nenhum lote em risco', ativos.length ? 'brasa' : '',
@@ -23925,7 +23942,7 @@ function editarSaldo(id){
           <div>${prog(prg).tipo === 'pontos'
             ? 'Se foram transferidas para um programa aéreo, ajuste também o saldo do destino — senão o estoque encolhe sem motivo.'
             : `Se viraram passagem, registre a reserva: é ela que separa emissão própria de venda${meu != null ? `, e que apura o resultado ao seu milheiro de ${brl2(meu)}` : ''}.`}</div>
-          <div><button class="bt p fantasma" onclick="fecharFolha();irPara('emissoes');irParaAba('emissoes','em-resgates');editarReserva()"><svg><use href="#i-balcao"/></svg>Registrar a reserva</button></div>
+          <div><button class="bt p fantasma" onclick="fecharFolha();irPara('emitidos');editarReserva()"><svg><use href="#i-balcao"/></svg>Registrar a reserva</button></div>
         </div></div>`;
     }
   };
@@ -25376,7 +25393,7 @@ function gastoAteAgoraHTML(p, ts){
   return `<div class="ga">
     <div class="ga-cab">
       <div><div class="olho anil" style="margin:0">Gasto até agora</div>
-        <p class="fraco">O que realmente saiu: milhas ao custo real de cada programa, passagens pagas e taxas. ${G.comprados} ${G.comprados === 1 ? 'trecho comprado' : 'trechos comprados'}${G.planejados ? `; ${G.planejados} ainda ${G.planejados === 1 ? 'planejado fica' : 'planejados ficam'} de fora` : ''}.</p></div>
+        <p class="fraco">O que realmente saiu: milhas ao custo real de cada programa, passagens pagas e taxas.<br>${G.comprados} ${G.comprados === 1 ? 'trecho comprado' : 'trechos comprados'}${G.planejados ? `; ${G.planejados} ainda ${G.planejados === 1 ? 'planejado fica' : 'planejados ficam'} de fora` : ''}.</p></div>
       <div class="ga-total"><span>Total</span><b>${brl(G.total)}</b>${pax > 1 ? `<em>${brl(G.total / pax)} por pessoa</em>` : ''}</div>
     </div>
     <div class="ga-barra" role="img" aria-label="Composição do gasto">${partes.filter(x => x.v > 0).map((x, i) => `<i style="--c:${x.cor};--w:${pct(x.v).toFixed(2)}%;--i:${i}" data-dica="${esc(x.rot)}: ${esc(brl(x.v))} (${Math.round(pct(x.v))}%)"></i>`).join('')}</div>
@@ -25422,7 +25439,7 @@ function renderTrechos(p){
           : `<b class="ec-vazio">a pesquisar</b><em>toque na lupa de cada trecho</em>`}</div>
       </div></div>${escadaEconomiaHTML(ts)}` : ''}<div class="cartao" style="padding:0;overflow:hidden">
     <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
-      <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar. Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato em dinheiro: tudo entra na conta.</div></h3>
+      <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar.<br>Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato em dinheiro: tudo entra na conta.</div></h3>
       <button class="bt primario" onclick="editarTrecho()"><svg><use href="#i-mais"/></svg>Novo Trecho</button>
     </div>
     ${ts.length ? `<div class="rolo" style="margin:0;padding:0"><table class="tb-dados tb-trechos">
@@ -25435,7 +25452,7 @@ function renderTrechos(p){
             : `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span>`}</div></td>
         <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq">dinheiro</span> <span class="tr-pg-val">${brl(t.pago || 0)}</span>`
           : `<span class="etq aco">${esc(prog(t.prog).n)}</span> <span class="tr-pg-val">${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}</span>`}
-          ${(c => c ? `<div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:3px">${(Number(t.parcelas) || 1) > 1 ? `${t.parcelas}x de ${brl(valorNoCartaoTrecho(t) / t.parcelas)}` : 'à vista'} no ${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · ' + esc(c.final) : ''}</div>` : '')((DB.cartoes || []).find(c => c.id === t.cartaoId))}</td>
+          ${(c => c ? `<div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:3px">${(Number(t.parcelas) || 1) > 1 ? `${t.parcelas}x de ${brl(valorCobradoTrecho(t) / t.parcelas)}` : `${brl(valorCobradoTrecho(t))} à vista`} no ${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · ' + esc(c.final) : ''}</div>` : '')((DB.cartoes || []).find(c => c.id === t.cartaoId))}</td>
         <td class="c" data-r="Situação"><button type="button" class="etq ${sit === 'voado' ? 'jade' : sit === 'emitido' ? 'ouro' : ''} rt-sit" onclick="avancarTrecho('${t.id}')" data-dica="Tocar para avançar a situação">${SITUACOES_TRECHO[sit]}</button></td>
         <td class="n" data-r="Economia">${e.valor == null ? `<span class="fraco" data-dica="${esc(e.nota)}">n/d</span>` : `<span class="${e.valor >= 0 ? 'jade' : 'brasa'}">${e.valor >= 0 ? '' : '−'}${brl(Math.abs(e.valor))}</span><div class="fraco" style="font-size:calc(11.5px * var(--esc))">${esc(e.nota)}</div>`}
           ${t.upgrade ? (eb => eb.valor != null ? `<div class="up-antes">antes ${eb.valor >= 0 ? '' : '−'}${brl(Math.abs(eb.valor))}</div>` : '')(economiaTrechoBase(t)) : ''}
@@ -29926,7 +29943,7 @@ function resultadoReserva(r){
 }
 const ICONE_TIPO = {voo:'#i-aviao', hospedagem:'#i-hotel', carro:'#i-carro'};
 const ROTULO_TIPO = {voo:'Voo', hospedagem:'Hospedagem', carro:'Carro'};
-let filtroReservaTipo = 'todas', filtroReservaQuem = 'todos';
+let filtroReservaTipo = 'todas', filtroReservaQuem = 'terceiro';   /* Emitidos (Negócio): só para cliente */
 
 function renderBalcao(){
   renderVendas();
@@ -29935,7 +29952,7 @@ function renderBalcao(){
   const custo = soma(terceiros.map(r => custoReserva(r)));
   const lucro = receita - custo;
   const clientes = new Set(terceiros.map(r => r.cliente).filter(Boolean)).size;
-  const ativas = DB.reservas.filter(r => r.status !== 'realizada' && r.status !== 'cancelada').length;
+  const ativas = DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'realizada' && r.status !== 'cancelada').length;
   /* O contador vive na aba de Emissões agora: a de Reservas saiu do Balcão junto
      com a lista que ela duplicava. */
   const cont = $('#contEmissoes');
@@ -29966,10 +29983,17 @@ function renderBalcao(){
        ${metrica('Economia', brl(economia), economia > 0 ? 'Contra o preço que você pagaria' : 'Informe o preço à vista para medir', economia > 0 ? 'jade' : '')}
        ${metrica('Em aberto', String(emAberto), 'Ainda vão acontecer', '')}`
     : filtroReservaQuem === 'terceiro'
-      ? `${metrica('Receita', brl(receita), `${terceiros.length} para ${clientes} cliente${clientes !== 1 ? 's' : ''}`, '')}
-         ${metrica('Custo real', brl(custo), 'Milhas ao seu milheiro + taxas + despesas', '')}
-         ${metrica('Resultado', brl(lucro), receita > 0 ? `Margem de ${pct(lucro / receita * 100, 1)}` : 'Nenhuma venda ainda', lucro >= 0 ? 'jade' : 'brasa')}
-         ${metrica('Em aberto', String(emAberto), 'Ainda vão acontecer', '')}`
+      ? (() => {
+          /* Emitidos (Negócio): o operacional das emissões para cliente. Receita e
+             resultado já estão na peça de destaque, logo acima. */
+          const futuras = daLista.filter(r => r.status !== 'realizada' && r.data >= hojeISO()).sort((a, b) => a.data.localeCompare(b.data));
+          const prox = futuras[0];
+          const aReceber = soma(daLista.filter(r => !vendaRecebida(r)).map(r => Number(r.cobrado) || 0));
+          return `${metrica('Emissões', String(daLista.length), `${nBR(milhasLista)} milhas usadas`, '')}
+           ${metrica('Em aberto', String(emAberto), 'Ainda vão acontecer', '')}
+           ${metrica('Próximo voo', prox ? dataBR(prox.data) : 'n/d', prox ? `${prox.cliente || 'cliente'} · ${prazoTexto(diasAte(prox.data))}` : 'Nenhum voo marcado', '')}
+           ${metrica('A receber', brl(aReceber), aReceber > 0 ? 'Ainda não creditado' : 'Tudo creditado', aReceber > 0 ? 'ouro' : 'jade')}`;
+        })()
       : `${metrica('Emissões', String(daLista.length), `${nBR(milhasLista)} milhas usadas`, '')}
          ${metrica('Custo real', brl(custoLista), 'Milhas ao seu milheiro + taxas', '')}
          ${metrica('Resultado das vendas', brl(lucro), `${terceiros.length} para cliente`, lucro >= 0 ? 'jade' : 'brasa')}
@@ -31370,7 +31394,7 @@ function renderResultado(){
               })()}</span>
               <span class="n"><b style="color:${corRes(rr)}">${brl(rr)}</b><small>de <span class="rv-azul">${brl(Number(r.cobrado) || 0)}</span></small><small>custo ${brl(c)} · ${mg == null ? 'n/d' : pct(mg, 1)}</small></span>
             </div>`; }).join('')}
-          <div class="rv-total"><span class="rv-esq"><b>Total</b><small>${d.n} ${d.n === 1 ? 'venda' : 'vendas'}</small></span><span class="n"><b style="color:${corRes(res)}">${brl(res)}</b><small>de ${brl(d.rec)}</small><small>custo ${brl(d.cus)} · ${d.rec ? pct(res / d.rec * 100, 1) : 'n/d'}</small></span></div>
+          <div class="rv-total"><span class="rv-esq"><b>Total</b><small><span class="rv-azul">${d.n} ${d.n === 1 ? 'venda' : 'vendas'}</span></small></span><span class="n"><b style="color:${corRes(res)}">${brl(res)}</b><small>de ${brl(d.rec)}</small><small>custo ${brl(d.cus)} · <span class="rv-azul">${d.rec ? pct(res / d.rec * 100, 1) : 'n/d'}</span></small></span></div>
         </div>`;
     }
   }
@@ -35260,7 +35284,7 @@ function comandos(){
     {t:'Abrir o bumerangue', s:'Simular a volta dos pontos com bônus nas duas pontas', i:'#i-atualizar', g:'ir', f:abrirBumerangueFolha},
     {t:'Registrar Compra Bonificada', s:'', i:'#i-caixa', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-compras'); novaCompra(); }},
     {t:'Nova Jornada de Viagem', s:'', i:'#i-alvo', g:'criar', f:() => { irPara('rota'); irParaAba('rota', 'rt-plano'); editarPlanoViagem(); }},
-    {t:'Registrar Emissão', s:'Própria ou para cliente', i:'#i-balcao', g:'criar', f:() => { irPara('emissoes'); irParaAba('emissoes', 'em-resgates'); editarReserva(); }},
+    {t:'Registrar Emissão', s:'Própria ou para cliente', i:'#i-balcao', g:'criar', f:() => { irPara('emitidos'); editarReserva(); }},
     {t:'Novo monitor de rota', s:'', i:'#i-radar', g:'criar', f:() => { irPara('radar'); irParaAba('radar', 'rd-monitores'); abrirMonitor(); }},
     {t:'Lançar saldo', s:'', i:'#i-saldo', g:'criar', f:() => { irPara('saldo'); editarSaldo(); }},
     {t:'Anotar Lote com Prazo', s:'', i:'#i-relogio', g:'criar', f:() => { irPara('saldo'); irParaAba('saldo', 'sl-validade'); editarLote(); }},
@@ -35790,7 +35814,7 @@ function importar(arquivo){
 
 /* O livro de lançamentos mora numa aba do Painel: sem ele aqui, apagar ou editar
    um lançamento pelo Painel deixava a linha velha na tabela até apertar F5. */
-const RENDER = { cotacoes:() => renderCotacoesSalvas(), mesa:() => { renderMesa(); renderVender(); renderLancamentos(); }, radar:renderRadar, fabrica:renderFabrica,
+const RENDER = { emitidos:() => renderBalcao(), cotacoes:() => renderCotacoesSalvas(), mesa:() => { renderMesa(); renderVender(); renderLancamentos(); }, radar:renderRadar, fabrica:renderFabrica,
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 /* ── correções de dados de 05/10/2026 ─────────────────────────────────────────
    Rodam a cada carga, inclusive quando o banco chega da nuvem, e são seguras de
@@ -36452,7 +36476,7 @@ function ligarEventos(){
 
   /* emissões: a lista única e seus dois recortes */
   ['#btNovaEmissao', '#btNovaEmissaoBalcao'].forEach(sel => {
-    const b = $(sel); if (b) b.onclick = () => editarReserva();
+    const b = $(sel); if (b) b.onclick = () => editarReserva(null, {tipo:'voo', quem:'terceiro', cliente:'', desc:'', data:hojeISO(), prog:'smiles', milhas:0, taxas:0, cobrado:0, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO()});
   });
   $$('#segReservas button').forEach(b => b.onclick = () => {
     filtroReservaTipo = b.dataset.t;
@@ -38902,7 +38926,9 @@ function restaurarEstadoTela(){
   /* A troca de tela é animada: abas, rolagem e janela esperam ela terminar. */
   setTimeout(() => {
     const aba = (e.abas || {})[e.vista];
-    if (aba && document.getElementById('p-' + aba)) irParaAba(e.vista, aba);
+    /* só se a seção ainda mora nesta tela: depois de uma mudança de lugar, o F5
+       com o estado antigo abriria a tela sem nenhuma seção */
+    if (aba && document.querySelector(`#v-${e.vista} #p-${aba}`)) irParaAba(e.vista, aba);
     /* Os seletores de tipo de campanha e de período do radar só mudam de cor no
        clique e não leem a escolha guardada: a Torre clica neles, e rótulos,
        lista e radar se atualizam pelo mesmo caminho de um clique de verdade. */
