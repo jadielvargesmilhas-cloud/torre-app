@@ -7421,6 +7421,13 @@ table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before
 
 /* peças de destaque das áreas: mesma pele do Painel, com folga para as abas */
 .heroi-area{ margin-bottom:18px; }
+/* compacta: nos outros módulos da área, só o número principal e a comparação */
+.heroi.compacto{ grid-template-columns:minmax(0, 1fr); padding:18px 24px; gap:0; }
+.heroi.compacto .heroi-numeros, .heroi.compacto .heroi-comp, .heroi.compacto .heroi-dir{ display:none; }
+.heroi.compacto .heroi-esq{ display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 18px; }
+.heroi.compacto .heroi-rot{ flex:1 1 100%; }
+.heroi.compacto .heroi-valor{ font-size:clamp(calc(28px * var(--esc)), 3vw, calc(36px * var(--esc))); margin:2px 0 0; }
+@media (max-width:560px){ .heroi.compacto{ padding:16px 18px; } }
 .heroi-area[hidden]{ display:none !important; }
 .heroi-valor small{ font-size:.42em; letter-spacing:-.01em; font-weight:600; color:rgba(242,193,78,.8); margin-left:.15em; }
 </style>
@@ -7591,6 +7598,10 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
     <div class="fita" id="fita"></div>
 
     <main class="palco">
+      <!-- Peça de destaque da área aberta (Milhas, Viagens ou Negócio). Completa no
+           módulo que a área abre; nos outros módulos da mesma área, compacta: só o
+           número principal e a comparação. -->
+      <section class="heroi heroi-area" id="heroiArea" hidden></section>
 
       <!-- ══════════════ MESA ══════════════════════════════════════════════ -->
       <section class="vista on" id="v-mesa">
@@ -7846,7 +7857,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
       <!-- ══════════════ TANQUE ═════════════════════════════════════════════ -->
       <section class="vista" id="v-saldo">
-        <section class="heroi heroi-area" id="heroiMilhas" aria-label="Suas milhas"></section>
         <div class="abas" data-grupo="saldo">
           <!-- Carteira primeiro: ela responde a pergunta que se faz ao abrir o
                Tanque — quanto há e a que custo. O grupo de contas é de quem está,
@@ -8417,7 +8427,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
       <!-- ══════════════ ROTA ══════════════════════════════════════════════ -->
       <section class="vista" id="v-rota">
-        <section class="heroi heroi-area" id="heroiViagens" aria-label="Suas viagens"></section>
         <div class="abas" data-grupo="rota">
           <!-- Jornadas (ROTA, o método) e Resultados (VEM, a transformação). A meta
                de milhas deixou de ser item próprio: virou a etapa R de cada jornada. -->
@@ -8864,7 +8873,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       </section>
 
       <section class="vista" id="v-vendas">
-        <section class="heroi heroi-area" id="heroiNegocio" aria-label="Seu negócio"></section>
         <!-- O mesmo botão dos dois lados: registrar emissão é o gesto que alimenta
              tanto o controle de milha quanto a conta do balcão, e obrigar a trocar
              de menu para fazê-lo separa o que na prática é um movimento só.
@@ -9220,7 +9228,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 21:00';
+const BUILD = '2026-10-06 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13699,7 +13707,7 @@ const milCurto = v => Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('pt-BR', {
 /* Milhas: o estoque pronto para emitir, o custo médio contra o alvo, e o que
    entrou a cada mês. */
 function renderHeroiMilhas(){
-  const alvo = $('#heroiMilhas'); if (!alvo) return;
+  const alvo = $('#heroiArea'); if (!alvo) return;
   const sal = saldoPorPrograma() || {}, cpm = cpmPorPrograma() || {};
   const aereos = Object.keys(sal).filter(p => sal[p] > 0 && prog(p).tipo !== 'pontos');
   const milhas = soma(aereos.map(p => sal[p]));
@@ -13734,8 +13742,9 @@ function renderHeroiMilhas(){
 
 /* Viagens: a próxima viagem, o que ela já economizou, e as milhas usadas. */
 function renderHeroiViagens(){
-  const alvo = $('#heroiViagens'); if (!alvo) return;
-  alvo.hidden = typeof roteiroAberto !== 'undefined' && roteiroAberto;
+  const alvo = $('#heroiArea'); if (!alvo || areaDe(vistaAtual).k !== 'viagens') return;
+  /* com uma jornada aberta, a peça sai da frente dela */
+  alvo.hidden = vistaAtual === 'rota' && typeof roteiroAberto !== 'undefined' && roteiroAberto;
   if (alvo.hidden) return;
   const hoje = hojeISO();
   const futuras = (DB.planos || []).filter(p => (p.fim || p.inicio || '') >= hoje).sort((a, b) => String(a.inicio || '').localeCompare(String(b.inicio || '')));
@@ -13765,7 +13774,7 @@ function renderHeroiViagens(){
 
 /* Negócio: o resultado das vendas no ano, a receita, e o resultado mês a mês. */
 function renderHeroiNegocio(){
-  const alvo = $('#heroiNegocio'); if (!alvo) return;
+  const alvo = $('#heroiArea'); if (!alvo) return;
   const ano = String(new Date().getFullYear());
   const vendas = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && String(r.criada || r.data || '').startsWith(ano));
   if (!vendas.length){ montarHeroi(alvo, {rot:`Resultado das vendas em ${ano}`, vazio:'Nenhuma venda registrada neste ano. Ao registrar uma emissão para cliente, a Torre mostra aqui a receita, o resultado e a margem.'}); return; }
@@ -13788,10 +13797,17 @@ function renderHeroiNegocio(){
     serie, fmtSerie:v => 'R$ ' + milCurto(v)
   });
 }
+const PRINCIPAL_DA_AREA = {milhas:'saldo', viagens:'rota', negocio:'vendas'};
 function renderHeroiDaVista(v){
-  if (v === 'saldo') renderHeroiMilhas();
-  if (v === 'rota') renderHeroiViagens();
-  if (v === 'vendas') renderHeroiNegocio();
+  const el = $('#heroiArea'); if (!el) return;
+  const k = areaDe(v).k;
+  if (!PRINCIPAL_DA_AREA[k]){ el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.dataset.area = k;
+  el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
+  if (k === 'milhas') renderHeroiMilhas();
+  if (k === 'viagens') renderHeroiViagens();
+  if (k === 'negocio') renderHeroiNegocio();
 }
 
 function renderMesa(){
@@ -26896,7 +26912,7 @@ function renderPlano(){
   const p = roteiroAberto ? P() : null;
   if (!p){
     roteiroAberto = false;
-    if (typeof renderHeroiViagens === 'function') renderHeroiViagens();
+    if (typeof renderHeroiViagens === 'function' && vistaAtual === 'rota') renderHeroiViagens();
     if ($('#rtJornada')) $('#rtJornada').innerHTML = '';
     if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
     renderListaRoteiros();
@@ -26905,7 +26921,7 @@ function renderPlano(){
   }
   if ($('#rtRoteiroLista')) $('#rtRoteiroLista').innerHTML = '';
   renderJornadaRota(p);
-  if (typeof renderHeroiViagens === 'function') renderHeroiViagens();
+  if (typeof renderHeroiViagens === 'function' && vistaAtual === 'rota') renderHeroiViagens();
   requestAnimationFrame(() => {
     const tr = document.querySelector('.rt-trilho.grande'), on = tr && tr.querySelector('.rt-no.on');
     if (!tr || !on || tr.scrollWidth <= tr.clientWidth) return;
