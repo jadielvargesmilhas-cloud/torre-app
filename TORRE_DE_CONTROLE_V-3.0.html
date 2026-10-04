@@ -3698,6 +3698,10 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-meio b{ font-family:var(--f-m); font-size:calc(18px * var(--esc)); }
 .up-meio b.jade{ color:var(--jade); } .up-meio b.brasa{ color:var(--brasa); }
 /* Leitura de prints */
+.oq-curto{ white-space:nowrap; }
+.info-i{ display:inline-grid; place-items:center; width:18px; height:18px; margin-left:4px; vertical-align:-3px; border-radius:50%; cursor:help; color:var(--grafite); }
+.info-i svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.info-i:hover, .info-i:focus{ color:var(--anil-claro); outline:none; }
 .ac-campo{ position:relative; }
 .ac-lista{ position:absolute; z-index:30; left:0; right:0; top:calc(100% + 4px); max-height:300px; overflow:auto; padding:5px; border-radius:12px;
   border:1px solid var(--fio-forte); background:var(--sup-0); box-shadow:var(--sombra); }
@@ -8772,7 +8776,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 07:00';
+const BUILD = '2026-10-05 07:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25096,6 +25100,7 @@ function editarTrecho(id){
       <div class="campo tr-alt"><label>No programa</label><select id="trAltProg">${opP(t.altProg || t.prog)}</select></div>
       <div class="campo tr-alt"><label>Com taxas de (R$)</label><input type="text" inputmode="decimal" data-moeda id="trAltTaxas" value="${moedaTxt(t.altTaxas || 0)}"></div>
       <div class="campo tr-sem"><label for="trSemAlt">Opção em milhas</label><label class="ck cd-caixa"><input type="checkbox" id="trSemAlt"${t.semAlt ? ' checked' : ''}> Não havia</label></div>
+      <input type="hidden" id="trTaxasDin" value="${Number(t.taxasDinheiro) || 0}">
       <div class="campo"><label>Cartão que pagou</label><select id="trCartao" data-ordem="natural"><option value="">Não foi no cartão</option>${(DB.cartoes || []).filter(c => c.ativo !== false || c.id === t.cartaoId).map(c => `<option value="${c.id}"${c.id === t.cartaoId ? ' selected' : ''}>${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · final ' + esc(c.final) : ''}</option>`).join('')}</select></div>
       ${campoParcelas('trParcelas', t.parcelas || 1)}
       <div class="campo"><label>Data da compra</label><input type="date" id="trDataCompra" value="${t.dataCompra || ''}"></div>
@@ -25184,6 +25189,7 @@ function editarTrecho(id){
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
       semAlt:f === 'dinheiro' && $('#trSemAlt').checked,
+      taxasDinheiro:f === 'dinheiro' ? (Number($('#trTaxasDin').value) || 0) : 0,
       cartaoId:$('#trCartao').value, parcelas:$('#trCartao').value ? (Number($('#trParcelas').value) || 1) : 1, dataCompra:$('#trDataCompra').value,
       cortesiaQtd:Number($('#trCortQtd').value) || 0, cortesiaValor:Number($('#trCortQtd').value) ? moedaNum($('#trCortValor').value) : 0,
       cortesiaOrigem:Number($('#trCortQtd').value) ? $('#trCortOrigem').value : '',
@@ -25790,6 +25796,7 @@ function aplicarLeituraPrints(){
   const progAlt = $('#lpProg').value || (_leitura.pre && _leitura.pre.prog) || '';
   const base = _leitura.base || 'custo', outro = _leitura.outro || 0;
   const pgLido = (_leitura.dados || {}).pagamento || null;
+  const taxasDinLidas = (((_leitura.dados || {}).dinheiro) || {}).taxas || 0;
   const pai = _leitura.pai; _leitura = null;
   devolverFolhaGuardada(pai);
   const set = (sel, val) => { const e = $(sel); if (e && val !== undefined && val !== null) e.value = val; };
@@ -25803,6 +25810,8 @@ function aplicarLeituraPrints(){
     $('#trSemAlt').dispatchEvent(new Event('change'));
   }
   $('#trBase').value = base; $('#trBase').dispatchEvent(new Event('change'));
+  /* taxas do bilhete pago em dinheiro (estão dentro do total; ficam guardadas para a agenda) */
+  if (f === 'dinheiro' && taxasDinLidas && $('#trTaxasDin')) $('#trTaxasDin').value = taxasDinLidas;
   /* Pagamento lido: o cartão pelo final e as parcelas. */
   if (pgLido && pgLido.cartao_final){
     const c = (DB.cartoes || []).find(x => String(x.final || '') === String(pgLido.cartao_final));
@@ -26898,7 +26907,7 @@ function trechosEmDinheiroNaAgenda(esc){
   return (DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(p => trechosDe(p)
     .filter(t => t.forma === 'dinheiro' && t.situacao !== 'voado' && !t.reservaId)
     .map(t => ({trecho:true, id:'t:' + p.id + ':' + t.id, planoId:p.id, trechoId:t.id, data:t.data, hora:horaDoTrecho(t),
-      desc:[rotuloTrecho(t), t.cia].filter(Boolean).join(' · '), pago:Number(t.pago) || 0, plano:p.nome})));
+      desc:[rotuloTrecho(t), t.cia].filter(Boolean).join(' · '), pago:Number(t.pago) || 0, taxas:Number(t.taxasDinheiro) || 0, plano:p.nome})));
 }
 function numerosViagens(esc){
   const sal = saldoPorPrograma();
@@ -28668,6 +28677,19 @@ function ordemNaAgenda(a, b){
   if (ra && rb){ if (ra[1] === rb[0] && rb[1] !== ra[0]) return -1; if (rb[1] === ra[0] && ra[1] !== rb[0]) return 1; }
   return 0;
 }
+/* "O quê" curto: a rota e a companhia; os voos, a escala e o localizador
+   ficam no "i", ao passar o mouse (ou tocar, no celular). */
+function oQueCurto(desc){
+  const partes = String(desc || '').split(' · ').map(x => x.trim()).filter(Boolean);
+  const principal = partes.slice(0, 2).join(' · '), resto = partes.slice(2).join(' · ');
+  return `<span class="oq-curto"><b>${esc(principal || desc || '')}</b>${resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : ''}</span>`;
+}
+function apagarTrechoDaAgenda(planoId, trechoId){
+  const p = (DB.planos || []).find(x => x.id === planoId); const t = p && trechosDe(p).find(x => x.id === trechoId); if (!t) return;
+  confirmar('Apagar o trecho', `${rotuloTrecho(t)} sai da jornada ${p.nome}.`, () => {
+    p.trechos = trechosDe(p).filter(x => x.id !== trechoId); salvar(); renderViagens(); renderFita(); avisar('Trecho apagado.', 'ok');
+  }, 'Apagar');
+}
 function trechoJaOcorreu(planoId, trechoId){
   const p = (DB.planos || []).find(x => x.id === planoId); const t = p && trechosDe(p).find(x => x.id === trechoId); if (!t) return;
   t.situacao = 'voado'; salvar(); renderViagens(); avisar(`${rotuloTrecho(t)} marcado como voado.`, 'ok');
@@ -28709,29 +28731,32 @@ function renderViagens(){
     'As reservadas à frente, da mais próxima para a mais distante, e as já realizadas, com o que cada resgate valeu à vista e quanto sobrou depois do custo das milhas.');
 
   $('#viAgenda').innerHTML = agenda.length ? `<table class="tb-dados">
-    <thead><tr><th class="c">Data</th><th>O quê</th><th class="c">Tipo</th><th class="n">Milhas</th><th class="n">Taxas</th><th>Meta</th><th></th></tr></thead>
+    <thead><tr><th class="c">Data</th><th>O quê</th><th class="c">Tipo</th><th class="n">Milhas</th><th class="n">Dinheiro</th><th class="n">Taxas</th><th class="c">Meta</th><th></th></tr></thead>
     <tbody>${agenda.map(r => {
       const d = diasAte(r.data);
       if (r.trecho) return `<tr>
         <td class="c">${dataBR(r.data)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${d === null ? '' : prazoTexto(d)}</div></td>
-        <td><b>${esc(r.desc)}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">em dinheiro</div></td>
+        <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">em dinheiro</div></td>
         <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Voo</span></td>
         <td class="n"><span class="fraco">—</span></td>
-        <td class="n" data-dica="Pago em dinheiro">${brl(r.pago)}<div class="fraco" style="font-size:calc(11.5px * var(--esc))">pago, não é taxa</div></td>
-        <td><span class="etq aco">${esc(r.plano)}</span></td>
+        <td class="n">${brl(r.pago)}</td>
+        <td class="n">${r.taxas ? brl(r.taxas) : '<span class="fraco" data-dica="Incluídas no valor pago em dinheiro">—</span>'}</td>
+        <td class="c"><span class="etq aco">${esc(r.plano)}</span></td>
         <td><div class="acoes-cel">
           <button class="bt p primario" onclick="trechoJaOcorreu('${r.planoId}','${r.trechoId}')" data-dica="Marcar o trecho como voado"><svg><use href="#i-ok"/></svg>Já ocorreu</button>
           <button class="bt p fantasma icone" onclick="abrirTrechoDaAgenda('${r.planoId}','${r.trechoId}')" data-dica="Abrir o trecho na jornada"><svg><use href="#i-lapis"/></svg></button>
+          <button class="bt p fantasma icone" onclick="apagarTrechoDaAgenda('${r.planoId}','${r.trechoId}')" data-dica="Apagar o trecho"><svg><use href="#i-lixo"/></svg></button>
         </div></td></tr>`;
       const meta = DB.metas.find(m => m.id === r.metaId);
       const t = TIPOS_VIAGEM[r.tipo] || TIPOS_VIAGEM.voo;
       return `<tr>
         <td class="c">${dataBR(r.data)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${d === null ? '' : prazoTexto(d)}</div></td>
-        <td><b>${esc(r.desc)}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(prog(r.prog).n)}</div></td>
+        <td>${oQueCurto(r.desc)}<div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(r.prog ? prog(r.prog).n : 'em dinheiro')}</div></td>
         <td class="c"><span class="etq"><svg style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2"><use href="#${t.ico}"/></svg>${esc(t.n)}</span></td>
-        <td class="n">${nBR(r.milhas)}</td>
-        <td class="n">${brl(r.taxas || 0)}</td>
-        <td>${meta ? `<span class="etq aco">${esc(meta.n)}</span>` : '<span class="fraco">avulsa</span>'}</td>
+        <td class="n">${Number(r.milhas) ? nBR(r.milhas) : '<span class="fraco">—</span>'}</td>
+        <td class="n">${Number(r.custoExtra) ? brl(r.custoExtra) : '<span class="fraco">—</span>'}</td>
+        <td class="n">${Number(r.taxas) ? brl(r.taxas) : '<span class="fraco">—</span>'}</td>
+        <td class="c">${meta ? `<span class="etq aco">${esc(meta.n)}</span>` : '<span class="fraco">avulsa</span>'}</td>
         <td><div class="acoes-cel">
           <button class="bt p primario" onclick="marcarViagemFeita('${r.id}')" data-dica="Marcar como realizada e calcular o valor"><svg><use href="#i-ok"/></svg>Já ocorreu</button>
           <button class="bt p fantasma icone" onclick="editarViagem('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -28741,7 +28766,7 @@ function renderViagens(){
     : `<div class="vazio" style="border:0;padding:26px"><p>Nada reservado à frente. Ao emitir uma passagem sua, registre aqui para acompanhar até a viagem acontecer.</p></div>`;
 
   $('#viFeitas').innerHTML = feitas.length ? `<table class="tb-dados">
-    <thead><tr><th class="c">Data</th><th>O quê</th><th class="n">Milhas</th><th class="n">Preço à vista</th><th class="n">Valeu</th><th class="n">Sobrou</th><th>Meta</th><th></th></tr></thead>
+    <thead><tr><th class="c">Data</th><th>O quê</th><th class="n">Milhas</th><th class="n">Preço à vista</th><th class="n">Valeu</th><th class="n">Sobrou</th><th class="c">Meta</th><th></th></tr></thead>
     <tbody>${feitas.sort((a, b) => (b.data || '').localeCompare(a.data || '')).map(r => {
       const v = valorResgate(r);
       const meta = DB.metas.find(m => m.id === r.metaId);
@@ -28760,7 +28785,7 @@ function renderViagens(){
               v.multiplo ? `Rendeu ${v.multiplo.toFixed(1).replace('.', ',')}× o seu custo de ${brl2(v.meu)}` : 'Sem custo lançado para comparar'
             ].concat(v.inflado ? ['Atenção: acima de quatro vezes o valor-alvo. Confira se você pagaria mesmo esse preço.'] : [])))}">${brl2(v.porMilheiro)}/mil</span>`}</td>
         <td class="n">${v.ganho == null ? '<span class="fraco">—</span>' : `<b style="color:var(--${v.ganho >= 0 ? 'jade' : 'brasa'})">${brl(v.ganho)}</b>`}</td>
-        <td>${meta ? `<span class="etq aco">${esc(meta.n)}</span>` : '<span class="fraco">avulsa</span>'}</td>
+        <td class="c">${meta ? `<span class="etq aco">${esc(meta.n)}</span>` : '<span class="fraco">avulsa</span>'}</td>
         <td><div class="acoes-cel">
           <button class="bt p fantasma icone" onclick="editarViagem('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
           <button class="bt p fantasma icone" onclick="apagar('reservas','${r.id}','o resgate')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
