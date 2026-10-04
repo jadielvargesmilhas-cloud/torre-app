@@ -5404,15 +5404,19 @@ table.tb-mes tr.mes-atual td:first-child{ box-shadow:inset 3px 0 0 var(--ouro); 
 .fa-bloco{ background:var(--fio-suave); border:1px solid var(--fio); border-radius:var(--r); padding:13px 15px; }
 
 .fa-linha{
-  display:flex; align-items:baseline; gap:9px; padding:6px 0;
+  display:flex; align-items:baseline; gap:6px 9px; padding:6px 0; flex-wrap:wrap;
   border-bottom:1px dashed color-mix(in oklab, var(--fio) 60%, transparent);
 }
 .fa-linha:last-child{ border-bottom:0; padding-bottom:0; }
 .fa-r{ flex:1 1 auto; min-width:0; font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.4; }
 .fa-v{
-  flex:0 0 auto; font-family:var(--f-m); font-size:calc(13px * var(--esc));
+  flex:0 1 auto; margin-left:auto; font-family:var(--f-m); font-size:calc(13px * var(--esc));
   color:var(--giz-2); text-align:right; white-space:nowrap;
+  /* data e etiqueta lado a lado; sem espaço, a etiqueta desce para a linha de
+     baixo, alinhada à direita, em vez de passar por cima do rótulo */
+  display:inline-flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:6px 8px; max-width:100%;
 }
+.fa-v .etq{ white-space:nowrap; }
 
 /* A bolinha de informação carrega a explicação sem gastar linha. Fica com o
    tamanho de um sinal de pontuação para não roubar o rótulo. */
@@ -7261,6 +7265,159 @@ table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
   .g4 > .metrica .val{ font-size:calc(19px * var(--esc)); }
   .g4 > .metrica .rot{ font-size:calc(10.5px * var(--esc)); letter-spacing:.08em; }
 }
+
+/* ══ GRÁFICOS (06/10/2026) ═════════════════════════════════════════════════════
+   Linha suave com o último ponto em destaque (é o "agora"); pontos intermediários
+   aparecem ao passar o mouse; barras do resultado sobem uma vez ao abrir a tela.
+   Quem pede menos movimento no aparelho não vê animação nenhuma. */
+svg.gr .pt{ opacity:0; transition:opacity .15s; }
+svg.gr:hover .pt, svg.gr .pt.pt-fim{ opacity:1; }
+svg.gr .pt-fim{ stroke:var(--sup-0); stroke-width:2; }
+svg.gr .pt-halo{ opacity:.16; pointer-events:none; }
+@media (prefers-reduced-motion: no-preference){
+  svg.gr .pt-halo{ animation:halo 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes halo{ 0%,100%{ transform:scale(.7); opacity:.22; } 50%{ transform:scale(1.25); opacity:.06; } }
+  .rm-res, .rm-rec{ transform-origin:bottom; animation:sobe .7s cubic-bezier(.2,.8,.2,1) both; }
+  .rm-col:nth-child(2) .rm-res, .rm-col:nth-child(2) .rm-rec{ animation-delay:.03s; }
+  .rm-col:nth-child(3) .rm-res, .rm-col:nth-child(3) .rm-rec{ animation-delay:.06s; }
+  .rm-col:nth-child(4) .rm-res, .rm-col:nth-child(4) .rm-rec{ animation-delay:.09s; }
+  .rm-col:nth-child(5) .rm-res, .rm-col:nth-child(5) .rm-rec{ animation-delay:.12s; }
+  .rm-col:nth-child(6) .rm-res, .rm-col:nth-child(6) .rm-rec{ animation-delay:.15s; }
+  .rm-col:nth-child(n+7) .rm-res, .rm-col:nth-child(n+7) .rm-rec{ animation-delay:.18s; }
+  @keyframes sobe{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+  .lc-barra i{ transform-origin:left; animation:estica .6s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes estica{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+}
+.rm-res{ background:linear-gradient(180deg, color-mix(in oklab, var(--jade) 82%, #fff), var(--jade)); }
+.rm-res.neg{ background:linear-gradient(180deg, color-mix(in oklab, var(--brasa) 82%, #fff), var(--brasa)); }
+
+/* ══ PAINEL · A CARTEIRA HOJE (06/10/2026) ═════════════════════════════════════
+   O único bloco escuro da tela, nos dois temas: azul-noite com o dourado da VEM.
+   As variáveis são redefinidas aqui dentro, e os componentes de dentro (gráfico,
+   dicas) se ajustam sozinhos ao fundo escuro. */
+.heroi{
+  --giz:#F3F6FB; --giz-2:#DCE4F0; --grafite:rgba(220,229,243,.62); --grafite-dim:rgba(220,229,243,.42);
+  --fio:rgba(255,255,255,.10); --fio-suave:rgba(255,255,255,.06); --sup-0:#13283F;
+  position:relative; overflow:hidden; border-radius:22px; color:var(--giz);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(242,193,78,.16), transparent 46%),
+    radial-gradient(90% 120% at 100% 100%, rgba(111,183,255,.14), transparent 50%),
+    linear-gradient(150deg, #12304D 0%, #0E2238 55%, #0A1828 100%);
+  box-shadow:0 30px 60px -36px rgba(8,20,36,.75), inset 0 1px 0 rgba(255,255,255,.06);
+  display:grid; grid-template-columns:minmax(0, 0.95fr) minmax(0, 1.05fr); gap:28px; padding:28px 30px;
+}
+.heroi::after{ content:''; position:absolute; inset:0; pointer-events:none; border-radius:inherit; border:1px solid rgba(255,255,255,.07); }
+.heroi-rot{ font-size:calc(13.5px * var(--esc)); color:var(--grafite); font-weight:500; }
+.heroi-valor{ font-family:var(--f-d); font-weight:700; font-size:clamp(calc(38px * var(--esc)), 4.4vw, calc(56px * var(--esc)));
+  letter-spacing:-.035em; line-height:1; margin:8px 0 12px; color:#F2C14E; font-variant-numeric:tabular-nums;
+  text-shadow:0 0 34px rgba(242,193,78,.25); }
+.heroi-linha{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:calc(14px * var(--esc)); color:var(--grafite); }
+.heroi-linha b{ color:var(--giz); font-weight:600; }
+.heroi-chip{ font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); padding:3px 10px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.heroi-chip.sobe{ color:#7EE2B8; background:rgba(95,211,166,.14); }
+.heroi-chip.desce{ color:#FF9A84; background:rgba(255,120,95,.14); }
+.heroi-numeros{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin:22px 0 20px; }
+.heroi-numeros > div{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:11px 12px; min-width:0; }
+.heroi-numeros b{ display:block; font-family:var(--f-m); font-size:calc(16px * var(--esc)); color:var(--giz); font-weight:600; white-space:nowrap; letter-spacing:-.02em; }
+.heroi-numeros span{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); margin-top:3px; }
+.heroi-barra{ display:flex; height:10px; border-radius:99px; overflow:hidden; gap:3px; }
+.heroi-barra i{ display:block; min-width:4px; border-radius:99px; }
+.heroi-leg{ display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:11px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.heroi-leg span{ display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+.heroi-leg i{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+.heroi-leg b{ color:var(--giz); font-weight:600; font-family:var(--f-m); }
+.heroi-dir{ display:flex; flex-direction:column; min-width:0; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); border-radius:18px; padding:18px 18px 10px; }
+.heroi-dir-cab{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:10px; }
+.heroi-sub{ font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); margin-top:3px; }
+.heroi-ult{ text-align:right; flex-shrink:0; }
+.heroi-ult b{ display:block; font-family:var(--f-m); font-size:calc(20px * var(--esc)); color:#F2C14E; font-weight:600; white-space:nowrap; }
+.heroi-ult span{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.heroi-curva{ flex:1; display:flex; align-items:flex-end; }
+.heroi-curva svg.gr text{ fill:var(--grafite-dim); }
+.heroi-curva svg.gr .malha{ stroke:rgba(255,255,255,.07); }
+.heroi-vazio{ grid-column:1 / -1; display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
+.heroi-vazio p{ margin:0; color:var(--grafite); max-width:56ch; }
+@media (max-width:1100px){ .heroi{ grid-template-columns:minmax(0, 1fr); } }
+@media (max-width:560px){
+  .heroi{ padding:22px 18px; gap:20px; border-radius:20px; }
+  .heroi-numeros{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .heroi-numeros > div:last-child{ grid-column:1 / -1; }
+  .heroi-dir{ padding:14px 12px 6px; }
+  .heroi-dir-cab{ flex-direction:column; }
+  .heroi-ult{ text-align:left; }
+}
+
+/* ══ TIPOGRAFIA LIMPA (06/10/2026) ═════════════════════════════════════════════
+   Rótulos em CAIXA ALTA espaçada, em letra de máquina, eram a maioria dos textos
+   pequenos da Torre: cansavam a leitura e deixavam tudo com a mesma voz. Agora
+   rótulos, títulos de seção e cabeçalhos de tabela usam a letra do texto, em
+   caixa normal; a letra de máquina fica só para números e códigos (R$, IATA,
+   localizador). As etiquetas de situação continuam em caixa alta, mais justas. */
+.olho, .cab-vista .cv-olho, .metrica .rot, .fita-rot, .calc-kpi .rot, .campo > label,
+table.tb-dados th, .matriz th, .cal-cab, .rv-cab, .cm-grupo, .hc-tit, .ck-rotulo, .crd-campos span,
+.guia-cab span, .det-bilhete > summary, .rt-proximo-rot, .rt-grupo-rot, .ga-total span, .ec-n span,
+.up-faixa-nums span, .up-lado-cab, .lp-lado-cab, .pax-resumo, .pax-ficha .faixa, .ds-conta span,
+.pn-mes em, .trilha-tit, .rg-etapa, .rg-fecho-r, .rg-vd .r, .lado-nome, .ct-ad-col, .ct-ad-pe-cab, .ct-ad-g,
+.hc-col em, .ctm-num span, .gp-nome, .termo-prog, .termo-invest span, .clube-tarja, .pl-dia-n span, .pl-elo span,
+.livro th .prog, .livro tr.fecho .rot, .ee-sep span, .rt-emb-grade span,
+table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before, .tb-cmp td::before, .tb-enc td::before{
+  font-family:var(--f-b); text-transform:none; letter-spacing:0;
+}
+/* títulos de seção: o rótulo vira título, com peso e cor de texto */
+.olho{ font-size:calc(15px * var(--esc)); font-weight:650; color:var(--giz); letter-spacing:-.005em; }
+.olho.destaque{ color:var(--ouro); font-size:calc(15.5px * var(--esc)); }
+.olho.anil{ color:var(--anil-claro); }
+.olho::after{ background:linear-gradient(90deg, var(--fio), transparent); }
+/* rótulos de número e de campo: menores, discretos, em peso médio */
+.metrica .rot, .fita-rot, .calc-kpi .rot{ font-size:calc(12.5px * var(--esc)); font-weight:500; color:var(--grafite); }
+.campo > label{ font-size:calc(12.5px * var(--esc)); font-weight:550; color:var(--grafite); }
+table.tb-dados th, .matriz th, .rv-cab{ font-size:calc(12px * var(--esc)); font-weight:600; color:var(--grafite); }
+table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before, .tb-cmp td::before, .tb-enc td::before{
+  font-size:calc(12px * var(--esc)); font-weight:550; }
+.cm-grupo{ font-size:calc(12px * var(--esc)); font-weight:600; }
+/* números com mais presença */
+.metrica .val{ font-size:calc(26px * var(--esc)); letter-spacing:-.035em; }
+/* etiquetas de situação: continuam em caixa alta, com menos espaço entre letras */
+.etq{ letter-spacing:.04em; }
+
+/* ══ TABELAS NO CELULAR, EM LISTA (06/10/2026) ═════════════════════════════════
+   No modelo do SisProf. Cada linha vira um cartão: a primeira coluna é o título
+   (sem rótulo), e as outras viram pequenos pares "rótulo em cima, valor embaixo",
+   dois por linha. Texto longo, etiqueta larga e a coluna de ações ocupam a
+   largura toda. Vale só no celular; no tablet a forma anterior continua. */
+@media (max-width:560px){
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]){
+    display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px 14px;
+    padding:14px 14px 12px; border-radius:16px; background:var(--sup-0);
+    border:1px solid color-mix(in oklab, var(--giz) 8%, transparent);
+    box-shadow:0 1px 2px rgba(15,25,45,.04), 0 8px 22px -18px rgba(15,25,45,.28);
+  }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td{
+    padding:0; text-align:left; min-width:0;
+  }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td::before{
+    position:static; display:block; width:auto; margin:0 0 3px; top:auto;
+    font-size:calc(11.5px * var(--esc)); font-weight:500; color:var(--grafite-dim); line-height:1.3;
+  }
+  /* a primeira coluna é o título do cartão */
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:first-child{
+    grid-column:1 / -1; padding-bottom:10px; margin-bottom:2px; border-bottom:1px solid var(--fio-suave);
+    font-size:calc(15px * var(--esc)); font-weight:600; color:var(--giz);
+  }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:first-child::before{ content:none; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:first-child::first-letter{ text-transform:uppercase; }
+  /* o que não cabe em meia largura ganha a linha inteira */
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td[data-longo="1"],
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td[data-valor-largo="1"]{ grid-column:1 / -1; }
+  /* ações no pé do cartão, à direita */
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td[data-r=""]:not(:first-child),
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:not([data-r]):not(:first-child){
+    grid-column:1 / -1; display:flex; justify-content:flex-end; flex-wrap:wrap; gap:6px; padding-top:4px;
+  }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td .etq{ max-width:100%; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td .n,
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td.n{ text-align:left; }
+}
 </style>
 </head>
 <body>
@@ -7452,6 +7609,10 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba on" id="p-ms-hoje">
           <div class="pilha" style="gap:20px">
+            <!-- A peça de destaque do Painel (06/10/2026): quanto a carteira vale
+                 hoje, quanto custou, e a curva do milheiro mês a mês. É o único
+                 bloco escuro da tela: o olho começa por ele. -->
+            <section class="heroi" id="mesaHeroi" aria-label="Sua carteira hoje"></section>
             <div class="pilha" style="gap:13px">
               <div class="linha" style="flex-wrap:wrap;gap:11px">
                 <div class="olho anil" style="margin:0;flex:0 0 auto">O que há no tanque</div>
@@ -8343,13 +8504,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <!-- Mesmo cabeçalho do Controle de emissões: o rótulo abre a aba e os
                    filtros seguem na mesma linha, porque são o recorte dele. -->
-              <!-- Emitidos tem duas partes: a lista das emissões e o resultado das
-                   vendas (veio da tela Vendas). Os filtros ao lado só valem para a
-                   lista, e somem no resultado. -->
-              <div class="seg" id="segEmVista">
-                <button class="on" data-v="lista">Emissões</button>
-                <button data-v="resultado">Resultado das vendas</button>
-              </div>
               <div class="seg em-so-lista" id="segEmQuem">
                 <button class="on" data-q="todos">Todas</button>
                 <button data-q="proprio">Minhas</button>
@@ -8371,31 +8525,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div id="emAvisoPax"></div>
             <div class="pilha" style="gap:10px" id="blReservas"></div>
             </div>
-            <div class="pilha em-so-resultado" style="gap:18px" id="emParteResultado" hidden>
-              <div class="rs-topo">
-                <div class="sec-cab"><div class="olho anil" style="margin:0">Resultado das vendas</div>
-                  <p class="fraco">O que entrou, o custo real das milhas e das taxas, e o que sobrou.</p></div>
-                <div class="rs-filtros">
-                  <div class="seg" id="rsAnos"></div>
-                  <div class="seg" id="rsBase" data-dica="Em que mês cada venda entra na conta">
-                    <button data-b="venda">Mês da venda</button><button data-b="voo">Mês do voo</button>
-                  </div>
-                </div>
-              </div>
-              <div class="grade g4" id="rsKpis"></div>
-              <div class="cartao">
-                <div class="cartao-cab"><h3>Resultado por mês</h3><span class="etq" id="rsMesEtq"></span></div>
-                <div id="blGraficoMes"></div>
-              </div>
-              <div class="rs-duas">
-                <div class="cartao">
-                  <div class="cartao-cab"><h3>Lucro por cliente</h3><span class="etq" id="rsCliEtq"></span></div>
-                  <div id="blPorCliente"></div>
-                </div>
-                <div class="cartao rs-det" id="rsDetCliente"></div>
-              </div>
-              <div id="rsFora"></div>
-            </div>
+            
           </div>
         </div>
 
@@ -8738,6 +8868,13 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <button class="bt primario" id="btNovaEmissaoBalcao"><svg><use href="#i-mais"/></svg>Registrar Emissão</button>
         </div>
 
+        <!-- Vendas tem duas seções: o recorte por período (ano e mês) e o resultado
+             das vendas (gráfico por mês, ranking e vendas de cada cliente). O
+             resultado voltou para cá em 06/10/2026, a pedido do Jadiel. -->
+        <div class="abas" data-grupo="vendas">
+          <button class="aba on" data-aba="bl-vendas">Vendas no período</button>
+          <button class="aba" data-aba="vd-resultado">Resultado das vendas</button>
+        </div>
         <div class="painel-aba on" id="p-bl-vendas">
           <div class="pilha" style="gap:16px">
             <div class="linha" style="flex-wrap:wrap;gap:11px">
@@ -8749,11 +8886,34 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             </div>
             <div class="grade g5" id="vdResumo"></div>
             <div class="pilha" style="gap:14px" id="vdContas"></div>
-            <div class="nota"><svg><use href="#i-info"/></svg><div class="pilha compacta">
-              <div><b>Resultado das vendas</b> (por mês e por cliente) fica agora em <b>Emissões → Emitidos</b>.</div>
-              <div style="margin-top:6px"><button type="button" class="bt p primario" onclick="abrirResultadoVendas()">Ver o resultado das vendas</button></div>
-            </div></div>
           </div>
+        </div>
+        <div class="painel-aba" id="p-vd-resultado">
+          <div class="pilha" style="gap:18px" id="emParteResultado">
+              <div class="rs-topo">
+                <div class="sec-cab"><div class="olho anil" style="margin:0">Resultado das vendas</div>
+                  <p class="fraco">O que entrou, o custo real das milhas e das taxas, e o que sobrou.</p></div>
+                <div class="rs-filtros">
+                  <div class="seg" id="rsAnos"></div>
+                  <div class="seg" id="rsBase" data-dica="Em que mês cada venda entra na conta">
+                    <button data-b="venda">Mês da venda</button><button data-b="voo">Mês do voo</button>
+                  </div>
+                </div>
+              </div>
+              <div class="grade g4" id="rsKpis"></div>
+              <div class="cartao">
+                <div class="cartao-cab"><h3>Resultado por mês</h3><span class="etq" id="rsMesEtq"></span></div>
+                <div id="blGraficoMes"></div>
+              </div>
+              <div class="rs-duas">
+                <div class="cartao">
+                  <div class="cartao-cab"><h3>Lucro por cliente</h3><span class="etq" id="rsCliEtq"></span></div>
+                  <div id="blPorCliente"></div>
+                </div>
+                <div class="cartao rs-det" id="rsDetCliente"></div>
+              </div>
+              <div id="rsFora"></div>
+            </div>
         </div>
       </section>
 
@@ -9052,7 +9212,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 11:00';
+const BUILD = '2026-10-06 19:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -10783,23 +10943,23 @@ const PARENTESCO = ['Titular','Cônjuge','Pai/Mãe','Filho(a)','Irmão/Irmã','A
 
 /* ── provedores de dados de voo ───────────────────────────────────────────── */
 const PROVEDORES = {
-  local:{ n:'Motor local', tipo:'ambos', chaves:[], docs:'',
+  local:{ n:'Motor local', tipo:'ambos', custo:'gratis', chaves:[], docs:'',
     desc:'Simulador determinístico. Modela distância, curva de antecedência, sazonalidade brasileira, dia da semana e volatilidade diária. Funciona offline e nunca falha.' },
-  travelpayouts:{ n:'Travelpayouts', tipo:'dinheiro', chaves:[['token','Token da API']],
+  travelpayouts:{ n:'Travelpayouts', tipo:'dinheiro', custo:'gratis', chaves:[['token','Token da API']],
     docs:'https://support.travelpayouts.com/hc/en-us/categories/200358578',
     chaveUrl:'https://www.travelpayouts.com/programs/', chaveOnde:'Painel do afiliado → Ferramentas → API',
     base:'https://api.travelpayouts.com/aviasales/v3/prices_for_dates',
     desc:'Cadastro gratuito de afiliado. Tarifas agregadas em cache; ótimas para ler tendência, não para fechar preço final.' },
-  duffel:{ n:'Duffel', tipo:'dinheiro', chaves:[['token','Access token']],
+  duffel:{ n:'Duffel', tipo:'dinheiro', custo:'teste', chaves:[['token','Access token']],
     docs:'https://duffel.com/docs/api/v2/offer-requests',
     chaveUrl:'https://app.duffel.com/', chaveOnde:'Dashboard → Developers → Access tokens',
     base:'https://api.duffel.com/air/offer_requests?return_offers=true',
     desc:'Busca e emissão por NDC. Modo de teste gratuito, com dados de sandbox. Rota mais recomendada depois do encerramento do Amadeus Self-Service.' },
-  flightapi:{ n:'FlightAPI.io', tipo:'dinheiro', chaves:[['key','Chave da API']],
+  flightapi:{ n:'FlightAPI.io', tipo:'dinheiro', custo:'pago', chaves:[['key','Chave da API']],
     docs:'https://docs.flightapi.io/', base:'https://api.flightapi.io/',
     chaveUrl:'https://www.flightapi.io/dashboard', chaveOnde:'Painel da conta, logo após o cadastro',
     desc:'Preços de ida, volta e multitrecho com link de reserva. Não emite bilhete.' },
-  seatsaero:{ n:'seats.aero', tipo:'milhas', chaves:[['key','Partner API key']],
+  seatsaero:{ n:'seats.aero', tipo:'milhas', custo:'pago', chaves:[['key','Partner API key']],
     docs:'https://developers.seats.aero/reference/getting-started-p',
     base:'https://seats.aero/partnerapi/search',
     chaveUrl:'https://seats.aero/settings', chaveOnde:'Configurações → aba API → gerar chave (formato pro_…)',
@@ -12163,7 +12323,22 @@ function grLinha(pontos, {altura = 150, cor = 'var(--ouro)', fmt = v => nBR(v), 
 
   const px = i => L + (i / Math.max(1, pontos.length - 1)) * (W - L - R);
   const py = v => T + (1 - (v - min) / (max - min || 1)) * (H - T - B);
-  const d = pontos.map((p, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${py(p.v).toFixed(1)}`).join(' ');
+  /* Curva suave (cúbica monotônica): passa por todos os pontos sem inventar
+     pico nem vale que os dados não têm. */
+  const P = pontos.map((p, i) => [px(i), py(p.v)]);
+  const d = (() => {
+    if (P.length < 3) return P.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' ');
+    const n = P.length, dx = [], m = [], t = [];
+    for (let i = 0; i < n - 1; i++){ dx[i] = P[i + 1][0] - P[i][0]; m[i] = (P[i + 1][1] - P[i][1]) / (dx[i] || 1); }
+    t[0] = m[0]; t[n - 1] = m[n - 2];
+    for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / m[i - 1] + (dx[i] + 2 * dx[i - 1]) / m[i]);
+    let out = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+    for (let i = 0; i < n - 1; i++){
+      const h = dx[i] / 3;
+      out += ` C${(P[i][0] + h).toFixed(1)},${(P[i][1] + t[i] * h).toFixed(1)} ${(P[i + 1][0] - h).toFixed(1)},${(P[i + 1][1] - t[i + 1] * h).toFixed(1)} ${P[i + 1][0].toFixed(1)},${P[i + 1][1].toFixed(1)}`;
+    }
+    return out;
+  })();
   const area = d + ` L${px(pontos.length - 1).toFixed(1)},${H - B} L${L},${H - B} Z`;
   const gid = 'g' + Math.random().toString(36).slice(2, 7);
 
@@ -12179,6 +12354,8 @@ function grLinha(pontos, {altura = 150, cor = 'var(--ouro)', fmt = v => nBR(v), 
      fora da caixa e o mês some na borda */
   const eixoX = pontos.map((p, i) => {
     if (!(i % passo === 0 || i === pontos.length - 1)) return '';
+    /* rótulo colado no último some: dois meses encostados viravam "setout/26" */
+    if (i !== pontos.length - 1 && px(pontos.length - 1) - px(i) < 52 * k) return '';
     const fim = i === pontos.length - 1, ini = i === 0;
     return `<text x="${px(i).toFixed(1)}" y="${H - 10}" text-anchor="${ini ? 'start' : fim ? 'end' : 'middle'}">${esc(rotulos ? rotulos[i] : p.r || '')}</text>`;
   }).join('');
@@ -12189,8 +12366,9 @@ function grLinha(pontos, {altura = 150, cor = 'var(--ouro)', fmt = v => nBR(v), 
     </linearGradient></defs>
     ${malha}${eixoY}
     <path d="${area}" fill="url(#${gid})"/>
-    <path class="traco" d="${d}" stroke="${cor}" stroke-width="1.8"/>
-    ${pontos.map((p, i) => `<circle class="pt" cx="${px(i).toFixed(1)}" cy="${py(p.v).toFixed(1)}" r="3.2" fill="${cor}"><title>${esc(p.r || '')} · ${fmt(p.v)}</title></circle>`).join('')}
+    <path class="traco" d="${d}" stroke="${cor}" stroke-width="2.2" stroke-linecap="round"/>
+    ${pontos.map((p, i) => `<circle class="pt${i === pontos.length - 1 ? ' pt-fim' : ''}" cx="${px(i).toFixed(1)}" cy="${py(p.v).toFixed(1)}" r="${i === pontos.length - 1 ? 4.6 : 3.4}" fill="${cor}"><title>${esc(p.r || '')}: ${fmt(p.v)}</title></circle>`).join('')}
+    <circle class="pt-halo" cx="${px(pontos.length - 1).toFixed(1)}" cy="${py(pontos[pontos.length - 1].v).toFixed(1)}" r="9" fill="${cor}"/>
     ${eixoX}
   </svg>`;
 }
@@ -12267,7 +12445,7 @@ function grBarras(itens, {altura = 170, fmt = v => nBR(v), alvo = null} = {}){
     const mostraVal = !soExtremos || v === vMax || v === vMin;
     const mostraMes = i % passoMes === 0 || i === itens.length - 1;
     return `<rect class="barra-v" x="${(cx - larg / 2).toFixed(1)}" y="${y.toFixed(1)}"
-        width="${larg.toFixed(1)}" height="${Math.max(2, h).toFixed(1)}" rx="4" fill="${cor}" opacity=".92">
+        width="${larg.toFixed(1)}" height="${Math.max(2, h).toFixed(1)}" rx="${Math.min(8, larg / 4).toFixed(1)}" fill="${cor}" opacity=".95">
         <title>${esc(it.r)}: ${fmt(v)}</title></rect>
       ${mostraVal ? `<text class="barra-val" x="${cx.toFixed(1)}" y="${yTexto.toFixed(1)}" text-anchor="middle" style="fill:${cor};font-size:${corpoVal}px">${fmt(v)}</text>` : ''}
       ${mostraMes ? `<text class="barra-mes" x="${cx.toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle" style="font-size:${corpoMes}px">${esc(it.r)}</text>` : ''}`;
@@ -12282,17 +12460,19 @@ function grBarras(itens, {altura = 170, fmt = v => nBR(v), alvo = null} = {}){
 function grRosca(itens, {tamanho = 178, titulo = ''} = {}){
   const total = soma(itens.map(i => i.v));
   if (!total) return `<div class="vazio" style="padding:26px"><p>Nada para distribuir ainda.</p></div>`;
-  const R = tamanho / 2, r = R * 0.6, cx = R, cy = R;
+  const R = tamanho / 2, r = R * 0.68, cx = R, cy = R;
+  /* um fio de respiro entre as fatias: separa as cores sem precisar de borda */
+  const vao = itens.filter(i => i.v > 0).length > 1 ? 0.018 : 0;
   let ang = -Math.PI / 2, caminhos = '';
   itens.forEach(it => {
-    const frac = it.v / total, dA = frac * Math.PI * 2, fim = ang + dA;
+    const frac = it.v / total, dA = Math.max(0.001, frac * Math.PI * 2 - vao), fim = ang + dA;
     const grande = dA > Math.PI ? 1 : 0;
     const x1 = cx + R * Math.cos(ang), y1 = cy + R * Math.sin(ang);
     const x2 = cx + R * Math.cos(fim), y2 = cy + R * Math.sin(fim);
     const x3 = cx + r * Math.cos(fim), y3 = cy + r * Math.sin(fim);
     const x4 = cx + r * Math.cos(ang), y4 = cy + r * Math.sin(ang);
     caminhos += `<path class="fatia" d="M${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${grande} 1 ${x2.toFixed(2)},${y2.toFixed(2)} L${x3.toFixed(2)},${y3.toFixed(2)} A${r},${r} 0 ${grande} 0 ${x4.toFixed(2)},${y4.toFixed(2)} Z" fill="${it.cor}"><title>${esc(it.r)} · ${nBR(it.v)} (${pct(frac * 100, 1)})</title></path>`;
-    ang = fim;
+    ang = fim + vao;
   });
   return `<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
     <svg class="gr" viewBox="0 0 ${tamanho} ${tamanho}" style="width:${tamanho}px;height:${tamanho}px;flex-shrink:0">
@@ -12468,6 +12648,7 @@ function irParaAba(grupo, aba){
   if (grupo === 'comprar'){
     montarCorpoCT(aba);
    }
+  if (grupo === 'vendas' && aba === 'vd-resultado') setTimeout(renderResultado, 0);
   if (grupo === 'fabrica' && aba === 'fb-campanhas'){
     /* Entrar na aba com campanha de clube aberta abre no clube, mesmo que a
        última visita tenha terminado em Lojas Parceiras. É a oferta que tem prazo
@@ -13390,8 +13571,82 @@ function renderFita(){
 /* ══════════════════════════════════════════════════════════════════════════════
    VISTA · MESA
    ══════════════════════════════════════════════════════════════════════════════ */
+/* ── Painel: a carteira hoje ──────────────────────────────────────────────────
+   Valor de hoje: cada programa pelo seu valor-alvo (ponto pela melhor rota de
+   transferência, como no resto da Torre). Investido: o que entrou com custo e
+   ainda está em estoque. A curva é o milheiro médio de cada mês, nos últimos
+   doze meses com compra. */
+function renderMesaHeroi(){
+  const alvo = $('#mesaHeroi'); if (!alvo) return;
+  const sal = saldoPorPrograma() || {};
+  const progs = Object.keys(sal).filter(p => sal[p] > 0);
+  const vale = soma(progs.map(p => valorPrograma(p, sal[p]).valor || 0));
+  const investido = soma(linhasCarteira(PROG_IDS).map(x => x.inv));
+  const milhas = soma(progs.filter(p => prog(p).tipo !== 'pontos').map(p => sal[p]));
+  const pontos = soma(progs.filter(p => prog(p).tipo === 'pontos').map(p => sal[p]));
+  const dif = vale - investido, difPct = investido ? dif / investido * 100 : null;
+  const hoje = hojeISO(), ha30 = somaDias(-30, hoje);
+  const entrou30 = soma((DB.lancamentos || []).filter(l => l.data >= ha30 && l.data <= hoje && Number(l.qtd) > 0).map(l => Number(l.custo) || 0));
+
+  if (!progs.length){
+    alvo.innerHTML = `<div class="heroi-vazio"><div class="heroi-rot">Sua carteira hoje</div>
+      <p>Lance a primeira compra de pontos ou milhas e a Torre mostra aqui quanto a carteira vale e quanto custou cada milheiro.</p>
+      <button type="button" class="bt primario" onclick="novoLancamentoDe('milhas')"><svg><use href="#i-mais"/></svg>Novo lançamento</button></div>`;
+    return;
+  }
+
+  /* curva do milheiro: últimos doze meses com compra */
+  const porMes = {};
+  (DB.lancamentos || []).forEach(l => {
+    const k = (l.data || '').slice(0, 7); if (!k || !(Number(l.qtd) > 0) || !(Number(l.custo) > 0)) return;
+    /* só milha aérea: ponto de banco tem outra escala de preço e entortaria a curva */
+    if (prog(l.prog).tipo === 'pontos') return;
+    if (!porMes[k]) porMes[k] = {qtd:0, custo:0};
+    porMes[k].qtd += Number(l.qtd); porMes[k].custo += Number(l.custo);
+  });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:MESES[Number(k.slice(5, 7)) - 1] + '/' + k.slice(2, 4), v:porMes[k].custo / porMes[k].qtd * 1000}));
+  const ultimo = serie.length ? serie[serie.length - 1].v : null;
+  const medio = (() => { const q = soma(meses.map(k => porMes[k].qtd)); return q ? soma(meses.map(k => porMes[k].custo)) / q * 1000 : null; })();
+
+  /* composição: os programas que mais pesam no valor */
+  const comp = progs.map(p => ({p, v:valorPrograma(p, sal[p]).valor || 0})).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const top = comp.slice(0, 4), resto = soma(comp.slice(4).map(x => x.v));
+  const cores = ['#F2C14E', '#6FB7FF', '#5FD3A6', '#C79BFF', 'rgba(226,233,245,.35)'];
+  const fatias = top.map((x, i) => ({n:prog(x.p).n, p:x.p, v:x.v, cor:cores[i]})).concat(resto > 0 ? [{n:'Outros', v:resto, cor:cores[4]}] : []);
+
+  alvo.innerHTML = `
+    <div class="heroi-esq">
+      <div class="heroi-rot">Sua carteira vale hoje</div>
+      <div class="heroi-valor">${brl(vale)}</div>
+      <div class="heroi-linha">
+        <span>Você investiu <b>${brl(investido)}</b></span>
+        ${difPct != null ? `<span class="heroi-chip ${dif >= 0 ? 'sobe' : 'desce'}">${dif >= 0 ? '+' : '−'}${brl(Math.abs(dif))} · ${dif >= 0 ? '+' : '−'}${pct(Math.abs(difPct), 1)}</span>` : ''}
+      </div>
+      <div class="heroi-numeros">
+        <div><b>${nBR(milhas)}</b><span>milhas prontas</span></div>
+        <div><b>${nBR(pontos)}</b><span>pontos a direcionar</span></div>
+        <div><b>${brl(entrou30)}</b><span>investido em 30 dias</span></div>
+      </div>
+      <div class="heroi-comp" role="img" aria-label="Composição do valor por programa">
+        <div class="heroi-barra">${fatias.map(f => `<i style="flex:${f.v.toFixed(2)};background:${f.cor}" data-dica="${esc(f.n)}: ${esc(brl(f.v))} (${esc(pct(f.v / vale * 100, 1))})"></i>`).join('')}</div>
+        <div class="heroi-leg">${fatias.map(f => `<span><i style="background:${f.cor}"></i>${esc(f.n)} <b>${pct(f.v / vale * 100, 0)}</b></span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="heroi-dir">
+      <div class="heroi-dir-cab">
+        <div><div class="heroi-rot">Custo do milheiro, mês a mês</div>
+          <div class="heroi-sub">Média do que entrou com custo nos programas aéreos.</div></div>
+        ${ultimo != null ? `<div class="heroi-ult"><b>${brl2(ultimo)}</b><span>${esc(serie[serie.length - 1].r)}${medio != null ? ` · média ${brl2(medio)}` : ''}</span></div>` : ''}
+      </div>
+      <div class="heroi-curva" id="mesaHeroiCurva">${serie.length >= 2 ? '' : '<p class="heroi-sub" style="padding:24px 0">A curva aparece a partir do segundo mês com compra lançada.</p>'}</div>
+    </div>`;
+  if (serie.length >= 2) $('#mesaHeroiCurva').innerHTML = grLinha(serie, {altura:170, fmt:v => 'R$ ' + v.toFixed(0), cor:'#F2C14E', alvo:'#mesaHeroiCurva'});
+}
+
 function renderMesa(){
   const cpms = cpmPorPrograma(), sal = saldoPorPrograma();
+  renderMesaHeroi();
 
   /* A grade de termômetros saía daqui e foi removida junto com a aba. A régua
      continua viva em cada cartão de programa — Carteira, lançamento, assinatura
@@ -30770,19 +31025,12 @@ function apagarPessoa(id){
 /* ── Emitidos: lista ou resultado ─────────────────────────────────────────────
    As duas partes moram na mesma aba. A escolha sobrevive ao F5 junto com o
    resto da tela (capturarEstadoTela). */
-let emVista = 'lista';
-function mostrarParteEmitidos(v){
-  emVista = v === 'resultado' ? 'resultado' : 'lista';
-  $$('#segEmVista button').forEach(x => x.classList.toggle('on', x.dataset.v === emVista));
-  $$('#p-em-resgates .em-so-lista').forEach(e => { e.hidden = emVista !== 'lista'; });
-  $$('#p-em-resgates .em-so-resultado').forEach(e => { e.hidden = emVista !== 'resultado'; });
-  if (emVista === 'resultado') renderResultado();
-  if (typeof atualizarSubmenus === 'function') atualizarSubmenus();
-}
-/* Atalho da tela Vendas: o resultado acumulado mudou para Emitidos. */
+/* O resultado das vendas mora em Negócio → Vendas (seção "Resultado das vendas").
+   Estes dois nomes ficam por compatibilidade com atalhos antigos. */
+function mostrarParteEmitidos(v){ if (v === 'resultado') abrirResultadoVendas(); }
 function abrirResultadoVendas(){
-  irPara('emissoes');
-  setTimeout(() => { irParaAba('emissoes', 'em-resgates'); mostrarParteEmitidos('resultado'); window.scrollTo({top:0, behavior:'smooth'}); }, 60);
+  irPara('vendas');
+  setTimeout(() => { irParaAba('vendas', 'vd-resultado'); window.scrollTo({top:0, behavior:'smooth'}); }, 60);
 }
 
 /* Iniciais do cliente para o selo da linha: "Kátia Barreto" vira KB; o que vem
@@ -32721,7 +32969,6 @@ const SUBMENUS = {
   'fb-mural':      {seg:'#segMural'},
   'rd-arsenal':    {seg:'#segArsenal'},
   'em-controle':   {seg:'#segCtrVista'},
-  'em-resgates':   {seg:'#segEmVista'},
   'rt-metas':      {seg:'#segMetas'},
   'rt-viagens':    {seg:'#segViagens'},
   'rt-plano':      {seg:'#segRoteiro'}
@@ -34536,13 +34783,20 @@ function renderAjustes(){
      noutra tela desde a última vez. */
   pintarEmissoesSemBaixa();
   pintarConferenciaDeSaldo();
-  $('#ajProvedores').innerHTML = Object.entries(PROVEDORES).map(([k, p]) => {
+  /* Auditoria de custo (06/10/2026): grátis primeiro, pagos por último e marcados. */
+  const CUSTO = {gratis:['Grátis', 'jade'], teste:['Grátis só em teste', 'ouro'], pago:['Pago', 'brasa']};
+  const ordemCusto = {gratis:0, teste:1, pago:2};
+  $('#ajProvedores').innerHTML = Object.entries(PROVEDORES).sort((a, b) => (ordemCusto[a[1].custo] || 0) - (ordemCusto[b[1].custo] || 0)).map(([k, p]) => {
     const usadoD = DB.cfg.provDinheiro === k, usadoM = DB.cfg.provMilhas === k;
+    const cu = CUSTO[p.custo] || CUSTO.gratis;
     return `<div class="cartao">
       <div class="cartao-cab" style="margin-bottom:11px">
         <h3>${esc(p.n)}<div class="sub">${p.tipo === 'ambos' ? 'dinheiro e milhas' : p.tipo === 'milhas' ? 'disponibilidade em milhas' : 'tarifa em dinheiro'}</div></h3>
+        <span class="etq ${cu[1]}">${cu[0]}</span>
         ${usadoD || usadoM ? '<span class="etq jade"><i class="ponto"></i>em uso</span>' : ''}
       </div>
+      ${p.custo === 'pago' ? `<div class="nota brasa" style="margin-bottom:13px"><svg><use href="#i-alerta"/></svg><div><b>Custa dinheiro.</b> ${p.k2 || ''}${k === 'seatsaero' ? 'Exige a assinatura Pro do seats.aero.' : 'Cobra por crédito de consulta depois do período de teste.'} Para ficar tudo grátis, deixe desligado: a Torre segue com o Motor local, o Travelpayouts e os atalhos de busca gratuitos (Google Voos, PointsYeah, Roame).</div></div>` : ''}
+      ${p.custo === 'teste' ? `<div class="nota ouro" style="margin-bottom:13px"><svg><use href="#i-info"/></svg><div>Grátis só no modo de teste, que devolve tarifas de exemplo, não as reais. Tarifa real exige conta ativa na Duffel, que cobra pelo uso.</div></div>` : ''}
       <p class="fraco" style="font-size:calc(13.5px * var(--esc));line-height:1.5;margin-bottom:13px">${esc(p.desc)}</p>
       ${p.chaveOnde ? `<div class="nota" style="margin-bottom:13px"><svg><use href="#i-info"/></svg><div>Onde pegar a chave: <b>${esc(p.chaveOnde)}</b></div></div>` : ''}
       ${p.aviso ? `<div class="nota ouro" style="margin-bottom:13px"><svg><use href="#i-alerta"/></svg><div>${esc(p.aviso)}</div></div>` : ''}
@@ -35989,7 +36243,6 @@ function ligarEventos(){
     $$('#segReservas button').forEach(x => x.classList.toggle('on', x === b));
     renderBalcao();
   });
-  $$('#segEmVista button').forEach(b => b.onclick = () => mostrarParteEmitidos(b.dataset.v));
   $$('#segCampGrupo button').forEach(b => b.onclick = () => mostrarGrupoCamp(b.dataset.g));
   $$('#segEmQuem button').forEach(b => b.onclick = () => {
     filtroReservaQuem = b.dataset.q;
@@ -38386,7 +38639,7 @@ function capturarEstadoTela(){
      preenchimento automático escreveria por cima deles ao reabrir. */
   const tocados = [...document.querySelectorAll('[id^="ct_"][data-tocado]')].map(e => e.id.slice(3));
   return {v:1, em:Date.now(), vista:vistaAtual, abas,
-    abaCampanha, janelaRadar, janelaRadarClube, emVista:typeof emVista === 'undefined' ? 'lista' : emVista,
+    abaCampanha, janelaRadar, janelaRadarClube,
     ct:{tipo:ctTipo, modo:ctModo, vals:ctVals, tocados},
     regras: dr && dr.open && dr._id ? {id:dr._id, aba:ultimaAbaRegras, sim:dr._sim || null} : null,
     guia: gm && gm.open ? {aba:gm._aba || 'instalar'} : null,
@@ -38444,7 +38697,6 @@ function restaurarEstadoTela(){
        certo é a escolha que se tinha — aplicada aqui, DEPOIS da regra de entrada,
        que roda durante a troca de tela e desfazia a restauração. */
     if (e.abaCampanha) clicar('#segCampanha button', bt => bt.dataset.t === e.abaCampanha);
-    if (e.emVista === 'resultado' && typeof mostrarParteEmitidos === 'function') mostrarParteEmitidos('resultado');
     if (e.janelaRadar) clicar('#segRadar button', bt => Number(bt.dataset.d) === Number(e.janelaRadar));
     if (e.janelaRadarClube) clicar('#clSegRadar button', bt => Number(bt.dataset.d) === Number(e.janelaRadarClube));
     if (e.vista === 'comprar'){
