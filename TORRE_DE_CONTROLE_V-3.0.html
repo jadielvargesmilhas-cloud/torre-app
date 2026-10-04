@@ -3345,6 +3345,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
   letter-spacing:normal; color:var(--giz); margin:0; }
 .cd-grade select:disabled, .cd-grade input:disabled{ opacity:.5; cursor:not-allowed; }
 .fat-cab{ margin-top:12px; }
+.sec-cab{ margin:22px 0 12px; } #viPanorama > .sec-cab:first-child{ margin-top:6px; } #viCabLado .sec-cab{ margin:0; } .sec-cab p{ margin:5px 0 0; font-size:calc(13px * var(--esc)); line-height:1.45; }
 /* Quatro números em quatro colunas, ou em duas por duas: nunca três e uma
    sobrando embaixo. */
 .grade.g4.g4-par{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
@@ -3697,6 +3698,17 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-meio b{ font-family:var(--f-m); font-size:calc(18px * var(--esc)); }
 .up-meio b.jade{ color:var(--jade); } .up-meio b.brasa{ color:var(--brasa); }
 /* Leitura de prints */
+.rs-leitor{ grid-column:span 2; display:flex; align-items:center; gap:12px; flex-wrap:wrap; align-self:start; margin-top:22px; padding:12px 14px; border-radius:14px;
+  border:1.5px dashed color-mix(in oklab, var(--anil-claro) 45%, var(--fio)); background:color-mix(in oklab, var(--anil-claro) 6%, transparent); }
+.rs-leitor.cheia{ grid-column:1 / -1; margin-top:0; }
+.rs-leitor.arrastando{ background:color-mix(in oklab, var(--anil-claro) 16%, transparent); }
+.rs-leitor > svg{ width:24px; height:24px; fill:none; stroke:var(--anil-claro); stroke-width:1.6; flex-shrink:0; }
+.rs-leitor > div{ flex:1; min-width:170px; display:flex; flex-direction:column; gap:2px; }
+.rs-leitor b{ color:var(--giz); font-size:calc(14px * var(--esc)); } .rs-leitor span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.rs-leitor label.bt{ cursor:pointer; }
+@media (max-width:900px){ .rs-leitor{ grid-column:1 / -1; margin-top:0; } }
+.le-itin{ margin-top:12px; padding:10px 14px; border-radius:12px; background:var(--sup-1); display:flex; flex-direction:column; gap:3px; }
+.le-itin code{ font-family:var(--f-m); font-size:calc(13px * var(--esc)); color:var(--giz); }
 .tr-leitor{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 16px; margin-bottom:18px; border-radius:14px;
   border:1.5px dashed color-mix(in oklab, var(--anil-claro) 45%, var(--fio)); background:color-mix(in oklab, var(--anil-claro) 6%, transparent); transition:background .15s var(--ease); }
 .tr-leitor.arrastando{ background:color-mix(in oklab, var(--anil-claro) 16%, transparent); }
@@ -8732,7 +8744,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-04 23:40';
+const BUILD = '2026-10-05 02:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12174,7 +12186,8 @@ function custosDasSaidas(){
     .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0))
     .forEach(l => {
       const p = l.prog; if (!p) return;
-      const e = acc[p] = acc[p] || {qtd:0, custo:0};
+      const chave = p + '|' + (l.contaId || '_');
+      const e = acc[chave] = acc[chave] || {qtd:0, custo:0};
       const q = Number(l.qtd) || 0;
       if (q >= 0){ e.qtd += q; e.custo += Number(l.custo) || 0; return; }
       const sai = Math.min(Math.abs(q), e.qtd), medio = e.qtd > 0 ? e.custo / e.qtd : 0;
@@ -12183,8 +12196,25 @@ function custosDasSaidas(){
     });
   return out;
 }
+/* O estoque de cada programa é a soma dos estoques de cada conta. Antes, todas
+   as contas iam para um caixa só: a saída de uma conta (a emissão de um cliente
+   pela conta que comprou barato) levava o custo médio de todas, e o milheiro da
+   barra de cima deixava de bater com o da Prateleira, que é por conta. Agora a
+   conta é a mesma nos dois lugares: cada conta com o seu custo, e o programa é
+   o que sobrou em todas, dividido pelas milhas que sobraram. Lançamento sem
+   conta forma um caixa à parte. */
+function estoquePorPrograma(){
+  const grupos = {};
+  (DB.lancamentos || []).forEach(l => { const k = l.contaId || '_'; (grupos[k] = grupos[k] || []).push(l); });
+  const tot = {};
+  for (const k in grupos){
+    const e = estoqueMedio(grupos[k]);
+    for (const p in e){ const t = tot[p] = tot[p] || {qtd:0, custo:0}; t.qtd += e[p].qtd; t.custo += e[p].custo; }
+  }
+  return tot;
+}
 function cpmPorPrograma(){
-  const acc = estoqueMedio(DB.lancamentos);
+  const acc = estoquePorPrograma();
   const saida = {};
   for (const p in acc) saida[p] = acc[p].qtd > 0 ? (acc[p].custo / acc[p].qtd) * 1000 : null;
   return saida;
@@ -12194,7 +12224,7 @@ function cpmPorPrograma(){
    coluna "custo total" deve mostrar: o custo do que resta, não o de tudo que já
    passou pela conta. */
 function custoEmEstoque(){
-  const acc = estoqueMedio(DB.lancamentos);
+  const acc = estoquePorPrograma();
   const saida = {};
   for (const p in acc) saida[p] = acc[p].custo;
   return saida;
@@ -24803,6 +24833,95 @@ function ofertasDoTexto(txt){
   return out.sort((a, b) => a.preco - b.preco).filter(o => { const k = o.preco + '|' + o.cia; if (vistos.has(k)) return false; vistos.add(k); return true; });
 }
 
+/* ── LEITURA PARA O REGISTRAR EMISSÃO ─────────────────────────────────────────
+   Mesmo leitor gratuito do trecho: lê bilhetes em PDF e prints no navegador,
+   mostra o que achou numa janela por cima, marca o que falta e, com o OK,
+   preenche a emissão (inclusive o itinerário). Nada é salvo antes do Salvar. */
+let _leituraEm = null;
+async function lerDocumentosEmissao(arquivos){
+  const lista = arquivos.filter(f => (f.type || '').startsWith('image/') || ehPDF(f)).slice(0, 12);
+  if (!lista.length){ avisar('Escolha imagens ou PDFs.', 'alerta'); return; }
+  const atual = {data:$('#rsData').value, prog:$('#rsProg').value, milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value)};
+  const pai = guardarFolhaAberta();
+  _leituraEm = {pai, atual};
+  abrirFolha({titulo:'Leitura do bilhete', largura:'larga', tipo:'formulario', corpo:`<div id="leCorpo"></div>`,
+    pe:`<button class="bt fantasma" onclick="fecharLeituraEmissao()">Fechar</button><button class="bt primario" id="btLeOk" disabled>Preencher a emissão</button>`});
+  const urls = await Promise.all(lista.map(f => ehPDF(f) ? '' : new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.readAsDataURL(f); })));
+  const espera = txt => { if ($('#leCorpo')) $('#leCorpo').innerHTML = `<div class="lp-espera"><div class="lp-miniaturas">${lista.map((f, k) => ehPDF(f)
+      ? `<div class="lp-mini lp-pdf"><svg><use href="#i-livro"/></svg><b>PDF</b><small>${esc((f.name || '').replace(/\.pdf$/i, '').slice(0, 22))}</small><span class="lp-varredura"></span></div>`
+      : `<div class="lp-mini"><img src="${urls[k]}" alt=""><span class="lp-varredura"></span></div>`).join('')}</div>
+      <div class="lp-passos"><div class="agora"><span class="lp-bola"></span>${txt}</div><div class="lp-dica">Tudo acontece no seu navegador, sem custo.</div></div></div>`; };
+  try{
+    espera('Preparando o leitor');
+    const w = await prepararLeitorOCR();
+    const textos = [];
+    for (let k = 0; k < lista.length; k++){ espera(`Lendo ${k + 1} de ${lista.length}`); textos.push(await textoDoArquivo(lista[k], w)); if (!_leituraEm) return; }
+    const ref = atual.data && atual.data !== hojeISO() ? atual.data : '';
+    const seg = segmentosDoTexto(textos, ref);
+    const d = seg.d;
+    const tudo = textos.join('\n');
+    const emissao = (() => { const m = tudo.match(/(?:Data|Date)\s*[\/:]?\s*(?:Date:?)?\s*(\d{2})([A-Za-z]{3})(\d{4})/) || tudo.match(/Data de emiss[aã]o:?\s*(\d{1,2})\s([A-Za-zç]{3,9})\s(\d{4})/i);
+      if (!m) return ''; const mes = MESES_LEITURA[semAcento(m[2])]; return mes ? `${m[3]}-${String(mes).padStart(2, '0')}-${String(+m[1]).padStart(2, '0')}` : ''; })();
+    const passageiros = [...new Set([...tudo.matchAll(/Passenger:\s*([^\n(]+?)\s*\((?:ADT|CHD|INF)\)/g)].map(m => m[1].trim()))];
+    const hora = seg.linhas.length ? seg.linhas[0].split(' ')[4].replace(/(\d{2})(\d{2})/, '$1:$2') : ((seg.horas || [])[0] || '').padStart(5, '0').replace(/^0+:/, '00:');
+    const voos = (d.voos || []).map(v => v.voo).filter(Boolean);
+    const escalas = (d.voos || []).slice(0, -1).map(v => v.destino);
+    const desc = [d.origem && d.destino ? `${d.origem} → ${d.destino}` : '', d.cia || '', voos.length ? 'voo' + (voos.length > 1 ? 's ' : ' ') + voos.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : '', d.localizador || ''].filter(Boolean).join(' · ');
+    const pg = d.pagamento || {}, mi = d.milhas || {};
+    const pre = {criada:emissao, data:d.data || '', hora, desc, prog:(mi.programa || '') || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : ''),
+      milhas:pg.pontos || mi.pontos || atual.milhas || 0, taxas:pg.dinheiro != null ? pg.dinheiro : (mi.taxas || atual.taxas || 0), vista:(d.dinheiro && d.dinheiro.total) || 0, itin:seg.linhas.join('\n')};
+    _leituraEm.pre = pre;
+    const campo = (id, rot, v, tipo, obrig) => { const vazio = !v || v === '0' || v === 0;
+      const val = tipo === 'moeda' ? moedaTxt(Number(v) || 0) : tipo === 'numero' ? (v ? nBR(v) : '') : esc(String(v || ''));
+      return `<div class="campo${obrig && vazio ? ' falta' : ''}"><label>${rot}${obrig && vazio ? ' <em>obrigatório</em>' : ''}</label><input type="${tipo === 'data' ? 'date' : tipo === 'hora' ? 'time' : 'text'}" id="${id}"${tipo === 'moeda' ? ' inputmode="decimal" data-moeda' : tipo === 'numero' ? ' inputmode="numeric"' : ''} value="${val}"></div>`; };
+    $('#leCorpo').innerHTML = `
+      <div class="lp-voo"><div class="lp-rota"><b>${esc(d.origem || '?')}</b>${escalas.length ? `<span class="lp-escala">${esc(escalas.join(' · '))}</span>` : '<span class="lp-escala direto">direto</span>'}<b>${esc(d.destino || '?')}</b></div>
+        <div class="lp-voo-info">${[d.data ? dataBR(d.data) : '', d.cia || '', d.localizador ? 'localizador ' + d.localizador : '', d.passageiros ? d.passageiros + (d.passageiros === 1 ? ' passageiro' : ' passageiros') : ''].filter(Boolean).map(esc).join(' · ')}</div></div>
+      ${seg.linhas.length ? `<div class="le-itin"><div class="olho anil" style="margin:0 0 6px">Itinerário lido</div>${seg.linhas.map(l => `<code>${esc(l)}</code>`).join('')}</div>` : `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>Não deu para montar o itinerário${seg.faltou ? ': faltou ' + esc(seg.faltou) : ''}. Os outros campos seguem abaixo.</div></div>`}
+      ${passageiros.length ? `<div class="nota" style="margin-top:12px"><svg><use href="#i-usuarios"/></svg><div><b>No bilhete:</b> ${passageiros.map(esc).join(', ')}. Escolha ${passageiros.length > 1 ? 'os passageiros' : 'o passageiro'} do cadastro na emissão, para entrar na cota de CPF.</div></div>` : ''}
+      ${(d.avisos || []).filter(a => !/Leitura feita/.test(a)).length ? `<div class="nota ouro" style="margin-top:12px"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">${d.avisos.filter(a => !/Leitura feita/.test(a)).map(a => `<div>${esc(a)}</div>`).join('')}</div></div>` : ''}
+      <div class="olho anil" style="margin:18px 0 10px">O que vai para a emissão</div>
+      <div class="grade tr-grade lp-campos">
+        ${campo('leCriada', 'Data da emissão', pre.criada, 'data', false)}
+        ${campo('leData', 'Data do voo', pre.data, 'data', true)}
+        ${campo('leHora', 'Hora do voo', pre.hora, 'hora', false)}
+        <div class="campo${pre.prog ? '' : ' falta'}"><label>Programa${pre.prog ? '' : ' <em>obrigatório</em>'}</label><select id="leProg"><option value="">em dinheiro</option>${PROG_MILHAS.map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+        ${campo('leMilhas', 'Milhas usadas', pre.milhas, 'numero', true)}
+        ${campo('leTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false)}
+        ${campo('leVista', 'Preço à vista que pagaria (R$)', pre.vista, 'moeda', false)}
+        <div class="campo" style="grid-column:1 / -1"><label>Descrição</label><input type="text" id="leDesc" value="${esc(pre.desc)}"></div>
+      </div>
+      <p class="fraco lp-rodape" id="leFalta"></p>`;
+    ['#leTaxas', '#leVista'].forEach(x => ligarCampoMoeda(x)); ligarCampoContagem('#leMilhas');
+    const conferir = () => {
+      const faltam = [];
+      if (!$('#leData').value) faltam.push('data do voo');
+      if ($('#leProg').value && !(rgNum($('#leMilhas').value) > 0)) faltam.push('milhas usadas');
+      $$('#leCorpo .lp-campos .campo').forEach(c => { const i = c.querySelector('input,select'); if (!i) return;
+        const ob = i.id === 'leData' || (i.id === 'leMilhas' && $('#leProg').value);
+        c.classList.toggle('falta', !!(ob && (!i.value || i.value === '0'))); });
+      $('#leFalta').innerHTML = faltam.length ? `Para continuar, preencha: <b>${faltam.join(', ')}</b>. Não ${faltam.length > 1 ? 'vieram' : 'veio'} nos documentos.` : 'Tudo certo. Confira e toque em <b>Preencher a emissão</b>.';
+      $('#btLeOk').disabled = faltam.length > 0;
+    };
+    $('#leCorpo').addEventListener('input', conferir); $('#leCorpo').addEventListener('change', conferir); conferir();
+    $('#btLeOk').onclick = () => {
+      const v = {criada:$('#leCriada').value, data:$('#leData').value, hora:$('#leHora').value, prog:$('#leProg').value, milhas:rgNum($('#leMilhas').value),
+        taxas:$('#leTaxas').value, vista:$('#leVista').value, desc:$('#leDesc').value.trim(), itin:pre.itin};
+      const pai2 = _leituraEm.pai; _leituraEm = null;
+      devolverFolhaGuardada(pai2);
+      const set = (id, val, ev) => { const e = $('#' + id); if (!e || val === undefined || val === null || val === '') return; e.value = val; e.dispatchEvent(new Event(ev || 'input', {bubbles:true})); };
+      set('rsTipo', 'voo', 'change'); set('rsCriada', v.criada, 'change'); set('rsData', v.data, 'change'); set('rsHora', v.hora, 'change');
+      if ($('#rsProg').value !== v.prog){ $('#rsProg').value = v.prog; $('#rsProg').dispatchEvent(new Event('change', {bubbles:true})); }
+      set('rsMilhas', v.milhas ? nBR(v.milhas) : ''); set('rsTaxas', v.taxas); if (moedaNum(v.vista) > 0) set('rsVista', v.vista);
+      set('rsDesc', v.desc); if (v.itin) set('rsItin', v.itin);
+      avisar('Emissão preenchida pelo documento. Confira, escolha os passageiros e toque em Salvar.', 'ok', 7000);
+    };
+  }catch(e){
+    if ($('#leCorpo')) $('#leCorpo').innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div><b>Não deu para ler.</b></div><div>${esc(e.message || String(e))}</div><div>Feche e preencha à mão: nada do que estava na emissão se perdeu.</div></div></div>`;
+  }
+}
+function fecharLeituraEmissao(){ const pai = _leituraEm && _leituraEm.pai; _leituraEm = null; if (pai) devolverFolhaGuardada(pai); else fecharFolha(); }
+
 function avancarTrecho(id){
   const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
   const ordem = ['planejado', 'emitido', 'voado']; t.situacao = ordem[(ordem.indexOf(t.situacao || 'planejado') + 1) % 3];
@@ -25143,6 +25262,18 @@ function interpretarTextosPrints(textos, ref){
   }
   const parent = [...new Set([...tudo.matchAll(/\(([A-Z]{3})\)/g)].map(m => m[1]).filter(ehAero))];
   if (!rota && parent.length >= 2) rota = parent;
+  /* pelos nomes das cidades: "Natal para Oslo", "De Berlim para Lisboa", e as
+     escalas "escala em Lisboa" */
+  if (!rota){
+    const cid = nome => { const n = semAcento(nome); const k = Object.keys(AEROPORTOS).find(c => semAcento(AEROPORTOS[c].c) === n); return k || null; };
+    for (const m of tudo.matchAll(/(?:^|\n|\bDe[ \t]+)([A-ZÀ-Ú][A-Za-zÀ-ú]+(?:[ \t][A-ZÀ-Ú][A-Za-zÀ-ú]+)?)[ \t]+para[ \t]+([A-ZÀ-Ú][A-Za-zÀ-ú]+(?:[ \t][A-ZÀ-Ú][A-Za-zÀ-ú]+)?)/g)){
+      const a = cid(m[1]), b = cid(m[2]);
+      if (a && b && a !== b){
+        const esc2 = [...tudo.matchAll(/escala em[ \t]+([A-ZÀ-Ú][a-zà-ú]+(?:[ \t][A-ZÀ-Ú][a-zà-ú]+)?)/g)].map(x => cid(x[1])).filter(Boolean);
+        rota = [a].concat(esc2.filter(c => c !== a && c !== b)).concat([b]); break;
+      }
+    }
+  }
   if (rota){
     d.origem = rota[0]; d.destino = rota[rota.length - 1];
     const meio = rota.slice(1, -1).concat(parent.filter(c => c !== d.origem && c !== d.destino));
@@ -25588,6 +25719,8 @@ function montarSegRoteiro(){
 }
 
 /* A lista: um cartão por viagem, com o trilho ROTA·VEM e o quanto falta. */
+/* Cabeçalho de seção: título com o fio e uma linha de explicação. */
+const cabecalhoSecao = (tit, txt) => `<div class="sec-cab"><div class="olho anil" style="margin:0">${tit}</div>${txt ? `<p class="fraco">${txt}</p>` : ''}</div>`;
 /* Números de um conjunto de jornadas, para o panorama. */
 function numerosJornadas(lista){
   const sal = saldoPorPrograma();
@@ -25619,13 +25752,17 @@ function renderListaRoteiros(){
   if (filtroRoteiro === 'todas' && lista.length){
     const ps = DB.planos || [];
     const N = numerosJornadas(ps.filter(p => escopoPlano(p) === 'nac')), I = numerosJornadas(ps.filter(p => escopoPlano(p) === 'int'));
-    lados = cartoesDosLados(N, I, [
+    lados = cabecalhoSecao('Nacional e internacional', 'Os mesmos números, separados por lado. Toque em "Ver jornadas" para abrir só as daquele lado.')
+      + cartoesDosLados(N, I, [
       ['Jornadas em andamento', x => nBR(x.abertas)],
       ['Prontas para emitir', x => nBR(x.prontas)],
       ['Milhas que faltam', x => x.faltam ? nBR(x.faltam) : '—'],
-      ['Próxima viagem', x => x.prox ? x.proxTxt : '—']], 'irParaLadoJornadas', 'jornadas')
-      + `<div class="olho anil" style="margin:20px 0 12px">Todas as jornadas</div>`;
+      ['Próxima viagem', x => x.prox ? x.proxTxt : '—']], 'irParaLadoJornadas', 'jornadas');
   }
+  /* Título da lista: entre os números e os cartões das viagens. */
+  if (lista.length) lados += cabecalhoSecao(
+    filtroRoteiro === 'nac' ? 'Jornadas nacionais' : filtroRoteiro === 'int' ? 'Jornadas internacionais' : 'Todas as jornadas',
+    `${lista.length} ${lista.length === 1 ? 'viagem' : 'viagens'}, da mais próxima para a mais distante. As letras R O T A V E M se completam conforme cada etapa do método fecha; toque na viagem para abrir.`);
   if (!lista.length){
     const demo = {porEt:Object.fromEntries(ROTA_ETAPAS.map((e, i) => [e.k, {total:4, feitos:Math.max(0, 4 - i)}]))};
     host.innerHTML = `<div class="vazio rt-vazio" style="padding:34px">${trilhoRota(demo, false)}
@@ -26613,7 +26750,18 @@ function escopoPorAeroportos(codigos, fixado){
   return conhecidos.every(a => a.p === 'BR') ? 'nac' : 'int';
 }
 const escopoMeta = m => escopoPorAeroportos([m.origem, m.destino], m.escopo);
-const escopoViagem = r => escopoPorAeroportos([r.origem, r.destino], r.escopo);
+/* De que lado é a emissão: pelos aeroportos da emissão; se ela não os tem
+   (as registradas a partir de um trecho guardam a rota só na descrição), pela
+   jornada a que está ligada; e, por último, pelos códigos escritos na
+   descrição ou no itinerário ("LIS → SSA"). */
+const escopoViagem = r => {
+  const direto = escopoPorAeroportos([r.origem, r.destino], r.escopo);
+  if (direto) return direto;
+  const pl = r.metaId && (DB.planos || []).find(p => p.metaId === r.metaId);
+  if (pl) return escopoPlano(pl);
+  const cods = (String(r.desc || '') + ' ' + String(r.itin || '')).match(/(?<![A-Z])[A-Z]{3}(?![A-Z])/g) || [];
+  return escopoPorAeroportos(cods.filter(c => AEROPORTOS[c]), null);
+};
 
 /* Números de um lado (ou de todos, com escopo nulo). */
 function numerosViagens(esc){
@@ -28388,14 +28536,18 @@ function renderViagens(){
     ${metrica('Economizou', X.ganho ? brl(X.ganho) : '—', X.ganho ? 'Já descontado o custo das milhas' : 'Precisa do custo lançado', X.ganho > 0 ? 'ouro' : '')}`;
 
   const semTipo = T.viagens.length - N.viagens.length - I.viagens.length;
-  $('#viPanorama').innerHTML = geral ? cartoesDosLados(N, I, [
+  $('#viPanorama').innerHTML = geral ? cabecalhoSecao('Nacional e internacional', 'Os mesmos números, separados por lado: o que já foi voado, o que está reservado à frente, quanto valeu cada milheiro e quanto sobrou. Toque em "Ver viagens" para abrir só as daquele lado.') + cartoesDosLados(N, I, [
       ['Viagens realizadas', x => nBR(x.feitas.length)],
       ['Reservadas à frente', x => nBR(x.agenda)],
       ['Valor médio do milheiro', x => x.medio ? brl2(x.medio) : '—'],
       ['Economizou', x => x.ganho ? brl(x.ganho) : '—']], 'irParaLadoViagens', 'viagens')
-    + (semTipo ? `<div class="nota" style="margin:13px 0 0"><svg><use href="#i-info"/></svg><div>${semTipo} viage${semTipo > 1 ? 'ns' : 'm'} sem aeroporto reconhecido: ${semTipo > 1 ? 'entram' : 'entra'} só nos números de cima.</div></div>` : '')
+    + (semTipo ? `<div class="nota" style="margin:13px 0 0"><svg><use href="#i-info"/></svg><div>${semTipo} ${semTipo > 1 ? 'viagens não puderam' : 'viagem não pôde'} ser separada${semTipo > 1 ? 's' : ''} entre nacional e internacional, porque a emissão não tem os aeroportos de origem e destino: ${semTipo > 1 ? 'entram' : 'entra'} só nos números de cima. Para corrigir, abra a emissão em EMS e preencha o itinerário, ou ligue-a a uma jornada.</div></div>` : '')
     : '';
   $('#viListas').style.display = geral ? 'none' : '';
+  /* Título entre os números e as listas do lado escolhido. */
+  if (!$('#viCabLado')) $('#viListas').insertAdjacentHTML('afterbegin', '<div id="viCabLado"></div>');
+  $('#viCabLado').innerHTML = geral ? '' : cabecalhoSecao(filtroViagens === 'nac' ? 'Viagens nacionais' : 'Viagens internacionais',
+    'As reservadas à frente, da mais próxima para a mais distante, e as já realizadas, com o que cada resgate valeu à vista e quanto sobrou depois do custo das milhas.');
 
   $('#viAgenda').innerHTML = agenda.length ? `<table class="tb-dados">
     <thead><tr><th class="c">Data</th><th>O quê</th><th class="c">Tipo</th><th class="n">Milhas</th><th class="n">Taxas</th><th>Meta</th><th></th></tr></thead>
@@ -29003,6 +29155,12 @@ function editarReserva(id, rascunho){
         <div class="dica">O retorno desta mesma emissão.</div></div>
       <div class="campo" id="rsBoxVoltaH" hidden><label>Hora da volta</label><input type="time" id="rsHoraVolta" value="${esc(r.horaVolta || '')}">
         <div class="dica">Opcional.</div></div>
+      <!-- Leitura de PDF e print: ocupa o espaço livre da linha do voo. -->
+      <div class="rs-leitor" id="rsLeitor">
+        <svg><use href="#i-imagem"/></svg>
+        <div><b>Preencher por PDF ou print</b><span>Arraste aqui o bilhete em PDF ou os prints da emissão, ou</span></div>
+        <label class="bt p primario"><svg><use href="#i-faisca"/></svg>Escolher<input type="file" id="rsLeitorArq" accept="image/*,application/pdf,.pdf" multiple hidden></label>
+      </div>
       <!-- Descrição sozinha na linha seguinte, ocupando as cinco colunas: é o
            campo mais longo da folha e espremê-lo numa coluna faria o texto sumir
            antes do meio. -->
@@ -29185,6 +29343,8 @@ function editarReserva(id, rascunho){
     const idaVolta = $('#rsTrajeto').value === 'idavolta';
     $('#rsBoxVolta').hidden = !idaVolta;
     $('#rsBoxVoltaH').hidden = !idaVolta;
+    /* com a volta à mostra a linha enche: a área de leitura desce e ocupa a linha toda */
+    if ($('#rsLeitor')) $('#rsLeitor').classList.toggle('cheia', idaVolta);
     $('#rsRotIda').textContent = idaVolta ? 'Data da ida' : 'Data do voo';
     $('#rsRotIdaH').textContent = idaVolta ? 'Hora da ida' : 'Hora do voo';
     if (!idaVolta){ $('#rsDataVolta').value = ''; $('#rsHoraVolta').value = ''; }
@@ -29211,7 +29371,18 @@ function editarReserva(id, rascunho){
     if (!d.value.trim()) d.value = `${c.de} → ${c.para}`;
     if (c.data && !id) $('#rsData').value = c.data;
   });
+  /* Leitura de PDF e print: arrastar, escolher ou colar. */
+  if ($('#rsLeitor')){
+    const z = $('#rsLeitor');
+    $('#rsLeitorArq').onchange = e => { if (e.target.files.length) lerDocumentosEmissao([...e.target.files]); e.target.value = ''; };
+    z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('arrastando'); });
+    z.addEventListener('dragleave', () => z.classList.remove('arrastando'));
+    z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('arrastando'); const fs = [...(e.dataTransfer.files || [])].filter(f => (f.type || '').startsWith('image/') || ehPDF(f)); if (fs.length) lerDocumentosEmissao(fs); });
+  }
   $('#btSalvarReserva').onclick = () => {
+    /* Emissão com milhas precisa das milhas: sem elas o saldo e o custo não mexem. */
+    if ($('#rsProg').value && !(qtdNum($('#rsMilhas').value) > 0)){ erroNoCampo('#rsMilhas', `Informe quantas milhas ${prog($('#rsProg').value).n} saíram nesta emissão.`); return; }
+    if (!$('#rsData').value){ erroNoCampo('#rsData', 'Informe a data do voo.'); return; }
     /* Programa com teto por CPF precisa saber de qual CPF saiu a emissão, senão
        a vaga é consumida na vida real e não aparece no controle — e o limite
        estoura sem aviso. Onde não há teto, a conta continua opcional. */
@@ -33175,11 +33346,15 @@ function segmentosDoTexto(textos, ref){
       if (k === 0 && /^\s*\d{1,2}:\d{2}\b/.test(l)) return;
       for (const m of l.matchAll(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g)) if (hs[hs.length - 1] !== m[0] || hs.length % 2 === 1) hs.push(m[0]);
     }));
-    if (hs.length >= 2 * n) horas = hs;
+    if (hs.length >= 2 * n || hs.length > horas.length) horas = hs;
   }
   /* sem data nos documentos, vale a data já preenchida no formulário */
   if (!d.data && ref) d.data = ref;
-  if (horas.length < 2 * n || !d.data) return {linhas:[], d, faltou:!d.data ? 'a data do voo (preencha a data no formulário e anexe de novo)' : 'os horários'};
+  if (!d.data || horas.length < 2) return {linhas:[], d, horas, faltou:!d.data ? 'a data do voo (preencha a data no formulário e anexe de novo)' : 'os horários'};
+  if (horas.length < 2 * n){
+    /* a tela mostra só a saída e a chegada da viagem toda: sem os números dos voos não dá para montar a linha */
+    return {linhas:[], d, horas, faltou:'os horários de cada voo e os números dos voos (anexe o bilhete em PDF ou a tela de detalhes)'};
+  }
   const cia2 = Object.keys(PREFIXO_CIA).find(k => PREFIXO_CIA[k][0] === d.cia) || '';
   const linhas = []; let dia = d.data, ultimaChegada = null;
   for (let i = 0; i < n; i++){
@@ -33192,7 +33367,7 @@ function segmentosDoTexto(textos, ref){
     if (vira) dia = somaDias(1, dia);
     ultimaChegada = vira ? '00:00' : arr;
   }
-  return {linhas, d};
+  return {linhas, d, horas};
 }
 async function lerItinerarioDaImagem(arquivo, campo, alvo, ler){
   const lista = (arquivo instanceof FileList || Array.isArray(arquivo) ? [...arquivo] : [arquivo]).filter(f => f && ((f.type || '').startsWith('image/') || ehPDF(f)));
