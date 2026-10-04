@@ -6554,6 +6554,9 @@ body.folha-aberta{
 /* O roteador põe a tabela de todas as rotas lado a lado com a rota eleita, e em
    900px a coluna de prazo caía fora. Mais 220px resolvem sem virar tela cheia. */
 .folha.ampla{ max-width:1120px; }
+/* Janelas de leitura de prints e PDFs: largas o bastante para quatro campos por
+   linha com o rótulo inteiro numa linha só. */
+.folha.larga.leitura{ max-width:min(1480px, calc(100vw - 40px)); }
 
 /* Linha do roteador: quatro campos iguais e o botão do tamanho do texto. O
    `minmax(0,1fr)` deixa os campos encolherem — sem ele o conteúdo do select
@@ -8769,7 +8772,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 04:40';
+const BUILD = '2026-10-05 05:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -11274,6 +11277,22 @@ function linhasNota(txt, cls, estilo){
 /* Erro de preenchimento mostrado no próprio campo: borda vermelha, a frase logo
    abaixo, e a folha rola até ele. O aviso do canto continua, mas não é mais o
    único sinal: com a folha aberta ele ficava atrás da área escura. */
+/* Vários campos de uma vez: marca cada um, rola até o primeiro e o aviso do
+   canto diz o nome de todos os que faltam. */
+function errosNosCampos(lista){
+  document.querySelectorAll('.campo.erro-campo').forEach(c => { c.classList.remove('erro-campo'); const m = c.querySelector('.erro-msg'); if (m) m.remove(); });
+  const nomes = [];
+  lista.forEach(({sel, msg}, k) => {
+    const el = document.querySelector(sel); const campo = el && el.closest('.campo'); if (!campo) return;
+    campo.classList.add('erro-campo');
+    campo.insertAdjacentHTML('beforeend', `<div class="erro-msg">${msg}</div>`);
+    const lab = campo.querySelector('label'); if (lab) nomes.push(lab.textContent.trim());
+    const limpar = () => { campo.classList.remove('erro-campo'); const m = campo.querySelector('.erro-msg'); if (m) m.remove(); };
+    el.addEventListener('input', limpar, {once:true}); el.addEventListener('change', limpar, {once:true});
+    if (k === 0){ campo.scrollIntoView({block:'center', behavior:'smooth'}); setTimeout(() => el.focus && el.focus(), 250); }
+  });
+  avisar(nomes.length === 1 ? `Preencha o campo obrigatório: <b>${esc(nomes[0])}</b>.` : `Preencha os campos obrigatórios: <b>${nomes.map(esc).join('</b>, <b>')}</b>.`, 'alerta', 8000);
+}
 function erroNoCampo(sel, msg){
   document.querySelectorAll('.campo.erro-campo').forEach(c => { c.classList.remove('erro-campo'); const m = c.querySelector('.erro-msg'); if (m) m.remove(); });
   const el = typeof sel === 'string' ? document.querySelector(sel) : sel;
@@ -24635,7 +24654,7 @@ async function lerPrintsUpgrade(t, arquivos){
   if (!lista.length){ avisar('Escolha imagens (PNG, JPG ou WEBP).', 'alerta'); return; }
   const pai = guardarFolhaAberta();
   _leituraUp = {pai, t};
-  abrirFolha({titulo:'Leitura dos prints da nova cabine', largura:'larga', tipo:'formulario', corpo:`<div id="luCorpo"></div>`,
+  abrirFolha({titulo:'Leitura dos prints da nova cabine', largura:'larga leitura', tipo:'formulario', corpo:`<div id="luCorpo"></div>`,
     pe:`<button class="bt fantasma" onclick="fecharLeituraUpgrade()">Fechar</button><button class="bt primario" id="btLuOk" disabled>Usar no upgrade</button>`});
   const urls = await Promise.all(lista.map(f => new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = err; fr.readAsDataURL(f); })));
   const passos = ['Preparando o leitor', 'Lendo rota, cabine e preço', 'Conferindo com o trecho'];
@@ -24870,7 +24889,7 @@ async function lerDocumentosEmissao(arquivos){
   const atual = {data:$('#rsData').value, prog:$('#rsProg').value, milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value)};
   const pai = guardarFolhaAberta();
   _leituraEm = {pai, atual};
-  abrirFolha({titulo:'Leitura do bilhete', largura:'larga', tipo:'formulario', corpo:`<div id="leCorpo"></div>`,
+  abrirFolha({titulo:'Leitura do bilhete', largura:'larga leitura', tipo:'formulario', corpo:`<div id="leCorpo"></div>`,
     pe:`<button class="bt fantasma" onclick="fecharLeituraEmissao()">Fechar</button><button class="bt primario" id="btLeOk" disabled>Preencher a emissão</button>`});
   const urls = await Promise.all(lista.map(f => ehPDF(f) ? '' : new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.readAsDataURL(f); })));
   const espera = txt => { if ($('#leCorpo')) $('#leCorpo').innerHTML = `<div class="lp-espera"><div class="lp-miniaturas">${lista.map((f, k) => ehPDF(f)
@@ -24914,7 +24933,7 @@ async function lerDocumentosEmissao(arquivos){
         <div class="campo${pre.prog ? '' : ' falta'}"><label>Programa</label><select id="leProg"><option value="">em dinheiro</option>${PROG_MILHAS.map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
         ${campo('leMilhas', 'Milhas usadas', pre.milhas, 'numero', true)}
         ${campo('leTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false)}
-        ${campo('leVista', 'Preço à vista que pagaria (R$)', pre.vista, 'moeda', false).replace('class="campo', 'class="campo le-largo')}
+        ${campo('leVista', 'Preço na pagante (R$)', pre.vista, 'moeda', false).replace('class="campo', 'class="campo le-largo')}
         <div class="campo" style="grid-column:1 / -1"><label>Descrição</label><input type="text" id="leDesc" value="${esc(pre.desc)}"></div>
       </div>
       <p class="ast-nota" id="leAst">* Obrigatório: não veio nos documentos. Preencha para continuar.</p>
@@ -25523,7 +25542,7 @@ async function lerPrintsTrecho(arquivos){
   ['trOri', 'trDes', 'trData', 'trCia', 'trForma', 'trProg', 'trMilhas', 'trTaxas', 'trPago', 'trVista', 'trAltMilhas', 'trAltTaxas', 'trLoc'].forEach(id => { const e = $('#' + id); if (e) atual[id] = e.value; });
   const pai = guardarFolhaAberta();
   _leitura = {pai, dados:null, imagens:[], atual};
-  abrirFolha({titulo:'Leitura dos prints', largura:'larga', tipo:'formulario',
+  abrirFolha({titulo:'Leitura dos prints', largura:'larga leitura', tipo:'formulario',
     corpo:`<div id="lpCorpo"></div>`,
     pe:`<button class="bt fantasma" onclick="fecharLeituraPrints()">Fechar</button><button class="bt primario" id="btLpOk" disabled>Preencher o formulário</button>`});
   const passos = ['Preparando o leitor', 'Lendo voos, datas e valores', 'Comparando dinheiro e milhas', 'Montando o preenchimento'];
@@ -25678,12 +25697,12 @@ function desenharRevisaoPrints(){
       ${campoLeitura('lpMilhas', 'Milhas (total)', pre.milhas, 'numero', true, 'lp-mi')}
       ${campoLeitura('lpTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false, 'lp-mi')}
       ${campoLeitura('lpPago', 'Pago em dinheiro (R$)', pre.pago, 'moeda', true, 'lp-di')}
-      ${campoLeitura('lpVista', 'Preço do voo em dinheiro (R$)', pre.vista, 'moeda', false, 'lp-mi')}
+      ${campoLeitura('lpVista', 'Preço em dinheiro (R$)', pre.vista, 'moeda', false, 'lp-mi')}
       ${campoLeitura('lpAltMilhas', 'Em milhas custaria', pre.altMilhas, 'numero', false, 'lp-alt')}
       ${campoLeitura('lpAltTaxas', 'Com taxas de (R$)', pre.altTaxas, 'moeda', false, 'lp-alt')}
       ${campoLeitura('lpLoc', 'Localizador', pre.loc, 'texto', false)}
       <div class="campo"><label>Passagens cortesia</label><select id="lpCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === ((d.cortesia && d.cortesia.qtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
-      ${campoLeitura('lpCortValor', 'Tarifa coberta por pessoa (R$)', (d.cortesia && d.cortesia.valor) || 0, 'moeda', false)}
+      ${campoLeitura('lpCortValor', 'Tarifa por pessoa (R$)', (d.cortesia && d.cortesia.valor) || 0, 'moeda', false)}
     </div>
     <p class="ast-nota" id="lpAst">* Obrigatório: não veio nos prints. Preencha para continuar.</p>
     <p class="fraco lp-rodape" id="lpFalta"></p>`;
@@ -28266,6 +28285,9 @@ function custoEmissao(r){
    quando o elemento da lista antiga não existia — e a aba ficava em branco sem
    um erro sequer para denunciar. */
 function renderEmissoes(){
+  /* A lista de emissões mora nesta tela: sem redesenhá-la aqui, apagar uma
+     emissão dava "Removido." e a linha só sumia ao atualizar a página. */
+  renderBalcao();
   renderControleEmissoes();
   renderControleContas();
   renderCotacoesSalvas();
@@ -28716,7 +28738,7 @@ function editarViagemAntigo(id, fechando){
       ${campoParcelas('viParcelas', r.parcelas)}
       <div class="campo"><label>Meta</label><select id="viMeta"><option value="">— avulsa —</option>${DB.metas.map(m => `<option value="${m.id}"${m.id === r.metaId ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select></div>
     </div>
-    <div class="campo rotulo-inteiro" style="margin-top:14px"><label>Preço à vista que pagaria (R$)</label>
+    <div class="campo rotulo-inteiro" style="margin-top:14px"><label>Preço na pagante (R$)</label>
       <input type="text" inputmode="decimal" data-moeda id="viVista" value="${moedaTxt(r.precoVista || 0)}">
       <div class="dica">O preço que você <b>realmente</b> pagaria por esse trecho, não a tarifa de balcão. É contra ele que a Torre mede o valor do resgate.</div></div>
     <div id="viPrevia" style="margin-top:13px"></div>
@@ -29291,7 +29313,7 @@ function editarReserva(id, rascunho){
            aparece no seu caso. -->
       <div class="campo" id="rsMetaBox"><label>Jornada</label><select id="rsMeta"><option value="">— avulsa —</option>${
         (DB.metas || []).map(m => `<option value="${m.id}"${m.id === r.metaId ? ' selected' : ''}>${esc(m.n)}</option>`).join('')}</select></div>
-      <div class="campo" id="rsVistaBox"><label>Preço à vista que pagaria (R$)</label>
+      <div class="campo" id="rsVistaBox"><label>Preço na pagante (R$)</label>
         <input type="text" inputmode="decimal" data-moeda id="rsVista" value="${moedaTxt(r.precoVista || 0)}"></div>
 
       <!-- Cobrado só existe quando há cliente: em uso próprio não se cobra de
@@ -29474,16 +29496,19 @@ function editarReserva(id, rascunho){
     z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('arrastando'); const fs = [...(e.dataTransfer.files || [])].filter(f => (f.type || '').startsWith('image/') || ehPDF(f)); if (fs.length) lerDocumentosEmissao(fs); });
   }
   $('#btSalvarReserva').onclick = () => {
+    /* Os obrigatórios são conferidos de uma vez: cada campo que falta fica
+       marcado com a sua explicação, e o aviso diz o nome de todos. */
+    const faltam = [];
+    const pg = $('#rsProg').value;
+    if (!$('#rsData').value) faltam.push({sel:'#rsData', msg:'Informe a data do voo.'});
     /* Emissão com milhas precisa das milhas: sem elas o saldo e o custo não mexem. */
-    if ($('#rsProg').value && !(qtdNum($('#rsMilhas').value) > 0)){ erroNoCampo('#rsMilhas', `Informe quantas milhas ${prog($('#rsProg').value).n} saíram nesta emissão.`); return; }
-    if (!$('#rsData').value){ erroNoCampo('#rsData', 'Informe a data do voo.'); return; }
+    if (pg && !(qtdNum($('#rsMilhas').value) > 0)) faltam.push({sel:'#rsMilhas', msg:`Informe quantas milhas ${prog(pg).n} saíram nesta emissão.`});
     /* Programa com teto por CPF precisa saber de qual CPF saiu a emissão, senão
-       a vaga é consumida na vida real e não aparece no controle — e o limite
-       estoura sem aviso. Onde não há teto, a conta continua opcional. */
-    if (!$('#rsConta').value && (politicaCPF($('#rsProg').value) || {}).limite){
-      avisar(`${prog($('#rsProg').value).n} tem teto por CPF. Informe a conta que emitiu.`, 'alerta');
-      $('#rsConta').focus(); return;
-    }
+       a vaga é consumida na vida real e não aparece no controle. */
+    if (pg && !$('#rsConta').value && (politicaCPF(pg) || {}).limite) faltam.push({sel:'#rsConta', msg:`${prog(pg).n} tem limite de CPFs por conta: informe a conta que emitiu.`});
+    /* Venda precisa do cliente: é dele o resultado e a cobrança. */
+    if ($('#rsQuem').value === 'terceiro' && !$('#rsCliente').value.trim()) faltam.push({sel:'#rsCliente', msg:'Venda precisa do cliente: busque no cadastro.'});
+    if (faltam.length){ errosNosCampos(faltam); return; }
     const novo = {id:r.id || uid(), tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(), clienteId:$('#rsCliente').dataset.id || '',
       desc:$('#rsDesc').value.trim() || 'Reserva', data:$('#rsData').value, hora:$('#rsHora').value,
       dataVolta:($('#rsDataVolta') || {}).value || '', horaVolta:($('#rsHoraVolta') || {}).value || '',
