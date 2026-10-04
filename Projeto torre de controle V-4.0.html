@@ -7460,6 +7460,30 @@ table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before
 .heroi .rm-trilho{ background:repeating-linear-gradient(to top, rgba(255,255,255,.06) 0 1px, transparent 1px 25%); }
 .heroi .heroi-curva .rm{ width:100%; }
 @media (max-width:560px){ .vd-topo .bt.primario{ flex:1 1 100%; } }
+
+/* voo aberto dentro dos Trechos da viagem: ocupa a largura toda, colado ao trecho */
+table.tb-trechos tr.tr-voo > td{ padding:4px 0 14px; border-bottom:0; }
+table.tb-cartao.em-cartao tbody tr.tr-voo{ display:block; margin:-4px 0 14px; padding:0; border:0; background:transparent; }
+table.tb-cartao.em-cartao tbody tr.tr-voo > td{ display:block; padding:0 !important; text-align:left; width:100% !important; }
+table.tb-cartao.em-cartao tbody tr.tr-voo > td::before{ content:none !important; }
+table.tb-trechos tr.tr-voo .bilhete, table.tb-trechos tr.tr-voo .bilhete-par{ margin:0; }
+
+/* Linhas de total dentro das tabelas em cartão (celular): antes viravam células
+   de tabela espremidas, com uma letra por linha ("T o t a l"). Agora são uma
+   faixa: o rótulo na linha de cima, os valores lado a lado embaixo. */
+table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo){
+  display:flex; flex-direction:row; flex-wrap:wrap; align-items:flex-start; gap:8px 16px; padding:10px 4px; border-top:1px solid var(--fio-suave);
+}
+table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td{
+  display:block; padding:0 !important; border:0; text-align:left; width:auto !important; white-space:nowrap;
+}
+table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td:first-child{ flex:1 1 100%; white-space:normal; }
+table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td:empty{ display:none; }
+
+/* no celular, cada valor da linha de total ganha o seu rótulo pequeno em cima */
+table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]::before{
+  content:attr(data-rt); display:block; position:static; width:auto; top:auto; left:auto; font-family:var(--f-b); font-size:calc(11.5px * var(--esc)); font-weight:500; color:var(--grafite-dim); margin-bottom:2px; }
+table.tb-cartao.em-cartao tbody tr[data-sem-cartao]:not(.tr-voo) > td[data-rt]{ flex:1 1 calc(50% - 16px); position:static; min-width:0; }
 </style>
 </head>
 <body>
@@ -9238,7 +9262,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 04:20';
+const BUILD = '2026-10-07 05:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25449,7 +25473,8 @@ function renderTrechos(p){
         <td class="c" data-r="Data">${t.data ? dataBR(t.data) : 'n/d'}</td>
         <td data-r="Trecho"><b>${esc(rotuloTrecho(t))}</b><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(t.cia || '')}${t.loc ? ` · ${esc(t.loc)}` : ''}</div>
           <div class="up-cab">${t.upgrade ? `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span><svg><use href="#i-seta"/></svg><span class="etq jade">${CABINES_TRECHO[t.upgrade.cabine]}</span>`
-            : `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span>`}</div></td>
+            : `<span class="etq">${CABINES_TRECHO[t.cabine || 'economica']}</span>`}</div>
+          ${vooDoTrecho(t) ? `<button type="button" class="rs-voo-bt${vooTrechoAberto.has(t.id) ? ' aberto' : ''}" onclick="alternarVooTrecho('${t.id}')"><svg><use href="#i-aviao"/></svg><span>${vooTrechoAberto.has(t.id) ? 'Ocultar o voo' : 'Ver o voo'}</span><svg class="seta"><use href="#i-baixo"/></svg></button>` : ''}</td>
         <td data-r="Pagamento">${t.forma === 'dinheiro' ? `<span class="etq">dinheiro</span> <span class="tr-pg-val">${brl(t.pago || 0)}</span>`
           : `<span class="etq aco">${esc(prog(t.prog).n)}</span> <span class="tr-pg-val">${nBR(t.milhas || 0)} milhas${Number(t.taxas) ? ` + ${brl(t.taxas)} de taxas` : ''}${t.forma === 'misto' && Number(t.pago) ? ` + ${brl(t.pago)}` : ''}</span>`}
           ${(c => c ? `<div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:3px">${(Number(t.parcelas) || 1) > 1 ? `${t.parcelas}x de ${brl(valorCobradoTrecho(t) / t.parcelas)}` : `${brl(valorCobradoTrecho(t))} à vista`} no ${esc(c.banco)} ${esc(c.produto)}${c.final ? ' · ' + esc(c.final) : ''}</div>` : '')((DB.cartoes || []).find(c => c.id === t.cartaoId))}</td>
@@ -25463,7 +25488,7 @@ function renderTrechos(p){
           <button class="bt p fantasma icone${t.upgrade ? ' up-feito' : ''}" onclick="editarUpgrade('${t.id}')" data-dica="${t.upgrade ? 'Ver ou mudar o upgrade' : 'Registrar upgrade de cabine'}" aria-label="Upgrade"><svg><use href="#i-subir"/></svg></button>
           <button class="bt p fantasma icone" onclick="editarTrecho('${t.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
           <button class="bt p fantasma icone" onclick="apagarTrecho('${t.id}')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
-        </div></td></tr>`; }).join('')}</tbody></table></div>
+        </div></td></tr>${vooTrechoAberto.has(t.id) ? (v => v ? `<tr class="tr-voo" data-sem-cartao><td colspan="6">${cardVoo(contasItinerario(v))}</td></tr>` : '')(vooDoTrecho(t)) : ''}`; }).join('')}</tbody></table></div>
       <div class="rt-trechos-pe">
         ${Object.keys(porProg).map(k => `<span><b>${nBR(porProg[k])}</b> milhas ${esc(prog(k).n)}</span>`).join('')}
         ${dinheiro ? `<span><b>${brl(dinheiro)}</b> em dinheiro</span>` : ''}${taxas ? `<span><b>${brl(taxas)}</b> de taxas</span>` : ''}
@@ -25903,6 +25928,26 @@ function fecharLeituraEmissao(){ const pai = _leituraEm && _leituraEm.pai; _leit
 /* O voo de cada emissão fica fechado na lista e abre quando a pessoa pede. */
 const vooAberto = new Set();
 function alternarVooReserva(id){ vooAberto.has(id) ? vooAberto.delete(id) : vooAberto.add(id); renderBalcao(); }
+/* ── voo do trecho (Jornadas → Trechos da viagem) ─────────────────────────────
+   O mesmo "Ver o voo" dos Emitidos. O itinerário vem da emissão ligada ao
+   trecho (ou da que tem o mesmo localizador); dela, ficam só os voos do trecho:
+   da saída na origem até a chegada no destino. Numa emissão de ida e volta, o
+   trecho de ida mostra só a ida. */
+const vooTrechoAberto = new Set();
+function alternarVooTrecho(id){ vooTrechoAberto.has(id) ? vooTrechoAberto.delete(id) : vooTrechoAberto.add(id); renderPlano(); }
+function vooDoTrecho(t){
+  const rs = DB.reservas || [];
+  const r = rs.find(x => x.id === t.reservaId) || (t.loc ? rs.find(x => String(x.loc || locDaDescricao(x.desc) || '').toUpperCase() === String(t.loc).toUpperCase()) : null);
+  if (!r || !r.itin) return null;
+  const todos = lerItinerario(r.itin, anoDe(r.data)) || [];
+  if (!todos.length) return null;
+  const o = String(t.origem || '').toUpperCase(), d = String(t.destino || '').toUpperCase();
+  for (let i = 0; i < todos.length; i++){
+    if (todos[i].de !== o) continue;
+    for (let j = i; j < todos.length; j++) if (todos[j].para === d) return todos.slice(i, j + 1);
+  }
+  return todos;
+}
 
 /* Busca de cliente: enquanto digita, a lista mostra quem está no cadastro
    (nome ou CPF, sem acento) e, embaixo, clientes já usados em outras emissões
@@ -32025,10 +32070,10 @@ function renderVendas(){
               })()}</td></tr>`;
           }).join('')}
             <tr><td colspan="5"><b>Total de vendas na conta</b></td>
-              <td class="n"><b>${brl(v)}</b></td><td></td>
-              <td class="n"><b>${brl(c)}</b></td>
-              <td class="n"><b style="color:var(--${v - c >= 0 ? 'jade' : 'brasa'})">${brl(v - c)}</b></td>
-              <td class="n"><b>${pct(v ? (v - c) / v * 100 : 0, 2)}</b></td><td></td></tr>
+              <td class="n" data-rt="Vendido"><b>${brl(v)}</b></td><td></td>
+              <td class="n" data-rt="Custo"><b>${brl(c)}</b></td>
+              <td class="n" data-rt="Lucro"><b style="color:var(--${v - c >= 0 ? 'jade' : 'brasa'})">${brl(v - c)}</b></td>
+              <td class="n" data-rt="Margem"><b>${pct(v ? (v - c) / v * 100 : 0, 2)}</b></td><td></td></tr>
             <tr><td colspan="5"><b>A receber na conta</b></td>
               <td class="n"><b style="color:var(--${rec > 0 ? 'ouro' : 'jade'})">${brl(rec)}</b></td>
               <td colspan="5"></td></tr>
