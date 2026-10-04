@@ -3698,6 +3698,15 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .up-meio b{ font-family:var(--f-m); font-size:calc(18px * var(--esc)); }
 .up-meio b.jade{ color:var(--jade); } .up-meio b.brasa{ color:var(--brasa); }
 /* Leitura de prints */
+.rs-linha{ display:flex; align-items:baseline; justify-content:space-between; gap:6px 18px; }
+.rs-linha > span:first-child{ flex:1 1 auto; min-width:0; }
+.rs-linha .rs-direita{ flex:0 0 auto; margin-left:auto; text-align:right; white-space:nowrap; }
+@media (max-width:700px){ .rs-linha{ flex-wrap:wrap; } }
+.rs-voo-bt{ display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:3px 0; border:0; background:none; cursor:pointer; font:inherit;
+  font-size:calc(12.5px * var(--esc)); font-weight:600; color:var(--anil-claro); }
+.rs-voo-bt svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.rs-voo-bt .seta{ transition:transform .2s var(--ease); } .rs-voo-bt.aberto .seta{ transform:rotate(180deg); }
+.rs-voo-bt:hover span{ text-decoration:underline; text-underline-offset:3px; }
 .rs-leitor{ grid-column:span 2; display:flex; align-items:center; gap:12px; flex-wrap:wrap; align-self:start; margin-top:22px; padding:12px 14px; border-radius:14px;
   border:1.5px dashed color-mix(in oklab, var(--anil-claro) 45%, var(--fio)); background:color-mix(in oklab, var(--anil-claro) 6%, transparent); }
 .rs-leitor.cheia{ grid-column:1 / -1; margin-top:0; }
@@ -3707,6 +3716,12 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .rs-leitor b{ color:var(--giz); font-size:calc(14px * var(--esc)); } .rs-leitor span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
 .rs-leitor label.bt{ cursor:pointer; }
 @media (max-width:900px){ .rs-leitor{ grid-column:1 / -1; margin-top:0; } }
+.lp-campos .campo.falta > label::after{ content:' *'; color:var(--brasa); font-weight:700; }
+.lp-rodape:empty{ display:none; }
+.ast-nota{ margin:10px 0 0; font-size:calc(12.5px * var(--esc)); color:var(--brasa); }
+.ast-nota[hidden]{ display:none; }
+.le-largo{ grid-column:span 2; }
+@media (max-width:560px){ .le-largo{ grid-column:auto; } }
 .le-itin{ margin-top:12px; padding:10px 14px; border-radius:12px; background:var(--sup-1); display:flex; flex-direction:column; gap:3px; }
 .le-itin code{ font-family:var(--f-m); font-size:calc(13px * var(--esc)); color:var(--giz); }
 .tr-leitor{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 16px; margin-bottom:18px; border-radius:14px;
@@ -8744,7 +8759,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-05 02:30';
+const BUILD = '2026-10-05 03:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24665,10 +24680,11 @@ function desenharLeituraUpgrade(){
     <div class="olho anil" style="margin:20px 0 10px">O que vai para o upgrade</div>
     <div class="grade tr-grade lp-campos">
       <div class="campo"><label>Nova cabine</label><select id="luCab" data-ordem="natural">${Object.entries(CABINES_TRECHO).filter(([k]) => k !== 'economica').map(([k, v]) => `<option value="${k}"${k === (d.cabine && d.cabine !== 'economica' ? d.cabine : 'executiva') ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div class="campo${total ? '' : ' falta'}"><label>Preço em dinheiro (R$)${total ? '' : ' <em>obrigatório</em>'}</label><input type="text" inputmode="decimal" data-moeda id="luVista" value="${moedaTxt(total)}"></div>
+      <div class="campo${total ? '' : ' falta'}"><label>Preço em dinheiro (R$)</label><input type="text" inputmode="decimal" data-moeda id="luVista" value="${moedaTxt(total)}"></div>
     </div>`;
   ligarCampoMoeda('#luVista');
-  const conferir = () => { const v = moedaNum($('#luVista').value); $('#btLuOk').disabled = !(v > 0); $('#luVista').closest('.campo').classList.toggle('falta', !(v > 0)); };
+  $('#luCorpo').insertAdjacentHTML('beforeend', '<p class="ast-nota" id="luAst">* Obrigatório: não veio nos prints. Preencha para continuar.</p>');
+  const conferir = () => { const v = moedaNum($('#luVista').value); $('#btLuOk').disabled = !(v > 0); $('#luVista').closest('.campo').classList.toggle('falta', !(v > 0)); $('#luAst').hidden = v > 0; };
   $('#luCorpo').addEventListener('input', conferir); conferir();
   $('#btLuOk').onclick = () => {
     const v = moedaNum($('#luVista').value), cab = $('#luCab').value, pai = _leituraUp.pai; _leituraUp = null;
@@ -24873,7 +24889,7 @@ async function lerDocumentosEmissao(arquivos){
     _leituraEm.pre = pre;
     const campo = (id, rot, v, tipo, obrig) => { const vazio = !v || v === '0' || v === 0;
       const val = tipo === 'moeda' ? moedaTxt(Number(v) || 0) : tipo === 'numero' ? (v ? nBR(v) : '') : esc(String(v || ''));
-      return `<div class="campo${obrig && vazio ? ' falta' : ''}"><label>${rot}${obrig && vazio ? ' <em>obrigatório</em>' : ''}</label><input type="${tipo === 'data' ? 'date' : tipo === 'hora' ? 'time' : 'text'}" id="${id}"${tipo === 'moeda' ? ' inputmode="decimal" data-moeda' : tipo === 'numero' ? ' inputmode="numeric"' : ''} value="${val}"></div>`; };
+      return `<div class="campo${obrig && vazio ? ' falta' : ''}"><label>${rot}</label><input type="${tipo === 'data' ? 'date' : tipo === 'hora' ? 'time' : 'text'}" id="${id}"${tipo === 'moeda' ? ' inputmode="decimal" data-moeda' : tipo === 'numero' ? ' inputmode="numeric"' : ''} value="${val}"></div>`; };
     $('#leCorpo').innerHTML = `
       <div class="lp-voo"><div class="lp-rota"><b>${esc(d.origem || '?')}</b>${escalas.length ? `<span class="lp-escala">${esc(escalas.join(' · '))}</span>` : '<span class="lp-escala direto">direto</span>'}<b>${esc(d.destino || '?')}</b></div>
         <div class="lp-voo-info">${[d.data ? dataBR(d.data) : '', d.cia || '', d.localizador ? 'localizador ' + d.localizador : '', d.passageiros ? d.passageiros + (d.passageiros === 1 ? ' passageiro' : ' passageiros') : ''].filter(Boolean).map(esc).join(' · ')}</div></div>
@@ -24885,12 +24901,13 @@ async function lerDocumentosEmissao(arquivos){
         ${campo('leCriada', 'Data da emissão', pre.criada, 'data', false)}
         ${campo('leData', 'Data do voo', pre.data, 'data', true)}
         ${campo('leHora', 'Hora do voo', pre.hora, 'hora', false)}
-        <div class="campo${pre.prog ? '' : ' falta'}"><label>Programa${pre.prog ? '' : ' <em>obrigatório</em>'}</label><select id="leProg"><option value="">em dinheiro</option>${PROG_MILHAS.map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+        <div class="campo${pre.prog ? '' : ' falta'}"><label>Programa</label><select id="leProg"><option value="">em dinheiro</option>${PROG_MILHAS.map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
         ${campo('leMilhas', 'Milhas usadas', pre.milhas, 'numero', true)}
         ${campo('leTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false)}
-        ${campo('leVista', 'Preço à vista que pagaria (R$)', pre.vista, 'moeda', false)}
+        ${campo('leVista', 'Preço à vista que pagaria (R$)', pre.vista, 'moeda', false).replace('class="campo', 'class="campo le-largo')}
         <div class="campo" style="grid-column:1 / -1"><label>Descrição</label><input type="text" id="leDesc" value="${esc(pre.desc)}"></div>
       </div>
+      <p class="ast-nota" id="leAst">* Obrigatório: não veio nos documentos. Preencha para continuar.</p>
       <p class="fraco lp-rodape" id="leFalta"></p>`;
     ['#leTaxas', '#leVista'].forEach(x => ligarCampoMoeda(x)); ligarCampoContagem('#leMilhas');
     const conferir = () => {
@@ -24900,8 +24917,10 @@ async function lerDocumentosEmissao(arquivos){
       $$('#leCorpo .lp-campos .campo').forEach(c => { const i = c.querySelector('input,select'); if (!i) return;
         const ob = i.id === 'leData' || (i.id === 'leMilhas' && $('#leProg').value);
         c.classList.toggle('falta', !!(ob && (!i.value || i.value === '0'))); });
-      $('#leFalta').innerHTML = faltam.length ? `Para continuar, preencha: <b>${faltam.join(', ')}</b>. Não ${faltam.length > 1 ? 'vieram' : 'veio'} nos documentos.` : 'Tudo certo. Confira e toque em <b>Preencher a emissão</b>.';
+      $('#leFalta').innerHTML = faltam.length ? '' : 'Tudo certo. Confira e toque em <b>Preencher a emissão</b>.';
+      $('#leAst').innerHTML = `* Obrigatório: <b>${faltam.join(', ')}</b> não ${faltam.length > 1 ? 'vieram' : 'veio'} nos documentos. Preencha para continuar.`;
       $('#btLeOk').disabled = faltam.length > 0;
+      $('#leAst').hidden = !$('#leCorpo .lp-campos .campo.falta');
     };
     $('#leCorpo').addEventListener('input', conferir); $('#leCorpo').addEventListener('change', conferir); conferir();
     $('#btLeOk').onclick = () => {
@@ -24921,6 +24940,10 @@ async function lerDocumentosEmissao(arquivos){
   }
 }
 function fecharLeituraEmissao(){ const pai = _leituraEm && _leituraEm.pai; _leituraEm = null; if (pai) devolverFolhaGuardada(pai); else fecharFolha(); }
+
+/* O voo de cada emissão fica fechado na lista e abre quando a pessoa pede. */
+const vooAberto = new Set();
+function alternarVooReserva(id){ vooAberto.has(id) ? vooAberto.delete(id) : vooAberto.add(id); renderBalcao(); }
 
 function avancarTrecho(id){
   const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
@@ -25593,7 +25616,7 @@ function desenharRevisaoPrints(){
       ${[['lpOri', 'Origem (IATA)', pre.origem, 'texto', true], ['lpDes', 'Destino (IATA)', pre.destino, 'texto', true], ['lpData', 'Data do voo', pre.data, 'data', true], ['lpCia', 'Companhia', pre.cia, 'texto', false]]
         .map(([id, r, v, t, obr]) => campoLeitura(id, r, v, t, obr)).join('')}
       <div class="campo"><label>Como foi pago</label><select id="lpForma" data-ordem="natural">${Object.entries(FORMAS_TRECHO).map(([k, v]) => `<option value="${k}"${k === pre.forma ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div class="campo lp-mi${!pre.prog ? ' falta' : ''}"><label>Programa${!pre.prog ? ' <em>obrigatório</em>' : ''}</label><select id="lpProg"><option value="">escolha</option>${PROG_IDS.filter(k => prog(k).tipo === 'milhas').map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+      <div class="campo lp-mi${!pre.prog ? ' falta' : ''}"><label>Programa</label><select id="lpProg"><option value="">escolha</option>${PROG_IDS.filter(k => prog(k).tipo === 'milhas').map(k => `<option value="${k}"${k === pre.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
       ${campoLeitura('lpMilhas', 'Milhas (total)', pre.milhas, 'numero', true, 'lp-mi')}
       ${campoLeitura('lpTaxas', 'Taxas (R$)', pre.taxas, 'moeda', false, 'lp-mi')}
       ${campoLeitura('lpPago', 'Pago em dinheiro (R$)', pre.pago, 'moeda', true, 'lp-di')}
@@ -25604,6 +25627,7 @@ function desenharRevisaoPrints(){
       <div class="campo"><label>Passagens cortesia</label><select id="lpCortQtd" data-ordem="natural">${[0, 1, 2, 3].map(n => `<option value="${n}"${n === ((d.cortesia && d.cortesia.qtd) || 0) ? ' selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select></div>
       ${campoLeitura('lpCortValor', 'Tarifa coberta por pessoa (R$)', (d.cortesia && d.cortesia.valor) || 0, 'moeda', false)}
     </div>
+    <p class="ast-nota" id="lpAst">* Obrigatório: não veio nos prints. Preencha para continuar.</p>
     <p class="fraco lp-rodape" id="lpFalta"></p>`;
   ['#lpTaxas', '#lpPago', '#lpVista', '#lpAltTaxas', '#lpCortValor'].forEach(sel => ligarCampoMoeda(sel));
   ligarCampoContagem('#lpMilhas'); ligarCampoContagem('#lpAltMilhas');
@@ -25620,8 +25644,10 @@ function desenharRevisaoPrints(){
       const vazio = !String(i.value || '').trim() || i.value === '0' || i.value === '0,00';
       const obrig = ({lpOri:1, lpDes:1, lpData:1})[i.id] || (i.id === 'lpProg' && f !== 'dinheiro') || (i.id === 'lpMilhas' && f !== 'dinheiro') || (i.id === 'lpPago' && f !== 'milhas');
       c.classList.toggle('falta', !!(obrig && vazio && c.style.display !== 'none')); });
-    $('#lpFalta').innerHTML = faltam.length ? `Para continuar, preencha: <b>${faltam.join(', ')}</b>. Não ${faltam.length > 1 ? 'vieram' : 'veio'} nos prints.` : 'Tudo certo. Confira e toque em <b>Preencher o formulário</b>.';
+    $('#lpFalta').innerHTML = faltam.length ? '' : 'Tudo certo. Confira e toque em <b>Preencher o formulário</b>.';
+    $('#lpAst').innerHTML = `* Obrigatório: <b>${faltam.join(', ')}</b> não ${faltam.length > 1 ? 'vieram' : 'veio'} nos prints. Preencha para continuar.`;
     $('#btLpOk').disabled = faltam.length > 0;
+    $('#lpAst').hidden = !$('#lpCorpo .lp-campos .campo.falta');
   };
   $('#lpCorpo').addEventListener('input', conferir); $('#lpCorpo').addEventListener('change', conferir);
   const refazer = () => {
@@ -25650,7 +25676,7 @@ function desenharRevisaoPrints(){
 function campoLeitura(id, rot, valor, tipo, obrig, classe){
   const vazio = valor === '' || valor == null || valor === 0;
   const v = tipo === 'moeda' ? moedaTxt(Number(valor) || 0) : tipo === 'numero' ? (valor ? nBR(valor) : '') : esc(String(valor || ''));
-  return `<div class="campo ${classe || ''}${obrig && vazio ? ' falta' : ''}"><label>${rot}${obrig && vazio ? ' <em>obrigatório</em>' : ''}</label>
+  return `<div class="campo ${classe || ''}${obrig && vazio ? ' falta' : ''}"><label>${rot}</label>
     <input type="${tipo === 'data' ? 'date' : 'text'}" id="${id}"${tipo === 'moeda' ? ' inputmode="decimal" data-moeda' : tipo === 'numero' ? ' inputmode="numeric"' : ''}${id === 'lpOri' || id === 'lpDes' || id === 'lpLoc' ? ' style="text-transform:uppercase"' + (id !== 'lpLoc' ? ' maxlength="3"' : '') : ''} value="${v}"></div>`;
 }
 /* Leva o que foi conferido para o formulário do trecho, que volta para a tela
@@ -28776,10 +28802,13 @@ function renderBalcao(){
              que sai do bolso em vermelho, custo apurado em verde. Quem monta a
              emissão e depois a revê na lista lê os mesmos números com o mesmo
              código de cor. -->
-        <div class="item-sub">${dataBR(r.data)}${r.prog ? ' · ' + esc(prog(r.prog).n)
+        <!-- Uma linha: à esquerda o que saiu (milhas e taxas); à direita, numa
+             venda, o custo real e o que foi cobrado. -->
+        <div class="item-sub rs-linha"><span>${dataBR(r.data)}${r.prog ? ' · ' + esc(prog(r.prog).n)
           + ' · <b class="n-azul">' + nBR(r.milhas) + ' milhas</b> + <b class="n-brasa">' + brl(r.taxas) + '</b>' : ''}${
-          r.custoExtra ? ' · despesa de <b class="n-brasa">' + brl(r.custoExtra) + '</b>' : ''}</div>
-        ${r.quem === 'terceiro' ? `<div class="item-sub">Custo real <b class="n-jade">${brl(c)}</b> · cobrado <b class="n-ouro">${brl(r.cobrado)}</b></div>` : ''}
+          r.custoExtra ? ' · despesa de <b class="n-brasa">' + brl(r.custoExtra) + '</b>' : ''}</span>
+          ${r.quem === 'terceiro' ? `<span class="rs-direita">Custo real <b class="n-jade">${brl(c)}</b> · cobrado <b class="n-ouro">${brl(r.cobrado)}</b></span>` : ''}</div>
+        ${r.itin ? `<button type="button" class="rs-voo-bt${vooAberto.has(r.id) ? ' aberto' : ''}" onclick="alternarVooReserva('${r.id}')"><svg><use href="#i-aviao"/></svg><span>${vooAberto.has(r.id) ? 'Ocultar o voo' : 'Ver o voo'}</span><svg class="seta"><use href="#i-baixo"/></svg></button>` : ''}
       </div>
       <!-- "Resultado" servia para os dois casos e não dizia nada em nenhum. Numa
            venda o número é lucro; numa emissão própria é economia — dinheiro que
@@ -28804,7 +28833,7 @@ function renderBalcao(){
         <button class="bt p fantasma icone" onclick="editarReserva('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
         <button class="bt p fantasma icone" onclick="apagar('reservas','${r.id}','a reserva')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
       </div>
-      ${r.itin ? cardVoo(contasItinerario(lerItinerario(r.itin, anoDe(r.data)))) : ''}
+      ${r.itin && vooAberto.has(r.id) ? cardVoo(contasItinerario(lerItinerario(r.itin, anoDe(r.data)))) : ''}
     </div>`;
   }).join('') : `<div class="vazio"><svg><use href="#i-balcao"/></svg><h4>Nenhuma reserva com esses filtros</h4><p>O balcão guarda tanto o que é seu quanto o que você emite para os outros, e separa as duas contas.</p><button class="bt primario" onclick="editarReserva()">Registrar Emissão</button></div>`;
 
@@ -29184,7 +29213,7 @@ function editarReserva(id, rascunho){
       <div class="campo"><label>Programa</label><select id="rsProg"><option value="">— em dinheiro —</option>${PROG_MILHAS.map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
       <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="rsMilhas" value="${qtdTxt(r.milhas)}"></div>
       <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="rsTaxas" value="${moedaTxt(r.taxas)}"></div>
-      <div class="campo"><label>Cartão que pagou as taxas</label><select id="rsCartao"><option value="">— não informado —</option>${
+      <div class="campo"><label>Cartão (pagamento/taxas)</label><select id="rsCartao"><option value="">— não informado —</option>${
         (DB.cartoes || []).map(c => `<option value="${c.id}"${c.id === r.cartaoId ? ' selected' : ''}>${esc(nomeCartao(c.id))}</option>`).join('')}</select></div>
       <!-- Taxa de emissão costuma ir parcelada, e a fatura precisa saber em quantas
            vezes para distribuir o valor pelos meses certos. Campo sempre à vista:
