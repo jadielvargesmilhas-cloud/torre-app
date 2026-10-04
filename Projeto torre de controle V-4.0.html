@@ -7173,6 +7173,10 @@ table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
 .rv .n{ text-align:right; align-items:flex-end; }
 .rv-esq b{ white-space:nowrap; }
 .rv .rv-azul{ color:var(--anil-claro); font-weight:600; }
+/* a companhia vira a logo; o nome aparece ao passar o mouse (ou tocar) */
+.rv small.rv-cia{ display:inline-flex; align-items:center; gap:6px; margin-top:2px; }
+.rv .rv-logo{ flex-shrink:0; cursor:help; }
+.rv .rv-ponto{ color:var(--grafite-dim); }
 
 /* ══ NAVEGAÇÃO POR ÁREAS (06/10/2026) ══════════════════════════════════════════
    No modelo do SisProf: trilho com as cinco áreas por extenso; na coluna, o nome
@@ -9233,7 +9237,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 01:00';
+const BUILD = '2026-10-07 02:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31358,7 +31362,12 @@ function renderResultado(){
           ${vs.map(r => { const c = custoReserva(r), rr = (Number(r.cobrado) || 0) - c, mg = Number(r.cobrado) ? rr / Number(r.cobrado) * 100 : null;
             const pe = partesEmissao(r);
             return `<div class="rv-linha">
-              <span class="rv-esq"><b>${esc(pe.rota)}</b><small><span class="rv-azul">venda</span> ${dataBR(String(r.criada || r.data).slice(0, 10))} · voo ${dataBR(r.data)}</small>${pe.cia || pe.loc ? `<small>${[pe.cia, pe.loc].filter(Boolean).map(esc).join(' · ')}</small>` : ''}</span>
+              <span class="rv-esq"><b>${esc(pe.rota)}</b><small><span class="rv-azul">venda</span> ${dataBR(String(r.criada || r.data).slice(0, 10))} · voo ${dataBR(r.data)}</small>${(() => {
+                /* companhia sem programa cadastrado (American, por exemplo) fica em texto */
+                const outra = !pe.pg ? (pe.cia || (pe.resto.split(' · ')[0] || '').replace(/^(voos?|via)\b.*$/i, '')) : '';
+                const marca = pe.pg ? discoProg(pe.pg, 'p rv-logo', pe.cia) : outra ? esc(outra) : '';
+                return marca || pe.loc ? `<small class="rv-cia">${marca}${marca && pe.loc ? '<span class="rv-ponto">·</span>' : ''}${pe.loc ? esc(pe.loc) : ''}</small>` : '';
+              })()}</span>
               <span class="n"><b style="color:${corRes(rr)}">${brl(rr)}</b><small>de <span class="rv-azul">${brl(Number(r.cobrado) || 0)}</span></small><small>custo ${brl(c)} · ${mg == null ? 'n/d' : pct(mg, 1)}</small></span>
             </div>`; }).join('')}
           <div class="rv-total"><span class="rv-esq"><b>Total</b><small>${d.n} ${d.n === 1 ? 'venda' : 'vendas'}</small></span><span class="n"><b style="color:${corRes(res)}">${brl(res)}</b><small>de ${brl(d.rec)}</small><small>custo ${brl(d.cus)} · ${d.rec ? pct(res / d.rec * 100, 1) : 'n/d'}</small></span></div>
@@ -36064,6 +36073,16 @@ function ligarDicas(){
     el ? mostrarDica(el) : esconderDica();
   });
   document.addEventListener('pointerdown', esconderDica);
+  /* No celular não há "passar o mouse": tocar na logo de uma companhia ou no "i"
+     mostra o mesmo balão por alguns segundos. */
+  let dicaToque = null;
+  document.addEventListener('click', e => {
+    if (!matchMedia('(hover: none)').matches) return;
+    const el = e.target.closest && e.target.closest('.disco-prog.fala, .info-i[data-dica]');
+    if (!el) return;
+    mostrarDica(el);
+    clearTimeout(dicaToque); dicaToque = setTimeout(esconderDica, 2600);
+  });
   addEventListener('scroll', esconderDica, true);
   addEventListener('resize', esconderDica);
   addEventListener('blur', esconderDica);
