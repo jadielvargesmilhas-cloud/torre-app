@@ -7430,6 +7430,31 @@ table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before
 @media (max-width:560px){ .heroi.compacto{ padding:16px 18px; } }
 .heroi-area[hidden]{ display:none !important; }
 .heroi-valor small{ font-size:.42em; letter-spacing:-.01em; font-weight:600; color:rgba(242,193,78,.8); margin-left:.15em; }
+
+/* ── Vendas numa tela só ── */
+.vd-topo{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.vd-filtros{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.vd-filtros .vd-mes{ margin:0; min-width:calc(150px * var(--esc)); }
+#vdHeroiSlot > .heroi{ margin-bottom:18px; }
+.heroi .rm-col.apagado{ opacity:.35; }
+.heroi .rm-val{ visibility:hidden; }
+.heroi .rm-col.top .rm-val, .heroi .rm-col.melhor .rm-val{ visibility:visible; }
+.heroi .rm-col.top .rm-val .rm-longo, .heroi .rm-col.melhor .rm-val .rm-longo{ display:inline; }
+.heroi .rm-col.top .rm-val .rm-curto, .heroi .rm-col.melhor .rm-val .rm-curto{ display:none; }
+.heroi .rm-col{ overflow:visible; }
+/* dentro da peça o ano inteiro cabe sem rolar, também no celular */
+.heroi .rm.doze .rm-area{ overflow:visible; gap:4px; }
+.heroi .rm.doze .rm-col{ flex:1 1 0; min-width:0; }
+.heroi .rm-mes{ font-size:calc(10.5px * var(--esc)); }
+.heroi .rm{ container-type:inline-size; }
+@container (max-width:330px){ .heroi .rm.doze .rm-col:nth-child(even) .rm-mes{ visibility:hidden; } }
+.heroi .rm-rec{ background:rgba(95,211,166,.18); }
+.heroi .rm-col.melhor .rm-trilho{ box-shadow:0 0 0 2px rgba(242,193,78,.55); }
+.heroi .rm-leg{ border-top-color:rgba(255,255,255,.08); }
+.heroi .rm-sw.rec{ background:rgba(95,211,166,.25); }
+.heroi .rm-trilho{ background:repeating-linear-gradient(to top, rgba(255,255,255,.06) 0 1px, transparent 1px 25%); }
+.heroi .heroi-curva .rm{ width:100%; }
+@media (max-width:560px){ .vd-topo .bt.primario{ flex:1 1 100%; } }
 </style>
 </head>
 <body>
@@ -7545,7 +7570,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-mesa"/></svg><span class="sg">Início</span></button>
       <button class="tb" data-area="milhas" data-vista="saldo" data-dica="Milhas: carteira, comprar e transferir, fábrica e cartões" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Milhas</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas, emissões e radar de voos" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
-      <button class="tb" data-area="negocio" data-vista="vendas" data-dica="Negócio: clientes, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="negocio" data-vista="vendas" data-dica="Negócio: vendas, cotações, clientes e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
     </nav>
   </aside>
@@ -8507,7 +8532,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                de CPF. Mas quem abre o menu vem ver o que já foi emitido, não montar
                cotação — então a aba que carrega por padrão é Emitidos. Ordem e
                ponto de entrada respondem a perguntas diferentes. -->
-          <button class="aba" data-aba="em-cotacoes">Cotações</button>
           <button class="aba on" data-aba="em-resgates">Emitidos <span class="cont" id="contEmissoes">0</span></button>
           <button class="aba" data-aba="em-controle">Controle de CPF</button>
         </div>
@@ -8545,102 +8569,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           </div>
         </div>
 
-        <div class="painel-aba" id="p-em-cotacoes">
-          <div class="pilha" style="gap:18px">
-            <div class="linha" style="flex-wrap:wrap;gap:9px">
-              <div class="olho destaque" style="margin:0;flex:0 0 auto">Cotações</div>
-            </div>
-            <div class="grade g4" id="ctResumo"></div>
-            <!-- No topo do painel: aviso que precisa ser rolado até o fim para ser
-                 visto não avisa ninguém. -->
-            <div id="ctAvisoPax"></div>
-
-            <div class="cartao">
-              <div class="cartao-cab">
-                <h3 style="color:var(--anil-claro)">Ler o print do voo
-                  <div class="sub">Cole a captura do Google Flights, do site da companhia ou de qualquer buscador. O Claude lê os trechos, grátis pela sua assinatura, e a Torre precifica em milhas em todos os programas.</div></h3>
-                <span class="etq jade" id="etqIACot">grátis, pelo Claude</span>
-              </div>
-              <div class="solta-alvo" id="ctAlvo" style="padding:6px 0">
-              <div class="solta" id="ctSolta" tabindex="0">
-                <svg><use href="#i-imagem"/></svg>
-                <div class="solta-txt">
-                  <b>Cole com Ctrl+V, arraste o arquivo ou clique para escolher</b>
-                  <span>PNG, JPG ou WEBP até 5 MB. Ida e volta podem estar na mesma imagem.</span>
-                </div>
-                <input type="file" id="ctArquivo" accept="image/png,image/jpeg,image/webp" hidden>
-              </div>
-              </div>
-              <div id="ctLeitura" style="margin-top:13px"></div>
-            </div>
-
-            <div class="cartao">
-              <div class="cartao-cab">
-                <h3 style="color:var(--anil-claro)">Buscar voos para a cotação
-                  <div class="sub">Origem, destino e data. A Torre consulta os provedores ligados e traz horários, preços e disponibilidade real de resgate por programa.</div></h3>
-                <span class="etq" id="etqFontes"></span>
-              </div>
-              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end">
-                <div class="campo"><label>Origem</label><input type="text" id="bcOri" value="GRU" maxlength="3" style="text-transform:uppercase"></div>
-                <div class="campo"><label>Destino</label><input type="text" id="bcDes" value="LIS" maxlength="3" style="text-transform:uppercase"></div>
-                <div class="campo"><label>Data</label><input type="date" id="bcData"></div>
-                <div class="campo"><label>Cabine</label><select id="bcCab" data-ordem="natural"></select></div>
-                <div class="campo"><label>Passageiros</label><input type="number" id="bcPax" value="1" min="1" max="9"></div>
-                <button class="bt primario" id="btBuscarCotacao" style="height:36px"><svg><use href="#i-busca"/></svg>Buscar voos</button>
-              </div>
-              <div id="bcSaida" style="margin-top:15px"></div>
-            </div>
-
-            <div class="cartao">
-              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Montar cotação para o cliente<div class="sub">Você lança o custo real (milhas × seu CPM + taxas + serviço). O cliente recebe só o preço final e as opções.</div></h3></div>
-              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end">
-                <div class="campo"><label>Cliente</label><input type="text" id="ctCliente" placeholder="Nome do cliente"></div>
-                <div class="campo"><label>Trecho</label><input type="text" id="ctTrecho" placeholder="GRU → LIS" style="text-transform:uppercase"></div>
-                <div class="campo"><label>Data</label><input type="date" id="ctData"></div>
-                <div class="campo"><label>Programa</label><select id="ctPrograma"></select></div>
-                <div class="campo"><label>Milhas</label><input type="text" inputmode="numeric" data-milhar id="ctMilhas" value="78.000"></div>
-                <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="ctTaxas" value="412"></div>
-                <div class="campo"><label>Serviço (R$)</label><input type="text" inputmode="decimal" data-moeda id="ctServico" value="250"></div>
-              <details class="det-bilhete">
-                <summary>Detalhes para o bilhete <span class="fraco">opcional</span></summary>
-                <div class="campo" style="margin-top:11px">
-                  <label>Colar itinerário — preenche os campos abaixo</label>
-                  <textarea id="ctItin" rows="2" spellcheck="false" style="font-family:var(--f-m);font-size:calc(12.5px * var(--esc));line-height:1.6"
-                    placeholder="1 TP1058Y 31MAY 4 NATLIS HK1 2245 1215+1"></textarea>
-                </div>
-                <div id="ctItinPrev" style="margin:11px 0"></div>
-                <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));margin-top:11px">
-                  <div class="campo"><label>Ida sai</label><input type="text" id="ctIdaSai" placeholder="15:20"></div>
-                  <div class="campo"><label>Ida chega</label><input type="text" id="ctIdaChega" placeholder="11:00"></div>
-                  <div class="campo"><label>Escala da ida</label><input type="text" id="ctIdaEscala" placeholder="GRU · 1h20"></div>
-                  <div class="campo"><label>Duração da ida</label><input type="text" id="ctIdaDur" placeholder="14h40"></div>
-                  <div class="campo"><label>Data da volta</label><input type="date" id="ctVoltaData"></div>
-                  <div class="campo"><label>Volta sai</label><input type="text" id="ctVoltaSai" placeholder="13:10"></div>
-                  <div class="campo"><label>Volta chega</label><input type="text" id="ctVoltaChega" placeholder="23:50"></div>
-                  <div class="campo"><label>Escala da volta</label><input type="text" id="ctVoltaEscala" placeholder="GRU · 2h05"></div>
-                  <div class="campo"><label>Duração da volta</label><input type="text" id="ctVoltaDur" placeholder="15h40"></div>
-                  <div class="campo"><label>Cabine</label><select id="ctCabine" data-ordem="natural"><option value="econômica">Econômica</option><option value="executiva">Executiva</option><option value="primeira">Primeira</option></select></div>
-                  <div class="campo"><label>Bagagem</label><input type="text" id="ctBagagem" placeholder="1 mala 23kg"></div>
-                </div>
-              </details>
-                <button class="bt fantasma" id="btEstimar" style="height:36px" data-dica="Preenche milhas e taxas pelo motor local, a partir do trecho, da data e do programa"><svg><use href="#i-faisca"/></svg>Estimar</button>
-                <button class="bt primario" id="btAddOpcao" style="height:36px"><svg><use href="#i-mais"/></svg>Somar opção</button>
-              </div>
-              <div class="pilha" style="gap:9px;margin-top:16px" id="ctOpcoes"></div>
-              <div id="ctMensagem" style="margin-top:14px"></div>
-              <div class="linha fim" style="margin-top:14px">
-                <button class="bt fantasma" id="btLimparCotacao">Limpar</button>
-                <button class="bt fantasma" id="btEscreverIA"><svg><use href="#i-faisca"/></svg>Escrever com o Claude</button>
-                <button class="bt fantasma" id="btCopiarCotacao"><svg><use href="#i-copiar"/></svg>Copiar texto</button>
-                <button class="bt primario" id="btSalvarCotacao"><svg><use href="#i-ok"/></svg>Salvar cotação</button>
-              </div>
-            </div>
-            <div>
-              <div class="olho anil">Cotações salvas</div>
-              <div class="pilha" style="gap:10px" id="blCotacoes"></div>
-            </div>
-          </div>
-        </div>
+        
 
         <div class="painel-aba" id="p-em-controle">
           <div class="pilha" style="gap:14px">
@@ -8872,64 +8801,139 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
         </div>
       </section>
 
-      <section class="vista" id="v-vendas">
-        <!-- O mesmo botão dos dois lados: registrar emissão é o gesto que alimenta
-             tanto o controle de milha quanto a conta do balcão, e obrigar a trocar
-             de menu para fazê-lo separa o que na prática é um movimento só.
-
-             Abaixo do trilho, e não acima: acima ele disputava a atenção com o
-             cabeçalho da vista e ficava antes das abas que ele nem usa. -->
-        <div class="linha" style="margin-bottom:16px">
-          <div class="esticar"></div>
-          <button class="bt primario" id="btNovaEmissaoBalcao"><svg><use href="#i-mais"/></svg>Registrar Emissão</button>
-        </div>
-
-        <!-- Vendas tem duas seções: o recorte por período (ano e mês) e o resultado
-             das vendas (gráfico por mês, ranking e vendas de cada cliente). O
-             resultado voltou para cá em 06/10/2026, a pedido do Jadiel. -->
-        <div class="abas" data-grupo="vendas">
-          <button class="aba on" data-aba="bl-vendas">Vendas no período</button>
-          <button class="aba" data-aba="vd-resultado">Resultado das vendas</button>
-        </div>
-        <div class="painel-aba on" id="p-bl-vendas">
-          <div class="pilha" style="gap:16px">
-            <div class="linha" style="flex-wrap:wrap;gap:11px">
-              <div class="olho destaque" style="margin:0;flex:0 0 auto">Vendas</div>
-              <div class="campo" style="max-width:140px;margin:0"><select id="vdAno" data-ordem="natural"></select></div>
-              <div class="campo" style="max-width:160px;margin:0"><select id="vdMes" data-ordem="natural"></select></div>
-              <div class="esticar"></div>
-              <span class="fraco" style="font-size:calc(12.5px * var(--esc))" id="vdPeriodo"></span>
+      <!-- COTAÇÕES em Negócio (06/10/2026, pedido do Jadiel): as cotações são para
+           vender passagem a cliente, e por isso saíram de Emissões. O painel é o
+           mesmo, com os mesmos nomes por dentro. -->
+      <section class="vista" id="v-cotacoes">
+        <div class="painel-aba on" id="p-em-cotacoes">
+          <div class="pilha" style="gap:18px">
+            <div class="linha" style="flex-wrap:wrap;gap:9px">
+              <div class="olho destaque" style="margin:0;flex:0 0 auto">Cotações</div>
             </div>
-            <div class="grade g5" id="vdResumo"></div>
-            <div class="pilha" style="gap:14px" id="vdContas"></div>
+            <div class="grade g4" id="ctResumo"></div>
+            <!-- No topo do painel: aviso que precisa ser rolado até o fim para ser
+                 visto não avisa ninguém. -->
+            <div id="ctAvisoPax"></div>
+
+            <div class="cartao">
+              <div class="cartao-cab">
+                <h3 style="color:var(--anil-claro)">Ler o print do voo
+                  <div class="sub">Cole a captura do Google Flights, do site da companhia ou de qualquer buscador. O Claude lê os trechos, grátis pela sua assinatura, e a Torre precifica em milhas em todos os programas.</div></h3>
+                <span class="etq jade" id="etqIACot">grátis, pelo Claude</span>
+              </div>
+              <div class="solta-alvo" id="ctAlvo" style="padding:6px 0">
+              <div class="solta" id="ctSolta" tabindex="0">
+                <svg><use href="#i-imagem"/></svg>
+                <div class="solta-txt">
+                  <b>Cole com Ctrl+V, arraste o arquivo ou clique para escolher</b>
+                  <span>PNG, JPG ou WEBP até 5 MB. Ida e volta podem estar na mesma imagem.</span>
+                </div>
+                <input type="file" id="ctArquivo" accept="image/png,image/jpeg,image/webp" hidden>
+              </div>
+              </div>
+              <div id="ctLeitura" style="margin-top:13px"></div>
+            </div>
+
+            <div class="cartao">
+              <div class="cartao-cab">
+                <h3 style="color:var(--anil-claro)">Buscar voos para a cotação
+                  <div class="sub">Origem, destino e data. A Torre consulta os provedores ligados e traz horários, preços e disponibilidade real de resgate por programa.</div></h3>
+                <span class="etq" id="etqFontes"></span>
+              </div>
+              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end">
+                <div class="campo"><label>Origem</label><input type="text" id="bcOri" value="GRU" maxlength="3" style="text-transform:uppercase"></div>
+                <div class="campo"><label>Destino</label><input type="text" id="bcDes" value="LIS" maxlength="3" style="text-transform:uppercase"></div>
+                <div class="campo"><label>Data</label><input type="date" id="bcData"></div>
+                <div class="campo"><label>Cabine</label><select id="bcCab" data-ordem="natural"></select></div>
+                <div class="campo"><label>Passageiros</label><input type="number" id="bcPax" value="1" min="1" max="9"></div>
+                <button class="bt primario" id="btBuscarCotacao" style="height:36px"><svg><use href="#i-busca"/></svg>Buscar voos</button>
+              </div>
+              <div id="bcSaida" style="margin-top:15px"></div>
+            </div>
+
+            <div class="cartao">
+              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Montar cotação para o cliente<div class="sub">Você lança o custo real (milhas × seu CPM + taxas + serviço). O cliente recebe só o preço final e as opções.</div></h3></div>
+              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end">
+                <div class="campo"><label>Cliente</label><input type="text" id="ctCliente" placeholder="Nome do cliente"></div>
+                <div class="campo"><label>Trecho</label><input type="text" id="ctTrecho" placeholder="GRU → LIS" style="text-transform:uppercase"></div>
+                <div class="campo"><label>Data</label><input type="date" id="ctData"></div>
+                <div class="campo"><label>Programa</label><select id="ctPrograma"></select></div>
+                <div class="campo"><label>Milhas</label><input type="text" inputmode="numeric" data-milhar id="ctMilhas" value="78.000"></div>
+                <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="ctTaxas" value="412"></div>
+                <div class="campo"><label>Serviço (R$)</label><input type="text" inputmode="decimal" data-moeda id="ctServico" value="250"></div>
+              <details class="det-bilhete">
+                <summary>Detalhes para o bilhete <span class="fraco">opcional</span></summary>
+                <div class="campo" style="margin-top:11px">
+                  <label>Colar itinerário — preenche os campos abaixo</label>
+                  <textarea id="ctItin" rows="2" spellcheck="false" style="font-family:var(--f-m);font-size:calc(12.5px * var(--esc));line-height:1.6"
+                    placeholder="1 TP1058Y 31MAY 4 NATLIS HK1 2245 1215+1"></textarea>
+                </div>
+                <div id="ctItinPrev" style="margin:11px 0"></div>
+                <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));margin-top:11px">
+                  <div class="campo"><label>Ida sai</label><input type="text" id="ctIdaSai" placeholder="15:20"></div>
+                  <div class="campo"><label>Ida chega</label><input type="text" id="ctIdaChega" placeholder="11:00"></div>
+                  <div class="campo"><label>Escala da ida</label><input type="text" id="ctIdaEscala" placeholder="GRU · 1h20"></div>
+                  <div class="campo"><label>Duração da ida</label><input type="text" id="ctIdaDur" placeholder="14h40"></div>
+                  <div class="campo"><label>Data da volta</label><input type="date" id="ctVoltaData"></div>
+                  <div class="campo"><label>Volta sai</label><input type="text" id="ctVoltaSai" placeholder="13:10"></div>
+                  <div class="campo"><label>Volta chega</label><input type="text" id="ctVoltaChega" placeholder="23:50"></div>
+                  <div class="campo"><label>Escala da volta</label><input type="text" id="ctVoltaEscala" placeholder="GRU · 2h05"></div>
+                  <div class="campo"><label>Duração da volta</label><input type="text" id="ctVoltaDur" placeholder="15h40"></div>
+                  <div class="campo"><label>Cabine</label><select id="ctCabine" data-ordem="natural"><option value="econômica">Econômica</option><option value="executiva">Executiva</option><option value="primeira">Primeira</option></select></div>
+                  <div class="campo"><label>Bagagem</label><input type="text" id="ctBagagem" placeholder="1 mala 23kg"></div>
+                </div>
+              </details>
+                <button class="bt fantasma" id="btEstimar" style="height:36px" data-dica="Preenche milhas e taxas pelo motor local, a partir do trecho, da data e do programa"><svg><use href="#i-faisca"/></svg>Estimar</button>
+                <button class="bt primario" id="btAddOpcao" style="height:36px"><svg><use href="#i-mais"/></svg>Somar opção</button>
+              </div>
+              <div class="pilha" style="gap:9px;margin-top:16px" id="ctOpcoes"></div>
+              <div id="ctMensagem" style="margin-top:14px"></div>
+              <div class="linha fim" style="margin-top:14px">
+                <button class="bt fantasma" id="btLimparCotacao">Limpar</button>
+                <button class="bt fantasma" id="btEscreverIA"><svg><use href="#i-faisca"/></svg>Escrever com o Claude</button>
+                <button class="bt fantasma" id="btCopiarCotacao"><svg><use href="#i-copiar"/></svg>Copiar texto</button>
+                <button class="bt primario" id="btSalvarCotacao"><svg><use href="#i-ok"/></svg>Salvar cotação</button>
+              </div>
+            </div>
+            <div>
+              <div class="olho anil">Cotações salvas</div>
+              <div class="pilha" style="gap:10px" id="blCotacoes"></div>
+            </div>
           </div>
         </div>
-        <div class="painel-aba" id="p-vd-resultado">
-          <div class="pilha" style="gap:18px" id="emParteResultado">
-              <div class="rs-topo">
-                <div class="sec-cab"><div class="olho anil" style="margin:0">Resultado das vendas</div>
-                  <p class="fraco">O que entrou, o custo real das milhas e das taxas, e o que sobrou.</p></div>
-                <div class="rs-filtros">
-                  <div class="seg" id="rsAnos"></div>
-                  <div class="seg" id="rsBase" data-dica="Em que mês cada venda entra na conta">
-                    <button data-b="venda">Mês da venda</button><button data-b="voo">Mês do voo</button>
-                  </div>
-                </div>
-              </div>
-              <div class="grade g4" id="rsKpis"></div>
-              <div class="cartao">
-                <div class="cartao-cab"><h3>Resultado por mês</h3><span class="etq" id="rsMesEtq"></span></div>
-                <div id="blGraficoMes"></div>
-              </div>
-              <div class="rs-duas">
-                <div class="cartao">
-                  <div class="cartao-cab"><h3>Lucro por cliente</h3><span class="etq" id="rsCliEtq"></span></div>
-                  <div id="blPorCliente"></div>
-                </div>
-                <div class="cartao rs-det" id="rsDetCliente"></div>
-              </div>
-              <div id="rsFora"></div>
+      </section>
+
+      <section class="vista" id="v-vendas">
+        <!-- VENDAS NUMA TELA SÓ (06/10/2026). "Vendas no período" e "Resultado das
+             vendas" mostravam os mesmos números duas vezes, com filtros diferentes.
+             Agora há um filtro só (ano, mês e base do mês), e ele vale para tudo:
+             a peça de destaque (resultado, receita, a receber, gráfico do ano), o
+             ranking de clientes com as vendas de cada um, e os recebimentos por
+             conta. -->
+        <div class="vd-topo">
+          <div class="vd-filtros">
+            <div class="seg" id="rsAnos"></div>
+            <div class="campo vd-mes"><select id="vdMes" data-ordem="natural" aria-label="Mês"></select></div>
+            <div class="seg" id="rsBase" data-dica="Em que mês cada venda entra na conta">
+              <button data-b="venda">Mês da venda</button><button data-b="voo">Mês do voo</button>
             </div>
+          </div>
+          <button class="bt primario" id="btNovaEmissaoBalcao"><svg><use href="#i-mais"/></svg>Registrar Emissão</button>
+        </div>
+        <div id="vdHeroiSlot"></div>
+        <div class="pilha" style="gap:18px" id="emParteResultado">
+          <div class="rs-duas">
+            <div class="cartao">
+              <div class="cartao-cab"><h3>Lucro por cliente</h3><span class="etq" id="rsCliEtq"></span></div>
+              <div id="blPorCliente"></div>
+            </div>
+            <div class="cartao rs-det" id="rsDetCliente"></div>
+          </div>
+          <div class="pilha" style="gap:12px">
+            <div class="olho anil" style="margin:0">Recebimentos por conta</div>
+            <div class="pilha" style="gap:14px" id="vdContas"></div>
+          </div>
+          <div id="rsFora"></div>
         </div>
       </section>
 
@@ -9228,7 +9232,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 22:00';
+const BUILD = '2026-10-07 00:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12529,7 +12533,8 @@ const TITULOS = {
   rota:    ['Jornadas', 'Jornadas pelo Método ROTA e seus resultados'],
   /* Emissões estava declarada três vezes, e só a última valia — as duas
      primeiras eram texto morto, de versões anteriores do módulo. */
-  emissoes:['Emissões', 'Cotações, o que foi emitido e a cota de CPF'],
+  emissoes:['Emissões', 'O que foi emitido e a cota de CPF'],
+  cotacoes:['Cotações', 'Orçamentos de passagem com milhas para clientes'],
   cartoes: ['Cartões', 'Faturas, limites e o que a operação compromete'],
   clientes:['Clientes', 'Passageiros cadastrados e documentos'],
   vendas:  ['Vendas', 'O que foi vendido e o resultado'],
@@ -12543,13 +12548,13 @@ const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-mesa',    vistas:['mesa']},
   {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica', 'cartoes']},
   {k:'viagens', n:'Viagens', sub:'Jornadas e emissões',  ic:'#i-aviao',   vistas:['rota', 'emissoes', 'radar']},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['vendas', 'clientes', 'imposto']},
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['vendas', 'cotacoes', 'clientes', 'imposto']},
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
 ];
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-saldo', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
-  emissoes:'#i-bilhete', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-vendas', imposto:'#i-imposto', ajustes:'#i-ajustes'};
+  emissoes:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-vendas', imposto:'#i-imposto', ajustes:'#i-ajustes'};
 /* nome curto para a barra de módulos do celular, onde cabe pouco */
-const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'Emissões',
+const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'Emissões', cotacoes:'Cotações',
   radar:'Radar', clientes:'Clientes', vendas:'Vendas', imposto:'Imposto'};
 const areaDe = v => AREAS.find(a => a.vistas.includes(v)) || AREAS[0];
 const ultimaDaArea = {};
@@ -13775,6 +13780,7 @@ function renderHeroiViagens(){
 /* Negócio: o resultado das vendas no ano, a receita, e o resultado mês a mês. */
 function renderHeroiNegocio(){
   const alvo = $('#heroiArea'); if (!alvo) return;
+  if (vistaAtual === 'vendas') return renderHeroiVendas(alvo);
   const ano = String(new Date().getFullYear());
   const vendas = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && String(r.criada || r.data || '').startsWith(ano));
   if (!vendas.length){ montarHeroi(alvo, {rot:`Resultado das vendas em ${ano}`, vazio:'Nenhuma venda registrada neste ano. Ao registrar uma emissão para cliente, a Torre mostra aqui a receita, o resultado e a margem.'}); return; }
@@ -13797,6 +13803,30 @@ function renderHeroiNegocio(){
     serie, fmtSerie:v => 'R$ ' + milCurto(v)
   });
 }
+/* Em Vendas, a peça é o resumo do recorte escolhido nos filtros, e o gráfico
+   do ano (receita e resultado por mês) vai no lugar da curva. */
+function renderHeroiVendas(alvo){
+  const vs = vendasFiltradas();
+  const quando = quandoRecorteVendas();
+  if (!vs.length){ montarHeroi(alvo, {rot:`Resultado das vendas ${quando}`, vazio:`Nenhuma venda ${quando}. Troque o ano ou o mês nos filtros acima, ou registre uma emissão para cliente.`}); return; }
+  const rec = soma(vs.map(r => Number(r.cobrado) || 0)), cus = soma(vs.map(r => custoReserva(r)));
+  const res = rec - cus, mg = rec ? res / rec * 100 : null;
+  const aReceber = soma(vs.filter(r => !vendaRecebida(r)).map(r => Number(r.cobrado) || 0));
+  const milhas = soma(vs.map(r => Number(r.milhas) || 0));
+  const clientes = {}; vs.forEach(r => { const c = r.cliente || 'sem nome'; clientes[c] = (clientes[c] || 0) + ((Number(r.cobrado) || 0) - custoReserva(r)); });
+  montarHeroi(alvo, {
+    rot:`Resultado das vendas ${quando}`,
+    valor:brl(res),
+    linha:`<span>Receita <b>${brl(rec)}</b></span>${mg != null ? `<span class="heroi-chip ${mg >= 0 ? 'sobe' : 'desce'}">margem de ${pct(mg, 1)}</span>` : ''}`,
+    numeros:[[nBR(vs.length), `${vs.length === 1 ? 'venda' : 'vendas'}, ticket ${brl(rec / vs.length)}`], [brl(aReceber), aReceber > 0 ? 'a receber' : 'tudo recebido'], [milhas ? brl2(rec / (milhas / 1000)) : 'n/d', 'rendimento do milheiro']],
+    fatias:fatiasHeroi(Object.keys(clientes).map(c => ({c, v:clientes[c]})), x => x.c.length > 22 ? x.c.slice(0, 21) + '…' : x.c), fmtFatia:v => brl(v), compRot:'Resultado por cliente',
+    dirRot:(rsAno && rsAno !== 'todos') ? `Receita e resultado em ${rsAno}` : 'Receita e resultado por mês',
+    dirSub:'Barra clara: receita. Barra cheia: o que sobrou.',
+    serie:null, semSerie:''
+  });
+  const c = document.getElementById(alvo.id + 'Curva');
+  if (c) c.innerHTML = graficoMesesVendas() || '<p class="heroi-sub" style="padding:24px 0">Sem vendas no período para desenhar.</p>';
+}
 const PRINCIPAL_DA_AREA = {milhas:'saldo', viagens:'rota', negocio:'vendas'};
 function renderHeroiDaVista(v){
   const el = $('#heroiArea'); if (!el) return;
@@ -13804,6 +13834,9 @@ function renderHeroiDaVista(v){
   if (!PRINCIPAL_DA_AREA[k]){ el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
   el.dataset.area = k;
+  const slot = $('#vdHeroiSlot'), palco = document.querySelector('.palco');
+  if (v === 'vendas' && slot && el.parentElement !== slot) slot.appendChild(el);
+  if (v !== 'vendas' && palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
   if (k === 'milhas') renderHeroiMilhas();
   if (k === 'viagens') renderHeroiViagens();
@@ -31196,10 +31229,7 @@ function apagarPessoa(id){
 /* O resultado das vendas mora em Negócio → Vendas (seção "Resultado das vendas").
    Estes dois nomes ficam por compatibilidade com atalhos antigos. */
 function mostrarParteEmitidos(v){ if (v === 'resultado') abrirResultadoVendas(); }
-function abrirResultadoVendas(){
-  irPara('vendas');
-  setTimeout(() => { irParaAba('vendas', 'vd-resultado'); window.scrollTo({top:0, behavior:'smooth'}); }, 60);
-}
+function abrirResultadoVendas(){ irPara('vendas'); }
 
 /* Iniciais do cliente para o selo da linha: "Kátia Barreto" vira KB; o que vem
    entre parênteses (um apelido, um grupo) não entra. */
@@ -31221,6 +31251,43 @@ function iniciaisCliente(n){
 let rsAno = null, rsCliente = null;
 const baseResultado = () => DB.cfg.resultadoBase === 'voo' ? 'voo' : 'venda';
 const mesDaVenda = r => String((baseResultado() === 'voo' ? r.data : (r.criada || r.data)) || '').slice(0, 7);
+/* "em 2026", "em out/2026", "em todos os anos" */
+function quandoRecorteVendas(){
+  const ano = rsAno || 'todos';
+  if (vdMes !== 'todos') return `em ${MESES[Number(vdMes) - 1]}${ano === 'todos' ? ', todos os anos' : '/' + ano}`;
+  return ano === 'todos' ? 'em todos os anos' : `em ${ano}`;
+}
+function atualizarVendasTudo(){
+  renderResultado(); renderVendas();
+  if (vistaAtual === 'vendas') renderHeroiDaVista('vendas');
+}
+/* Gráfico do ano: receita (barra clara) e resultado (barra cheia) de cada mês.
+   Com um mês escolhido no filtro, ele fica marcado e os outros esmaecem. */
+function graficoMesesVendas(){
+  const ano = rsAno && rsAno !== 'todos' ? rsAno : null;
+  const vs = DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && mesDaVenda(r) && (!ano || mesDaVenda(r).startsWith(ano)));
+  const porMes = {};
+  vs.forEach(r => { const k = mesDaVenda(r); if (!porMes[k]) porMes[k] = {rec:0, cus:0, n:0}; porMes[k].rec += Number(r.cobrado) || 0; porMes[k].cus += custoReserva(r); porMes[k].n++; });
+  const chaves = ano ? Array.from({length:12}, (_, i) => `${ano}-${String(i + 1).padStart(2, '0')}`) : Object.keys(porMes).sort();
+  const com = chaves.filter(k => porMes[k]);
+  if (!com.length) return '';
+  const topo = Math.max(1, ...com.map(k => Math.max(porMes[k].rec, Math.abs(porMes[k].rec - porMes[k].cus))));
+  const rot = k => MESES[Number(k.slice(5, 7)) - 1] + (ano ? '' : '/' + k.slice(2, 4));
+  const cor = v => v >= 0 ? 'var(--jade)' : 'var(--brasa)';
+  /* no espaço da peça só cabe um rótulo: o do melhor mês (ou o do mês escolhido);
+     os outros aparecem ao passar o mouse */
+  const topK = com.slice().sort((x, y) => (porMes[y].rec - porMes[y].cus) - (porMes[x].rec - porMes[x].cus))[0];
+  return `<div class="rm${ano ? ' doze' : ''}"><div class="rm-area">${chaves.map(k => {
+      const m = porMes[k], sel = vdMes !== 'todos' && k.slice(5, 7) === vdMes, apaga = vdMes !== 'todos' && !sel;
+      if (!m) return `<div class="rm-col vazio-mes${apaga ? ' apagado' : ''}"><span class="rm-val">&nbsp;</span><div class="rm-trilho"></div><span class="rm-mes">${esc(rot(k))}</span></div>`;
+      const res = m.rec - m.cus;
+      return `<div class="rm-col${sel ? ' melhor' : ''}${vdMes === 'todos' && k === topK ? ' top' : ''}${apaga ? ' apagado' : ''}" data-dica="${esc(rot(k))}: receita ${esc(brl(m.rec))}, custo ${esc(brl(m.cus))}, resultado ${esc(brl(res))} (${m.n} ${m.n === 1 ? 'venda' : 'vendas'})">
+        <span class="rm-val" style="color:${cor(res)}"><span class="rm-longo">${brl(res)}</span><span class="rm-curto">${valorCurto(res).replace(/^(−?)R\$\s/, '$1')}</span></span>
+        <div class="rm-trilho"><i class="rm-rec" style="height:${(m.rec / topo * 100).toFixed(1)}%"></i><i class="rm-res${res < 0 ? ' neg' : ''}" style="height:${(Math.abs(res) / topo * 100).toFixed(1)}%"></i></div>
+        <span class="rm-mes">${esc(rot(k))}</span></div>`; }).join('')}</div>
+    <div class="rm-leg"><span><i class="rm-sw rec"></i>Receita</span><span><i class="rm-sw res"></i>Resultado</span><span>${baseResultado() === 'voo' ? 'pelo mês do voo' : 'pelo mês da venda'}</span></div></div>`;
+}
+
 function renderResultado(){
   const todas = DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && mesDaVenda(r));
   const anos = [...new Set(todas.map(r => mesDaVenda(r).slice(0, 4)))].sort();
@@ -31230,56 +31297,18 @@ function renderResultado(){
   if (seg){
     seg.innerHTML = anos.map(a => `<button data-a="${a}" class="${a === rsAno ? 'on' : ''}">${a}</button>`).join('') + (anos.length > 1 ? `<button data-a="todos" class="${rsAno === 'todos' ? 'on' : ''}">Todos</button>` : '');
     seg.hidden = !anos.length;
-    $$('button', seg).forEach(b => b.onclick = () => { rsAno = b.dataset.a; renderResultado(); });
+    $$('button', seg).forEach(b => b.onclick = () => { rsAno = b.dataset.a; atualizarVendasTudo(); });
   }
-  $$('#rsBase button').forEach(b => { b.classList.toggle('on', b.dataset.b === baseResultado()); b.onclick = () => { DB.cfg.resultadoBase = b.dataset.b; salvar(); rsAno = null; renderResultado(); }; });
-
-  const terceiros = todas.filter(r => rsAno === 'todos' || mesDaVenda(r).startsWith(rsAno));
-  const receita = soma(terceiros.map(r => Number(r.cobrado) || 0));
-  const custo = soma(terceiros.map(r => custoReserva(r)));
-  const resultado = receita - custo;
-  const milhasQueimadas = soma(terceiros.map(r => Number(r.milhas) || 0));
-  const ticket = terceiros.length ? receita / terceiros.length : 0;
+  const selM = $('#vdMes');
+  if (selM){
+    selM.innerHTML = `<option value="todos">Todos os meses</option>` + MESES_CURTO.map((m, i) => { const k = String(i + 1).padStart(2, '0');
+      return `<option value="${k}"${k === vdMes ? ' selected' : ''}>${m.charAt(0).toUpperCase() + m.slice(1)}</option>`; }).join('');
+    selM.onchange = () => { vdMes = selM.value; atualizarVendasTudo(); };
+  }
+  $$('#rsBase button').forEach(b => { b.classList.toggle('on', b.dataset.b === baseResultado()); b.onclick = () => { DB.cfg.resultadoBase = b.dataset.b; salvar(); rsAno = null; atualizarVendasTudo(); }; });
+  const terceiros = todas.filter(noRecorteVendas);
   const corRes = v => v >= 0 ? 'var(--jade)' : 'var(--brasa)';
-  const quando = rsAno === 'todos' ? 'em todos os anos' : `em ${rsAno}`;
-
-  if ($('#rsKpis')) $('#rsKpis').innerHTML = terceiros.length
-    ? metrica('Receita', brl(receita), `${terceiros.length} ${terceiros.length === 1 ? 'venda' : 'vendas'} ${quando}`, '', `Ticket médio: ${brl(ticket)} por venda`)
-      + metrica('Custo real', brl(custo), 'milhas ao custo e taxas', '')
-      + metrica('Resultado', brl(resultado), 'o que sobrou', resultado >= 0 ? 'jade' : 'brasa')
-      + metrica('Margem', receita ? pct(resultado / receita * 100, 1) : 'n/d', `${nBR(milhasQueimadas)} milhas usadas`, '')
-    : '';
-
-  /* ── por mês: os doze meses do ano, com ou sem venda ── */
-  const porMes = {};
-  terceiros.forEach(r => {
-    const k = mesDaVenda(r);
-    if (!porMes[k]) porMes[k] = {rec:0, cus:0, n:0};
-    porMes[k].rec += Number(r.cobrado) || 0; porMes[k].cus += custoReserva(r); porMes[k].n++;
-  });
-  const chaves = rsAno === 'todos' ? Object.keys(porMes).sort() : Array.from({length:12}, (_, i) => `${rsAno}-${String(i + 1).padStart(2, '0')}`);
-  const com = chaves.filter(k => porMes[k]);
-  const topo = Math.max(1, ...com.map(k => Math.max(porMes[k].rec, Math.abs(porMes[k].rec - porMes[k].cus))));
-  const melhor = com.slice().sort((x, y) => (porMes[y].rec - porMes[y].cus) - (porMes[x].rec - porMes[x].cus))[0];
-  const rotMes = k => MESES[Number(k.slice(5, 7)) - 1] + (rsAno === 'todos' ? '/' + k.slice(2, 4) : '');
-  if ($('#rsMesEtq')) $('#rsMesEtq').textContent = baseResultado() === 'voo' ? 'pelo mês do voo' : 'pelo mês da venda';
-  $('#blGraficoMes').innerHTML = com.length ? `<div class="rm${chaves.length === 12 && rsAno !== 'todos' ? ' doze' : ''}">
-      <div class="rm-area">${chaves.map(k => {
-        const m = porMes[k];
-        if (!m) return `<div class="rm-col vazio-mes"><span class="rm-val">&nbsp;</span><div class="rm-trilho"></div><span class="rm-mes">${esc(rotMes(k))}</span></div>`;
-        const res = m.rec - m.cus;
-        return `<div class="rm-col${k === melhor && com.length > 1 ? ' melhor' : ''}" data-dica="${esc(rotMes(k))}: receita ${esc(brl(m.rec))}, custo ${esc(brl(m.cus))}, resultado ${esc(brl(res))} (${m.n} ${m.n === 1 ? 'venda' : 'vendas'})">
-          <span class="rm-val" style="color:${corRes(res)}"><span class="rm-longo">${brl(res)}</span><span class="rm-curto">${valorCurto(res).replace(/^(−?)R\$\s/, '$1')}</span></span>
-          <div class="rm-trilho"><i class="rm-rec" style="height:${(m.rec / topo * 100).toFixed(1)}%"></i><i class="rm-res${res < 0 ? ' neg' : ''}" style="height:${(Math.abs(res) / topo * 100).toFixed(1)}%"></i></div>
-          <span class="rm-mes">${esc(rotMes(k))}</span>
-        </div>`; }).join('')}</div>
-      <div class="rm-leg"><span><i class="rm-sw rec"></i>Receita</span><span><i class="rm-sw res"></i>Resultado</span><span>valores em R$</span>${com.length > 1 ? `<span class="rm-leg-melhor">Melhor mês: <b>${esc(rotMes(melhor))}</b></span>` : ''}</div>
-    </div>`
-    : `<div class="vazio" style="padding:26px"><p>Sem vendas registradas ${quando}.</p></div>`;
-
-  /* celular: o gráfico rola de lado; abre mostrando o mês mais recente com venda */
-  requestAnimationFrame(() => { const ar = document.querySelector('#blGraficoMes .rm-area'); if (!ar || ar.scrollWidth <= ar.clientWidth) return;
-    const cols = [...ar.querySelectorAll('.rm-col:not(.vazio-mes)')]; const u = cols[cols.length - 1]; if (u) ar.scrollLeft = Math.max(0, u.offsetLeft - ar.clientWidth + u.offsetWidth + 8); });
+  const quando = quandoRecorteVendas();
 
   /* ── por cliente ── */
   const porCliente = {};
@@ -31593,23 +31622,27 @@ function copiarResumoBilhete(){
    saber como está o mês, e "todos os anos" obriga a filtrar antes de olhar. Os
    dois seletores continuam com a opção "todos" para quem quiser o acumulado. */
 let vdAno = String(new Date().getFullYear());
-let vdMes = String(new Date().getMonth() + 1).padStart(2, '0');
+/* o mês abre em "todos": a tela começa pelo ano inteiro */
+let vdMes = 'todos';
 
 /* Vendas canceladas do mesmo período. Elas somem das somas, como sempre, mas
    não somem da vista: uma emissão cancelada devolveu milhas à conta, e esse
    estorno é informação de operação — some do lucro e volta para o estoque. */
-function vendasCanceladas(){
-  return DB.reservas.filter(r => r.quem === 'terceiro' && r.status === 'cancelada' && r.data)
-    .filter(r => vdAno === 'todos' || String(r.data).startsWith(vdAno))
-    .filter(r => vdMes === 'todos' || String(r.data).slice(5, 7) === vdMes)
-    .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+/* O recorte da tela Vendas: ano e mês escolhidos, pelo mês da venda (ou do voo,
+   se essa for a base escolhida). Vale para a peça de destaque, os clientes e os
+   recebimentos, que assim nunca discordam entre si. */
+function noRecorteVendas(r){
+  const k = mesDaVenda(r); if (!k) return false;
+  const ano = rsAno || 'todos';
+  return (ano === 'todos' || k.startsWith(ano)) && (vdMes === 'todos' || k.slice(5, 7) === vdMes);
 }
-
+function vendasCanceladas(){
+  return DB.reservas.filter(r => r.quem === 'terceiro' && r.status === 'cancelada' && noRecorteVendas(r))
+    .sort((a, b) => mesDaVenda(a).localeCompare(mesDaVenda(b)));
+}
 function vendasFiltradas(){
-  return DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && r.data)
-    .filter(r => vdAno === 'todos' || String(r.data).startsWith(vdAno))
-    .filter(r => vdMes === 'todos' || String(r.data).slice(5, 7) === vdMes)
-    .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  return DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && noRecorteVendas(r))
+    .sort((a, b) => String(a.criada || a.data || '').localeCompare(String(b.criada || b.data || '')));
 }
 
 /* Uma venda é "recebida" quando tem data de crédito e ela já passou. Sem data,
@@ -31809,6 +31842,7 @@ function copiarDiscriminacao(progId, contaId){
 
 function renderVendas(){
   const alvo = $('#vdContas'); if (!alvo) return;
+  vdAno = rsAno || 'todos';
   const todas = DB.reservas.filter(r => r.quem === 'terceiro' && r.data);
 
   const anos = [...new Set(todas.map(r => String(r.data).slice(0, 4)))].sort().reverse();
@@ -31817,13 +31851,7 @@ function renderVendas(){
     selA.innerHTML = `<option value="todos">todos os anos</option>` + anos.map(a => `<option${a === vdAno ? ' selected' : ''}>${a}</option>`).join('');
     selA.onchange = () => { vdAno = selA.value; renderVendas(); };
   }
-  const selM = $('#vdMes');
-  if (selM){
-    selM.innerHTML = `<option value="todos">todos os meses</option>` +
-      MESES_CURTO.map((m, i) => { const k = String(i + 1).padStart(2, '0');
-        return `<option value="${k}"${k === vdMes ? ' selected' : ''}>${m}</option>`; }).join('');
-    selM.onchange = () => { vdMes = selM.value; renderVendas(); };
-  }
+  /* o seletor de mês é o do filtro único, montado em renderResultado */
 
   const l = vendasFiltradas();
   if ($('#vdPeriodo')) $('#vdPeriodo').textContent = l.length
@@ -31863,7 +31891,7 @@ function renderVendas(){
     .filter(r => r.quem === 'terceiro' && r.status !== 'cancelada')
     .map(r => Number(r.cobrado) || 0));
 
-  $('#vdResumo').innerHTML = `
+  if ($('#vdResumo')) $('#vdResumo').innerHTML = `
     ${metrica('Vendas', brl(tVenda),
       `${l.length} ${l.length === 1 ? 'venda' : 'vendas'} · ticket de ${brl(tTicket)}` +
       (filtrado && vTodas ? ` · ${pct(vTodas ? tVenda / vTodas * 100 : 0, 0)} do total` : ''), '')}
@@ -35752,7 +35780,7 @@ function importar(arquivo){
 
 /* O livro de lançamentos mora numa aba do Painel: sem ele aqui, apagar ou editar
    um lançamento pelo Painel deixava a linha velha na tabela até apertar F5. */
-const RENDER = { mesa:() => { renderMesa(); renderVender(); renderLancamentos(); }, radar:renderRadar, fabrica:renderFabrica,
+const RENDER = { cotacoes:() => renderCotacoesSalvas(), mesa:() => { renderMesa(); renderVender(); renderLancamentos(); }, radar:renderRadar, fabrica:renderFabrica,
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 /* ── correções de dados de 05/10/2026 ─────────────────────────────────────────
    Rodam a cada carga, inclusive quando o banco chega da nuvem, e são seguras de
@@ -36857,8 +36885,7 @@ function ligarLeituraPrint(){
 
   /* colar direto: é assim que o print chega na prática, sem passar por arquivo */
   document.addEventListener('paste', e => {
-    if (vistaAtual !== 'emissoes' || ponteAberta()) return;
-    if (!$('#p-em-cotacoes').classList.contains('on')) return;
+    if (vistaAtual !== 'cotacoes' || ponteAberta()) return;
     const item = [...(e.clipboardData.items || [])].find(i => i.type.startsWith('image/'));
     if (!item) return;
     e.preventDefault();
