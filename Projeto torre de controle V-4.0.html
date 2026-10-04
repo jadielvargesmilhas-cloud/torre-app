@@ -7078,7 +7078,7 @@ table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
   background:repeating-linear-gradient(to top, var(--fio-suave) 0 1px, transparent 1px 25%); }
 .rm-rec, .rm-res{ position:absolute; left:0; right:0; bottom:0; border-radius:9px 9px 3px 3px; transition:height .5s cubic-bezier(.2,.8,.2,1); }
 .rm-rec{ background:color-mix(in oklab, var(--jade) 22%, transparent); }
-.rm-res{ background:var(--jade); left:18%; right:18%; }
+.rm-res{ background:var(--jade); left:18%; right:18%; min-height:3px; }
 .rm-res.neg{ background:var(--brasa); }
 .rm-col.melhor .rm-trilho{ box-shadow:0 0 0 2px color-mix(in oklab, var(--jade) 45%, transparent); }
 .rm-mes{ font-family:var(--f-m); font-size:calc(11.5px * var(--esc)); color:var(--grafite); letter-spacing:.04em; }
@@ -7134,6 +7134,40 @@ table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
   border:1px solid var(--fio); border-radius:7px; background:var(--sup-1); white-space:nowrap; }
 .rs-desc{ grid-column:1 / -2; }
 @media (max-width:640px){ .rs-desc{ grid-column:auto; } }
+
+/* ── Resultado das vendas: filtros, gráfico na linha toda, detalhe do cliente ── */
+.rs-topo{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px 20px; flex-wrap:wrap; }
+.rs-filtros{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.rm-col.vazio-mes .rm-trilho{ opacity:.55; }
+/* o ano inteiro na linha: doze colunas iguais; com pouco espaço, o rótulo encurta */
+.rm.doze .rm-area{ gap:6px; }
+.rm.doze .rm-col{ flex:1 1 0; min-width:0; max-width:none; }
+.rm.doze .rm-curto{ font-size:calc(11px * var(--esc)); letter-spacing:-.02em; }
+@container (max-width:1150px){ .rm.doze .rm-longo{ display:none; } .rm.doze .rm-curto{ display:inline; } }
+@media (max-width:560px){ .rm.doze .rm-col{ flex:0 0 calc(56px * var(--esc)); } }
+.rm-col.vazio-mes .rm-mes{ color:var(--grafite-dim); }
+.rs-duas{ grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) !important; }
+@media (max-width:1280px){ .rs-duas{ grid-template-columns:minmax(0, 1fr) !important; } }
+.lc-linha{ cursor:pointer; border-radius:12px; padding-left:8px; padding-right:8px; margin:0 -8px; transition:background .15s; }
+.lc-linha:hover{ background:var(--sup-1); }
+.lc{ container-type:inline-size; }
+/* lista estreita (meia linha): a posição sai, e o nome ganha o espaço dela */
+@container (max-width:520px){ .lc-linha{ grid-template-columns:auto minmax(0, 1fr) auto; gap:10px; } .lc-pos{ display:none; } .lc-ini{ width:calc(34px * var(--esc)); height:calc(34px * var(--esc)); font-size:calc(12px * var(--esc)); } }
+.lc-linha.on{ background:color-mix(in oklab, var(--anil-claro) 10%, transparent); box-shadow:inset 3px 0 0 var(--anil-claro); }
+.lc-linha:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:1px; }
+.rv{ display:flex; flex-direction:column; }
+.rv-titulo{ margin-bottom:12px; } .rv-titulo h3{ margin:0; } .rv-titulo p{ margin:3px 0 0; font-size:calc(12.5px * var(--esc)); }
+.rv-cab, .rv-linha, .rv-total{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:14px; align-items:center; padding:11px 2px; }
+.rv-cab{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite-dim); border-bottom:1px solid var(--fio); padding-top:0; }
+.rv-linha{ border-bottom:1px solid var(--fio-suave); }
+.rv-linha:hover{ background:var(--sup-1); }
+.rv-total{ border-top:2px solid var(--fio); font-weight:600; }
+.rv-linha > span, .rv-total > span{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.rv b{ font-size:calc(13.5px * var(--esc)); color:var(--giz); font-weight:600; }
+.rv-linha .n b, .rv-total .n b{ font-family:var(--f-m); white-space:nowrap; }
+.rv small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.rv .n{ text-align:right; align-items:flex-end; }
+.rv-esq b{ white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -8260,19 +8294,29 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="pilha" style="gap:10px" id="blReservas"></div>
             </div>
             <div class="pilha em-so-resultado" style="gap:18px" id="emParteResultado" hidden>
-              <div class="sec-cab"><div class="olho anil" style="margin:0">Resultado acumulado</div>
-                <p class="fraco">Todas as vendas para clientes: o que entrou, o custo real das milhas e das taxas, e o que sobrou.</p></div>
-              <div class="grade g4" id="rsKpis"></div>
-              <div class="rs-duas">
-                <div class="cartao">
-                  <div class="cartao-cab"><h3>Resultado por mês</h3></div>
-                  <div id="blGraficoMes"></div>
-                </div>
-                <div class="cartao">
-                  <div class="cartao-cab"><h3>Lucro por cliente</h3></div>
-                  <div id="blPorCliente"></div>
+              <div class="rs-topo">
+                <div class="sec-cab"><div class="olho anil" style="margin:0">Resultado das vendas</div>
+                  <p class="fraco">O que entrou, o custo real das milhas e das taxas, e o que sobrou.</p></div>
+                <div class="rs-filtros">
+                  <div class="seg" id="rsAnos"></div>
+                  <div class="seg" id="rsBase" data-dica="Em que mês cada venda entra na conta">
+                    <button data-b="venda">Mês da venda</button><button data-b="voo">Mês do voo</button>
+                  </div>
                 </div>
               </div>
+              <div class="grade g4" id="rsKpis"></div>
+              <div class="cartao">
+                <div class="cartao-cab"><h3>Resultado por mês</h3><span class="etq" id="rsMesEtq"></span></div>
+                <div id="blGraficoMes"></div>
+              </div>
+              <div class="rs-duas">
+                <div class="cartao">
+                  <div class="cartao-cab"><h3>Lucro por cliente</h3><span class="etq" id="rsCliEtq"></span></div>
+                  <div id="blPorCliente"></div>
+                </div>
+                <div class="cartao rs-det" id="rsDetCliente"></div>
+              </div>
+              <div id="rsFora"></div>
             </div>
           </div>
         </div>
@@ -8930,7 +8974,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 05:00';
+const BUILD = '2026-10-06 07:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -30653,80 +30697,151 @@ function abrirResultadoVendas(){
 /* Valor curto para rótulo apertado: R$ 11,3 mil, R$ 904. */
 function valorCurto(v){
   const a = Math.abs(v), s = v < 0 ? '−' : '';
-  return a >= 1000 ? `${s}R$ ${(a / 1000).toLocaleString('pt-BR', {maximumFractionDigits:1})} mil` : `${s}R$ ${Math.round(a)}`;
+  return a >= 1000 ? `${s}R$ ${(a / 1000).toLocaleString('pt-BR', {maximumFractionDigits:1})} mil` : `${s}R$ ${a.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 }
 function iniciaisCliente(n){
   const p = String(n || '').replace(/\(.*?\)/g, ' ').trim().split(/\s+/).filter(Boolean);
   return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
 }
 
+/* ── Resultado das vendas ──────────────────────────────────────────────────────
+   Tudo segue o mesmo recorte: o ano escolhido e a base do mês (o da venda, que
+   é quando o dinheiro entra, ou o do voo). O gráfico mostra os doze meses do
+   ano na linha inteira; embaixo, o ranking dos clientes e, ao lado, as vendas
+   de quem estiver escolhido. */
+let rsAno = null, rsCliente = null;
+const baseResultado = () => DB.cfg.resultadoBase === 'voo' ? 'voo' : 'venda';
+const mesDaVenda = r => String((baseResultado() === 'voo' ? r.data : (r.criada || r.data)) || '').slice(0, 7);
 function renderResultado(){
-  const terceiros = DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada');
+  const todas = DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && mesDaVenda(r));
+  const anos = [...new Set(todas.map(r => mesDaVenda(r).slice(0, 4)))].sort();
+  const atual = String(new Date().getFullYear());
+  if (!rsAno || (rsAno !== 'todos' && !anos.includes(rsAno))) rsAno = anos.includes(atual) ? atual : (anos[anos.length - 1] || atual);
+  const seg = $('#rsAnos');
+  if (seg){
+    seg.innerHTML = anos.map(a => `<button data-a="${a}" class="${a === rsAno ? 'on' : ''}">${a}</button>`).join('') + (anos.length > 1 ? `<button data-a="todos" class="${rsAno === 'todos' ? 'on' : ''}">Todos</button>` : '');
+    seg.hidden = !anos.length;
+    $$('button', seg).forEach(b => b.onclick = () => { rsAno = b.dataset.a; renderResultado(); });
+  }
+  $$('#rsBase button').forEach(b => { b.classList.toggle('on', b.dataset.b === baseResultado()); b.onclick = () => { DB.cfg.resultadoBase = b.dataset.b; salvar(); rsAno = null; renderResultado(); }; });
+
+  const terceiros = todas.filter(r => rsAno === 'todos' || mesDaVenda(r).startsWith(rsAno));
   const receita = soma(terceiros.map(r => Number(r.cobrado) || 0));
   const custo = soma(terceiros.map(r => custoReserva(r)));
   const resultado = receita - custo;
   const milhasQueimadas = soma(terceiros.map(r => Number(r.milhas) || 0));
   const ticket = terceiros.length ? receita / terceiros.length : 0;
   const corRes = v => v >= 0 ? 'var(--jade)' : 'var(--brasa)';
+  const quando = rsAno === 'todos' ? 'em todos os anos' : `em ${rsAno}`;
 
   if ($('#rsKpis')) $('#rsKpis').innerHTML = terceiros.length
-    ? metrica('Receita', brl(receita), `${terceiros.length} ${terceiros.length === 1 ? 'venda' : 'vendas'}`, '', `Ticket médio: ${brl(ticket)} por venda`)
+    ? metrica('Receita', brl(receita), `${terceiros.length} ${terceiros.length === 1 ? 'venda' : 'vendas'} ${quando}`, '', `Ticket médio: ${brl(ticket)} por venda`)
       + metrica('Custo real', brl(custo), 'milhas ao custo e taxas', '')
       + metrica('Resultado', brl(resultado), 'o que sobrou', resultado >= 0 ? 'jade' : 'brasa')
       + metrica('Margem', receita ? pct(resultado / receita * 100, 1) : 'n/d', `${nBR(milhasQueimadas)} milhas usadas`, '')
     : '';
 
-  /* Por mês: a barra clara é a receita e a cheia, por dentro dela, o resultado.
-     Assim se vê de uma vez quanto entrou e quanto disso ficou. */
+  /* ── por mês: os doze meses do ano, com ou sem venda ── */
   const porMes = {};
   terceiros.forEach(r => {
-    const k = (r.data || '').slice(0, 7); if (!k) return;
+    const k = mesDaVenda(r);
     if (!porMes[k]) porMes[k] = {rec:0, cus:0, n:0};
-    porMes[k].rec += Number(r.cobrado) || 0;
-    porMes[k].cus += custoReserva(r);
-    porMes[k].n++;
+    porMes[k].rec += Number(r.cobrado) || 0; porMes[k].cus += custoReserva(r); porMes[k].n++;
   });
-  const chaves = Object.keys(porMes).sort();
-  const topo = Math.max(1, ...chaves.map(k => Math.max(porMes[k].rec, Math.abs(porMes[k].rec - porMes[k].cus))));
-  const melhor = chaves.slice().sort((x, y) => (porMes[y].rec - porMes[y].cus) - (porMes[x].rec - porMes[x].cus))[0];
-  $('#blGraficoMes').innerHTML = chaves.length ? `<div class="rm">
+  const chaves = rsAno === 'todos' ? Object.keys(porMes).sort() : Array.from({length:12}, (_, i) => `${rsAno}-${String(i + 1).padStart(2, '0')}`);
+  const com = chaves.filter(k => porMes[k]);
+  const topo = Math.max(1, ...com.map(k => Math.max(porMes[k].rec, Math.abs(porMes[k].rec - porMes[k].cus))));
+  const melhor = com.slice().sort((x, y) => (porMes[y].rec - porMes[y].cus) - (porMes[x].rec - porMes[x].cus))[0];
+  const rotMes = k => MESES[Number(k.slice(5, 7)) - 1] + (rsAno === 'todos' ? '/' + k.slice(2, 4) : '');
+  if ($('#rsMesEtq')) $('#rsMesEtq').textContent = baseResultado() === 'voo' ? 'pelo mês do voo' : 'pelo mês da venda';
+  $('#blGraficoMes').innerHTML = com.length ? `<div class="rm${chaves.length === 12 && rsAno !== 'todos' ? ' doze' : ''}">
       <div class="rm-area">${chaves.map(k => {
-        const m = porMes[k], res = m.rec - m.cus;
-        const rot = MESES[Number(k.slice(5, 7)) - 1] + '/' + k.slice(2, 4);
-        return `<div class="rm-col${k === melhor && chaves.length > 1 ? ' melhor' : ''}" data-dica="${esc(rot)}: receita ${esc(brl(m.rec))}, custo ${esc(brl(m.cus))}, resultado ${esc(brl(res))} (${m.n} ${m.n === 1 ? 'venda' : 'vendas'})">
-          <span class="rm-val" style="color:${corRes(res)}"><span class="rm-longo">${brl(res)}</span><span class="rm-curto">${valorCurto(res)}</span></span>
+        const m = porMes[k];
+        if (!m) return `<div class="rm-col vazio-mes"><span class="rm-val">&nbsp;</span><div class="rm-trilho"></div><span class="rm-mes">${esc(rotMes(k))}</span></div>`;
+        const res = m.rec - m.cus;
+        return `<div class="rm-col${k === melhor && com.length > 1 ? ' melhor' : ''}" data-dica="${esc(rotMes(k))}: receita ${esc(brl(m.rec))}, custo ${esc(brl(m.cus))}, resultado ${esc(brl(res))} (${m.n} ${m.n === 1 ? 'venda' : 'vendas'})">
+          <span class="rm-val" style="color:${corRes(res)}"><span class="rm-longo">${brl(res)}</span><span class="rm-curto">${valorCurto(res).replace(/^(−?)R\$\s/, '$1')}</span></span>
           <div class="rm-trilho"><i class="rm-rec" style="height:${(m.rec / topo * 100).toFixed(1)}%"></i><i class="rm-res${res < 0 ? ' neg' : ''}" style="height:${(Math.abs(res) / topo * 100).toFixed(1)}%"></i></div>
-          <span class="rm-mes">${esc(rot)}</span>
+          <span class="rm-mes">${esc(rotMes(k))}</span>
         </div>`; }).join('')}</div>
-      <div class="rm-leg"><span><i class="rm-sw rec"></i>Receita</span><span><i class="rm-sw res"></i>Resultado</span><span>pelo mês do voo</span>${chaves.length > 1 ? `<span class="rm-leg-melhor">Melhor mês: <b>${esc(MESES[Number(melhor.slice(5, 7)) - 1] + '/' + melhor.slice(2, 4))}</b></span>` : ''}</div>
+      <div class="rm-leg"><span><i class="rm-sw rec"></i>Receita</span><span><i class="rm-sw res"></i>Resultado</span><span>valores em R$</span>${com.length > 1 ? `<span class="rm-leg-melhor">Melhor mês: <b>${esc(rotMes(melhor))}</b></span>` : ''}</div>
     </div>`
-    : `<div class="vazio" style="padding:26px"><p>Sem vendas registradas ainda.</p></div>`;
+    : `<div class="vazio" style="padding:26px"><p>Sem vendas registradas ${quando}.</p></div>`;
 
-  /* Por cliente: uma linha por pessoa, em ranking. A barra mostra a receita
-     dela partida em custo e resultado, na mesma escala para todos. */
+  /* celular: o gráfico rola de lado; abre mostrando o mês mais recente com venda */
+  requestAnimationFrame(() => { const ar = document.querySelector('#blGraficoMes .rm-area'); if (!ar || ar.scrollWidth <= ar.clientWidth) return;
+    const cols = [...ar.querySelectorAll('.rm-col:not(.vazio-mes)')]; const u = cols[cols.length - 1]; if (u) ar.scrollLeft = Math.max(0, u.offsetLeft - ar.clientWidth + u.offsetWidth + 8); });
+
+  /* ── por cliente ── */
   const porCliente = {};
   terceiros.forEach(r => {
     const c = r.cliente || 'sem nome';
-    if (!porCliente[c]) porCliente[c] = {n:0, rec:0, cus:0};
-    porCliente[c].n++; porCliente[c].rec += Number(r.cobrado) || 0; porCliente[c].cus += custoReserva(r);
+    if (!porCliente[c]) porCliente[c] = {n:0, rec:0, cus:0, vendas:[]};
+    porCliente[c].n++; porCliente[c].rec += Number(r.cobrado) || 0; porCliente[c].cus += custoReserva(r); porCliente[c].vendas.push(r);
   });
   const cs = Object.entries(porCliente).sort((x, y) => (y[1].rec - y[1].cus) - (x[1].rec - x[1].cus));
+  if (!cs.some(([n]) => n === rsCliente)) rsCliente = cs.length ? cs[0][0] : null;
+  if ($('#rsCliEtq')) $('#rsCliEtq').textContent = cs.length ? `${cs.length} ${cs.length === 1 ? 'cliente' : 'clientes'}` : '';
   const maxRec = Math.max(1, ...cs.map(([, d]) => d.rec));
   $('#blPorCliente').innerHTML = cs.length ? `<div class="lc">${cs.map(([n, d], i) => {
       const res = d.rec - d.cus, mg = d.rec ? res / d.rec * 100 : null;
       const wCus = Math.min(d.cus, d.rec) / maxRec * 100, wRes = Math.max(0, res) / maxRec * 100;
-      return `<div class="lc-linha">
+      return `<div class="lc-linha${n === rsCliente ? ' on' : ''}" role="button" tabindex="0" data-cli="${esc(n)}" aria-pressed="${n === rsCliente}">
         <span class="lc-pos">${i + 1}</span>
         <span class="lc-ini">${esc(iniciaisCliente(n))}</span>
         <div class="lc-meio">
           <b class="lc-nome">${esc(n)}</b>
-          <span class="lc-sub">${d.n} ${d.n === 1 ? 'reserva' : 'reservas'} · receita ${brl(d.rec)}</span>
+          <span class="lc-sub">${d.n} ${d.n === 1 ? 'venda' : 'vendas'} · receita ${brl(d.rec)}</span>
           <div class="lc-barra" data-dica="Custo ${esc(brl(d.cus))} · resultado ${esc(brl(res))}"><i class="cus" style="width:${wCus.toFixed(1)}%"></i><i class="res${res < 0 ? ' neg' : ''}" style="width:${(res < 0 ? Math.abs(res) / maxRec * 100 : wRes).toFixed(1)}%"></i></div>
         </div>
         <div class="lc-fim"><b style="color:${corRes(res)}">${brl(res)}</b><span class="etq ${mg == null ? '' : mg >= 20 ? 'jade' : mg >= 0 ? 'ouro' : 'brasa'}">${mg == null ? 'n/d' : pct(mg, 1)}</span></div>
       </div>`; }).join('')}</div>
-    <div class="rm-leg"><span><i class="rm-sw cus"></i>Custo</span><span><i class="rm-sw res"></i>Resultado</span><span>do maior para o menor resultado</span></div>`
-    : `<div class="vazio" style="padding:26px"><p>Nenhum cliente ainda.</p></div>`;
+    <div class="rm-leg"><span><i class="rm-sw cus"></i>Custo</span><span><i class="rm-sw res"></i>Resultado</span><span>toque num cliente para ver as vendas</span></div>`
+    : `<div class="vazio" style="padding:26px"><p>Nenhum cliente ${quando}.</p></div>`;
+  $$('#blPorCliente .lc-linha').forEach(el => {
+    const abrir = () => { rsCliente = el.dataset.cli; renderResultado();
+      if (window.innerWidth <= 1280){ const d = $('#rsDetCliente'); if (d) d.scrollIntoView({block:'start', behavior:'smooth'}); } };
+    el.onclick = abrir;
+    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abrir(); } };
+  });
+
+  /* ── vendas do cliente escolhido ── */
+  const det = $('#rsDetCliente');
+  if (det){
+    const d = rsCliente && porCliente[rsCliente];
+    if (!d){ det.innerHTML = `<div class="vazio" style="padding:26px"><p>Escolha um cliente na lista.</p></div>`; }
+    else {
+      const vs = d.vendas.slice().sort((x, y) => String(y.criada || y.data).localeCompare(String(x.criada || x.data)));
+      const res = d.rec - d.cus;
+      det.innerHTML = `<div class="rv-titulo"><div class="olho anil" style="margin:0 0 4px">Vendas do cliente</div><h3>${esc(rsCliente)}</h3><p class="fraco">${d.n} ${d.n === 1 ? 'venda' : 'vendas'} ${quando}, da mais recente para a mais antiga</p></div>
+        <div class="rv">
+          <div class="rv-cab"><span>Venda</span><span class="n">Resultado</span></div>
+          ${vs.map(r => { const c = custoReserva(r), rr = (Number(r.cobrado) || 0) - c, mg = Number(r.cobrado) ? rr / Number(r.cobrado) * 100 : null;
+            const pe = partesEmissao(r);
+            return `<div class="rv-linha">
+              <span class="rv-esq"><b>${esc(pe.rota)}</b><small>venda ${dataBR(String(r.criada || r.data).slice(0, 10))} · voo ${dataBR(r.data)}</small>${pe.cia || pe.loc ? `<small>${[pe.cia, pe.loc].filter(Boolean).map(esc).join(' · ')}</small>` : ''}</span>
+              <span class="n"><b style="color:${corRes(rr)}">${brl(rr)}</b><small>de ${brl(Number(r.cobrado) || 0)}</small><small>custo ${brl(c)} · ${mg == null ? 'n/d' : pct(mg, 1)}</small></span>
+            </div>`; }).join('')}
+          <div class="rv-total"><span class="rv-esq"><b>Total</b><small>${d.n} ${d.n === 1 ? 'venda' : 'vendas'}</small></span><span class="n"><b style="color:${corRes(res)}">${brl(res)}</b><small>de ${brl(d.rec)}</small><small>custo ${brl(d.cus)} · ${d.rec ? pct(res / d.rec * 100, 1) : 'n/d'}</small></span></div>
+        </div>`;
+    }
+  }
+
+  /* ── emissões com cliente que não entram na conta ── */
+  const fora = DB.reservas.filter(r => r.quem !== 'terceiro' && r.status !== 'cancelada' && String(r.cliente || '').trim());
+  const semData = DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && !mesDaVenda(r));
+  /* venda sem a data da emissão: pela base "mês da venda" ela cai no mês do voo,
+     que pode ser de outro ano. Avisa, com o caminho para corrigir. */
+  const semEmissao = baseResultado() === 'venda' ? DB.reservas.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && r.data && !r.criada) : [];
+  const fx = $('#rsFora');
+  if (fx) fx.innerHTML = fora.length || semData.length || semEmissao.length ? `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div class="pilha compacta">
+      ${fora.length ? `<div><b>${fora.length} ${fora.length === 1 ? 'emissão tem cliente mas está' : 'emissões têm cliente mas estão'} como "Uso próprio"</b>, e por isso não ${fora.length === 1 ? 'entra' : 'entram'} no resultado das vendas.</div>
+        <div>${fora.slice(0, 8).map(r => `<button type="button" class="bt p fantasma" onclick="editarReserva('${r.id}')">${esc(r.cliente)} · ${esc(partesEmissao(r).rota)}</button>`).join(' ')}</div>
+        <div>Se foram vendas, abra cada uma e mude <b>Para quem</b> para venda.</div>` : ''}
+      ${semData.length ? `<div><b>${semData.length} ${semData.length === 1 ? 'venda está' : 'vendas estão'} sem data</b> e não ${semData.length === 1 ? 'entra' : 'entram'} no gráfico.</div>` : ''}
+      ${semEmissao.length ? `<div><b>${semEmissao.length} ${semEmissao.length === 1 ? 'venda está' : 'vendas estão'} sem a data da emissão</b>, e por isso ${semEmissao.length === 1 ? 'entra' : 'entram'} no gráfico pelo mês do voo. Preencha a <b>Data da emissão</b>:</div>
+        <div>${semEmissao.slice(0, 8).map(r => `<button type="button" class="bt p fantasma" onclick="editarReserva('${r.id}')">${esc(r.cliente || 'cliente')} · ${esc(partesEmissao(r).rota)} · voo ${dataBR(r.data)}</button>`).join(' ')}</div>` : ''}
+    </div></div>` : '';
 }
 
 /* ── cotações ─────────────────────────────────────────────────────────────── */
