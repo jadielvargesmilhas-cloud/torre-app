@@ -7084,6 +7084,9 @@ table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
 .rm-sw.rec{ background:color-mix(in oklab, var(--jade) 22%, transparent); } .rm-sw.res{ background:var(--jade); }
 .rm-sw.cus{ background:color-mix(in oklab, var(--grafite) 45%, transparent); }
 .rm-curto{ display:none; }
+.rm{ container-type:inline-size; }
+/* gráfico estreito (cartão dividido, celular): o rótulo encurta para R$ 11,3 mil */
+@container (max-width:560px){ .rm-longo{ display:none; } .rm-curto{ display:inline; } }
 .lc + .rm-leg{ margin-top:4px; }
 .rm-leg-melhor{ margin-left:auto; } .rm-leg-melhor b{ color:var(--giz); }
 .lc{ display:flex; flex-direction:column; }
@@ -7117,6 +7120,15 @@ table.tb-trechos.em-cartao .tr-pg-val{ display:block; margin-top:6px; }
   .rm-longo{ display:none; } .rm-curto{ display:inline; }
   #segEmVista{ flex:1 1 100%; }
 }
+
+/* ── emissão na lista: marca, "i" e localizador à direita (06/10/2026) ───────── */
+.em-dir{ margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-weight:400; }
+.em-dir .info-i{ margin-left:0; }
+.em-dir .oq-marca{ flex-shrink:0; }
+.em-loc{ font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); letter-spacing:.08em; color:var(--giz-2); padding:2px 8px;
+  border:1px solid var(--fio); border-radius:7px; background:var(--sup-1); white-space:nowrap; }
+.rs-desc{ grid-column:1 / -2; }
+@media (max-width:640px){ .rs-desc{ grid-column:auto; } }
 </style>
 </head>
 <body>
@@ -8219,7 +8231,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                    lista, e somem no resultado. -->
               <div class="seg" id="segEmVista">
                 <button class="on" data-v="lista">Emissões</button>
-                <button data-v="resultado">Resultado</button>
+                <button data-v="resultado">Resultado das vendas</button>
               </div>
               <div class="seg em-so-lista" id="segEmQuem">
                 <button class="on" data-q="todos">Todas</button>
@@ -8610,6 +8622,10 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             </div>
             <div class="grade g5" id="vdResumo"></div>
             <div class="pilha" style="gap:14px" id="vdContas"></div>
+            <div class="nota"><svg><use href="#i-info"/></svg><div class="pilha compacta">
+              <div><b>Resultado das vendas</b> (por mês e por cliente) fica agora em <b>Emissões → Emitidos</b>.</div>
+              <div style="margin-top:6px"><button type="button" class="bt p primario" onclick="abrirResultadoVendas()">Ver o resultado das vendas</button></div>
+            </div></div>
           </div>
         </div>
       </section>
@@ -8909,7 +8925,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 01:20';
+const BUILD = '2026-10-06 04:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -9067,7 +9083,17 @@ const PROGRAMAS = {
   suma:      { n:'Air Europa SUMA', cia:'Air Europa',      tipo:'milhas', cor:'#003DA5', ali:'SkyTeam',
                faixas:{otimo:44, alvo:58, razoavel:78}, base:0, validade:24,
                fonte:'Calibração da casa',
-               nota:'Não aparece em nenhum dos grandes buscadores. Compra direta em campanha ou transferência de ALL Accor.\nEmissão em parceiras sai pelo call center.' }
+               nota:'Não aparece em nenhum dos grandes buscadores. Compra direta em campanha ou transferência de ALL Accor.\nEmissão em parceiras sai pelo call center.' },
+  /* Virgin Atlantic Flying Club. Sem parceiro bancário no Brasil (Livelo e
+     Esfera não transferem): entra por compra direta, voo e pontos de hotel
+     (IHG 5 : 3, Hilton 10 : 1,5). Virgin Points não expiram, pela política
+     atual. Conferido em 04/10/2026 (Passageiro de Primeira, Cartões e Viagens).
+     As faixas de milheiro são PROVISÓRIAS: não há referência de mercado no
+     Brasil para este programa; ajuste em Ajustes → Programas. */
+  virgin:    { n:'Virgin Atlantic Flying Club', cia:'Virgin Atlantic', tipo:'milhas', cor:'#DA0530', ali:'SkyTeam',
+               faixas:{otimo:38, alvo:52, razoavel:70}, base:0, validade:0,
+               fonte:'Provisório · sem referência de mercado no Brasil, ajuste em Ajustes → Programas',
+               nota:'Virgin Points, que não expiram pela política atual.\nSem transferência de Livelo ou Esfera: entra por compra direta (com bônus frequentes), voos e pontos IHG (5 : 3) ou Hilton (10 : 1,5).\nTabela fixa nos voos da própria Virgin; emite também Delta, Air France-KLM e ANA.' }
 };
 const PROG_IDS = Object.keys(PROGRAMAS);
 const PROG_MILHAS = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'milhas');
@@ -9090,7 +9116,7 @@ const SIGLA_PROG = {
   azul:'AZ', smiles:'SM', latampass:'LA', tap:'TP', flyingblue:'FB', iberia:'IB',
   connect:'CM', aeromexico:'AM', united:'MP', lifemiles:'LM', aeroplan:'AP',
   suma:'AE', livelo:'LV', esfera:'ES', atomos:'AT', revpoints:'RP', uau:'UA', banriclube:'BR',
-  british:'BA', qatar:'QR', finnair:'AY',
+  british:'BA', qatar:'QR', finnair:'AY', virgin:'VS',
   hilton:'HH', ihg:'IH', accor:'AC'
 };
 function siglaProg(p){
@@ -10369,6 +10395,9 @@ const PARIDADES = [
   { de:'esfera', para:'hilton',     p:2,   nota:'Deságio de 2 : 1, mesma paridade da Livelo.' },
   { de:'livelo', para:'ihg',        p:2,   nota:'Deságio de 2 : 1.' },
   { de:'esfera', para:'ihg',        p:2,   nota:'Deságio de 2 : 1. Mínimo de 30.000 pontos Esfera.' },
+  /* Virgin Atlantic só recebe de hotel: confira a paridade no site antes de transferir. */
+  { de:'ihg',    para:'virgin',     p:5/3, nota:'5 pontos IHG viram 3 Virgin Points. Mínimo de 10.000 pontos IHG. Confira no site do IHG antes de transferir.' },
+  { de:'hilton', para:'virgin',     p:10/1.5, nota:'10.000 pontos Hilton viram 1.500 Virgin Points. Pouco vantajoso. Confira no site da Hilton antes de transferir.' },
   { de:'livelo', para:'accor',      p:3.5, nota:'Deságio de 3,5 : 1.' },
   { de:'esfera', para:'accor',      p:3.5, nota:'Deságio de 3,5 : 1.' },
   { de:'smiles', para:'accor',      p:8,   nota:'8 milhas viram 1 ponto; 7 : 1 para Clube Smiles ou Diamante.' },
@@ -25193,10 +25222,10 @@ async function lerDocumentosEmissao(arquivos){
     const hora = seg.linhas.length ? seg.linhas[0].split(' ')[4].replace(/(\d{2})(\d{2})/, '$1:$2') : ((seg.horas || [])[0] || '').padStart(5, '0').replace(/^0+:/, '00:');
     const voos = (d.voos || []).map(v => v.voo).filter(Boolean);
     const escalas = d.volta ? [...new Set((d.voos || []).map(v => v.destino).filter(c => c !== d.origem && c !== d.destino))] : (d.voos || []).slice(0, -1).map(v => v.destino);
-    const desc = [d.origem && d.destino ? `${d.origem} → ${d.destino}${d.volta ? ' (ida e volta)' : ''}` : '', d.cia || '', voos.length ? 'Voo' + (voos.length > 1 ? 's ' : ' ') + voos.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : '', d.localizador || ''].filter(Boolean).join(' · ');
+    const desc = [d.origem && d.destino ? `${d.origem} → ${d.destino}${d.volta ? ' (ida e volta)' : ''}` : '', d.cia || '', voos.length ? 'Voo' + (voos.length > 1 ? 's ' : ' ') + voos.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : ''].filter(Boolean).join(' · ');
     const pg = d.pagamento || {}, mi = d.milhas || {};
     const pre = {criada:emissao, data:d.data || '', hora, desc, prog:(mi.programa || '') || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : ''),
-      milhas:pg.pontos || mi.pontos || atual.milhas || 0, taxas:pg.dinheiro != null ? pg.dinheiro : (mi.taxas || atual.taxas || 0), vista:(d.dinheiro && d.dinheiro.total) || 0, itin:seg.linhas.join('\n'), volta:d.volta || null};
+      milhas:pg.pontos || mi.pontos || atual.milhas || 0, taxas:pg.dinheiro != null ? pg.dinheiro : (mi.taxas || atual.taxas || 0), vista:(d.dinheiro && d.dinheiro.total) || 0, itin:seg.linhas.join('\n'), volta:d.volta || null, loc:d.localizador || ''};
     _leituraEm.pre = pre;
     const campo = (id, rot, v, tipo, obrig) => { const vazio = !v || v === '0' || v === 0;
       const val = tipo === 'moeda' ? moedaTxt(Number(v) || 0) : tipo === 'numero' ? (v ? nBR(v) : '') : esc(String(v || ''));
@@ -25243,7 +25272,7 @@ async function lerDocumentosEmissao(arquivos){
       set('rsTipo', 'voo', 'change'); set('rsCriada', v.criada, 'change'); set('rsData', v.data, 'change'); set('rsHora', v.hora, 'change');
       if ($('#rsProg').value !== v.prog){ $('#rsProg').value = v.prog; $('#rsProg').dispatchEvent(new Event('change', {bubbles:true})); }
       set('rsMilhas', v.milhas ? nBR(v.milhas) : ''); set('rsTaxas', v.taxas); if (moedaNum(v.vista) > 0) set('rsVista', v.vista);
-      set('rsDesc', v.desc); if (v.itin) set('rsItin', v.itin);
+      set('rsDesc', v.desc); if (v.itin) set('rsItin', v.itin); if (pre.loc && $('#rsLoc') && !$('#rsLoc').value.trim()) set('rsLoc', pre.loc);
       if (pre.volta){ set('rsTrajeto', 'idavolta', 'change'); set('rsDataVolta', pre.volta.data, 'change'); set('rsHoraVolta', pre.volta.hora, 'change'); }
       avisar('Emissão preenchida pelo documento. Confira, escolha os passageiros e toque em Salvar.', 'ok', 7000);
     };
@@ -25324,7 +25353,7 @@ function apagarTrecho(id){
 function registrarTrecho(id){
   const p = P(); const t = trechosDe(p).find(x => x.id === id); if (!t) return;
   trechoEmRegistro = {plano:p.id, trecho:t.id};
-  editarReserva(null, {tipo:'voo', quem:'proprio', cliente:'', desc:rotuloTrecho(t) + (t.cia ? ' · ' + t.cia : ''), data:t.data || p.inicio, prog:t.prog,
+  editarReserva(null, {tipo:'voo', quem:'proprio', cliente:'', desc:rotuloTrecho(t) + (t.cia ? ' · ' + t.cia : ''), loc:t.loc || '', data:t.data || p.inicio, prog:t.prog,
     milhas:Number(t.milhas) || 0, taxas:Number(t.taxas) || 0, cobrado:0, custoExtra:Number(t.pago) || 0, precoVista:Number(t.vista) || 0,
     status:'emitida', trajeto:'ida', pax:[], criada:hojeISO(), metaId:p.metaId || ''});
 }
@@ -25542,7 +25571,7 @@ const MESES_LEITURA = {jan:1, janeiro:1, january:1, fev:2, feb:2, fevereiro:2, f
   out:10, oct:10, outubro:10, october:10, nov:11, novembro:11, november:11, dez:12, dec:12, dezembro:12, december:12};
 const PREFIXO_CIA = {AD:['Azul', 'azul'], G3:['GOL', 'smiles'], LA:['LATAM', 'latampass'], JJ:['LATAM', 'latampass'], TP:['TAP', 'tap'], UX:['Air Europa', 'suma'],
   IB:['Iberia', 'iberia'], AF:['Air France', 'flyingblue'], KL:['KLM', 'flyingblue'], CM:['Copa', 'connect'], AV:['Avianca', 'lifemiles'], UA:['United', 'united'],
-  AC:['Air Canada', 'aeroplan'], BA:['British Airways', 'british'], QR:['Qatar Airways', 'qatar'], AY:['Finnair', 'finnair'], AM:['Aeromexico', 'aeromexico'],
+  AC:['Air Canada', 'aeroplan'], BA:['British Airways', 'british'], QR:['Qatar Airways', 'qatar'], AY:['Finnair', 'finnair'], AM:['Aeromexico', 'aeromexico'], VS:['Virgin Atlantic', 'virgin'],
   LH:['Lufthansa', ''], LX:['Swiss', ''], AZ:['ITA', ''], TK:['Turkish', ''], EK:['Emirates', ''], AA:['American', ''], DL:['Delta', ''], ET:['Ethiopian', ''], AT:['Royal Air Maroc', '']};
 function dataDoTexto(t, ref){
   const pad = n => String(n).padStart(2, '0');
@@ -29024,8 +29053,44 @@ function ordemNaAgenda(a, b){
    Companhia sem programa na Torre continua escrita por extenso. */
 const CIA_PARA_PROG = [[/^azul/i, 'azul'], [/^gol/i, 'smiles'], [/^latam/i, 'latampass'], [/^tap/i, 'tap'], [/^air europa/i, 'suma'], [/^iberia/i, 'iberia'],
   [/^copa/i, 'connect'], [/^(air france|klm)/i, 'flyingblue'], [/^avianca/i, 'lifemiles'], [/^united/i, 'united'], [/^air canada/i, 'aeroplan'],
-  [/^british/i, 'british'], [/^qatar/i, 'qatar'], [/^finnair/i, 'finnair'], [/^aeromexico/i, 'aeromexico']];
+  [/^british/i, 'british'], [/^qatar/i, 'qatar'], [/^finnair/i, 'finnair'], [/^aeromexico/i, 'aeromexico'], [/^virgin/i, 'virgin']];
 const progDaCia = nome => { const x = CIA_PARA_PROG.find(([re]) => re.test(String(nome || '').trim())); return x && PROGRAMAS[x[1]] ? x[1] : ''; };
+/* ── emissão na lista ─────────────────────────────────────────────────────────
+   A descrição vem como "GRU → ADZ (ida e volta) · LATAM · Voos LA 4904 e
+   LA 4266 · via BOG · UYOLQG". Na lista fica só a rota; a companhia vira a
+   marca, os voos e a escala vão para o "i", e o localizador fecha a linha à
+   direita. */
+const ehLocalizador = x => /^[A-Z0-9]{5,8}$/.test(x) && /[A-Z]/.test(x) && !/^(VOOS?|VIA)$/.test(x);
+function locDaDescricao(desc){
+  const partes = String(desc || '').split(' · ').map(x => x.trim());
+  const u = partes.length > 1 ? partes[partes.length - 1] : '';
+  return ehLocalizador(u) ? u : '';
+}
+function partesEmissao(r){
+  const partes = String(r.desc || '').split(' · ').map(x => x.trim()).filter(Boolean);
+  const loc = (r.loc || locDaDescricao(r.desc) || '').toUpperCase();
+  /* a rota é a parte com "AAA → BBB", esteja onde estiver; sem ela, a primeira */
+  let iR = partes.findIndex(x => /\b[A-Z]{3}\s*(?:→|->|>)\s*[A-Z]{3}\b/.test(x)); if (iR < 0) iR = 0;
+  const rota = partes[iR] || r.desc || '';
+  let cia = '', pg = '';
+  const resto = [];
+  partes.filter((_, i) => i !== iR).forEach(x => {
+    if (loc && x.toUpperCase() === loc) return;
+    const p = !cia ? progDaCia(x) : '';
+    if (p){ cia = x; pg = p; return; }
+    resto.push(x.replace(/^voo(s?)\b/i, 'Voo$1'));
+  });
+  return {rota, cia, pg, resto:resto.join(' · '), loc};
+}
+function tituloEmissao(r){ return `<span>${esc(partesEmissao(r).rota)}</span>`; }
+function marcaEmissao(r){
+  const {cia, pg, resto, loc} = partesEmissao(r);
+  const marca = pg ? discoProg(pg, 'p oq-marca', cia) : cia ? `<span class="oq-cia">${esc(cia)}</span>` : '';
+  const info = resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : '';
+  const lc = loc ? `<span class="em-loc" data-dica="Localizador">${esc(loc)}</span>` : '';
+  return marca || info || lc ? `<span class="em-dir">${marca}${info}${lc}</span>` : '';
+}
+
 function oQueCurto(desc){
   const partes = String(desc || '').split(' · ').map(x => x.trim()).filter(Boolean);
   /* no "i", "voo"/"voos" começam com maiúscula: "Voos 4997 e 8002 · via REC" */
@@ -29314,10 +29379,10 @@ function renderBalcao(){
     return `<div class="item linha-reserva ${r.itin ? 'com-bilhete ' : ''}${r.status === 'cancelada' ? '' : futura && dias <= 2 ? 'urgente' : futura && dias <= 7 ? 'atencao' : ''}" style="${r.status === 'cancelada' ? 'opacity:.5' : ''};align-items:flex-start">
       <svg style="width:19px;height:19px;fill:none;stroke:var(--grafite);stroke-width:1.6;margin-top:3px;flex-shrink:0"><use href="${ICONE_TIPO[r.tipo]}"/></svg>
       <div class="item-corpo">
-        <div class="item-tit">${esc(r.desc)}
+        <div class="item-tit">${tituloEmissao(r)}
           <span class="etq">${ROTULO_TIPO[r.tipo]}</span>
           ${r.quem === 'terceiro' ? `<span class="etq lilas">${esc(r.cliente || 'cliente')}</span>` : '<span class="etq aco">meu</span>'}
-          ${r.status === 'realizada' ? '<span class="etq">realizada</span>' : r.status === 'cancelada' ? '<span class="etq brasa">cancelada</span>' : futura ? `<span class="etq jade">${prazoTexto(dias)}</span>` : ''}</div>
+          ${r.status === 'realizada' ? '<span class="etq">realizada</span>' : r.status === 'cancelada' ? '<span class="etq brasa">cancelada</span>' : futura ? `<span class="etq jade">${prazoTexto(dias)}</span>` : ''}${marcaEmissao(r)}</div>
         <!-- Mesma leitura de cor da prévia do formulário: milha em azul, dinheiro
              que sai do bolso em vermelho, custo apurado em verde. Quem monta a
              emissão e depois a revê na lista lê os mesmos números com o mesmo
@@ -29744,7 +29809,10 @@ function editarReserva(id, rascunho){
       <!-- Descrição sozinha na linha seguinte, ocupando as cinco colunas: é o
            campo mais longo da folha e espremê-lo numa coluna faria o texto sumir
            antes do meio. -->
-      <div class="campo" style="grid-column:1/-1"><label>Descrição</label><input type="text" id="rsDesc" value="${esc(r.desc)}" placeholder="GRU → LIS · executiva"></div>
+      <div class="campo rs-desc"><label>Descrição</label><input type="text" id="rsDesc" value="${esc(r.desc)}" placeholder="GRU → LIS · executiva"></div>
+      <!-- Localizador: obrigatório para salvar. Sem ele não há como achar a
+           reserva no site da companhia, remarcar ou fazer o check-in. -->
+      <div class="campo"><label>Localizador</label><input type="text" id="rsLoc" maxlength="8" autocomplete="off" spellcheck="false" style="text-transform:uppercase;font-family:var(--f-m);letter-spacing:.06em" value="${esc(r.loc || locDaDescricao(r.desc))}" placeholder="UYOLQG"></div>
       <!-- ── Passageiros ────────────────────────────────────────────────────────
            Quem viaja sai do cadastro, não de texto livre: é o CPF de cada um que a
            companhia conta na cota, e nome digitado à mão faz a mesma pessoa contar
@@ -29889,7 +29957,7 @@ function editarReserva(id, rascunho){
   $('#rsPaxAbrir').onclick = () => {
     const rascunho = {...r,
       tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(), clienteId:$('#rsCliente').dataset.id || '',
-      desc:$('#rsDesc').value.trim(), data:$('#rsData').value, hora:$('#rsHora').value,
+      desc:$('#rsDesc').value.trim(), loc:($('#rsLoc') || {}).value ? $('#rsLoc').value.trim().toUpperCase() : '', data:$('#rsData').value, hora:$('#rsHora').value,
       dataVolta:$('#rsDataVolta') ? $('#rsDataVolta').value : '',
       horaVolta:$('#rsHoraVolta') ? $('#rsHoraVolta').value : '',
       criadaHora:$('#rsCriadaHora') ? $('#rsCriadaHora').value : '',
@@ -29973,9 +30041,13 @@ function editarReserva(id, rascunho){
     if (pg && !$('#rsConta').value && (politicaCPF(pg) || {}).limite) faltam.push({sel:'#rsConta', msg:`${prog(pg).n} tem limite de CPFs por conta: informe a conta que emitiu.`});
     /* Venda precisa do cliente: é dele o resultado e a cobrança. */
     if ($('#rsQuem').value === 'terceiro' && !$('#rsCliente').value.trim()) faltam.push({sel:'#rsCliente', msg:'Venda precisa do cliente: busque no cadastro.'});
+    /* Toda emissão precisa do localizador: é ele que acha a reserva na companhia. */
+    const loc = $('#rsLoc').value.trim().toUpperCase();
+    if (!loc) faltam.push({sel:'#rsLoc', msg:'Informe o localizador da reserva (o código de 6 letras ou números).'});
+    else if (!/^[A-Z0-9]{5,8}$/.test(loc)) faltam.push({sel:'#rsLoc', msg:'O localizador tem de 5 a 8 letras ou números, sem espaço nem símbolo.'});
     if (faltam.length){ errosNosCampos(faltam); return; }
     const novo = {id:r.id || uid(), tipo:$('#rsTipo').value, quem:$('#rsQuem').value, cliente:$('#rsCliente').value.trim(), clienteId:$('#rsCliente').dataset.id || '',
-      desc:$('#rsDesc').value.trim() || 'Reserva', data:$('#rsData').value, hora:$('#rsHora').value,
+      desc:$('#rsDesc').value.trim() || 'Reserva', loc:$('#rsLoc').value.trim().toUpperCase(), data:$('#rsData').value, hora:$('#rsHora').value,
       dataVolta:($('#rsDataVolta') || {}).value || '', horaVolta:($('#rsHoraVolta') || {}).value || '',
       criadaHora:($('#rsCriadaHora') || {}).value || '', prog:$('#rsProg').value,
       milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value), cartaoId:$('#rsCartao').value,
@@ -30563,6 +30635,12 @@ function mostrarParteEmitidos(v){
   $$('#p-em-resgates .em-so-lista').forEach(e => { e.hidden = emVista !== 'lista'; });
   $$('#p-em-resgates .em-so-resultado').forEach(e => { e.hidden = emVista !== 'resultado'; });
   if (emVista === 'resultado') renderResultado();
+  if (typeof atualizarSubmenus === 'function') atualizarSubmenus();
+}
+/* Atalho da tela Vendas: o resultado acumulado mudou para Emitidos. */
+function abrirResultadoVendas(){
+  irPara('emissoes');
+  setTimeout(() => { irParaAba('emissoes', 'em-resgates'); mostrarParteEmitidos('resultado'); window.scrollTo({top:0, behavior:'smooth'}); }, 60);
 }
 
 /* Iniciais do cliente para o selo da linha: "Kátia Barreto" vira KB; o que vem
@@ -32415,6 +32493,7 @@ const SUBMENUS = {
   'fb-mural':      {seg:'#segMural'},
   'rd-arsenal':    {seg:'#segArsenal'},
   'em-controle':   {seg:'#segCtrVista'},
+  'em-resgates':   {seg:'#segEmVista'},
   'rt-metas':      {seg:'#segMetas'},
   'rt-viagens':    {seg:'#segViagens'},
   'rt-plano':      {seg:'#segRoteiro'}
@@ -35052,6 +35131,7 @@ function migrarDadosOutubro(){
     if (lp && Array.isArray(lp.planos)) novo.latampass.planos.forEach(n => { if (!lp.planos.some(x => x.id === n.id)){ lp.planos.push({...n}); mudou = true; } });
     DB.cfg.migracoes.catalogoOut26 = hojeISO(); mudou = true;
   }
+  (DB.reservas || []).forEach(r => { if (!r.loc){ const l = locDaDescricao(r.desc); if (l){ r.loc = l; mudou = true; } } });
   if (mudou) salvar();
 }
 
@@ -37761,7 +37841,7 @@ const NOMES_MERCADO = {
   'qatar privilege club':'qatar', 'qatar':'qatar', 'finnair plus':'finnair', 'hilton honors':'hilton',
   'ihg':'ihg', 'ihg one rewards':'ihg', 'all accor':'accor', 'connect miles':'connect', 'connectmiles':'connect',
   'united airlines':'united', 'mileageplus':'united', 'lifemiles':'lifemiles', 'aeroplan':'aeroplan',
-  'air europa suma':'suma', 'aeromexico rewards':'aeromexico'
+  'air europa suma':'suma', 'aeromexico rewards':'aeromexico', 'virgin atlantic':'virgin', 'flying club':'virgin', 'virgin atlantic flying club':'virgin'
 };
 const progDoMercado = nome => NOMES_MERCADO[String(nome || '').trim().toLowerCase()] || null;
 const numBR = t => { const m = String(t || '').replace(/\u00a0/g, ' ').match(/-?[\d.]+(?:,\d+)?/); return m ? Number(m[0].replace(/\./g, '').replace(',', '.')) : null; };
