@@ -2218,6 +2218,11 @@ input[type=date]::-webkit-inner-spin-button{ display:none; }
    inteira, e o item ganha permissão de quebrar. */
 .item.com-bilhete{ flex-wrap:wrap; }
 .item.com-bilhete > .bilhete{ flex:1 0 100%; margin-top:12px; }
+.item.com-bilhete > .bilhete-par{ flex:1 0 100%; margin-top:12px; }
+.bilhete-par{ container-type:inline-size; }
+.bp-grade{ display:grid; grid-template-columns:minmax(0, 1fr); gap:10px; }
+.bp-grade > .bilhete{ margin:0; }
+@container (min-width:900px){ .bp-grade.duas{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 /* O corpo precisa de base declarada. Sem ela encolhe até o mínimo do conteúdo,
    e em tela estreita o título passa a quebrar palavra por palavra — a linha de
    reserva chegava a 45px de corpo num item de 351px, com "NAT → OSL" em três
@@ -8925,7 +8930,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-06 04:10';
+const BUILD = '2026-10-06 05:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31882,7 +31887,10 @@ function cardVoo(itin, opc){
       cortes.concat([c.trechos.length]).forEach(f => { partes.push(c.trechos.slice(ini, f)); ini = f; });
       const volta = partes.length === 2 && partes[1][partes[1].length - 1].para === partes[0][0].de;
       const nomes = partes.map((_, i) => volta ? (i ? 'Volta' : 'Ida') : `Parte ${i + 1}`);
-      return `<div class="pilha" style="gap:10px">${partes.map((p, i) => cardVoo(contasItinerario(p), {...o, semDividir:true, selo:o.selo ? `${o.selo} · ${nomes[i]}` : nomes[i]})).join('')}</div>`;
+      /* Ida e volta lado a lado, em duas colunas, quando há largura para os dois
+         cartões; em tela estreita, um embaixo do outro. Mais de duas partes,
+         sempre uma por linha. */
+      return `<div class="bilhete-par"><div class="bp-grade${partes.length === 2 ? ' duas' : ''}">${partes.map((p, i) => cardVoo(contasItinerario(p), {...o, semDividir:true, selo:o.selo ? `${o.selo} · ${nomes[i]}` : nomes[i]})).join('')}</div></div>`;
     }
   }
   const dias = typeof diasAte === 'function' ? diasAte(c.data) : null;
