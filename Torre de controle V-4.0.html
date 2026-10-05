@@ -8044,6 +8044,26 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .cc-meta small{ font-size:calc(11px * var(--esc)); line-height:1.35; }
 .cc-meta.grande .cc-meta-txt{ font-size:calc(14px * var(--esc)); }
 .cc-nums sup{ font-size:.75em; margin-left:1px; }
+
+/* janelinha da meta de isenção */
+.cc-anu-bt{ border:0; background:none; padding:0; font:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:3px; white-space:nowrap; }
+.cc-anu-bt svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; opacity:.75; }
+.cc-anu-bt.n-ouro{ color:var(--ouro); } .cc-anu-bt.n-jade{ color:var(--jade); }
+.cc-anu-bt:hover svg, .cc-anu-bt:focus-visible svg{ opacity:1; }
+.cc-pop{ position:fixed; z-index:400; width:min(320px, calc(100vw - 20px)); opacity:0; pointer-events:none; transform:translateY(4px);
+  transition:opacity .16s var(--ease), transform .16s var(--ease); filter:drop-shadow(0 14px 28px rgba(8,18,34,.28)); }
+.cc-pop.on{ opacity:1; pointer-events:auto; transform:none; }
+.cc-pop .cc-meta{ background:var(--sup-0); }
+.cc-pop .cc-meta.ok{ background:var(--sup-0); }
+.cc-meta-nota{ display:block; margin-top:4px; padding-top:7px; border-top:1px solid var(--fio-suave); font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); line-height:1.45; }
+
+/* divisória leve entre fileiras de cartões */
+.cc-galeria{ row-gap:44px !important; }
+.cc-galeria > .cc-item{ position:relative; }
+.cc-galeria > .cc-item::after{ content:''; position:absolute; left:-9px; right:-9px; bottom:-22px; height:1px; pointer-events:none;
+  background:var(--fio); opacity:.6; }
+.cc-galeria > .cc-item.cc-ult-fileira::after{ display:none; }
+@media (max-width:560px){ .cc-galeria{ row-gap:38px !important; } .cc-galeria > .cc-item::after{ bottom:-19px; left:0; right:0; } }
 </style>
 </head>
 <body>
@@ -9850,7 +9870,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-10 19:40';
+const BUILD = '2026-10-10 20:35';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -30823,6 +30843,19 @@ function faceCartao(c, grande){
     ${band ? `<span class="cc-bandeira cc-b-${band.toLowerCase()}">${esc(band)}</span>` : ''}
   </div>`;
 }
+
+/* Linha leve entre as fileiras de cartões (10/10/2026): cada cartão desenha a
+   linha abaixo de si, e a última fileira fica sem, para não fechar a lista com
+   um traço solto. */
+function marcarFileiras(gal){
+  if (!gal) return;
+  const its = [...gal.querySelectorAll(':scope > .cc-item')];
+  const cols = Math.max(1, getComputedStyle(gal).gridTemplateColumns.split(' ').length);
+  const resto = its.length % cols || cols;
+  its.forEach((it, i) => it.classList.toggle('cc-ult-fileira', i >= its.length - resto));
+}
+addEventListener('resize', () => document.querySelectorAll('.cc-galeria').forEach(marcarFileiras), {passive:true});
+
 function vistaCatalogo(){ return (DB.cfg && DB.cfg.catVista) || 'cartoes'; }
 let _colsCat = 0;
 addEventListener('resize', () => {
@@ -30918,6 +30951,7 @@ function renderCatalogo(){
     }).join('')}</tbody></table>`
     : `<div class="vazio" style="border:0;padding:26px"><p>Nenhum cartão encontrado com esse filtro.</p></div>`;
 
+  marcarFileiras(alvo.querySelector('.cc-galeria'));
   $('#catPaginador').innerHTML = paginas > 1 ? `<div class="paginador">
     <button class="bt p fantasma icone" ${catPag === 1 ? 'disabled' : ''} onclick="irPaginaCatalogo(${catPag - 1})" data-dica="Anterior"><svg style="rotate:180deg"><use href="#i-seta"/></svg></button>
     ${paginasVisiveis(catPag, paginas).map(n => n === '…'
@@ -31077,14 +31111,51 @@ function estadoAnuidade(c, mes){
   return i.ok ? {k:'meta-ok', rot:'isenta', cor:'jade', anual, meta:i, pct:p}
               : {k:'meta', rot:'com meta', cor:'ouro', anual, meta:i, pct:p};
 }
-function blocoMetaIsencao(c, mes, grande){
+function blocoMetaIsencao(c, mes, grande, notaEmTexto){
   const e = estadoAnuidade(c, mes); if (!e.meta) return '';
   const i = e.meta;
+  const nota = /fatura paga/.test(i.fonte || '') ? 'Com base no valor da fatura paga, registrado na Torre. Caso haja alguma divergência, corrigir o pagamento da fatura.'
+    : 'Com base nos valores lançados na Torre. Caso haja alguma divergência, corrigir em lançamentos.';
   return `<span class="cc-meta ${e.k === 'meta-ok' ? 'ok' : ''}${grande ? ' grande' : ''}">
     <span class="cc-meta-cab"><span>${e.k === 'meta-ok' ? '* Isenta neste mês: meta de gasto batida' : '* Isenção só com meta de gasto no mês'}</span><b>${Math.round(e.pct)}%</b></span>
     <span class="cc-meta-barra"><i style="width:${e.pct.toFixed(1)}%"></i></span>
-    <span class="cc-meta-txt">${brl(i.gasto)} de ${brl(i.min)} · ${e.k === 'meta-ok' ? '<b class="n-jade">meta batida</b>' : `faltam <b>${brl(i.falta)}</b> (${100 - Math.round(e.pct)}%)`} ${infoFonteIsencao(i.fonte)}</span>
+    <span class="cc-meta-txt">${brl(i.gasto)} de ${brl(i.min)} · ${e.k === 'meta-ok' ? '<b class="n-jade">meta batida</b>' : `faltam <b>${brl(i.falta)}</b> (${100 - Math.round(e.pct)}%)`}${notaEmTexto ? '' : ' ' + infoFonteIsencao(i.fonte)}</span>
+    ${notaEmTexto ? `<small class="cc-meta-nota">${esc(nota)}</small>` : ''}
   </span>`;
+}
+
+
+/* Janelinha da meta de isenção (10/10/2026): abre ao passar o mouse (computador)
+   ou ao tocar (celular), sobre o cartão, e some ao sair ou tocar fora. Tudo numa
+   janela só: a evolução do mês e, embaixo, de onde veio o gasto. */
+function ligarJanelaMeta(){
+  let pop = document.getElementById('ccPop');
+  if (!pop){ pop = document.createElement('div'); pop.id = 'ccPop'; pop.className = 'cc-pop'; pop.setAttribute('role', 'tooltip'); document.body.appendChild(pop); }
+  const fechar = () => { pop.classList.remove('on'); pop.dataset.dono = ''; };
+  const abrir = bt => {
+    const c = (DB.cartoes || []).find(x => x.id === bt.dataset.cartao); if (!c) return;
+    pop.innerHTML = blocoMetaIsencao(c, mesAtual(), false, true);
+    pop.dataset.dono = c.id; pop.classList.add('on'); pop._y0 = scrollY;
+    const r = bt.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, m = 10;
+    let x = Math.min(Math.max(m, r.left + r.width / 2 - w / 2), innerWidth - w - m);
+    let y = r.bottom + 8; if (y + h > innerHeight - m) y = Math.max(m, r.top - h - 8);
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  };
+  document.querySelectorAll('.cc-anu-bt').forEach(bt => {
+    bt.onmouseenter = () => { if (matchMedia('(hover:hover)').matches) abrir(bt); };
+    bt.onmouseleave = () => { if (matchMedia('(hover:hover)').matches) fechar(); };
+    /* o foco do toque chega antes do clique: o clique logo depois não fecha */
+    bt.onfocus = () => { bt._abertoEm = Date.now(); abrir(bt); };
+    bt.onblur = fechar;
+    bt.onclick = ev => { ev.stopPropagation();
+      if (pop.classList.contains('on') && pop.dataset.dono === bt.dataset.cartao && Date.now() - (bt._abertoEm || 0) > 250) fechar();
+      else { bt._abertoEm = Date.now(); abrir(bt); } };
+  });
+  if (!window._ccPopLigado){ window._ccPopLigado = true;
+    document.addEventListener('click', ev => { if (!ev.target.closest('.cc-anu-bt, #ccPop')) fechar(); });
+    /* rolar a página de verdade fecha; o ajuste de poucos pixels do toque, não */
+    addEventListener('scroll', () => { if (pop.classList.contains('on') && Math.abs(scrollY - (pop._y0 || 0)) > 40) fechar(); }, {passive:true});
+    addEventListener('resize', fechar, {passive:true}); }
 }
 
 function renderMeusCartoes(){
@@ -31113,13 +31184,14 @@ function renderMeusCartoes(){
         <span class="cc-l1"><b class="cc-nome">${esc(c.banco)} — ${esc(c.produto)}</b></span>
         <span class="cc-nums"><span><small>Fatura do mês</small><b>${brl(fat)}</b></span><span><small>Limite</small><b>${lim ? 'R$ ' + milCurto(lim) : 'n/d'}</b></span>
           <span><small>Anuidade</small><b>${(e => e.k === 'livre' ? `<span class="n-jade" data-dica="${esc(e.nota)}">isenta</span>`
-            : e.k === 'paga' ? e.rot : `<span class="n-${e.cor}" data-dica="${esc(brl(e.anual))} por ano, isenta só no mês em que o gasto passa de ${esc(brl(e.meta.min))}">${e.rot}<sup>*</sup></span>`)(estadoAnuidade(c, m))}</b></span></span>
-        ${blocoMetaIsencao(c, m)}
+            : e.k === 'paga' ? e.rot : `<button type="button" class="cc-anu-bt n-${e.cor}" data-cartao="${c.id}" aria-label="Ver a meta de isenção">${e.rot}<sup>*</sup><svg><use href="#i-info"/></svg></button>`)(estadoAnuidade(c, m))}</b></span></span>
         ${lim ? `<span class="cc-uso" data-dica="${pct(fat / lim * 100, 1)} do limite em uso neste mês"><i style="width:${Math.min(100, fat / lim * 100).toFixed(1)}%"></i></span>` : ''}
         <span class="cc-acoes"><button type="button" class="bt p fantasma" onclick="editarCartao('${c.id}')"><svg><use href="#i-lapis"/></svg>Editar</button>
           <button type="button" class="bt p vermelho-solido" onclick="apagar('cartoes','${c.id}','o cartão')"><svg><use href="#i-lixo"/></svg>Excluir</button></span>
       </span></div>`;
   }).join('') : `<div class="vazio" style="grid-column:1/-1"><p>Nenhum cartão cadastrado.</p></div>`);
+  ligarJanelaMeta();
+  marcarFileiras($('#crMeus'));
 }
 
 /* Nomes curtos de propósito: o seletor tem a largura de uma coluna da folha, e
