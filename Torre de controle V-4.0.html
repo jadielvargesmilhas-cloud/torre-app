@@ -7636,6 +7636,10 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 /* o botão de recolher/esticar fica sempre à vista, no pé da coluna */
 .cm-recolher{ position:sticky; bottom:4px; z-index:1; background:var(--sup-0); }
 .cm-recolher:hover{ background:var(--sup-1); }
+
+#rtHeroiSlot > .heroi, #viHeroiSlot > .heroi{ margin:0 0 18px; }
+
+#crHeroiSlot > .heroi, #catHeroiSlot > .heroi, #meusHeroiSlot > .heroi, #fatHeroiSlot > .heroi{ margin:0 0 4px; }
 </style>
 </head>
 <body>
@@ -8605,6 +8609,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="esticar"></div>
             <button class="bt primario" onclick="editarPlanoViagem()"><svg><use href="#i-mais"/></svg>Nova Jornada</button>
           </div>
+          <div id="rtHeroiSlot"></div>
           <div id="rtRoteiroLista"></div>
           <div id="rtJornada"></div>
           <div id="rtPlano"></div>
@@ -8620,7 +8625,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="esticar"></div>
               <button class="bt primario" onclick="editarViagem()"><svg><use href="#i-mais"/></svg>Registrar Resgate</button>
             </div>
-            <div class="grade g4 g4-par" id="viResumo"></div>
+            <div id="viHeroiSlot"></div>
+            <div class="grade g4 g4-par" id="viResumo" hidden></div>
             <div id="viPanorama"></div>
             <div id="viListas" class="pilha" style="gap:16px">
             <div class="nota" style="margin:0"><svg><use href="#i-info"/></svg>
@@ -8703,7 +8709,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba on" id="p-cr-painel">
           <div class="pilha" style="gap:16px">
-            <div class="grade g4" id="crResumo"></div>
+            <div id="crHeroiSlot"></div>
+            <div class="grade g4" id="crResumo" hidden></div>
             <div class="cartao" style="padding:0">
               <div style="padding:16px 20px 12px;border-bottom:1px solid var(--fio-suave)">
                 <div class="olho anil" style="margin:0">Fatura projetada deste mês</div>
@@ -8750,6 +8757,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba" id="p-cr-catalogo">
           <div class="pilha" style="gap:14px">
+            
             <div class="cartao">
               <div class="cartao-cab" style="margin-bottom:4px">
                 <h3 style="color:var(--anil-claro)">Catálogo de cartões
@@ -8770,6 +8778,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                   </select></div>
               </div>
             </div>
+            <div id="catHeroiSlot"></div>
             <div class="cartao" style="padding:0">
               <div style="padding:14px 18px 11px;border-bottom:1px solid var(--fio-suave)" class="linha">
                 <div class="olho destaque" style="margin:0">Cartões do mercado</div>
@@ -8789,11 +8798,13 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba" id="p-cr-meus">
           <div class="pilha" style="gap:14px">
+            
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="olho destaque" style="margin:0;flex:0 0 auto">Meus cartões</div>
               <div class="esticar"></div>
               <button class="bt primario" id="btNovoCartao"><svg><use href="#i-mais"/></svg>Novo Cartão</button>
             </div>
+            <div id="meusHeroiSlot"></div>
             <!-- Dois caminhos, e o primeiro é o melhor: pelo catálogo o cartão vem
                  com anuidade, pontuação e programa já preenchidos, e é assim que a
                  Torre calcula quanto ele rende. Pelo botão, tudo isso é digitado à
@@ -8811,7 +8822,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="campo" style="max-width:210px;margin:0"><select id="crMes" data-ordem="natural"></select></div>
               <div class="esticar"></div>
             </div>
-            <div class="grade g4" id="crFatResumo"></div>
+            <div id="fatHeroiSlot"></div>
+            <div class="grade g4" id="crFatResumo" hidden></div>
             <!-- Cabeçalho da lista de cartões: separa o resumo do mês, acima, das
                  faturas de cada cartão, abaixo. -->
             <div class="fat-cab">
@@ -9415,7 +9427,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 21:30';
+const BUILD = '2026-10-07 23:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12849,6 +12861,8 @@ function montarCorpoCT(aba){
 }
 
 function irParaAba(grupo, aba){
+  if (grupo === 'cartoes' && typeof renderHeroiCartoes === 'function') setTimeout(renderHeroiCartoes, 0);
+  if (grupo === 'rota' && typeof renderHeroiViagens === 'function') setTimeout(renderHeroiViagens, 0);
   const cx = $(`.abas[data-grupo="${grupo}"]`); if (!cx) return;
   /* A coluna de seções espelha a aba ativa. Marcada no fim desta função, para
      que o estado já esteja aplicado quando ela ler. */
@@ -13951,26 +13965,36 @@ function renderHeroiMilhas(){
 /* Viagens: a próxima viagem, o que ela já economizou, e as milhas usadas. */
 function renderHeroiViagens(){
   const alvo = $('#heroiArea'); if (!alvo || areaDe(vistaAtual).k !== 'viagens') return;
+  /* Cada seção tem o seu painel, logo abaixo do filtro dela: em Jornadas, a
+     próxima viagem; em Resultados, o que as viagens já renderam. O filtro
+     (Panorama geral, Nacional, Internacional) vale para o painel também. */
+  const emResultados = !!document.querySelector('#p-rt-viagens.on');
+  const slot = document.getElementById(emResultados ? 'viHeroiSlot' : 'rtHeroiSlot');
+  if (slot && alvo.parentElement !== slot) slot.appendChild(alvo);
+  alvo.classList.remove('compacto');
+  if (emResultados){ alvo.hidden = false; return renderHeroiResultadosViagens(alvo); }
   /* com uma jornada aberta, a peça sai da frente dela */
   alvo.hidden = vistaAtual === 'rota' && typeof roteiroAberto !== 'undefined' && roteiroAberto;
   if (alvo.hidden) return;
   const hoje = hojeISO();
-  const futuras = (DB.planos || []).filter(p => (p.fim || p.inicio || '') >= hoje).sort((a, b) => String(a.inicio || '').localeCompare(String(b.inicio || '')));
+  const lado = typeof filtroRoteiro !== 'undefined' && filtroRoteiro !== 'todas' ? filtroRoteiro : null;
+  const doLado = p => !lado || escopoPlano(p) === lado;
+  const futuras = (DB.planos || []).filter(doLado).filter(p => (p.fim || p.inicio || '') >= hoje).sort((a, b) => String(a.inicio || '').localeCompare(String(b.inicio || '')));
   const prox = futuras.find(p => (p.inicio || '') >= hoje) || futuras[0];
-  const emitidas = (DB.reservas || []).filter(r => r.quem !== 'terceiro' && r.status !== 'cancelada' && Number(r.milhas) > 0);
-  if (!prox && !emitidas.length){ montarHeroi(alvo, {rot:'Próxima viagem', vazio:'Nenhuma viagem planejada ainda. Crie uma jornada e a Torre acompanha prazos, trechos e quanto cada emissão economizou.'}); return; }
+  const emitidas = (DB.reservas || []).filter(r => r.quem !== 'terceiro' && r.status !== 'cancelada' && Number(r.milhas) > 0 && (!lado || escopoViagem(r) === lado));
+  if (!prox && !emitidas.length){ montarHeroi(alvo, {rot:lado ? `Próxima viagem ${lado === 'nac' ? 'nacional' : 'internacional'}` : 'Próxima viagem', vazio:'Nenhuma viagem planejada ainda. Crie uma jornada e a Torre acompanha prazos, trechos e quanto cada emissão economizou.'}); return; }
   const dias = prox ? diasAte(prox.inicio) : null;
   const ecoProx = prox ? economiaJornada(prox) : 0;
   const ts = futuras.flatMap(p => trechosDe(p));
   const emit = ts.filter(t => (t.situacao || 'planejado') !== 'planejado').length;
-  const ecoTodas = soma((DB.planos || []).map(p => economiaJornada(p) || 0));
+  const ecoTodas = soma((DB.planos || []).filter(doLado).map(p => economiaJornada(p) || 0));
   const porProg = {}; emitidas.forEach(r => { porProg[r.prog] = (porProg[r.prog] || 0) + Number(r.milhas); });
   const porMes = {}; emitidas.forEach(r => { const k = String(r.criada || r.data || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + Number(r.milhas); });
   const meses = Object.keys(porMes).sort().slice(-12);
   const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
   montarHeroi(alvo, {
-    rot: prox ? 'Próxima viagem' : 'Viagens',
-    valor: prox ? (dias === 0 ? 'hoje' : dias > 0 ? `em ${nBR(dias)}<small> ${dias === 1 ? 'dia' : 'dias'}</small>` : 'em andamento') : `${nBR(emitidas.length)}<small> emissões</small>`,
+    rot: prox ? 'Próxima viagem' + (lado ? (lado === 'nac' ? ' nacional' : ' internacional') : '') : 'Viagens' + (lado ? (lado === 'nac' ? ' nacionais' : ' internacionais') : ''),
+    valor: prox ? (dias === 0 ? 'hoje' : dias > 0 ? `em ${nBR(dias)}<small> ${dias === 1 ? 'dia' : 'dias'}</small>` : 'em andamento') : `${nBR(emitidas.length)}<small> ${emitidas.length === 1 ? 'emissão' : 'emissões'}</small>`,
     linha: prox ? `<span><b>${esc(prox.nome || 'Viagem')}</b>${prox.inicio ? ' · ' + dataBR(prox.inicio) : ''}</span>${ecoProx ? `<span class="heroi-chip ${ecoProx >= 0 ? 'sobe' : 'desce'}">${ecoProx >= 0 ? '+' : '−'}${brl(Math.abs(ecoProx))} de economia</span>` : ''}` : '',
     numeros:[[nBR(futuras.length), futuras.length === 1 ? 'jornada à frente' : 'jornadas à frente'], [`${nBR(emit)} de ${nBR(ts.length)}`, 'trechos emitidos'], [brl(ecoTodas), 'economia em todas']],
     fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas usadas por programa',
@@ -14030,7 +14054,7 @@ function renderHeroiVendas(alvo){
   const c = document.getElementById(alvo.id + 'Curva');
   if (c) c.innerHTML = graficoMesesVendas() || '<p class="heroi-sub" style="padding:24px 0">Sem vendas no período para desenhar.</p>';
 }
-const PRINCIPAL_DA_AREA = {milhas:'saldo', viagens:'rota', negocio:'vendas'};
+const PRINCIPAL_DA_AREA = {milhas:'saldo', viagens:'rota', negocio:'vendas', cartoes:'cartoes'};
 /* Imposto de Renda: a peça mostra o ano escolhido na tela (ganho, vendas,
    isento e imposto) e as vendas de cada mês contra o teto de isenção. */
 /* Emitidos: as emissões para clientes no recorte de tipo escolhido (Tudo, Voos,
@@ -14141,6 +14165,102 @@ function renderHeroiOrcamento(){
     serie, fmtSerie:v => nBR(Math.round(v)), semSerie:'A curva aparece a partir do segundo mês com cotação.'
   });
 }
+/* ── Painéis de Cartões, um por seção (07/10/2026) ──────────────────────────── */
+const crAtivos = () => (DB.cartoes || []).filter(c => c.ativo !== false);
+const nomeCrCurto = c => `${c.banco} ${c.produto}`.length > 24 ? `${c.banco} ${c.produto}`.slice(0, 23) + '…' : `${c.banco} ${c.produto}`;
+function mesesAte(m, n){ const out = []; let [a, mm] = m.split('-').map(Number); for (let i = 0; i < n; i++){ out.unshift(`${a}-${String(mm).padStart(2, '0')}`); mm--; if (!mm){ mm = 12; a--; } } return out; }
+function renderHeroiCartoesPainel(alvo){
+  const cs = crAtivos(), m = mesAtual();
+  if (!cs.length){ montarHeroi(alvo, {rot:'Comprometido este mês', vazio:'Nenhum cartão cadastrado. Em Meus cartões, cadastre os seus: a Torre acompanha fatura, vencimento, limite e se a anuidade se paga.'}); return; }
+  const porCr = cs.map(c => ({c, v:totalFatura(c.id, m)}));
+  const comprometido = soma(porCr.map(x => x.v)), limite = soma(cs.map(c => Number(c.limite) || 0));
+  const parcelas = (DB.lancamentos || []).filter(l => l.cartaoId && (l.parcelas || 1) > 1).length;
+  const venc = cs.map(c => vencimentoNoMes(c, m)).filter(Boolean).filter(v => diasAte(v) !== null && diasAte(v) >= 0).sort();
+  const alertas = typeof alertasCartoes === 'function' ? alertasCartoes() : [];
+  const serie = mesesAte(m, 12).map(k => ({r:rotuloMes(k), v:soma(cs.map(c => totalFatura(c.id, k)))})).filter((x, i, a) => x.v > 0 || i === a.length - 1);
+  montarHeroi(alvo, {
+    rot:`Comprometido em ${nomeMes(m).split(' de ')[0].toLowerCase()}`,
+    valor:brl(comprometido),
+    linha:`<span><b>${nBR(cs.length)}</b> ${cs.length === 1 ? 'cartão' : 'cartões'} em <b>${new Set(cs.map(c => c.banco)).size}</b> ${new Set(cs.map(c => c.banco)).size === 1 ? 'banco' : 'bancos'}</span>${venc.length ? `<span class="heroi-chip ${diasAte(venc[0]) <= 3 ? 'desce' : ''}">vence ${diasAte(venc[0]) === 0 ? 'hoje' : prazoTexto(diasAte(venc[0]))} · ${dataBR(venc[0])}</span>` : '<span class="heroi-chip sobe">nada a vencer</span>'}`,
+    numeros:[[limite ? pct(comprometido / limite * 100, 1) : 'n/d', limite ? `do limite de ${brl(limite)}` : 'do limite'], [nBR(parcelas), parcelas === 1 ? 'parcelamento ativo' : 'parcelamentos ativos'],
+      [nBR(alertas.filter(a => a.grau >= 2).length), 'alertas para agir']],
+    fatias:fatiasHeroi(porCr.map(x => ({c:x.c, v:x.v})), x => nomeCrCurto(x.c)), fmtFatia:v => brl(v), compRot:'Comprometido por cartão',
+    dirRot:'Gasto nos cartões, mês a mês', dirSub:'Clubes, parcelas, taxas e o que foi lançado em cada fatura.',
+    ult: serie.length ? {b:brl(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => 'R$ ' + milCurto(v), semSerie:'A curva aparece a partir do segundo mês com gasto.'
+  });
+}
+function renderHeroiCatalogo(alvo){
+  const l = typeof catalogoFiltrado === 'function' ? catalogoFiltrado() : [];
+  const total = CATALOGO.length;
+  if (!l.length){ montarHeroi(alvo, {rot:'Catálogo de cartões', vazio:'Nenhum cartão no recorte. Limpe a busca ou troque o clube no filtro.'}); return; }
+  const num = v => Number(String(v || '').replace(',', '.')) || 0;
+  const gratis = l.filter(c => !(Number(c.a) > 0)).length;
+  const comSala = l.filter(c => c.s && !/^não há/i.test(String(c.s).trim())).length;
+  const melhor = l.slice().sort((a, b) => num(b.px || b.pm) - num(a.px || a.pm))[0];
+  const conferidos = Object.keys(DB.catCorrecoes || {}).length;
+  const porClube = {}; l.forEach(c => { const k = c.c || 'sem clube'; porClube[k] = (porClube[k] || 0) + 1; });
+  const faixas = [['grátis', c => !(Number(c.a) > 0)], ['até 500', c => c.a > 0 && c.a <= 500], ['500–1 mil', c => c.a > 500 && c.a <= 1000], ['1–2 mil', c => c.a > 1000 && c.a <= 2000], ['2 mil +', c => c.a > 2000]];
+  const serie = faixas.map(([r, f]) => ({r, v:l.filter(f).length}));
+  montarHeroi(alvo, {
+    rot:l.length < total ? 'Cartões no recorte' : 'Cartões no catálogo',
+    valor:`${nBR(l.length)}<small> ${l.length === 1 ? 'cartão' : 'cartões'}</small>`,
+    linha:`<span>Conferidos <b>${nBR(conferidos)}</b> de <b>${nBR(total)}</b></span>${melhor ? `<span class="heroi-chip sobe" data-dica="${esc(catNome ? catNome(melhor) : melhor.n)}">até ${esc(String(melhor.px || melhor.pm))} pontos por dólar</span>` : ''}`,
+    numeros:[[nBR(gratis), gratis === 1 ? 'sem anuidade' : 'sem anuidade'], [nBR(comSala), comSala === 1 ? 'com sala VIP' : 'com sala VIP'], [nBR(Object.keys(porClube).length), 'clubes de pontos']],
+    fatias:fatiasHeroi(Object.keys(porClube).map(k => ({k, v:porClube[k]})), x => x.k), fmtFatia:v => `${v} ${v === 1 ? 'cartão' : 'cartões'}`, compRot:'Cartões por clube',
+    dirRot:'Cartões por faixa de anuidade', dirSub:'Anuidade por ano, em reais: quantos cartões do recorte cabem em cada faixa.',
+    ult:{b:nBR(gratis), sp:'sem anuidade'}, serie, fmtSerie:v => nBR(Math.round(v))
+  });
+}
+function renderHeroiMeusCartoes(alvo){
+  const cs = crAtivos(), m = mesAtual();
+  if (!cs.length){ montarHeroi(alvo, {rot:'Meus cartões', vazio:'Nenhum cartão cadastrado ainda. Toque em Novo Cartão para começar.'}); return; }
+  const anuidade = soma(cs.map(c => c.isento ? 0 : (Number(c.anuidade) || 0)));
+  const isentos = cs.filter(c => c.isento || !(Number(c.anuidade) > 0)).length;
+  const limite = soma(cs.map(c => Number(c.limite) || 0));
+  const usado = soma(cs.map(c => totalFatura(c.id, m)));
+  const porBanco = {}; cs.forEach(c => { porBanco[c.banco] = (porBanco[c.banco] || 0) + (Number(c.limite) || 0); });
+  const serie = mesesAte(m, 12).map(k => ({r:rotuloMes(k), v:limite ? soma(cs.map(c => totalFatura(c.id, k))) / limite * 100 : 0})).filter((x, i, a) => x.v > 0 || i === a.length - 1);
+  montarHeroi(alvo, {
+    rot:'Anuidade que você paga por ano',
+    valor:brl(anuidade),
+    linha:`<span>Limite total <b>${brl(limite)}</b></span><span class="heroi-chip ${limite && usado / limite >= .5 ? 'desce' : 'sobe'}">${limite ? pct(usado / limite * 100, 1) : 'n/d'} em uso este mês</span>`,
+    numeros:[[nBR(cs.length), cs.length === 1 ? 'cartão ativo' : 'cartões ativos'], [nBR(isentos), isentos === 1 ? 'isento de anuidade' : 'isentos de anuidade'], [nBR(new Set(cs.map(c => c.banco)).size), 'bancos']],
+    fatias:fatiasHeroi(Object.keys(porBanco).map(b => ({b, v:porBanco[b]})), x => x.b), fmtFatia:v => brl(v), compRot:'Limite por banco',
+    dirRot:'Uso do limite, mês a mês', dirSub:'O total das faturas sobre o limite somado.',
+    ult: serie.length ? {b:pct(serie[serie.length - 1].v, 1), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => pct(v, 0), semSerie:'A curva aparece a partir do segundo mês com gasto.'
+  });
+}
+function renderHeroiFaturas(alvo){
+  const cs = crAtivos(), m = mesFatura || mesAtual();
+  const est = cs.map(c => ({c, e:estadoFatura(c, m)})).filter(x => x.e.total > 0 || x.e.pg);
+  const total = soma(est.map(x => x.e.total)), pagas = soma(est.map(x => x.e.pago)), aberto = Math.max(0, total - pagas);
+  const prox = est.filter(x => x.e.venc && x.e.dias !== null && x.e.dias >= 0 && x.e.estado !== 'paga').sort((a, b) => a.e.dias - b.e.dias)[0];
+  const serie = mesesAte(m, 12).map(k => ({r:rotuloMes(k), v:soma(cs.map(c => totalFatura(c.id, k)))})).filter((x, i, a) => x.v > 0 || i === a.length - 1);
+  montarHeroi(alvo, {
+    rot:`Faturas de ${nomeMes(m)}`,
+    valor:brl(total),
+    linha:`<span>Já pago <b>${brl(pagas)}</b></span>${aberto > 0 ? `<span class="heroi-chip desce">${brl(aberto)} em aberto</span>` : `<span class="heroi-chip sobe">${total ? 'mês fechado' : 'sem fatura'}</span>`}`,
+    numeros:[[nBR(est.length), est.length === 1 ? 'fatura no mês' : 'faturas no mês'], [prox ? dataBR(prox.e.venc) : 'n/d', prox ? `próximo vencimento · ${nomeCrCurto(prox.c)}` : 'próximo vencimento'],
+      [total ? pct(pagas / total * 100, 0) : 'n/d', 'do mês já pago']],
+    fatias:fatiasHeroi(est.map(x => ({c:x.c, v:x.e.total})), x => nomeCrCurto(x.c)), fmtFatia:v => brl(v), compRot:'Fatura por cartão',
+    dirRot:'Total das faturas, mês a mês', dirSub:'Até o mês escolhido no filtro.',
+    ult: serie.length ? {b:brl(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => 'R$ ' + milCurto(v), semSerie:'A curva aparece a partir do segundo mês com fatura.'
+  });
+}
+function renderHeroiCartoes(){
+  const alvo = $('#heroiArea'); if (!alvo || vistaAtual !== 'cartoes') return;
+  const aba = (document.querySelector('#v-cartoes .painel-aba.on') || {}).id || 'p-cr-painel';
+  const mapa = {'p-cr-painel':['crHeroiSlot', renderHeroiCartoesPainel], 'p-cr-catalogo':['catHeroiSlot', renderHeroiCatalogo],
+    'p-cr-meus':['meusHeroiSlot', renderHeroiMeusCartoes], 'p-cr-faturas':['fatHeroiSlot', renderHeroiFaturas]};
+  const [slotId, fn] = mapa[aba] || mapa['p-cr-painel'];
+  const slot = document.getElementById(slotId);
+  if (slot && alvo.parentElement !== slot) slot.appendChild(alvo);
+  alvo.hidden = false; alvo.classList.remove('compacto'); alvo.dataset.area = 'cartoes';
+  fn(alvo);
+}
 let _irResumo = null;
 function renderHeroiIR(){
   const alvo = $('#heroiArea'); if (!alvo || !_irResumo) return;
@@ -14163,6 +14283,29 @@ function renderHeroiIR(){
     serie, fmtSerie:v => 'R$ ' + milCurto(v), semSerie:'A curva aparece a partir do segundo mês do ano.'
   });
 }
+/* Resultados das viagens: os quatro números da seção (viagens realizadas,
+   milhas usadas, valor médio do milheiro e quanto economizou), no recorte do
+   filtro, com as milhas por programa e a curva das milhas usadas mês a mês. */
+function renderHeroiResultadosViagens(alvo){
+  const lado = typeof filtroViagens !== 'undefined' && filtroViagens !== 'todas' ? filtroViagens : null;
+  const X = numerosViagens(lado);
+  const nomeLado = lado ? (lado === 'nac' ? ' nacionais' : ' internacionais') : '';
+  if (!X.viagens.length){ montarHeroi(alvo, {rot:`Resultados das viagens${nomeLado}`, vazio:'Nenhum resgate registrado ainda. Quando uma viagem com milhas for voada, ela entra aqui com quanto valeu cada milheiro e quanto economizou.'}); return; }
+  const porProg = {}; X.feitas.forEach(r => { if (r.prog && Number(r.milhas) > 0) porProg[r.prog] = (porProg[r.prog] || 0) + Number(r.milhas); });
+  const porMes = {}; X.feitas.forEach(r => { const k = String(r.data || '').slice(0, 7); if (k && Number(r.milhas) > 0) porMes[k] = (porMes[k] || 0) + Number(r.milhas); });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot:`Economia das viagens${nomeLado}`,
+    valor: X.ganho ? brl(X.ganho) : 'n/d',
+    linha:`<span>Milheiro médio <b>${X.medio ? brl2(X.medio) : 'n/d'}</b></span>${X.vista ? `<span class="heroi-chip sobe">passagens de ${brl(X.vista)} na pagante</span>` : '<span class="heroi-chip">informe o preço na pagante</span>'}`,
+    numeros:[[nBR(X.feitas.length), X.feitas.length === 1 ? 'viagem realizada' : 'viagens realizadas'], [nBR(X.agenda), X.agenda === 1 ? 'reservada à frente' : 'reservadas à frente'], [nBR(X.milhas), 'milhas usadas']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas usadas por programa',
+    dirRot:'Milhas usadas, mês a mês', dirSub:'Pelo mês do voo, nas viagens já realizadas.',
+    ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com viagem realizada.'
+  });
+}
 function renderHeroiDaVista(v){
   const el = $('#heroiArea'); if (!el) return;
   const k = areaDe(v).k;
@@ -14180,6 +14323,7 @@ function renderHeroiDaVista(v){
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
   if (k === 'milhas') renderHeroiMilhas();
   if (k === 'viagens') renderHeroiViagens();
+  if (k === 'cartoes'){ renderHeroiCartoes(); return; }
   if (k === 'negocio'){
     if (v === 'clientes'){ el.classList.remove('compacto'); renderHeroiClientes(); }
     else if (v === 'emissoes'){ el.classList.remove('compacto'); renderHeroiCPF(); }
@@ -29265,7 +29409,7 @@ function renderFaturas(){
     sel.innerHTML = `<optgroup label="Próximos vencimentos">${desc.filter(m => m > hoje).map(op).join('')}</optgroup>`
       + `<optgroup label="Mês atual">${op(hoje)}</optgroup>`
       + `<optgroup label="Meses anteriores">${desc.filter(m => m < hoje).map(op).join('')}</optgroup>`;
-    sel.onchange = () => { mesFatura = sel.value; renderFaturas(); };
+    sel.onchange = () => { mesFatura = sel.value; renderFaturas(); renderHeroiCartoes(); };
   }
 
   const est = cs.map(c => ({c, e:estadoFatura(c, mesFatura)})).filter(x => x.e.total > 0 || x.e.pg || isencaoPorGasto(x.c));
@@ -29369,6 +29513,7 @@ function catalogoFiltrado(){
 
 function renderCatalogo(){
   const alvo = $('#catLista'); if (!alvo) return;
+  if (vistaAtual === 'cartoes' && document.querySelector('#p-cr-catalogo.on')) setTimeout(renderHeroiCartoes, 0);
   if ($('#contCatalogo')) $('#contCatalogo').textContent = CATALOGO.length;
 
   const selC = $('#catClube');
@@ -30114,6 +30259,7 @@ function abrirTrechoDaAgenda(planoId, trechoId){
   setTimeout(() => { abrirRoteiroViagem(planoId); modoRoteiro = 'trechos'; renderPlano(); editarTrecho(trechoId); }, 60);
 }
 function renderViagens(){
+  if (vistaAtual === 'rota' && typeof renderHeroiViagens === 'function') setTimeout(renderHeroiViagens, 0);
   const T = numerosViagens(null), N = numerosViagens('nac'), I = numerosViagens('int');
   if ($('#contViagens')) $('#contViagens').textContent = T.viagens.length;
   segLados('#segViagens', filtroViagens, N.feitas.length, I.feitas.length, f => { filtroViagens = f; renderViagens(); });
