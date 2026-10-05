@@ -7443,6 +7443,7 @@ table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before
 .vd-filtros{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .vd-filtros .vd-mes{ margin:0; min-width:calc(150px * var(--esc)); }
 #vdHeroiSlot > .heroi{ margin-bottom:18px; }
+#irHeroiSlot > .heroi, #emHeroiSlot > .heroi{ margin-bottom:0; }
 .heroi .rm-col.apagado{ opacity:.35; }
 .heroi .rm-val{ visibility:hidden; }
 .heroi .rm-col.top .rm-val, .heroi .rm-col.melhor .rm-val{ visibility:visible; }
@@ -7608,6 +7609,33 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 .cm-recolher svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .coluna-menu .cm-nav{ flex:0 0 auto; }
 .coluna-menu.medindo .cm-recolher{ display:none; }
+
+/* Posição em 31/12: titulares recolhidos dentro de cada programa */
+.ir-pos tr.ir-conta[hidden]{ display:none !important; }
+.ir-abre svg{ transition:transform .2s var(--ease); }
+.ir-prog.aberto .ir-abre svg{ transform:rotate(180deg); }
+
+/* ══ COLUNA DO MENU RECOLHIDA: só ícones, tudo clicável (07/10/2026) ═══════════
+   Em vez de sumir, a coluna estreita: fica o ícone da área, um ícone por módulo
+   e o botão de esticar, no pé. As seções voltam ao alto de cada tela. */
+@media (min-width:861px){
+  html.coluna-fechada{ --menu:calc(58px * var(--esc)); }
+  html.coluna-fechada .coluna-menu{ display:flex; align-items:center; padding-left:0; padding-right:0; }
+  html.coluna-fechada .cm-titulo{ padding:4px 0 0; justify-content:center; }
+  html.coluna-fechada .cm-tit-txt{ display:none; }
+  html.coluna-fechada .cm-nav{ align-items:center; padding:0; gap:6px; width:100%; }
+  html.coluna-fechada .cm-recolher{ margin:auto 0 4px; padding:8px; justify-content:center; }
+  html.coluna-fechada .cm-recolher span{ display:none; }
+}
+.cm-ico{ width:calc(40px * var(--esc)); height:calc(40px * var(--esc)); display:grid; place-items:center; border-radius:10px; border:1px solid transparent;
+  background:transparent; color:var(--grafite); cursor:pointer; flex-shrink:0; }
+.cm-ico:hover{ background:var(--sup-1); color:var(--giz); }
+.cm-ico.on{ background:var(--lavagem-ouro); border-color:color-mix(in oklab, var(--ouro) 35%, transparent); color:var(--ouro); }
+.cm-ico svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.cm-ico-div{ width:22px; height:1px; background:var(--fio); margin:4px 0; flex-shrink:0; }
+/* o botão de recolher/esticar fica sempre à vista, no pé da coluna */
+.cm-recolher{ position:sticky; bottom:4px; z-index:1; background:var(--sup-0); }
+.cm-recolher:hover{ background:var(--sup-1); }
 </style>
 </head>
 <body>
@@ -7711,14 +7739,13 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <div class="cm-tit-nome">Painel</div>
     </div>
     <nav class="cm-nav"></nav>
-    <button type="button" class="cm-recolher" id="btColunaPe" aria-label="Recolher o menu"><svg><use href="#i-painel-fechar"/></svg><span>Recolher menu</span></button>
+    <button type="button" class="cm-recolher" id="btColunaPe" aria-label="Recolher o menu" data-dica-lado="direita"><svg><use href="#i-painel-fechar"/></svg><span>Recolher menu</span></button>
   </aside>
 
   <aside class="trilho">
     <div class="marca" data-dica="VEM · Viagens & Experiências com Milhas" data-dica-lado="direita">
       <img src="data:image/png;base64,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" alt="VEM">
     </div>
-    <button type="button" class="tb-coluna" id="btColuna" data-dica="Recolher o menu" data-dica-lado="direita" aria-label="Recolher o menu" aria-expanded="true"><svg><use href="#i-painel-fechar"/></svg></button>
     <nav class="trilho-nav" id="trilhoNav">
       <!-- NAVEGAÇÃO POR ÁREAS (06/10/2026, pedido do Jadiel, no modelo do SisProf).
            Eram doze siglas (PNL, FAB, CTP...) em duas barras. Agora são cinco áreas
@@ -9036,8 +9063,10 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="esticar"></div>
               <button class="bt primario" id="btNovaEmissao"><svg><use href="#i-mais"/></svg>Registrar Emissão</button>
             </div>
+            <!-- painel de destaque de Emitidos (os quatro cartões viraram ele, 07/10/2026) -->
+            <div id="emHeroiSlot"></div>
             <div class="pilha em-so-lista" style="gap:18px" id="emParteLista">
-            <div class="grade g4" id="emResumo"></div>
+            <div class="grade g4" id="emResumo" hidden></div>
             <!-- Entre os cards e a lista: o aviso pertence ao conteúdo que vem
                  abaixo dele, e é ali que se lê antes de percorrer as emissões. -->
             <div id="emAvisoPax"></div>
@@ -9089,7 +9118,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="olho destaque" style="margin:0;flex:0 0 auto">Ano-calendário</div>
               <div class="seg" id="segAnoIR"></div>
             </div>
-            <div class="grade g4" id="irResumo"></div>
+            <div id="irHeroiSlot"></div>
+            <div class="grade g4" id="irResumo" hidden></div>
             <div id="irAlerta"></div>
             <div class="pilha" style="gap:16px" id="irContas"></div>
             <div class="cartao" style="padding:0">
@@ -9377,7 +9407,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 16:00';
+const BUILD = '2026-10-07 19:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12713,7 +12743,7 @@ const AREAS = [
     grupos:[{n:'Cadastro', vistas:['clientes', 'emissoes']}, {n:'Cotações', vistas:['cotacoes']}, {n:'Resultados', vistas:['emitidos', 'vendas']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
 ];
-const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-saldo', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
+const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-caixa', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
   emissoes:'#i-usuarios', emitidos:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-vendas', imposto:'#i-imposto', ajustes:'#i-ajustes'};
 /* nome curto para a barra de módulos do celular, onde cabe pouco */
 const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'CPF', emitidos:'Emitidos', cotacoes:'Orçamento',
@@ -13990,6 +14020,63 @@ function renderHeroiVendas(alvo){
   if (c) c.innerHTML = graficoMesesVendas() || '<p class="heroi-sub" style="padding:24px 0">Sem vendas no período para desenhar.</p>';
 }
 const PRINCIPAL_DA_AREA = {milhas:'saldo', viagens:'rota', negocio:'vendas'};
+/* Imposto de Renda: a peça mostra o ano escolhido na tela (ganho, vendas,
+   isento e imposto) e as vendas de cada mês contra o teto de isenção. */
+/* Emitidos: as emissões para clientes no recorte de tipo escolhido (Tudo, Voos,
+   Hospedagem, Carros): quantas, quantas milhas, o que ainda vai acontecer, o
+   próximo voo e o que falta receber. À direita, as milhas emitidas a cada mês. */
+function renderHeroiEmitidos(){
+  const alvo = $('#heroiArea'); if (!alvo) return;
+  const tipo = typeof filtroReservaTipo === 'undefined' ? 'todas' : filtroReservaTipo;
+  const rotTipo = {todas:'', voo:' (voos)', hospedagem:' (hospedagem)', carro:' (carros)'}[tipo] || '';
+  const lista = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && (tipo === 'todas' || r.tipo === tipo));
+  if (!lista.length){ montarHeroi(alvo, {rot:`Emissões para clientes${rotTipo}`, vazio:'Nenhuma emissão para cliente registrada ainda. Toque em Registrar Emissão: ela aparece aqui com milhas, próximo voo e o que falta receber.'}); return; }
+  const hoje = hojeISO();
+  const milhas = soma(lista.map(r => Number(r.milhas) || 0));
+  const abertas = lista.filter(r => r.status !== 'realizada' && (r.dataVolta || r.data || '') >= hoje);
+  const futuras = lista.filter(r => r.status !== 'realizada' && r.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
+  const prox = futuras[0], dias = prox ? diasAte(prox.data) : null;
+  const oQue = prox ? ({hospedagem:'próximo check-in', carro:'próxima retirada'}[prox.tipo] || 'próximo voo') : 'próximo voo';
+  const aReceber = soma(lista.filter(r => !vendaRecebida(r)).map(r => Number(r.cobrado) || 0));
+  const porProg = {}; lista.forEach(r => { if (r.prog && Number(r.milhas) > 0) porProg[r.prog] = (porProg[r.prog] || 0) + Number(r.milhas); });
+  const porMes = {}; lista.forEach(r => { const k = String(r.criada || r.data || '').slice(0, 7); if (k && Number(r.milhas) > 0) porMes[k] = (porMes[k] || 0) + Number(r.milhas); });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot:`Emissões para clientes${rotTipo}`,
+    valor:`${nBR(lista.length)}<small> ${lista.length === 1 ? 'emissão' : 'emissões'}</small>`,
+    linha:`<span>Milhas usadas <b>${nBR(milhas)}</b></span>${prox ? `<span class="heroi-chip sobe">${oQue} ${dias === 0 ? 'hoje' : prazoTexto(dias)}</span>` : '<span class="heroi-chip">nada marcado à frente</span>'}`,
+    numeros:[[nBR(abertas.length), abertas.length === 1 ? 'em aberto, ainda vai acontecer' : 'em aberto, ainda vão acontecer'],
+      [prox ? dataBR(prox.data) : 'n/d', prox ? `${oQue} · ${prox.cliente || 'cliente'}` : oQue],
+      [brl(aReceber), aReceber > 0 ? 'a receber' : 'tudo recebido']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas por programa',
+    dirRot:'Milhas emitidas, mês a mês', dirSub:'Pela data da emissão, só as de cliente.',
+    ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com emissão.'
+  });
+}
+let _irResumo = null;
+function renderHeroiIR(){
+  const alvo = $('#heroiArea'); if (!alvo || !_irResumo) return;
+  const {ano, ap, tVenda, tGanho, tImposto, tIsento, mesesTrib} = _irResumo;
+  if (!ap.length){ montarHeroi(alvo, {rot:`Imposto de renda em ${ano}`, vazio:`Nenhuma venda registrada em ${ano}. As vendas para clientes entram aqui sozinhas, mês a mês, com o teto de isenção de ${brl(IR_TETO_MENSAL)}.`}); return; }
+  const porMes = Array.from({length:12}, (_, i) => soma(ap.map(x => (x.meses.find(m => m.mes === i + 1) || {}).venda || 0)));
+  const mesAtual = String(new Date().getFullYear()) === String(ano) ? new Date().getMonth() + 1 : 12;
+  const serie = porMes.slice(0, mesAtual).map((v, i) => ({r:MESES[i] + '/' + String(ano).slice(2), v}));
+  const maior = Math.max(...porMes), mesMaior = porMes.indexOf(maior);
+  montarHeroi(alvo, {
+    rot:`Ganho apurado em ${ano}`,
+    valor:brl(tGanho),
+    linha:`<span>Vendas no ano <b>${brl(tVenda)}</b></span>${tImposto > 0
+      ? `<span class="heroi-chip desce">imposto devido ${brl(tImposto)}</span>` : `<span class="heroi-chip sobe">nada a pagar</span>`}`,
+    numeros:[[nBR(ap.length), ap.length === 1 ? 'conta com vendas' : 'contas com vendas'], [brl(tIsento), 'ganho isento'],
+      [brl(tImposto), tImposto > 0 ? `${mesesTrib.length} ${mesesTrib.length === 1 ? 'mês acima' : 'meses acima'} do teto` : 'imposto devido']],
+    fatias:fatiasHeroi(ap.map(x => ({n:x.conta.nome, v:Math.max(0, x.ganho)})), x => x.n), fmtFatia:v => brl(v), compRot:'Ganho por titular',
+    dirRot:'Vendas por mês', dirSub:`O teto de isenção é de ${brl(IR_TETO_MENSAL)} por mês, por titular.`,
+    ult: maior > 0 ? {b:brl(maior), sp:`maior mês: ${MESES[mesMaior]}`} : null,
+    serie, fmtSerie:v => 'R$ ' + milCurto(v), semSerie:'A curva aparece a partir do segundo mês do ano.'
+  });
+}
 function renderHeroiDaVista(v){
   const el = $('#heroiArea'); if (!el) return;
   const k = areaDe(v).k;
@@ -13997,12 +14084,21 @@ function renderHeroiDaVista(v){
   el.hidden = false;
   el.dataset.area = k;
   const slot = $('#vdHeroiSlot'), palco = document.querySelector('.palco');
+  /* Vendas e Imposto de Renda: a peça fica abaixo do filtro da própria tela,
+     porque é ele que decide o que ela mostra */
+  const slotIR = $('#irHeroiSlot'), slotEm = $('#emHeroiSlot');
   if (v === 'vendas' && slot && el.parentElement !== slot) slot.appendChild(el);
-  if (v !== 'vendas' && palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
+  else if (v === 'imposto' && slotIR && el.parentElement !== slotIR) slotIR.appendChild(el);
+  else if (v === 'emitidos' && slotEm && el.parentElement !== slotEm) slotEm.appendChild(el);
+  else if (!['vendas', 'imposto', 'emitidos'].includes(v) && palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
   if (k === 'milhas') renderHeroiMilhas();
   if (k === 'viagens') renderHeroiViagens();
-  if (k === 'negocio') renderHeroiNegocio();
+  if (k === 'negocio'){
+    if (v === 'emitidos'){ el.classList.remove('compacto'); renderHeroiEmitidos(); }
+    else if (v === 'imposto'){ el.classList.remove('compacto'); if (!_irResumo && typeof renderIR === 'function') renderIR(); renderHeroiIR(); }
+    else renderHeroiNegocio();
+  }
 }
 
 function renderMesa(){
@@ -31938,6 +32034,9 @@ function custoVenda(r){
 /* ── painel do imposto de renda ─────────────────────────────────────────────── */
 let anoIR = null;
 
+/* titulares abertos na Posição em 31/12, por programa (começa tudo fechado) */
+const irAbertos = new Set();
+function alternarIrProg(p){ irAbertos.has(p) ? irAbertos.delete(p) : irAbertos.add(p); if (typeof esconderDica === 'function') esconderDica(); renderIR(); }
 function renderIR(){
   if (!$('#irContas')) return;
   const hoje = new Date();
@@ -31954,6 +32053,10 @@ function renderIR(){
   const tImposto = soma(ap.map(x => x.imposto)), tIsento = soma(ap.map(x => x.isentos));
   const mesesTrib = ap.flatMap(x => x.meses.filter(m => m.base > 0).map(m => ({...m, conta:x.conta})));
 
+  /* Os quatro números do ano passaram para a peça de destaque, no topo da tela
+     (07/10/2026). Os cartões continuam montados, escondidos, para quem os lê. */
+  _irResumo = {ano:anoIR, ap, tVenda, tGanho, tImposto, tIsento, mesesTrib};
+  if (vistaAtual === 'imposto') renderHeroiIR();
   $('#irResumo').innerHTML = `
     ${metrica('Vendas no ano', brl(tVenda), `${anoIR} · ${ap.length} ${ap.length === 1 ? 'conta' : 'contas'}`, '')}
     ${metrica('Ganho apurado', brl(tGanho), 'Venda menos custo das milhas', tGanho > 0 ? 'jade' : '')}
@@ -32011,7 +32114,7 @@ function renderIR(){
     <colgroup><col style="width:34%"><col><col><col><col style="width:44px"></colgroup>
     <thead><tr><th>Programa e titular</th><th class="n">Pontos</th><th class="n">Custo</th><th class="n">Preço do milheiro</th><th></th></tr></thead>
     <tbody>${pos.map(g => `
-      <tr class="ir-prog">
+      <tr class="ir-prog${irAbertos.has(g.p) ? ' aberto' : ''}">
         <td><div class="linha" style="gap:8px">${discoProg(g.p, 'p')}<b>${esc(prog(g.p).n)}</b>
           <span class="etq">${g.contas.length} ${g.contas.length === 1 ? 'conta' : 'contas'}</span></div></td>
         <td class="n">${nBR(g.qtd)}</td>
@@ -32019,9 +32122,10 @@ function renderIR(){
         <td class="n">${g.milheiro != null ? brl2(g.milheiro)
           : g.misto ? `<span class="fraco" data-dica="Milheiro médio só faz sentido por titular: cada CPF pagou o seu">por titular</span>`
           : '<span class="fraco">n/d</span>'}</td>
-        <td></td>
+        <td class="c"><button type="button" class="bt p fantasma icone ir-abre" onclick="alternarIrProg('${g.p}')" aria-expanded="${irAbertos.has(g.p)}"
+          data-dica="${irAbertos.has(g.p) ? 'Fechar' : 'Ver'} os titulares de ${esc(prog(g.p).n)}"><svg><use href="#i-baixo"/></svg></button></td>
       </tr>
-      ${g.contas.map(c => `<tr class="ir-conta">
+      ${g.contas.map(c => `<tr class="ir-conta"${irAbertos.has(g.p) ? '' : ' hidden'}>
         <td><span class="ir-ramo"></span>${esc(c.nome)}${
           c.qtdLancada > 0 && Math.abs(c.qtdLancada - c.qtd) > 1
             ? ` <span class="ficha" style="width:15px;height:15px;font-size:10px" data-dica="${esc(
@@ -33503,17 +33607,20 @@ function ajustarLarguraTrilho(){
 function aplicarColuna(){
   const fechada = !!(DB.cfg && DB.cfg.colunaFechada);
   document.documentElement.classList.toggle('coluna-fechada', fechada);
-  const b = document.getElementById('btColuna');
+  const b = document.getElementById('btColunaPe');
   if (b){
-    b.dataset.dica = fechada ? 'Abrir o menu' : 'Recolher o menu';
-    b.setAttribute('aria-label', b.dataset.dica); b.setAttribute('aria-expanded', String(!fechada));
+    b.setAttribute('aria-label', fechada ? 'Esticar o menu' : 'Recolher o menu'); b.setAttribute('aria-expanded', String(!fechada));
+    if (fechada) b.dataset.dica = 'Esticar o menu'; else delete b.dataset.dica;
     b.querySelector('use').setAttribute('href', fechada ? '#i-painel-abrir' : '#i-painel-fechar');
+    b.querySelector('span').textContent = fechada ? 'Esticar menu' : 'Recolher menu';
   }
+  montarColunaMenu();
   if (!fechada) setTimeout(ajustarLarguraMenu, 0);
 }
 function alternarColuna(){ DB.cfg.colunaFechada = !DB.cfg.colunaFechada; salvar(); aplicarColuna(); if (typeof esconderDica === 'function') esconderDica(); }
 function ajustarLarguraMenu(){
   ajustarLarguraTrilho();
+  if (DB.cfg && DB.cfg.colunaFechada) return;   /* recolhida, a largura é fixa: só ícones */
   const col = document.querySelector('.coluna-menu');
   if (!col || getComputedStyle(col).display === 'none') return;
   /* A medição é feita numa cópia invisível, fora da tela. A coluna de verdade
@@ -33558,9 +33665,30 @@ function montarColunaMenu(raiz, vistaMedida){
   if (!nav) return;
   const v = vistaMedida || vistaAtual;
   const area = areaDe(v);
-  if (tit) tit.innerHTML = `<span class="cm-tit-icone"><svg><use href="${area.ic}"/></svg></span>
+  if (tit) tit.innerHTML = `<span class="cm-tit-icone"${!raiz && DB.cfg.colunaFechada ? ` data-dica="${esc(area.n)}" data-dica-lado="direita"` : ''}><svg><use href="${area.ic}"/></svg></span>
     <span class="cm-tit-txt"><span class="cm-tit-nome">${esc(area.n)}</span><span class="cm-tit-sub">${esc(area.sub)}</span></span>`;
   nav.innerHTML = '';
+  if (!raiz && DB.cfg && DB.cfg.colunaFechada){
+    /* Recolhida: um ícone por módulo da área, na ordem do menu, com o nome no
+       balão ao passar o mouse. As seções de cada tela ficam no alto da página. */
+    const grupos = area.grupos || [{n:'', vistas:area.vistas}];
+    grupos.forEach((g, gi) => {
+      if (gi) nav.insertAdjacentHTML('beforeend', '<div class="cm-ico-div" aria-hidden="true"></div>');
+      g.vistas.forEach(vv => {
+        if (!document.getElementById('v-' + vv)) return;
+        const nomeMod = (TITULOS[vv] || [vv])[0];
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cm-ico' + (vv === v ? ' on' : '');
+        b.dataset.vista = vv; b.dataset.dica = (g.n ? g.n + ' · ' : '') + nomeMod; b.dataset.dicaLado = 'direita';
+        b.setAttribute('aria-label', nomeMod);
+        b.innerHTML = `<svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg>`;
+        b.onclick = () => irPara(vv);
+        nav.appendChild(b);
+      });
+    });
+    return;
+  }
   const varios = area.vistas.length > 1;
   /* área com grupos (Negócio): um título por grupo e, embaixo, os módulos dele */
   if (area.grupos){
@@ -36738,6 +36866,7 @@ function ligarEventos(){
     filtroReservaTipo = b.dataset.t;
     $$('#segReservas button').forEach(x => x.classList.toggle('on', x === b));
     renderBalcao();
+    if (vistaAtual === 'emitidos') renderHeroiEmitidos();
   });
   $$('#segCampGrupo button').forEach(b => b.onclick = () => mostrarGrupoCamp(b.dataset.g));
   $$('#segEmQuem button').forEach(b => b.onclick = () => {
