@@ -7443,7 +7443,7 @@ table.tb-cartao.em-cartao td::before, table.tb-cartao.em-cartao tfoot td::before
 .vd-filtros{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .vd-filtros .vd-mes{ margin:0; min-width:calc(150px * var(--esc)); }
 #vdHeroiSlot > .heroi{ margin-bottom:18px; }
-#irHeroiSlot > .heroi, #emHeroiSlot > .heroi{ margin-bottom:0; }
+#irHeroiSlot > .heroi, #emHeroiSlot > .heroi, #clHeroiSlot > .heroi, #ctrHeroiSlot > .heroi, #ctHeroiSlot > .heroi{ margin-bottom:0; }
 .heroi .rm-col.apagado{ opacity:.35; }
 .heroi .rm-val{ visibility:hidden; }
 .heroi .rm-col.top .rm-val, .heroi .rm-col.melhor .rm-val{ visibility:visible; }
@@ -8670,7 +8670,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                 <button data-s="prevista">Previstas</button>
               </div>
             </div>
-            <div class="grade g4" id="ctrResumo"></div>
+            <div id="ctrHeroiSlot"></div>
+            <div class="grade g4" id="ctrResumo" hidden></div>
             <!-- Conta com saldo importado ainda não tem linha na tabela: sem
                  emissão registrada, ela não existe no controle. É justamente o
                  caso de quem precisa informar a cota já consumida, e por isso o
@@ -8841,7 +8842,10 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="linha" style="flex-wrap:wrap;gap:9px">
               <div class="olho destaque" style="margin:0;flex:0 0 auto">Clientes</div>
             </div>
-            <div class="grade g4" id="clResumo"></div>
+            <!-- era o identificador clResumo, o mesmo das campanhas de clube: os dois escreviam no
+                 primeiro que achavam (o das campanhas). Agora cada um tem o seu. -->
+            <div id="clHeroiSlot"></div>
+            <div class="grade g4" id="pxResumo" hidden></div>
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="esticar"><div class="olho anil" style="margin-bottom:0">Cadastro de passageiros</div></div>
               <div class="campo" style="max-width:260px;margin:0">
@@ -8894,7 +8898,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="linha" style="flex-wrap:wrap;gap:9px">
               <div class="olho destaque" style="margin:0;flex:0 0 auto">Cotações</div>
             </div>
-            <div class="grade g4" id="ctResumo"></div>
+            <div id="ctHeroiSlot"></div>
+            <div class="grade g4" id="ctResumo" hidden></div>
             <!-- No topo do painel: aviso que precisa ser rolado até o fim para ser
                  visto não avisa ninguém. -->
             <div id="ctAvisoPax"></div>
@@ -8941,7 +8946,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="linha" style="margin-top:14px;gap:9px">
                 <button class="bt primario" id="btCcMontar"><svg><use href="#i-copiar"/></svg>Copiar a instrução</button>
               </div>
-              <div id="ccPassos" style="margin-top:14px"></div>
+              <div id="bcPassos" style="margin-top:14px"></div>
               <div class="campo" style="margin-top:12px"><label>Cole aqui a resposta do Claude</label>
                 <textarea id="ccResposta" rows="4" spellcheck="false" style="font-family:var(--f-m);font-size:calc(12.5px * var(--esc));line-height:1.6" placeholder="=== RESULTADO TORRE === ... === FIM ==="></textarea></div>
               <div class="linha" style="gap:9px"><button class="bt fantasma" id="btCcLer"><svg><use href="#i-ok"/></svg>Ler a resposta</button></div>
@@ -9407,7 +9412,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 19:00';
+const BUILD = '2026-10-07 20:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14055,6 +14060,81 @@ function renderHeroiEmitidos(){
     serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com emissão.'
   });
 }
+/* ── Painéis de Clientes, Controle de CPF e Orçamento (07/10/2026) ─────────── */
+function renderHeroiClientes(){
+  const alvo = $('#heroiArea'); if (!alvo) return;
+  const todas = DB.pessoas || [];
+  if (!todas.length){ montarHeroi(alvo, {rot:'Passageiros cadastrados', vazio:'Nenhum passageiro cadastrado ainda. Toque em Novo Passageiro: o CPF dele passa a contar na cota de cada programa e ele aparece para escolher na emissão.'}); return; }
+  const comCpf = todas.filter(p => soDigitos(p.cpf).length === 11).length;
+  const viajaram = new Set((DB.reservas || []).flatMap(r => r.pax || [])).size;
+  const menores = todas.filter(p => faixaPax(p) !== 'adulto').length;
+  const docs = todas.filter(p => [p.docVal, p.passVal].filter(Boolean).some(v => diasAte(v) <= 180)).length;
+  const usos = {}; (DB.reservas || []).forEach(r => (r.pax || []).forEach(id => { usos[id] = (usos[id] || 0) + 1; }));
+  const nome = id => (todas.find(p => p.id === id) || {}).nome || 'sem nome';
+  const porMes = {}; (DB.reservas || []).forEach(r => { const k = String(r.criada || r.data || '').slice(0, 7); if (k && (r.pax || []).length) porMes[k] = (porMes[k] || 0) + r.pax.length; });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot:'Passageiros cadastrados',
+    valor:`${nBR(todas.length)}<small> ${todas.length === 1 ? 'passageiro' : 'passageiros'}</small>`,
+    linha:`<span>Com CPF <b>${nBR(comCpf)}</b></span>${comCpf < todas.length ? `<span class="heroi-chip desce">${todas.length - comCpf} sem CPF</span>` : '<span class="heroi-chip sobe">todos identificados</span>'}`,
+    numeros:[[nBR(viajaram), 'já viajaram'], [nBR(menores), menores === 1 ? 'criança ou bebê' : 'crianças e bebês'], [nBR(docs), docs === 1 ? 'documento vencido ou vencendo em 6 meses' : 'documentos vencidos ou vencendo em 6 meses']],
+    fatias:fatiasHeroi(Object.keys(usos).map(id => ({id, v:usos[id]})), x => nome(x.id).length > 22 ? nome(x.id).slice(0, 21) + '…' : nome(x.id)), fmtFatia:v => `${v} ${v === 1 ? 'emissão' : 'emissões'}`, compRot:'Emissões por passageiro',
+    dirRot:'Passageiros em emissões, mês a mês', dirSub:'Quantos lugares foram emitidos em cada mês.',
+    ult: serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => nBR(Math.round(v)), semSerie:'A curva aparece a partir do segundo mês com passageiro emitido.'
+  });
+}
+function renderHeroiCPF(){
+  const alvo = $('#heroiArea'); if (!alvo) return;
+  const l = matrizCota();
+  if (!l.length){ montarHeroi(alvo, {rot:'Cota de CPF', vazio:'Nenhuma conta com programa que limita CPF ainda. Quando houver saldo ou emissão num programa com teto (Smiles, Azul, LATAM Pass...), a cota de cada conta aparece aqui.'}); return; }
+  const comTeto = l.filter(x => x.limite);
+  const livres = soma(comTeto.map(x => x.livres || 0)), usadas = soma(comTeto.map(x => x.usados)), teto = soma(comTeto.map(x => x.limite));
+  const totEm = soma(l.map(x => x.emissoes)), totMilhas = soma(l.map(x => x.milhas));
+  const semVaga = comTeto.filter(x => x.livres === 0).length, apertadas = comTeto.filter(x => x.livres > 0 && x.livres <= 3).length;
+  const porProg = {}; comTeto.forEach(x => { porProg[x.prog] = (porProg[x.prog] || 0) + x.usados; });
+  const progsTeto = new Set(comTeto.map(x => x.prog));
+  const porMes = {}; (DB.reservas || []).forEach(r => { if (r.status === 'cancelada' || !progsTeto.has(r.prog)) return; const k = String(r.criada || r.data || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + Math.max(1, (r.pax || []).length); });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot:'Cota de CPF',
+    valor:`${nBR(livres)}<small> ${livres === 1 ? 'vaga livre' : 'vagas livres'}</small>`,
+    linha:`<span>Vagas usadas <b>${nBR(usadas)}</b> de <b>${nBR(teto)}</b></span>${semVaga ? `<span class="heroi-chip desce">${semVaga} sem vaga</span>` : apertadas ? `<span class="heroi-chip">${apertadas} ${apertadas === 1 ? 'apertada' : 'apertadas'}</span>` : '<span class="heroi-chip sobe">nenhuma cota apertada</span>'}`,
+    numeros:[[nBR(totEm), `emissões em ${l.length} ${l.length === 1 ? 'par' : 'pares'} conta e programa`], [nBR(totMilhas), totEm ? `milhas, ${nBR(Math.round(totMilhas / totEm))} por emissão` : 'milhas usadas'],
+      [nBR(apertadas), apertadas === 1 ? 'cota com três vagas ou menos' : 'cotas com três vagas ou menos']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => `${v} ${v === 1 ? 'vaga usada' : 'vagas usadas'}`, compRot:'Vagas usadas por programa',
+    dirRot:'Lugares emitidos, mês a mês', dirSub:'Nos programas que limitam CPF: é o que consome a cota.',
+    ult: serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => nBR(Math.round(v)), semSerie:'A curva aparece a partir do segundo mês com emissão.'
+  });
+}
+function renderHeroiOrcamento(){
+  const alvo = $('#heroiArea'); if (!alvo) return;
+  const l = DB.cotacoes || [];
+  const vem = (DB.vemCotacoes || []).length;
+  if (!l.length && !vem){ montarHeroi(alvo, {rot:'Cotações montadas', vazio:'Nenhuma cotação montada ainda. Leia um print ou busque pelo Claude no Chrome, monte a cotação e gere a página VEM para o cliente.'}); return; }
+  const clientes = new Set(l.map(c => semAcento(c.cliente)).filter(Boolean));
+  const total = soma(l.map(c => soma((c.opcoes || []).map(o => Number(o.preco) || 0))));
+  const opcoes = soma(l.map(c => (c.opcoes || []).length));
+  const emitidos = new Set((DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada').map(r => semAcento(r.cliente)).filter(Boolean));
+  const conv = [...clientes].filter(c => emitidos.has(c)).length;
+  const porCli = {}; l.forEach(c => { const n = c.cliente || 'sem nome'; porCli[n] = (porCli[n] || 0) + soma((c.opcoes || []).map(o => Number(o.preco) || 0)); });
+  const porMes = {}; l.forEach(c => { const d = c.quando ? new Date(c.quando) : null; if (!d || isNaN(d)) return; const k = d.toISOString().slice(0, 7); porMes[k] = (porMes[k] || 0) + 1; });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot:'Cotações montadas',
+    valor:`${nBR(l.length)}<small> ${l.length === 1 ? 'cotação' : 'cotações'}</small>`,
+    linha:`<span>Somam <b>${brl(total)}</b></span>${clientes.size ? `<span class="heroi-chip ${conv ? 'sobe' : ''}">${pct(conv / clientes.size * 100, 0)} viraram emissão</span>` : ''}`,
+    numeros:[[nBR(clientes.size), clientes.size === 1 ? 'cliente cotado' : 'clientes cotados'], [nBR(opcoes), opcoes === 1 ? 'opção montada' : 'opções montadas'], [nBR(vem), vem === 1 ? 'página VEM gerada' : 'páginas VEM geradas']],
+    fatias:fatiasHeroi(Object.keys(porCli).map(c => ({c, v:porCli[c]})), x => x.c.length > 22 ? x.c.slice(0, 21) + '…' : x.c), fmtFatia:v => brl(v), compRot:'Valor cotado por cliente',
+    dirRot:'Cotações por mês', dirSub:'Pela data em que foram montadas.',
+    ult: serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => nBR(Math.round(v)), semSerie:'A curva aparece a partir do segundo mês com cotação.'
+  });
+}
 let _irResumo = null;
 function renderHeroiIR(){
   const alvo = $('#heroiArea'); if (!alvo || !_irResumo) return;
@@ -14086,16 +14166,19 @@ function renderHeroiDaVista(v){
   const slot = $('#vdHeroiSlot'), palco = document.querySelector('.palco');
   /* Vendas e Imposto de Renda: a peça fica abaixo do filtro da própria tela,
      porque é ele que decide o que ela mostra */
-  const slotIR = $('#irHeroiSlot'), slotEm = $('#emHeroiSlot');
-  if (v === 'vendas' && slot && el.parentElement !== slot) slot.appendChild(el);
-  else if (v === 'imposto' && slotIR && el.parentElement !== slotIR) slotIR.appendChild(el);
-  else if (v === 'emitidos' && slotEm && el.parentElement !== slotEm) slotEm.appendChild(el);
-  else if (!['vendas', 'imposto', 'emitidos'].includes(v) && palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
+  /* cada módulo de Negócio tem o seu lugar para o painel, abaixo do cabeçalho */
+  const SLOTS = {vendas:'vdHeroiSlot', imposto:'irHeroiSlot', emitidos:'emHeroiSlot', clientes:'clHeroiSlot', emissoes:'ctrHeroiSlot', cotacoes:'ctHeroiSlot'};
+  const meu = SLOTS[v] ? document.getElementById(SLOTS[v]) : null;
+  if (meu){ if (el.parentElement !== meu) meu.appendChild(el); }
+  else if (palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
   if (k === 'milhas') renderHeroiMilhas();
   if (k === 'viagens') renderHeroiViagens();
   if (k === 'negocio'){
-    if (v === 'emitidos'){ el.classList.remove('compacto'); renderHeroiEmitidos(); }
+    if (v === 'clientes'){ el.classList.remove('compacto'); renderHeroiClientes(); }
+    else if (v === 'emissoes'){ el.classList.remove('compacto'); renderHeroiCPF(); }
+    else if (v === 'cotacoes'){ el.classList.remove('compacto'); renderHeroiOrcamento(); }
+    else if (v === 'emitidos'){ el.classList.remove('compacto'); renderHeroiEmitidos(); }
     else if (v === 'imposto'){ el.classList.remove('compacto'); if (!_irResumo && typeof renderIR === 'function') renderIR(); renderHeroiIR(); }
     else renderHeroiNegocio();
   }
@@ -29794,6 +29877,7 @@ function renderControleContas(){
   const totMilhas = soma(l.map(x => x.milhas));
   const semVaga = l.filter(x => x.livres === 0).length;
   const apertados = l.filter(x => x.livres !== null && x.limite && x.livres > 0 && x.livres <= 3).length;
+  if (vistaAtual === 'emissoes' && typeof renderHeroiCPF === 'function') renderHeroiCPF();
   if ($('#ctrResumo') && ctrVista === 'contas') $('#ctrResumo').innerHTML = `
     ${metrica('Emissões', String(totEm), `${l.length} par${l.length !== 1 ? 'es' : ''} conta e programa`, '')}
     ${metrica('Milhas usadas', nBR(totMilhas), totEm ? `${nBR(Math.round(totMilhas / totEm))} por emissão` : 'Sem emissões', '')}
@@ -31323,7 +31407,8 @@ function renderClientes(){
 
   const comCpf = todas.filter(p => soDigitos(p.cpf).length === 11).length;
   const emUso = new Set((DB.reservas || []).flatMap(r => r.pax || [])).size;
-  if ($('#clResumo')) $('#clResumo').innerHTML = `
+  if (vistaAtual === 'clientes' && typeof renderHeroiClientes === 'function') renderHeroiClientes();
+  if ($('#pxResumo')) $('#pxResumo').innerHTML = `
     ${metrica('Passageiros', String(todas.length),
       `<b style="color:var(--ouro)">${filtrados.length}</b> no recorte atual`, '')}
     ${metrica('Com CPF', String(comCpf), comCpf < todas.length ? `${todas.length - comCpf} sem CPF cadastrado` : 'Todos identificados', comCpf === todas.length && todas.length ? 'jade' : 'ouro')}
@@ -32036,7 +32121,8 @@ let anoIR = null;
 
 /* titulares abertos na Posição em 31/12, por programa (começa tudo fechado) */
 const irAbertos = new Set();
-function alternarIrProg(p){ irAbertos.has(p) ? irAbertos.delete(p) : irAbertos.add(p); if (typeof esconderDica === 'function') esconderDica(); renderIR(); }
+/* um programa aberto por vez: abrir um fecha o que estava aberto */
+function alternarIrProg(p){ const abrir = !irAbertos.has(p); irAbertos.clear(); if (abrir) irAbertos.add(p); if (typeof esconderDica === 'function') esconderDica(); renderIR(); }
 function renderIR(){
   if (!$('#irContas')) return;
   const hoje = new Date();
@@ -32378,6 +32464,7 @@ function renderCotacoesSalvas(){
 
      A conversão é medida pelo nome do cliente, que é o que liga uma cotação a uma
      emissão hoje — não é vínculo formal, mas é o que existe. */
+  if (vistaAtual === 'cotacoes' && typeof renderHeroiOrcamento === 'function') renderHeroiOrcamento();
   if ($('#ctResumo')){
     const l = DB.cotacoes || [];
     const clientes = new Set(l.map(c => semAcento(c.cliente)).filter(Boolean));
@@ -37720,7 +37807,7 @@ async function copiarInstrucaoCC(){
   const txt = instrucaoCC(p);
   let ok = false;
   try{ await navigator.clipboard.writeText(txt); ok = true; }catch(e){}
-  $('#ccPassos').innerHTML = `<div class="nota jade"><svg><use href="#i-ok"/></svg><div class="pilha compacta">
+  $('#bcPassos').innerHTML = `<div class="nota jade"><svg><use href="#i-ok"/></svg><div class="pilha compacta">
     <div><b>${ok ? 'Instrução copiada.' : 'Copie a instrução abaixo.'}</b> Agora:</div>
     <div>1. No Chrome, faça login nos sites dos programas escolhidos (a extensão não digita senha).</div>
     <div>2. Abra a extensão do Claude e cole a instrução.</div>
