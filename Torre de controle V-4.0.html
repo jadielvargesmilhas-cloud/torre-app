@@ -7848,6 +7848,30 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 .sl-grupo[data-tipo="milhas"] h4::before{ background:var(--anil-claro); }
 .sl-grupo[data-tipo="pontos"] h4::before{ background:var(--ouro); }
 .sl-grupo[data-tipo="hotel"] h4::before{ background:var(--jade); }
+
+/* ══ CONTAS: UM CARTÃO POR TITULAR (09/10/2026) ═══════════════════════════════ */
+.tit-grade{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap:16px; padding:18px; }
+.tit-cartao{ background:var(--sup-0); border:1px solid var(--fio); border-radius:18px; display:flex; flex-direction:column; overflow:hidden; }
+.tit-cab{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; gap:12px; padding:16px 16px 14px; border-bottom:1px solid var(--fio-suave); }
+.tit-av{ width:42px; height:42px; border-radius:50%; display:grid; place-items:center; font-family:var(--f-b); font-weight:700; font-size:calc(14px * var(--esc));
+  color:var(--dourado); background:linear-gradient(150deg, var(--noite-1), var(--noite-2)); border:2px solid color-mix(in oklab, var(--dourado) 50%, transparent); }
+.tit-quem{ min-width:0; } .tit-quem b{ display:block; font-size:calc(15px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tit-etqs{ display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
+.tit-vale{ text-align:right; } .tit-vale small{ display:block; color:var(--grafite-dim); font-size:calc(11.5px * var(--esc)); }
+.tit-vale b{ font-family:var(--f-m); color:var(--ouro); font-size:calc(15px * var(--esc)); white-space:nowrap; }
+.tit-grupo{ padding:10px 16px 4px; }
+.tit-grupo-rot{ font-size:calc(12px * var(--esc)); font-weight:700; color:var(--grafite); margin-bottom:4px; }
+.tit-linha{ display:grid; grid-template-columns:auto minmax(0, 1fr) minmax(50px, 90px) auto; align-items:center; gap:10px; width:100%; padding:7px 4px; border:0; border-radius:10px;
+  background:transparent; font:inherit; color:inherit; cursor:pointer; text-align:left; }
+.tit-linha:hover{ background:var(--sup-1); }
+.tit-prog{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:calc(13.5px * var(--esc)); }
+.tit-clube{ font-size:calc(11px * var(--esc)); font-weight:700; color:var(--jade); margin-left:3px; }
+.tit-barra{ height:5px; border-radius:99px; background:var(--sup-1); overflow:hidden; }
+.tit-barra > i{ display:block; height:100%; border-radius:99px; }
+.tit-qtd{ font-family:var(--f-m); font-weight:600; text-align:right; min-width:76px; }
+.tit-vazio{ padding:14px 16px; margin:0; }
+.tit-pe{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px 14px; font-size:calc(12px * var(--esc)); }
+@media (max-width:560px){ .tit-linha{ grid-template-columns:auto minmax(0, 1fr) 40px auto; gap:8px; } .tit-qtd{ min-width:0; } .tit-grade{ padding:12px; } .tit-cab{ grid-template-columns:auto minmax(0, 1fr) auto; } .tit-cab .acoes-cel{ grid-column:1 / -1; justify-self:end; } }
 </style>
 </head>
 <body>
@@ -8296,8 +8320,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <!-- Carteira primeiro: ela responde a pergunta que se faz ao abrir o
                Tanque — quanto há e a que custo. O grupo de contas é de quem está,
                e é a segunda pergunta, não a primeira. -->
-          <button class="aba" data-aba="sl-carteira">Saldos</button>
           <button class="aba on" data-aba="sl-contas">Contas <span class="cont" id="contContas">0</span></button>
+          <button class="aba" data-aba="sl-carteira">Saldos</button>
           <!-- Contagem regressiva por último: as três primeiras dizem o que existe,
                e ela diz o que está para acabar. Ler o estoque antes do prazo é a
                ordem em que a pergunta se faz. -->
@@ -8308,7 +8332,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <div class="pilha" style="gap:16px">
             <div class="linha">
               <div class="esticar">
-                <div class="olho anil" style="margin-bottom:4px">Contas e titulares</div>
+                
                 <p class="fraco" style="font-size:calc(13.5px * var(--esc));margin:0">Cada CPF é uma conta. Limites de bonificação por campanha são por CPF, é por isso que o grupo importa.</p>
               </div>
               <button class="bt primario" id="btNovaConta"><svg><use href="#i-mais"/></svg>Nova Conta</button>
@@ -8316,8 +8340,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="grade g4" id="slResumoContas"></div>
             <div class="cartao" style="padding:0;overflow:hidden">
               <div style="padding:17px 20px 12px;border-bottom:1px solid var(--fio-suave)">
-                <div class="olho anil" style="margin:0">Livro de posições do grupo</div>
-                <p class="fraco" style="font-size:calc(13px * var(--esc));margin:6px 0 0">Uma linha por titular, uma coluna por programa. A barra sob cada número é a fatia daquele titular naquele programa. Não há coluna de total em quantidade: milha de programas diferentes não se soma, e ponto não é milha; o único total legítimo é o de dinheiro. Clique em qualquer posição para ajustar; clique num ponto para lançar saldo novo.</p>
+                <div class="olho anil" style="margin:0">O que cada titular tem</div>
+                <p class="fraco" style="font-size:calc(13px * var(--esc));margin:6px 0 0">Um cartão por pessoa, com os programas em que ela tem saldo, separados em milhas, pontos e hotel. A barra mostra a parte dela no que o grupo tem naquele programa. Toque num saldo para ajustar.</p>
               </div>
               <div class="rolo" style="margin:0;padding:0" id="slMatriz"></div>
             </div>
@@ -9646,7 +9670,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 16:25';
+const BUILD = '2026-10-09 17:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12995,7 +13019,7 @@ const AREAS = [
      Duas delas dividem o módulo Fábrica (as seções dele se repartem); a área de
      uma tela é decidida pela seção aberta (areaDe). [módulo, seção, nome, ícone, subgrupo] */
   {k:'carteira',  n:'Carteira',  sub:'O que você tem',            ic:'#i-carteira', vistas:['saldo'],
-    menu:[{g:'', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-contas', 'Contas', '#i-usuarios'],
+    menu:[{g:'', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios'], ['saldo', 'sl-carteira', 'Saldos', '#i-caixa'],
       ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]}]},
   {k:'promocoes', n:'Promoções', sub:'Onde a milha está barata',  ic:'#i-fogo',     vistas:['fabrica'],
     menu:[{g:'', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube'],
@@ -13060,7 +13084,7 @@ const ABA_INICIAL = {
      uma aba que já não é dela, e por isso não abria em lugar nenhum. */
   mesa:     'ms-hoje',          /* o que exige decisão hoje */
   fabrica:  'fb-clubes',        /* a assinatura que fabrica sozinha, todo mês */
-  saldo:    'sl-carteira',      /* Saldos: o Resumo saiu em 09/10/2026 (repetia Saldos) */
+  saldo:    'sl-contas',        /* Contas primeiro (09/10/2026): quem é o grupo, depois o que ele tem */
   rota:     'rt-plano',         /* as jornadas: para onde se está indo */
   emissoes: 'em-controle',      /* a cota de CPF (os emitidos foram para Negócio) */
   cartoes:  'cr-painel'         /* o estado das faturas */
@@ -25089,56 +25113,44 @@ function renderMatrizContas(){
     </td>`;
   };
 
-  /* Vermelho, e não azul: sem saldo lançado a Torre não sabe do que dispõe, e
-     nenhuma das contas abaixo vale nada para decidir. Não é informação de apoio,
-     é o que falta para o resto funcionar. O caminho de saída vira selo com seta:
-     apontar o nome da tela obriga a procurá-la; o selo leva. */
-  alvo.innerHTML = `${notaSemSaldo('margin:16px 20px 4px')}
-  <table class="livro">
-    <thead><tr>
-      <th class="quem"><div class="prog" style="justify-content:flex-start">Titular</div><div class="soma">${DB.contas.length} conta${DB.contas.length > 1 ? 's' : ''}</div></th>
-      ${progs.map((p, i) => `<th data-col="${i}">
-        <div class="prog"><span class="termo-marca" style="background:${prog(p).cor}"></span>${esc(curto(prog(p).n))}</div>
-        <div class="soma">${nBR(totalCol[p])}</div></th>`).join('')}
-      <th><div class="prog">Vale hoje</div><div class="soma">${brl(valorEstoque())}</div></th>
-      <th style="position:static"></th>
-    </tr></thead>
-    <tbody>
-      ${contas.map(c => {
-        const meus = DB.saldos.filter(s => s.contaId === c.id);
-        const vale = soma(meus.map(s => valorPrograma(s.prog, s.qtd).valor));
-        const clubes = DB.assinaturas.filter(a => a.contaId === c.id && a.status === 'ativa').length;
-        return `<tr>
-          <td class="quem">
-            <div class="quem-nome" data-dica="${esc(c.nome)}">${esc(nomeCurto(c.nome))}</div>
-            <span class="etq${/^titular/i.test(c.papel || '') ? ' ouro' : ''}"
-              data-dica="${esc([c.papel, c.cpf, c.email, clubes ? clubes + (clubes > 1 ? ' clubes ativos' : ' clube ativo') : ''].filter(Boolean).join('\n'))}">${esc(c.papel)}</span>
-          </td>
-          ${progs.map((p, i) => cel(c, p, i)).join('')}
-          <td class="pos vale"><button class="pos-n${vale ? ' vale' : ' zero'}" style="cursor:default"
-            data-dica="${esc(meus.length ? meus.sort((a, b) => b.qtd - a.qtd).map(s => `${prog(s.prog).n}: ${nBR(s.qtd)} → ${brl(valorPrograma(s.prog, s.qtd).valor)}`).join('\n') : 'Sem saldo lançado.')}">${brl(vale)}</button>
-            ${vale ? `<div class="pos-fatia"><i style="width:${valorEstoque() ? vale / valorEstoque() * 100 : 0}%"></i></div>` : ''}</td>
-          <td style="text-align:right">
-            <div class="acoes-cel">
-              <button class="bt p fantasma icone" onclick="editarConta('${c.id}')" data-dica="Editar ${esc(c.nome)}"><svg><use href="#i-lapis"/></svg></button>
-              <button class="bt p fantasma icone" onclick="apagarConta('${c.id}')" data-dica="Apagar ${esc(c.nome)}"><svg><use href="#i-lixo"/></svg></button>
-            </div></td>
-        </tr>`;
-      }).join('')}
-      <tr class="fecho">
-        <td class="quem"><span class="rot">Grupo</span></td>
-        ${progs.map((p, i) => `<td class="pos" data-col="${i}"><button class="pos-n">${nBR(totalCol[p])}</button></td>`).join('')}
-        <td class="pos vale"><button class="pos-n vale">${brl(valorEstoque())}</button></td>
-        <td></td>
-      </tr>
-    </tbody></table>`;
-
-  /* mira cruzada: numa matriz larga o olho perde a coluna na diagonal */
-  const cels = $$('#slMatriz [data-col]');
-  cels.forEach(td => {
-    td.onmouseenter = () => cels.forEach(o => o.classList.toggle('mira', o.dataset.col === td.dataset.col));
-    td.onmouseleave = () => cels.forEach(o => o.classList.remove('mira'));
-  });
+  /* ── O que cada titular tem (09/10/2026) ───────────────────────────────────
+     A matriz titular × programa ficou larga demais (um programa por coluna) e,
+     sem caber, virava uma pilha de rótulos e números soltos. Agora é um cartão
+     por pessoa: só os programas em que ela tem saldo, em grupos de milhas,
+     pontos e hotel, com a parte dela no que o grupo tem em cada um. */
+  const GR = [['milhas', 'Milhas'], ['pontos', 'Pontos'], ['hotel', 'Hotel']];
+  const tipoDe = p => ['pontos', 'hotel'].includes(prog(p).tipo) ? prog(p).tipo : 'milhas';
+  alvo.innerHTML = `${notaSemSaldo('margin:16px 20px 4px')}<div class="tit-grade">${contas.map(c => {
+    const meus = DB.saldos.filter(s => s.contaId === c.id && s.qtd > 0);
+    const vale = soma(meus.map(s => valorPrograma(s.prog, s.qtd).valor));
+    const clubes = DB.assinaturas.filter(a => a.contaId === c.id && a.status === 'ativa');
+    const progsClube = new Set(clubes.map(a => a.prog));
+    const vazios = progs.length - meus.length;
+    return `<article class="tit-cartao">
+      <header class="tit-cab">
+        <span class="tit-av">${esc(iniciaisDe(c.nome))}</span>
+        <div class="tit-quem"><b>${esc(c.nome)}</b>
+          <div class="tit-etqs"><span class="etq${/^titular/i.test(c.papel || '') ? ' ouro' : ''}">${esc(c.papel || 'conta')}</span>${clubes.length ? `<span class="etq jade">${clubes.length} ${clubes.length === 1 ? 'clube ativo' : 'clubes ativos'}</span>` : ''}</div></div>
+        <div class="tit-vale"><small>vale hoje</small><b>${brl(vale)}</b></div>
+        <div class="acoes-cel">
+          <button class="bt p fantasma icone" onclick="editarConta('${c.id}')" data-dica="Editar ${esc(c.nome)}"><svg><use href="#i-lapis"/></svg></button>
+          <button class="bt p fantasma icone" onclick="apagarConta('${c.id}')" data-dica="Apagar ${esc(c.nome)}"><svg><use href="#i-lixo"/></svg></button>
+        </div>
+      </header>
+      ${meus.length ? GR.map(([t, nomeG]) => {
+        const l = meus.filter(s => tipoDe(s.prog) === t).sort((x, y) => y.qtd - x.qtd);
+        if (!l.length) return '';
+        return `<div class="tit-grupo"><div class="tit-grupo-rot">${nomeG}</div>${l.map(s => {
+          const fatia = totalCol[s.prog] ? s.qtd / totalCol[s.prog] * 100 : 0, nivel = (c.niveis || {})[s.prog];
+          return `<button type="button" class="tit-linha" onclick="editarSaldo('${s.id}')" data-dica="${esc(nBR(s.qtd))} em ${esc(prog(s.prog).n)}: ${pct(fatia, 0)} do que o grupo tem nesse programa. Toque para ajustar.">
+            ${discoProg(s.prog, 'p')}<span class="tit-prog">${esc(prog(s.prog).n)}${nivel ? ` <span class="etq">${esc(nivel)}</span>` : ''}${progsClube.has(s.prog) ? ' <span class="tit-clube">clube</span>' : ''}</span>
+            <span class="tit-barra"><i style="width:${fatia.toFixed(1)}%;background:${prog(s.prog).cor || 'var(--ouro)'}"></i></span>
+            <b class="tit-qtd">${nBR(s.qtd)}</b></button>`; }).join('')}</div>`;
+      }).join('') : `<p class="fraco tit-vazio">Nenhum saldo lançado para ${esc(nomeCurto(c.nome))} ainda.</p>`}
+      <footer class="tit-pe">${vazios > 0 ? `<span class="fraco">${vazios} ${vazios === 1 ? 'programa do grupo' : 'programas do grupo'} sem saldo aqui</span>` : '<span></span>'}
+        <button type="button" class="bt p fantasma" onclick="editarSaldo();setTimeout(()=>{ if ($('#sdConta')) $('#sdConta').value='${c.id}'; }, 30)"><svg><use href="#i-mais"/></svg>Lançar saldo</button></footer>
+    </article>`;
+  }).join('')}</div>`;
 
   const comNivel = DB.contas.filter(c => Object.values(c.niveis || {}).some(Boolean)).length;
   const comClube = new Set(DB.assinaturas.filter(a => a.status === 'ativa').map(a => a.contaId)).size;
