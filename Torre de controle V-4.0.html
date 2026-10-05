@@ -7965,6 +7965,50 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .cc-face.cc-grande .cc-modelo{ font-size:calc(14px * var(--esc)); }
 @media (max-width:560px){ .cc-galeria{ padding:14px; gap:20px; } }
 @media (prefers-reduced-motion:reduce){ .cc-item:hover .cc-face{ transform:none; } }
+
+/* Tema e busca no mesmo círculo da foto do perfil (10/10/2026): 36 px, redondo.
+   O tema vale em toda largura; a lupa só vira círculo no celular, onde ela é só
+   o ícone (no computador ela é a caixa "Buscar ou executar"). */
+.topo #btTemaTopo, .topo #btAlertas{ width:36px; height:36px; min-width:36px; padding:0; border-radius:50%; display:grid; place-items:center; flex-shrink:0; }
+.topo #btTemaTopo svg{ width:17px; height:17px; }
+@media (max-width:560px){
+  .topo #btPaleta{ width:36px; height:36px; min-width:36px; padding:0; border-radius:50%; display:grid; place-items:center; flex-shrink:0; }
+}
+
+/* barra de cima do celular cabe inteira em qualquer largura (10/10/2026):
+   com a pílula da área ao lado dos quatro círculos e da letra, a 360 px o sino
+   ficava para fora da tela. Espaços mais justos, letra do seletor menor e a
+   pílula encolhe (com reticências) antes de qualquer botão sumir. */
+@media (max-width:560px){
+  .topo{ gap:6px !important; padding-left:10px !important; padding-right:10px !important; }
+  .topo .fm-pilula{ min-width:0; flex-shrink:1 !important; overflow:hidden; }
+  .topo .fm-pilula .fm-nome{ overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .topo .topo-espaco{ flex:1 1 0; min-width:0 !important; width:0; }
+  #segEscala{ flex-shrink:0; }
+  #segEscala button{ padding:0 5px !important; font-size:min(calc(13px * var(--esc)), 14px); }
+  #segEscala button:last-child{ font-size:min(calc(16px * var(--esc)), 17px); }
+}
+@media (max-width:380px){ #segEscala button{ padding:0 4px !important; } .topo .fm-pilula{ padding:6px 9px 6px 8px !important; } }
+
+/* celular: a área ativa fica em negrito; um aperto leve nas letras para o nome
+   continuar inteiro ("Acumular" ativa passava da largura do botão) */
+@media (max-width:860px){ #trilhoNav .tb[data-area].on .sg{ letter-spacing:-.035em; } #trilhoNav .tb[data-area]{ padding:0 !important; } }
+
+@media (max-width:400px){ #barraModulos.muitos .bm-item{ font-size:min(calc(10px * var(--esc)), 10.8px) !important; letter-spacing:-.015em; } }
+
+/* Meus cartões no estilo do Catálogo */
+.cc-galeria.cc-meus{ padding:4px 0 0; }
+.cc-meu{ cursor:default; }
+.cc-face-bt{ border:0; background:none; padding:0; cursor:pointer; display:block; width:100%; border-radius:14px; text-align:left; font:inherit; color:inherit; }
+.cc-face-bt:hover .cc-face{ transform:translateY(-4px) rotate(-.6deg); box-shadow:0 22px 40px -18px rgba(8,18,34,.55); }
+.cc-face-bt:focus-visible .cc-face{ outline:3px solid var(--dourado); outline-offset:3px; }
+.cc-numero{ position:absolute; left:26%; top:42%; font-family:var(--f-m); font-size:calc(13.5px * var(--esc)); letter-spacing:.08em; opacity:.92; white-space:nowrap; }
+.cc-titular{ position:absolute; left:7%; bottom:23%; font-family:var(--f-b); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.08em; opacity:.8; max-width:60%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-nome{ font-weight:600; font-size:calc(13.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-uso{ display:block; height:5px; border-radius:99px; background:var(--sup-1); overflow:hidden; }
+.cc-uso > i{ display:block; height:100%; border-radius:99px; background:var(--ouro); }
+.cc-acoes{ display:flex; gap:8px; justify-content:flex-end; margin-top:2px; }
+.cc-face.cc-grande .cc-numero{ font-size:calc(16px * var(--esc)); }
 </style>
 </head>
 <body>
@@ -8084,15 +8128,15 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
            com nome por extenso; os módulos de cada área aparecem na coluna ao lado
            (no computador) ou na barra logo acima desta (no celular). -->
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-casa"/></svg><span class="sg">Início</span></button>
-      <!-- Milhas dividida em três (09/10/2026): o que você tem, onde a milha está
-           barata e como juntar mais. Um assunto por botão. -->
-      <button class="tb" data-area="carteira" data-vista="saldo" data-dica="Carteira: o que você tem — saldos, contas, vencimentos e resumo" data-dica-lado="direita"><svg><use href="#i-carteira"/></svg><span class="sg">Carteira</span></button>
       <button class="tb" data-area="promocoes" data-vista="fabrica" data-dica="Promoções: onde a milha está barata hoje — compra e transferência bonificada, clubes e lojas, mural" data-dica-lado="direita"><svg><use href="#i-fogo"/></svg><span class="sg"><span class="sg-longo">Promoções</span><span class="sg-curto">Promos</span></span></button>
       <button class="tb" data-area="acumular" data-vista="comprar" data-dica="Acumular: como juntar milhas — comprar, transferir, assinar clubes e comprar produtos" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Acumular</span></button>
-      <button class="tb" data-area="cartoes" data-vista="cartoes" data-dica="Cartões: painel, catálogo, meus cartões e faturas" data-dica-lado="direita"><svg><use href="#i-cartao"/></svg><span class="sg">Cartões</span></button>
+      <button class="tb" data-area="carteira" data-vista="saldo" data-dica="Carteira: o que você tem — saldos, contas, vencimentos e resumo" data-dica-lado="direita"><svg><use href="#i-carteira"/></svg><span class="sg">Carteira</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
       <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, controle de CPF, orçamento, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="cartoes" data-vista="cartoes" data-dica="Cartões: painel, catálogo, meus cartões e faturas" data-dica-lado="direita"><svg><use href="#i-cartao"/></svg><span class="sg">Cartões</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
+      <!-- Milhas dividida em três (09/10/2026): o que você tem, onde a milha está
+           barata e como juntar mais. Um assunto por botão. -->
     </nav>
   </aside>
   <nav class="barra-modulos" id="barraModulos" aria-label="Módulos da área"></nav>
@@ -9154,7 +9198,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                  mão — necessário quando o cartão não está no catálogo, e retrabalho
                  quando está. -->
             <div class="nota" id="crComoAdd"></div>
-            <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:13px" id="crMeus"></div>
+            <div class="cc-galeria cc-meus" id="crMeus"></div>
           </div>
         </div>
 
@@ -9771,7 +9815,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-10 14:10';
+const BUILD = '2026-10-10 17:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12750,7 +12794,7 @@ function confirmar(titulo, texto, aoSim, rotulo = 'Confirmar', duplo = ACAO_DEST
       corpo: paragrafo(`<b>${esc(oQue)}</b>`) + ficha
         + `<p style="font-size:calc(13.5px * var(--esc));line-height:1.5;color:var(--grafite);margin-top:10px">Depois daqui não há como desfazer: a Torre não tem lixeira.</p>`
         + `<p style="font-size:calc(13.5px * var(--esc));line-height:1.5;color:var(--grafite);margin-top:6px">Se restar dúvida, feche e baixe uma cópia em Sistema → Dados antes.</p>`,
-      pe: `<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt vermelho-solido" id="btConfirmarFinal">Sim, ${esc(rotulo.toLowerCase())}</button>`
+      pe: `<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt vermelho-solido" id="btConfirmarFinal">Sim, ${esc(rotulo.toLowerCase())}</button>`
     });
     $('#btConfirmarFinal').onclick = () => { fecharFolha(); aoSim(resposta); };
   };
@@ -12758,7 +12802,9 @@ function confirmar(titulo, texto, aoSim, rotulo = 'Confirmar', duplo = ACAO_DEST
   abrirFolha({
     titulo: esc(titulo), largura:'estreita',
     corpo: ficha + paragrafo(texto) + (extra ? extra.html : ''),
-    pe: `<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt perigo" id="btConfirmarAcao">${esc(rotulo)}</button>`
+    /* padrão do sistema (10/10/2026): Fechar em vermelho só no contorno; a ação
+       que apaga em vermelho cheio; as demais, no botão principal */
+    pe: `<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt ${ACAO_DESTRUTIVA.test(rotulo) ? 'vermelho-solido' : 'primario'}" id="btConfirmarAcao">${esc(rotulo)}</button>`
   });
   $('#btConfirmarAcao').onclick = () => {
     const resposta = extra && extra.ler ? extra.ler() : undefined;
@@ -13141,7 +13187,8 @@ const AREAS = [
     menu:[{g:'Campanhas', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube']]},
       {g:'Anúncios', itens:[['fabrica', 'fb-mural', 'Mural', '#i-livro']]}]},
   {k:'acumular',  n:'Acumular',  sub:'Como juntar milhas',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
-    menu:[{g:'Com dinheiro', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras Inteligentes', '#i-sacola'], ['comprar', 'ct-comprar', 'Comprar Milhas', '#i-carrinho']]},
+    menu:[{g:'Com dinheiro', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras Inteligentes', '#i-sacola'],
+      ['fabrica', 'fb-campanhas', 'Compra Bonificada', '#i-brilho', 'bonificada'], ['comprar', 'ct-comprar', 'Comprar Milhas', '#i-carrinho']]},
       {g:'Com pontos', itens:[['comprar', 'ct-transferir', 'Transferir Pontos', '#i-subir']]}]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
@@ -13157,6 +13204,10 @@ const AREAS = [
     menu:[{g:'Conexões', itens:[['ajustes', 'aj-provedores', 'Provedores', '#i-nuvem']]}, {g:'Mercado', itens:[['ajustes', 'aj-mercado', 'Programas', '#i-alvo']]},
       {g:'Sistema', itens:[['ajustes', 'aj-dados', 'Dados', '#i-caixa'], ['ajustes', 'aj-sobre', 'Sobre', '#i-info']]}]}
 ];
+/* Ordem da barra (10/10/2026): Carteira depois de Acumular, Cartões depois de
+   Negócio. A lista acima segue a ordem em que as áreas nasceram; esta é a da tela. */
+const ORDEM_AREAS = ['inicio', 'promocoes', 'acumular', 'carteira', 'viagens', 'negocio', 'cartoes', 'ajustes'];
+AREAS.sort((a, b) => ORDEM_AREAS.indexOf(a.k) - ORDEM_AREAS.indexOf(b.k));
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-caixa', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
   emissoes:'#i-documento', emitidos:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-carrinho', imposto:'#i-imposto', ajustes:'#i-ajustes'};
 /* nome curto para a barra de módulos do celular, onde cabe pouco */
@@ -13166,12 +13217,21 @@ const areaDe = v => {
   const cands = AREAS.filter(a => a.vistas.includes(v));
   if (cands.length <= 1) return cands[0] || AREAS[0];
   const ab = document.querySelector(`#v-${v} .abas .aba.on`), aba = ab ? ab.dataset.aba : '';
-  return cands.find(a => (a.menu || []).some(g => g.itens.some(it => it[0] === v && it[1] === aba))) || cands[0];
+  return cands.find(a => (a.menu || []).some(g => g.itens.some(it => it[0] === v && it[1] === aba && (!it[4] || subAtivo(it[4])))))
+    || cands.find(a => (a.menu || []).some(g => g.itens.some(it => it[0] === v && it[1] === aba))) || cands[0];
 };
 /* item do menu que está aberto agora (módulo, seção e, em Campanhas, o lado) */
+/* subgrupos de Campanhas: o lado (compra e transferência ou clubes e lojas) e,
+   desde 10/10/2026, a Compra Bonificada, que mora em Acumular */
+function subAtivo(sub){
+  const g = typeof campGrupo !== 'undefined' ? campGrupo : 'ct', t = typeof abaCampanha !== 'undefined' ? abaCampanha : 'transferencia';
+  if (sub === 'bonificada') return g === 'ct' && t === 'bonificada';
+  if (sub === 'ct') return g === 'ct' && t !== 'bonificada';
+  return g === sub;
+}
 function itemAberto(it){
   if (it[0] !== vistaAtual || !document.querySelector(`#v-${it[0]} .abas .aba.on[data-aba="${it[1]}"]`)) return false;
-  return !it[4] || (typeof campGrupo !== 'undefined' && campGrupo === it[4]);
+  return !it[4] || subAtivo(it[4]);
 }
 /* a barra, a coluna, a barra do celular e as seções do alto acompanham a área da seção aberta */
 function atualizarArea(){
@@ -13189,6 +13249,10 @@ function atualizarArea(){
   /* a pílula vai para a barra de cima no celular em toda troca, inclusive na
      primeira tela (no Início ela ficava numa faixa própria e empurrava tudo) */
   if (typeof lugarDaPilula === 'function') lugarDaPilula();
+  if ($('#segCampanha')){
+    const bon = $('#segCampanha button[data-t="bonificada"]'); if (bon) bon.hidden = ar.k === 'promocoes';
+    const linha = $('#segCampanha').parentElement; if (linha) linha.hidden = ar.k === 'acumular';
+  }
   pintarBarraModulos(vistaAtual);
   _marcaColuna = ''; montarColunaMenu();
   /* nas áreas que nasceram de Milhas, o topo diz a área (Promoções, Acumular,
@@ -14607,19 +14671,20 @@ function abrirFichaCartao(id){
   const lim = Number(c.limite) || 0, agora = totalFatura(c.id, m);
   const al = (typeof alertasCartoes === 'function' ? alertasCartoes() : []).filter(a => a.cartao && a.cartao.id === c.id);
   abrirFolha({titulo:`${esc(c.banco)} — ${esc(c.produto)}`, largura:'media', corpo:`
+    <div class="cc-ficha-topo">${faceCartao({e:c.banco, m:`${c.bandeira || ''} ${c.produto || ''}`.trim(), final:c.final, titular:nomeCurto(c.titular || '') || ''}, true)}</div>
     <div class="ficha-topo"><span class="etq">${esc(c.bandeira || '')} ···· ${esc(c.final || '')}</span>${c.isento ? '<span class="etq jade">anuidade isenta</span>' : ''}${c.clube ? `<span class="etq">${esc(c.clube)}</span>` : ''}</div>
     <div class="ficha-destaque"><div><span>Fatura deste mês</span><b>${brl(agora)}</b></div><div><span>Limite</span><b>${brl(lim)}</b></div><div><span>Em uso</span><b>${lim ? pct(agora / lim * 100, 1) : 'n/d'}</b></div></div>
     <div class="olho anil" style="margin:16px 0 8px">Cartão</div>
     ${fichaCampos([
       ['Anuidade', c.isento ? `isenta${c.isencaoTipo ? ' · ' + esc(c.isencaoTipo) : ''}` : brl(Number(c.anuidade) || 0)],
-      ['Fecha', c.fecha ? 'dia ' + c.fecha : 'n/d'], ['Vence', c.vence ? 'dia ' + c.vence : 'n/d'],
+      ['Fecha', (c.fechamento || c.fecha) ? 'dia ' + (c.fechamento || c.fecha) : 'n/d'], ['Vence', (c.vencimento || c.vence) ? 'dia ' + (c.vencimento || c.vence) : 'n/d'],
       ['Titular', esc(c.titular || 'n/d')], ['Clube de pontos', esc(c.clube || 'n/d')],
-      ['Pontos por real', c.ptsPorReal ? String(c.ptsPorReal).replace('.', ',') : 'n/d']
+      ['Pontos por dólar', (c.ptsMin || c.ptsMax) ? `${String(c.ptsMin || 0).replace('.', ',')} – ${String(c.ptsMax || 0).replace('.', ',')}` : (c.ptsPorReal ? String(c.ptsPorReal).replace('.', ',') + ' por real' : 'n/d')]
     ])}
     <div class="olho anil" style="margin:18px 0 8px">Próximas faturas</div>
     <div class="jn-lista">${meses.map(k => { const t = totalFatura(c.id, k); return `<div class="jn-linha"><span class="jn-mes">${esc(rotuloMes(k))}</span><div class="jn-nome"><div class="jn-barra"><i style="width:${lim ? Math.min(100, t / lim * 100).toFixed(1) : 0}%;background:var(--dourado)"></i></div></div><div class="jn-num"><b>${brl(t)}</b><span>${lim ? pct(t / lim * 100, 1) + ' do limite' : ''}</span></div></div>`; }).join('')}</div>
     ${al.length ? `<div class="olho anil" style="margin:18px 0 8px">Alertas</div><div class="pilha" style="gap:8px">${al.map(a => `<div class="item ${a.grau === 3 ? 'hoje' : a.grau === 2 ? 'urgente' : 'atencao'}"><div class="item-corpo"><div class="item-tit">${esc(a.t)}</div><div class="item-sub">${esc(a.s)}</div></div></div>`).join('')}</div>` : ''}`,
-    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><div class="esticar"></div><button class="bt primario" onclick="fecharFolha();setTimeout(()=>editarCartao('${c.id}'),60)"><svg><use href="#i-lapis"/></svg>Editar</button>`});
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><div class="esticar"></div><button class="bt vermelho-solido" onclick="fecharFolha();setTimeout(()=>apagar('cartoes','${c.id}','o cartão'),60)"><svg><use href="#i-lixo"/></svg>Excluir</button><button class="bt primario" onclick="fecharFolha();setTimeout(()=>editarCartao('${c.id}'),60)"><svg><use href="#i-lapis"/></svg>Editar</button>`});
 }
 
 /* ══ O QUE FAZER HOJE ══════════════════════════════════════════════════════════
@@ -15082,7 +15147,7 @@ function renderHeroiMeusCartoes(alvo){
     fatias:fatiasHeroi(Object.keys(porBanco).map(b => ({b, v:porBanco[b]})), x => x.b), fmtFatia:v => brl(v), compRot:'Limite por banco',
     dirRot:'Uso do limite, mês a mês', dirSub:'O total das faturas sobre o limite somado.',
     ult: serie.length ? {b:pct(serie[serie.length - 1].v, 1), sp:serie[serie.length - 1].r} : null,
-    serie, fmtSerie:v => pct(v, 0), semSerie:'A curva aparece a partir do segundo mês com gasto.'
+    serie, fmtSerie:v => pct(v, v > 0 && v < 10 ? 1 : 0), semSerie:'A curva aparece a partir do segundo mês com gasto.'
   });
 }
 function renderHeroiFaturas(alvo){
@@ -15209,7 +15274,7 @@ function renderHeroiResultadosViagens(alvo){
 function renderHeroiDaVista(v){
   const el = $('#heroiArea'); if (!el) return;
   const k = areaDe(v).k;
-  if (k === 'promocoes' && document.querySelector('#p-fb-campanhas.on') && _heroiCamp){ el.hidden = false; el.classList.remove('compacto'); renderHeroiCampanhas(); return; }
+  if ((k === 'promocoes' || k === 'acumular') && document.querySelector('#p-fb-campanhas.on') && _heroiCamp){ el.hidden = false; el.classList.remove('compacto'); renderHeroiCampanhas(); return; }
   if (!PRINCIPAL_DA_AREA[k]){ el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
   el.dataset.area = k;
@@ -30637,7 +30702,7 @@ function desfazerPagamento(id){
    Consulta pura: nada aqui entra na sua carteira sem você mandar. A tabela
    pagina como a de campanhas encerradas, e a ficha completa abre na folha —
    com o botão que copia o cartão para os seus, já preenchido. */
-let catPag = 1, catFiltro = {q:'', clube:'', ordem:'nome', porPag:15};
+let catPag = 1, catFiltro = {q:'', clube:'', ordem:'nome', porPag:15, porPagCartoes:16};
 
 function catalogoFiltrado(){
   const q = catFiltro.q.toLowerCase().trim();
@@ -30669,7 +30734,7 @@ function catalogoFiltrado(){
 function categoriaCartao(m){
   const t = semAcento(m || '');
   if (/centurion/.test(t)) return 'centurion';
-  if (/black|infinite|nanquim|aeternum|dux|carbon|altus|private|world elite|ultrablack/.test(t)) return 'black';
+  if (/black|infinite|nanquim|aeternum|dux|carbon|altus|private|world elite|ultrablack|metal|ultra/.test(t)) return 'black';
   if (/platinum|grafite|signature/.test(t)) return 'platinum';
   if (/gold|ouro/.test(t)) return 'gold';
   if (/green/.test(t)) return 'green';
@@ -30687,8 +30752,10 @@ function bandeiraCartao(m){
 function faceCartao(c, grande){
   const cat = categoriaCartao(c.m), band = bandeiraCartao(c.m);
   const modelo = String(c.m || '').replace(/^(visa|mastercard|elo|american express)\s+/i, '');
-  return `<div class="cc-face cc-${cat}${grande ? ' cc-grande' : ''}" aria-hidden="true">
+  return `<div class="cc-face cc-${cat}${grande ? ' cc-grande' : ''}${c.final ? ' cc-com-final' : ''}" aria-hidden="true">
     <span class="cc-brilho"></span>
+    ${c.final ? `<span class="cc-numero">•••• •••• •••• ${esc(c.final)}</span>` : ''}
+    ${c.titular ? `<span class="cc-titular">${esc(c.titular)}</span>` : ''}
     <span class="cc-banco">${esc(c.e || '')}</span>
     <svg class="cc-contato" viewBox="0 0 24 24"><path d="M8 7c2.5 2.7 2.5 7.3 0 10M12 5c3.6 3.9 3.6 10.1 0 14M16 3c4.7 5 4.7 13 0 18"/></svg>
     <span class="cc-chip"><i></i><i></i><i></i></span>
@@ -30697,6 +30764,13 @@ function faceCartao(c, grande){
   </div>`;
 }
 function vistaCatalogo(){ return (DB.cfg && DB.cfg.catVista) || 'cartoes'; }
+let _colsCat = 0;
+addEventListener('resize', () => {
+  if (vistaAtual !== 'cartoes' || !document.querySelector('#p-cr-catalogo.on') || vistaCatalogo() !== 'cartoes') return;
+  const g = document.querySelector('.cc-galeria'); if (!g) return;
+  const n = getComputedStyle(g).gridTemplateColumns.split(' ').length;
+  if (n !== _colsCat){ _colsCat = n; renderCatalogo(); }
+}, {passive:true});
 
 function renderCatalogo(){
   const alvo = $('#catLista'); if (!alvo) return;
@@ -30725,7 +30799,24 @@ function renderCatalogo(){
   }
 
   const todos = catalogoFiltrado();
-  const tam = catFiltro.porPag;
+  /* Na galeria a página fecha sempre a última fileira (10/10/2026): 16 por
+     página como base, arredondado para o múltiplo das colunas que cabem na tela
+     (4 colunas → 16; 3 → 15; 2 → 16). Assim nunca sobra buraco no fim. */
+  const colunasGaleria = () => {
+    const W = (alvo.clientWidth || alvo.getBoundingClientRect().width) - (innerWidth <= 560 ? 28 : 40);
+    const gap = 18, min = Math.min(250, W);
+    return Math.max(1, Math.floor((W + gap) / (min + gap)));
+  };
+  const cols = vistaCatalogo() === 'cartoes' ? colunasGaleria() : 1;
+  const tam = vistaCatalogo() === 'cartoes'
+    ? Math.max(cols, Math.round(catFiltro.porPagCartoes / cols) * cols)
+    : catFiltro.porPag;
+  const sel = $('#catPorPag');
+  if (sel){
+    const ops = vistaCatalogo() === 'cartoes' ? [8, 16, 24, 48] : [10, 15, 25, 50];
+    const atual = vistaCatalogo() === 'cartoes' ? catFiltro.porPagCartoes : catFiltro.porPag;
+    if (sel.dataset.modo !== vistaCatalogo()){ sel.innerHTML = ops.map(n => `<option${n === atual ? ' selected' : ''}>${n}</option>`).join(''); sel.dataset.modo = vistaCatalogo(); }
+  }
   const paginas = Math.max(1, Math.ceil(todos.length / tam));
   catPag = Math.min(Math.max(1, catPag), paginas);
   const de = (catPag - 1) * tam;
@@ -30912,27 +31003,24 @@ function renderMeusCartoes(){
       ${rep.map(([f, g]) => `<div>Final ${esc(f)}: ${g.length} cadastros (${esc(g[0].banco)} ${esc(g[0].produto)}).</div>`).join('')}
       <div style="margin-top:8px"><button type="button" class="bt p primario" onclick="juntarCartoesRepetidos()">Juntar em um só</button></div>
     </div></div>` : '';
-  $('#crMeus').innerHTML = avisoRep + (cs.length ? cs.map(c => `<div class="cartao crd-ficha">
-    <div class="linha" style="gap:9px;align-items:flex-start;margin-bottom:12px">
-      <div class="esticar" style="min-width:0">
-        <button type="button" class="ficha-link" style="display:block;font-size:calc(15px * var(--esc));font-weight:700" onclick="abrirFichaCartao('${c.id}')" data-dica="Abrir a ficha">${esc(c.banco)} — ${esc(c.produto)}</button>
-        <div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${esc(c.bandeira)} ···· ${esc(c.final)} · ${esc(c.titular || 'Titular')}</div>
-      </div>
-      <div class="acoes-cel">
-        <button class="bt p fantasma icone" onclick="editarCartao('${c.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
-        <button class="bt p fantasma icone" onclick="apagar('cartoes','${c.id}','o cartão')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
-      </div>
-    </div>
-    <div class="crd-campos">
-      <div><span>Anuidade</span><b>${c.isento ? `<span class="n-jade">Isenta</span>${c.isencaoTipo ? ` <small class="fraco">${esc(c.isencaoTipo)}</small>` : ''}` : brl(c.anuidade || 0)}</b></div>
-      <div><span>Clube</span><b>${esc(c.clube || 'n/d')}</b></div>
-      <div><span>Limite</span><b>${brl(c.limite || 0)}</b></div>
-      <div><span>Pontos por dólar</span><b>${c.ptsMin || 0} – ${c.ptsMax || 0}</b></div>
-      <div><span>Fecha</span><b>dia ${c.fechamento || 'n/d'}</b></div>
-      <div><span>Vence</span><b>dia ${c.vencimento || 'n/d'}</b></div>
-    </div>
-    ${c.beneficios ? `<div class="crd-benef">${linhasFrase(c.beneficios, 'item-sub')}</div>` : ''}
-  </div>`).join('') : `<div class="vazio" style="grid-column:1/-1"><p>Nenhum cartão cadastrado.</p></div>`);
+  /* No mesmo estilo do Catálogo (10/10/2026): a face do cartão, com o final e o
+     titular; embaixo, fatura do mês, limite e anuidade; e as ações de Editar e
+     Excluir. Tocar na face abre a ficha completa. */
+  const m = mesAtual();
+  $('#crMeus').innerHTML = avisoRep + (cs.length ? cs.map(c => {
+    const face = {e:c.banco, m:`${c.bandeira || ''} ${c.produto || ''}`.trim(), final:c.final, titular:nomeCurto(c.titular || '') || ''};
+    const fat = totalFatura(c.id, m), lim = Number(c.limite) || 0;
+    return `<div class="cc-item cc-meu">
+      <button type="button" class="cc-face-bt" onclick="abrirFichaCartao('${c.id}')" aria-label="${esc(c.banco)} ${esc(c.produto)}: abrir a ficha">${faceCartao(face)}</button>
+      <span class="cc-info">
+        <span class="cc-l1"><b class="cc-nome">${esc(c.banco)} — ${esc(c.produto)}</b></span>
+        <span class="cc-nums"><span><small>Fatura do mês</small><b>${brl(fat)}</b></span><span><small>Limite</small><b>${lim ? 'R$ ' + milCurto(lim) : 'n/d'}</b></span>
+          <span><small>Anuidade</small><b>${c.isento ? '<span class="n-jade">isenta</span>' : brl(c.anuidade || 0)}</b></span></span>
+        ${lim ? `<span class="cc-uso" data-dica="${pct(fat / lim * 100, 1)} do limite em uso neste mês"><i style="width:${Math.min(100, fat / lim * 100).toFixed(1)}%"></i></span>` : ''}
+        <span class="cc-acoes"><button type="button" class="bt p fantasma" onclick="editarCartao('${c.id}')"><svg><use href="#i-lapis"/></svg>Editar</button>
+          <button type="button" class="bt p vermelho-solido" onclick="apagar('cartoes','${c.id}','o cartão')"><svg><use href="#i-lixo"/></svg>Excluir</button></span>
+      </span></div>`;
+  }).join('') : `<div class="vazio" style="grid-column:1/-1"><p>Nenhum cartão cadastrado.</p></div>`);
 }
 
 /* Nomes curtos de propósito: o seletor tem a largura de uma coluna da folha, e
@@ -35114,7 +35202,13 @@ function ajustarLarguraMenu(){
 /* ir a uma seção de um módulo, a partir do menu */
 function irItemMenu(vv, a, sub){
   const grupo = (document.querySelector(`#v-${vv} .abas`) || {dataset:{}}).dataset.grupo || vv;
-  const depois = () => { if (sub && typeof mostrarGrupoCamp === 'function') mostrarGrupoCamp(sub); marcarColunaMenu(); setTimeout(atualizarArea, 0); };
+  const tipo = t => { const b = document.querySelector(`#segCampanha button[data-t="${t}"]`); if (b && abaCampanha !== t) b.click(); };
+  const depois = () => {
+    if (sub === 'bonificada'){ mostrarGrupoCamp('ct'); tipo('bonificada'); }
+    else if (sub === 'ct'){ mostrarGrupoCamp('ct'); if (abaCampanha === 'bonificada') tipo('transferencia'); }
+    else if (sub && typeof mostrarGrupoCamp === 'function') mostrarGrupoCamp(sub);
+    marcarColunaMenu(); setTimeout(atualizarArea, 0);
+  };
   if (vistaAtual !== vv){ irPara(vv); setTimeout(() => { irParaAba(grupo, a); depois(); }, 0); }
   else { irParaAba(grupo, a); depois(); }
 }
@@ -35248,7 +35342,7 @@ function montarColunaMenu(raiz, vistaMedida){
    Logo acima da barra das áreas: os módulos da área aberta, com ícone e nome.
    Área de um módulo só não precisa dela. */
 /* nome curto de cada item na segunda barra do celular, onde cabe pouco */
-const CURTO_ITEM = {'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
+const CURTO_ITEM = {'Compra Bonificada':'Bonificada', 'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
   'Compra e transferência':'Transferência', 'Clubes e lojas':'Clubes e lojas', 'Meus cartões':'Meus cartões', 'Lançamentos':'Lançamentos'};
 function pintarBarraModulos(v){
   const bm = $('#barraModulos'); if (!bm) return;
@@ -35258,6 +35352,7 @@ function pintarBarraModulos(v){
   if (area.menu && area.menu.flatMap(g => g.itens).length > 1){
     const its = area.menu.flatMap(g => g.itens);
     document.body.classList.add('com-modulos'); document.body.classList.add('barra-itens');
+    bm.classList.toggle('muitos', its.length >= 5);
     bm.innerHTML = its.map((it, i) => `<button type="button" class="bm-item${itemAberto(it) ? ' on' : ''}" data-i="${i}"><svg><use href="${it[3]}"/></svg><span>${esc(CURTO_ITEM[it[2]] || it[2])}</span></button>`).join('');
     $$('.bm-item', bm).forEach(b => b.onclick = () => { const it = its[+b.dataset.i]; irItemMenu(it[0], it[1], it[4]); });
     return;
@@ -35281,7 +35376,7 @@ function marcarColunaMenu(){
   if (chave !== _marcaColuna){ _marcaColuna = chave; montarColunaMenu(); }
   document.querySelectorAll('.cm-item[data-aba]').forEach(b => {
     b.classList.toggle('on', !!ativa && b.dataset.vista === vistaAtual && b.dataset.aba === ativa.dataset.aba
-      && (!b.dataset.sub || (typeof campGrupo !== 'undefined' && campGrupo === b.dataset.sub)));
+      && (!b.dataset.sub || subAtivo(b.dataset.sub)));
   });
   atualizarSubmenus();
 }
@@ -38277,6 +38372,7 @@ function ligarEventos(){
      vista de dois jeitos — o padrão do período e as ofertas em si. */
   $$('#segCampanha button').forEach(b => b.onclick = () => {
     abaCampanha = b.dataset.t;
+    setTimeout(() => { if (typeof atualizarArea === 'function') atualizarArea(); }, 0);
     $$('#segCampanha button').forEach(x => x.classList.toggle('on', x === b));
     const rot = $('#rotuloLista');
     if (rot) rot.textContent = b.dataset.t === 'transferencia' ? 'Transferências Bonificadas'
@@ -38305,7 +38401,7 @@ function ligarEventos(){
   if ($('#catBusca')) $('#catBusca').oninput = e => { catFiltro.q = e.target.value; catRe(); };
   if ($('#catClube')) $('#catClube').onchange = e => { catFiltro.clube = e.target.value; catRe(); };
   if ($('#catOrdem')) $('#catOrdem').onchange = e => { catFiltro.ordem = e.target.value; catRe(); };
-  if ($('#catPorPag')) $('#catPorPag').onchange = e => { catFiltro.porPag = Number(e.target.value) || 15; catRe(); };
+  if ($('#catPorPag')) $('#catPorPag').onchange = e => { if (vistaCatalogo() === 'cartoes') catFiltro.porPagCartoes = Number(e.target.value) || 16; else catFiltro.porPag = Number(e.target.value) || 15; catPag = 1; catRe(); };
   $('#btNovaAssinatura').onclick = () => editarAssinatura();
   $('#btCatalogoClubes').onclick = () => { irParaAba('fabrica', 'fb-clubes'); $('#cmpPrograma').scrollIntoView({behavior:'smooth', block:'center'}); };
   ['#cmpPrograma','#cmpModalidade'].forEach(s => $(s).onchange = renderComparador);
@@ -38530,6 +38626,9 @@ function arrancar(){
   pintarEmissoesSemBaixa();
   pintarConferenciaDeSaldo();
   nuvemLigarAuto();
+  /* a primeira tela já nasce no padrão: pílula na barra de cima (celular),
+     segunda barra e coluna da área certa */
+  setTimeout(() => { if (typeof lugarDaPilula === 'function') lugarDaPilula(); if (typeof atualizarArea === 'function') atualizarArea(); }, 0);
   /* Ao abrir, traz o que houver na nuvem antes de qualquer edição: é o momento
      em que o outro aparelho pode ter gravado algo. */
   if (nuvemPronta()) setTimeout(() => nuvemSincronizar(false), 1800);
