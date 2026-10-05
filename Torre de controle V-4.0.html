@@ -7640,6 +7640,33 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 #rtHeroiSlot > .heroi, #viHeroiSlot > .heroi{ margin:0 0 18px; }
 
 #crHeroiSlot > .heroi, #catHeroiSlot > .heroi, #meusHeroiSlot > .heroi, #fatHeroiSlot > .heroi{ margin:0 0 4px; }
+
+/* ── perfil e sair na barra da direita (07/10/2026) ── */
+.perfil-bt{ border:0; background:transparent; padding:0; cursor:pointer; border-radius:50%; flex-shrink:0; }
+.perfil-av{ width:calc(38px * var(--esc)); height:calc(38px * var(--esc)); border-radius:50%; display:grid; place-items:center; overflow:hidden;
+  background:linear-gradient(150deg, var(--noite-1), var(--noite-2)); color:var(--dourado); border:2px solid color-mix(in oklab, var(--dourado) 55%, transparent);
+  font-family:var(--f-b); font-size:calc(13px * var(--esc)); letter-spacing:.02em; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+.perfil-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+.perfil-bt:hover .perfil-av, .perfil-bt:focus-visible .perfil-av{ border-color:var(--dourado); }
+.trilho-dir .perfil-bt{ margin-bottom:10px; }
+.tb-sair-rot{ display:flex; flex-direction:column; align-items:center; gap:3px; border:0; background:transparent; cursor:pointer; padding:7px 4px; border-radius:9px;
+  color:#FF8A6B; font:inherit; font-size:calc(11px * var(--esc)); font-weight:600; }
+.tb-sair-rot svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.tb-sair-rot:hover{ background:rgba(255,138,107,.12); }
+#btPerfilTopo .perfil-av{ width:36px; height:36px; font-size:12.5px; }
+.perfil-topo{ display:flex; align-items:center; gap:18px; }
+.perfil-foto{ width:96px; height:96px; border-radius:50%; overflow:hidden; display:grid; place-items:center; flex-shrink:0;
+  background:linear-gradient(150deg, var(--noite-1), var(--noite-2)); color:var(--dourado); border:3px solid color-mix(in oklab, var(--dourado) 55%, transparent);
+  font-family:var(--f-b); font-size:32px; }
+.perfil-foto img{ width:100%; height:100%; object-fit:cover; }
+
+.perfil-bt.so-estreito{ display:none; }
+@media (max-width:860px){ .perfil-bt.so-estreito{ display:block; } }
+
+/* itens do menu de Milhas com ícone, mais leves que os de módulo */
+.cm-nav .cm-item.cm-modulo[data-aba]{ font-size:calc(14px * var(--esc)); }
+.cm-nav .cm-item.cm-modulo[data-aba] svg{ opacity:.8; }
+.cm-nav .cm-item.cm-modulo.on[data-aba] svg{ opacity:1; }
 </style>
 </head>
 <body>
@@ -7769,11 +7796,15 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
   <!-- ═══ barra da direita ═══════════════════════════════════════════════════
        Vendas e financeiro no alto; no pé, o que é da conta de quem usa: tema,
        atalhos e sair. Fixa como o trilho da esquerda. -->
-  <aside class="trilho-dir" aria-label="Vendas, financeiro e conta">
+  <aside class="trilho-dir" aria-label="Perfil e conta">
+    <!-- perfil do titular no alto (07/10/2026): foto, nome e dados da pessoa -->
+    <button type="button" class="perfil-bt" id="btPerfil" data-dica="Meu perfil" data-dica-lado="esquerda" aria-label="Meu perfil"><span class="perfil-av" id="perfilAv"></span></button>
     <div class="trilho-nav"></div>
     <div class="trilho-rodape">
-      <button class="tb-min" id="btTema" data-dica="Mudar a cor: tema claro ou escuro" data-dica-lado="esquerda"><svg><use href="#i-lua"/></svg></button>
-      <button class="tb-min tb-sair" id="btSair" data-dica="Sair da conta" data-dica-lado="esquerda"><svg><use href="#i-sair"/></svg></button>
+      <!-- o tema foi para o topo, ao lado do tamanho da letra; fica aqui escondido
+           porque o código ainda escreve o ícone nele -->
+      <button class="tb-min" id="btTema" hidden aria-hidden="true" tabindex="-1"><svg><use href="#i-lua"/></svg></button>
+      <button class="tb-sair-rot" id="btSair" aria-label="Sair da conta"><svg><use href="#i-sair"/></svg><span>Sair</span></button>
     </div>
   </aside>
 
@@ -7806,7 +7837,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <!-- O tema mora no rodapé da barra lateral, que some no celular: ali não
            havia caminho nenhum para trocá-lo, porque a paleta e a tecla T pedem
            teclado. Este botão aparece só na tela estreita, ao lado do sino. -->
-      <button class="bt fantasma icone so-estreito" id="btTemaTopo" data-dica="Alternar tema"><svg><use href="#i-lua"/></svg></button>
+      <button class="bt fantasma icone" id="btTemaTopo" data-dica="Tema claro ou escuro"><svg><use href="#i-lua"/></svg></button>
+      <button type="button" class="perfil-bt so-estreito" id="btPerfilTopo" aria-label="Meu perfil"><span class="perfil-av" id="perfilAvTopo"></span></button>
       <button class="bt fantasma icone" id="btAlertas" data-dica="Central de Avisos"><svg><use href="#i-sino"/></svg></button>
     </header>
 
@@ -7956,8 +7988,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                tela, o alternador de tipo forçava a escolha antes de a pessoa
                saber qual das duas queria. -->
           <div class="abas" data-grupo="comprar">
-                        <button class="aba on" data-aba="ct-comprar">Comprar Pontos/Milhas</button>
-            <button class="aba" data-aba="ct-transferir">Transferir Pontos</button>
+                        <button class="aba on" data-aba="ct-comprar">Comprar</button>
+            <button class="aba" data-aba="ct-transferir">Transferir</button>
           </div>
 
           
@@ -8079,18 +8111,18 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                Tanque — quanto há e a que custo. O grupo de contas é de quem está,
                e é a segunda pergunta, não a primeira. -->
           <button class="aba" data-aba="sl-carteira">Saldos</button>
-          <button class="aba on" data-aba="sl-contas">Grupo de contas <span class="cont" id="contContas">0</span></button>
+          <button class="aba on" data-aba="sl-contas">Contas <span class="cont" id="contContas">0</span></button>
           <!-- Contagem regressiva por último: as três primeiras dizem o que existe,
                e ela diz o que está para acabar. Ler o estoque antes do prazo é a
                ordem em que a pergunta se faz. -->
           <button class="aba" data-aba="sl-resumo">Resumo</button>
-          <button class="aba" data-aba="sl-validade">Contagem regressiva</button>
+          <button class="aba" data-aba="sl-validade">Vencimentos</button>
         </div>
         <div class="painel-aba on" id="p-sl-contas">
           <div class="pilha" style="gap:16px">
             <div class="linha">
               <div class="esticar">
-                <div class="olho anil" style="margin-bottom:4px">Grupo de contas</div>
+                <div class="olho anil" style="margin-bottom:4px">Contas e titulares</div>
                 <p class="fraco" style="font-size:calc(13.5px * var(--esc));margin:0">Cada CPF é uma conta. Limites de bonificação por campanha são por CPF, é por isso que o grupo importa.</p>
               </div>
               <button class="bt primario" id="btNovaConta"><svg><use href="#i-mais"/></svg>Nova Conta</button>
@@ -8177,8 +8209,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                que já está contratado. A ordem alfabética valia enquanto nenhuma
                das duas mandava na outra. -->
           <button class="aba on" data-aba="fb-campanhas">Campanhas <span class="cont" id="contCampTotal">0</span></button>
-          <button class="aba" data-aba="fb-clubes">Assinatura de Clubes <span class="cont" id="contClubes">0</span></button>
-          <button class="aba" data-aba="fb-compras">Compras Inteligentes</button>
+          <button class="aba" data-aba="fb-clubes">Clubes <span class="cont" id="contClubes">0</span></button>
+          <button class="aba" data-aba="fb-compras">Compras inteligentes</button>
           <button class="aba" data-aba="fb-mural">Mural</button>
         </div>
 
@@ -9427,7 +9459,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 23:40';
+const BUILD = '2026-10-08 02:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12538,18 +12570,30 @@ function escalaBonita(min, max, marcas){
   return {min:Math.floor(min / passo) * passo, max:Math.ceil(max / passo) * passo, passo};
 }
 
+let _cvMedida = null;
+function larguraTextoGrafico(txt){
+  if (!_cvMedida) _cvMedida = document.createElement('canvas').getContext('2d');
+  const raiz = getComputedStyle(document.documentElement);
+  const esc = parseFloat(raiz.getPropertyValue('--esc')) || 1;
+  _cvMedida.font = `${11.5 * esc}px ${raiz.getPropertyValue('--f-m') || 'monospace'}`;
+  return _cvMedida.measureText(String(txt)).width;
+}
 function grLinha(pontos, {altura = 150, cor = 'var(--ouro)', fmt = v => nBR(v), rotulos = null, alvo = null} = {}){
   if (!pontos.length) return `<div class="vazio" style="padding:26px"><p>Ainda não há série para desenhar.</p></div>`;
   /* A caixa do desenho segue a proporção real de exibição. Antes o viewBox tinha
      600 de largura e era esticado para os 1.247 do cartão: as formas aguentam,
      a tipografia não — cada letra saía 2,08 vezes mais larga que alta. */
   const W = caixaGrafico(alvo), k = W / 600;
-  const H = altura, L = 46 * k, R = 23 * k, T = 12, B = 30;
   const vals = pontos.map(p => p.v);
   const bruta = {min:Math.min(...vals), max:Math.max(...vals)};
   const folga = (bruta.max - bruta.min) * 0.15 || Math.abs(bruta.max) * 0.15 || 1;
   const e = escalaBonita(Math.max(0, bruta.min - folga), bruta.max + folga, 4);
   const min = e.min, max = e.max;
+  /* A margem esquerda nasce da largura do maior valor do eixo ("R$ 30 mil"), medida
+     na fonte do gráfico. Antes era fixa, e os valores longos saíam para fora do
+     gráfico, desalinhados do "R$ 0". */
+  const rotY = []; for (let v = min; v <= max + 1e-9; v += e.passo) rotY.push(fmt(v));
+  const H = altura, L = Math.max(46 * k, Math.ceil(Math.max(...rotY.map(larguraTextoGrafico))) + 14), R = 23 * k, T = 12, B = 30;
 
   const px = i => L + (i / Math.max(1, pontos.length - 1)) * (W - L - R);
   const py = v => T + (1 - (v - min) / (max - min || 1)) * (H - T - B);
@@ -12756,7 +12800,17 @@ const TITULOS = {
    ordem aqui é a ordem em que aparecem no menu. */
 const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-casa',    vistas:['mesa']},
-  {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica']},
+  {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica'],
+    /* 08/10/2026: o menu de Milhas pelo que se faz, não pelo módulo onde mora.
+       Cada item tem ícone, o nome é curto, e o submenu só aparece embaixo do item
+       aberto. [módulo, seção, nome, ícone] */
+    menu:[
+      {g:'Carteira', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-contas', 'Contas', '#i-usuarios'],
+        ['saldo', 'sl-resumo', 'Resumo', '#i-grafico'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]},
+      {g:'Movimentar', itens:[['comprar', 'ct-comprar', 'Comprar', '#i-mais'], ['comprar', 'ct-transferir', 'Transferir', '#i-troca']]},
+      {g:'Fábrica de milhas', itens:[['fabrica', 'fb-campanhas', 'Campanhas', '#i-faisca'], ['fabrica', 'fb-clubes', 'Clubes', '#i-atualizar'],
+        ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola'], ['fabrica', 'fb-mural', 'Mural', '#i-livro']]}
+    ]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
   {k:'cartoes', n:'Cartões', sub:'Crédito e faturas',    ic:'#i-cartao',   vistas:['cartoes']},
@@ -17524,6 +17578,82 @@ function radarCampanhaCorpo(c, jan){
 
 /* Sair: a Torre ainda não tem contas de acesso — os dados vivem neste navegador.
    O botão já ocupa o seu lugar e diz isso, em vez de fingir que desconectou. */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PERFIL DO TITULAR (07/10/2026)
+   Foto, nome e dados de contato de quem é dono da conta. Fica gravado com os
+   dados da Torre (DB.cfg.perfil). A foto é reduzida para 240 px antes de
+   gravar, para não pesar o arquivo de dados.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function perfilAtual(){
+  const p = (DB.cfg && DB.cfg.perfil) || {};
+  const nome = p.nome || ((DB.contas || [])[0] || {}).nome || '';
+  return {...p, nome};
+}
+function iniciaisDe(nome){ const ps = String(nome || '').trim().split(/\s+/).filter(Boolean); return ((ps[0] || '?')[0] + (ps.length > 1 ? ps[ps.length - 1][0] : '')).toUpperCase(); }
+function pintarAvatar(){
+  const p = perfilAtual();
+  const html = p.foto ? `<img src="${p.foto}" alt="">` : `<b>${esc(iniciaisDe(p.nome))}</b>`;
+  ['#perfilAv', '#perfilAvTopo'].forEach(sel => { const el = $(sel); if (el) el.innerHTML = html; });
+  const b = $('#btPerfil'); if (b) b.dataset.dica = p.nome ? `${p.nome} · meu perfil` : 'Meu perfil';
+}
+function reduzirFoto(arquivo){
+  return new Promise((ok, falha) => {
+    const r = new FileReader();
+    r.onerror = () => falha(new Error('Não deu para ler a imagem.'));
+    r.onload = () => {
+      const img = new Image();
+      img.onerror = () => falha(new Error('Esse arquivo não é uma imagem que o navegador abra.'));
+      img.onload = () => {
+        const lado = 240, c = document.createElement('canvas'); c.width = c.height = lado;
+        const k = Math.max(lado / img.width, lado / img.height), w = img.width * k, h = img.height * k;
+        c.getContext('2d').drawImage(img, (lado - w) / 2, (lado - h) / 2, w, h);
+        ok(c.toDataURL('image/jpeg', 0.86));
+      };
+      img.src = r.result;
+    };
+    r.readAsDataURL(arquivo);
+  });
+}
+let _fotoPerfil = undefined;
+function abrirPerfil(){
+  const p = perfilAtual(); _fotoPerfil = p.foto || '';
+  const contas = (DB.contas || []).length;
+  abrirFolha({titulo:'Meu perfil', largura:'media', corpo:`
+    <div class="perfil-topo">
+      <div class="perfil-foto" id="pfFoto">${p.foto ? `<img src="${p.foto}" alt="">` : `<b>${esc(iniciaisDe(p.nome))}</b>`}</div>
+      <div class="pilha" style="gap:8px">
+        <label class="bt fantasma p" style="cursor:pointer"><svg><use href="#i-imagem"/></svg>Escolher foto<input type="file" id="pfArquivo" accept="image/*" hidden></label>
+        <button type="button" class="bt fantasma p" id="pfTirar"${p.foto ? '' : ' hidden'}><svg><use href="#i-x"/></svg>Tirar a foto</button>
+      </div>
+    </div>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));margin-top:14px">
+      <div class="campo"><label>Nome</label><input type="text" id="pfNome" value="${esc(p.nome || '')}" placeholder="Como aparece para você"></div>
+      <div class="campo"><label>E-mail</label><input type="text" inputmode="email" autocomplete="email" id="pfEmail" value="${esc(p.email || '')}" placeholder="voce@exemplo.com"></div>
+      <div class="campo"><label>Telefone ou WhatsApp</label><input type="text" inputmode="tel" autocomplete="tel" id="pfTel" value="${esc(p.tel || '')}" placeholder="(71) 9 0000-0000"></div>
+      <div class="campo"><label>Cidade</label><input type="text" id="pfCidade" value="${esc(p.cidade || '')}" placeholder="Salvador, BA"></div>
+      <div class="campo"><label>Empresa ou marca <span class="fraco">opcional</span></label><input type="text" id="pfMarca" value="${esc(p.marca || '')}" placeholder="VEM · Viagens & Experiências com Milhas"></div>
+    </div>
+    <p class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:10px">${contas} ${contas === 1 ? 'titular de programa cadastrado' : 'titulares de programa cadastrados'} em Milhas → Contas. Este perfil é o seu, o dono da Torre.</p>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="pfSair"><svg><use href="#i-sair"/></svg>Sair da conta</button><div class="esticar"></div><button class="bt primario" id="pfSalvar"><svg><use href="#i-ok"/></svg>Salvar</button>`});
+  $('#pfArquivo').onchange = async ev => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    try{
+      _fotoPerfil = await reduzirFoto(f);
+      $('#pfFoto').innerHTML = `<img src="${_fotoPerfil}" alt="">`; $('#pfTirar').hidden = false;
+    }catch(e){ avisar(e.message, 'alerta'); }
+  };
+  $('#pfTirar').onclick = () => { _fotoPerfil = ''; $('#pfFoto').innerHTML = `<b>${esc(iniciaisDe($('#pfNome').value))}</b>`; $('#pfTirar').hidden = true; };
+  $('#pfNome').oninput = () => { if (!_fotoPerfil) $('#pfFoto').innerHTML = `<b>${esc(iniciaisDe($('#pfNome').value))}</b>`; };
+  $('#pfSair').onclick = () => { fecharFolha(); sairDaConta(); };
+  $('#pfSalvar').onclick = () => {
+    const email = $('#pfEmail').value.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ erroNoCampo('#pfEmail', 'Esse e-mail não parece completo (falta o @ ou o domínio).'); return; }
+    DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || ''};
+    salvar(); pintarAvatar(); fecharFolha(); avisar('Perfil salvo.', 'ok');
+  };
+}
+
 function sairDaConta(){
   avisar('A Torre ainda não tem contas de acesso: seus dados ficam só neste navegador. O Sair passa a funcionar quando houver login, na etapa de vários clientes.', 'info', 8000);
 }
@@ -33897,6 +34027,12 @@ function ajustarLarguraMenu(){
     document.documentElement.style.setProperty('--menu-medido', nova);
 }
 
+/* ir a uma seção de um módulo, a partir do menu */
+function irItemMenu(vv, a){
+  const grupo = (document.querySelector(`#v-${vv} .abas`) || {dataset:{}}).dataset.grupo || vv;
+  if (vistaAtual !== vv){ irPara(vv); setTimeout(() => { irParaAba(grupo, a); marcarColunaMenu(); }, 0); }
+  else { irParaAba(grupo, a); marcarColunaMenu(); }
+}
 function montarColunaMenu(raiz, vistaMedida){
   const base = raiz || document;
   const nav = base.querySelector('.cm-nav');
@@ -33910,6 +34046,23 @@ function montarColunaMenu(raiz, vistaMedida){
   if (!raiz && DB.cfg && DB.cfg.colunaFechada){
     /* Recolhida: um ícone por módulo da área, na ordem do menu, com o nome no
        balão ao passar o mouse. As seções de cada tela ficam no alto da página. */
+    if (area.menu){
+      area.menu.forEach((g, gi) => {
+        if (gi) nav.insertAdjacentHTML('beforeend', '<div class="cm-ico-div" aria-hidden="true"></div>');
+        g.itens.forEach(([vv, a, nome, ic]) => {
+          if (!document.getElementById('v-' + vv)) return;
+          const aberta = vv === v && !!document.querySelector(`#v-${vv} .abas .aba.on[data-aba="${a}"]`);
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'cm-ico' + (aberta ? ' on' : '');
+          b.dataset.vista = vv; b.dataset.aba = a; b.dataset.dica = g.g + ' · ' + nome; b.dataset.dicaLado = 'direita';
+          b.setAttribute('aria-label', nome);
+          b.innerHTML = `<svg><use href="${ic}"/></svg>`;
+          b.onclick = () => irItemMenu(vv, a);
+          nav.appendChild(b);
+        });
+      });
+      return;
+    }
     const grupos = area.grupos || [{n:'', vistas:area.vistas}];
     grupos.forEach((g, gi) => {
       if (gi) nav.insertAdjacentHTML('beforeend', '<div class="cm-ico-div" aria-hidden="true"></div>');
@@ -33929,6 +34082,28 @@ function montarColunaMenu(raiz, vistaMedida){
     return;
   }
   const varios = area.vistas.length > 1;
+  /* área com menu próprio (Milhas): grupos pelo que se faz, itens com ícone */
+  if (area.menu){
+    area.menu.forEach(g => {
+      const atual = g.itens.some(([vv, a]) => vv === v && document.querySelector(`#v-${vv} .abas .aba.on[data-aba="${a}"]`));
+      nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${atual ? ' atual' : ''}">${esc(g.g)}</div>`);
+      g.itens.forEach(([vv, a, nome, ic]) => {
+        const aba = document.querySelector(`#v-${vv} .abas .aba[data-aba="${a}"]`); if (!aba) return;
+        const aberta = vv === v && aba.classList.contains('on');
+        const selo = aba.querySelector('.selo, .aba-selo, .badge, .cont');
+        const sv = selo ? selo.textContent.trim() : '';
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cm-item cm-modulo' + (aberta ? ' on' : '');
+        b.dataset.vista = vv; b.dataset.aba = a;
+        b.innerHTML = `<svg><use href="${ic}"/></svg><span>${esc(nome)}</span>${sv && sv !== '0' ? `<span class="cm-selo">${esc(sv)}</span>` : ''}`;
+        b.onclick = () => irItemMenu(vv, a);
+        nav.appendChild(b);
+        if (aberta){ const grp = (aba.closest('.abas') || {}).dataset ? aba.closest('.abas').dataset.grupo : vv; const sub = htmlSubmenu(grp, a); if (sub) nav.insertAdjacentHTML('beforeend', sub); }
+      });
+    });
+    return;
+  }
   /* área com grupos (Negócio): um título por grupo e, embaixo, os módulos dele */
   if (area.grupos){
     area.grupos.forEach(g => {
@@ -33977,7 +34152,7 @@ function montarColunaMenu(raiz, vistaMedida){
         else { irParaAba(grupo, aba.dataset.aba); marcarColunaMenu(); }
       };
       nav.appendChild(b);
-      if (vv === v){ const sub = htmlSubmenu(grupo, aba.dataset.aba); if (sub) nav.insertAdjacentHTML('beforeend', sub); }
+      if (vv === v && aba.classList.contains('on')){ const sub = htmlSubmenu(grupo, aba.dataset.aba); if (sub) nav.insertAdjacentHTML('beforeend', sub); }
     });
   });
 }
@@ -33997,8 +34172,13 @@ function pintarBarraModulos(v){
 
 /* Chamada quando a seção muda por outro caminho — atalho, botão dentro da
    página, paleta de comandos. Sem ela a coluna marcaria a seção anterior. */
+let _marcaColuna = '';
 function marcarColunaMenu(){
   const ativa = document.querySelector('#v-' + vistaAtual + ' .abas .aba.on');
+  /* o submenu acompanha a seção aberta: a coluna se remonta só quando a seção
+     muda de fato (remontar sempre entrava em ciclo com o observador da página) */
+  const chave = vistaAtual + '|' + (ativa ? ativa.dataset.aba : '') + '|' + (DB.cfg && DB.cfg.colunaFechada ? 1 : 0);
+  if (chave !== _marcaColuna){ _marcaColuna = chave; montarColunaMenu(); }
   document.querySelectorAll('.cm-item[data-aba]').forEach(b => {
     b.classList.toggle('on', !!ativa && b.dataset.vista === vistaAtual && b.dataset.aba === ativa.dataset.aba);
   });
@@ -36791,6 +36971,8 @@ function ligarEventos(){
     irPara(ar ? (ultimaDaArea[ar.k] || ar.vistas[0]) : b.dataset.vista);
   });
   if ($('#btSair')) $('#btSair').onclick = sairDaConta;
+  ['#btPerfil', '#btPerfilTopo'].forEach(sel => { if ($(sel)) $(sel).onclick = abrirPerfil; });
+  pintarAvatar();
   /* Ferramentas da vitrine de lojas. */
   if ($('#ljBusca')) $('#ljBusca').addEventListener('input', e => { buscaLojaV = e.target.value; renderLojasParceiras(); });
   if ($('#ljGasto')) $('#ljGasto').addEventListener('input', e => { gastoLojaV = moedaNum(e.target.value) || 0; renderLojasParceiras(); });
