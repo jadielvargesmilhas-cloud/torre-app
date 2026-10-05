@@ -7885,6 +7885,22 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 @media (max-width:560px){ .tit-cab .acoes-cel{ grid-column:auto; justify-self:auto; } }
 
 #ptHeroi, #mcHeroi, #ciHeroi, #rlHeroi, #ajHeroi{ margin:0; }
+
+/* ══ PADRÃO ÚNICO DE NAVEGAÇÃO (10/10/2026) ═══════════════════════════════════
+   Celular: barra de áreas embaixo + segunda barra com os itens da área, em
+   TODAS as áreas; o seletor de seções do alto da página e o de Campanhas saem,
+   porque já estão na segunda barra. Computador: itens do menu numa linha só. */
+@media (max-width:860px){
+  body.barra-itens .vista.on > .abas, body.barra-itens #segCampGrupo{ display:none !important; }
+  body.barra-itens .bm-item span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+}
+.cm-nav .cm-item > span:not(.cm-selo){ white-space:nowrap; }
+
+/* celulares bem estreitos: nada empurra a página para o lado */
+@media (max-width:400px){ html, body{ overflow-x:clip; } }
+
+.heroi-chip-bt{ border:0; cursor:pointer; font:inherit; }
+.heroi-chip-bt:hover{ filter:brightness(1.15); }
 </style>
 </head>
 <body>
@@ -8518,7 +8534,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               </div>
               <div class="linha-vigia">
                 <div class="campo" style="flex:0 0 auto;width:calc(196px * var(--esc))"><label>Horários</label><input type="text" id="vgHoras" placeholder="08:00, 10:00, 15:00"><div class="dica">Só com a Torre aberto.</div></div>
-                <div class="campo" style="flex:1 1 calc(400px * var(--esc));min-width:calc(280px * var(--esc))"><label>Arquivo publicado (opcional)</label><input type="text" id="vgUrl" placeholder="https://raw.githubusercontent.com/..."><div class="dica">Resultado do robô do GitHub Actions, que roda mesmo com o navegador fechado.</div></div>
+                <div class="campo" style="flex:1 1 calc(400px * var(--esc));min-width:min(calc(280px * var(--esc)), 100%)"><label>Arquivo publicado (opcional)</label><input type="text" id="vgUrl" placeholder="https://raw.githubusercontent.com/..."><div class="dica">Resultado do robô do GitHub Actions, que roda mesmo com o navegador fechado.</div></div>
                 <label class="ck" style="height:34px;flex:0 0 auto"><input type="checkbox" id="vgAuto"> Lembrar nos horários</label>
                 <button class="bt p fantasma" id="btVarrerAgora" style="height:34px;flex:0 0 auto"><svg><use href="#i-atualizar"/></svg>Varrer agora</button>
                 <button class="bt p fantasma" id="btPuxarPublicado" style="height:34px;flex:0 0 auto"><svg><use href="#i-baixar"/></svg>Puxar do arquivo</button>
@@ -9690,7 +9706,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 22:20';
+const BUILD = '2026-10-10 11:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13109,8 +13125,11 @@ function atualizarArea(){
   if (['carteira', 'promocoes', 'acumular'].includes(ar.k)){
     if ($('#topoTit')) $('#topoTit').textContent = ar.n;
     if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, saldos e vencimentos', promocoes:'Onde a milha está barata hoje', acumular:'Como juntar milhas: comprar, transferir, clubes e compras'}[ar.k];
-    if ($('#fmNome')) $('#fmNome').textContent = ar.n;
   }
+  /* a pílula do alto diz a área, sempre: a segunda barra (celular) e a coluna
+     (computador) dizem o item */
+  if ($('#fmNome')) $('#fmNome').textContent = ar.n;
+  if ($('#fmCurto')) $('#fmCurto').textContent = ar.n;
 }
 const ultimaDaArea = {};
 let vistaAtual = 'mesa';
@@ -13204,7 +13223,7 @@ function montarCorpoCT(aba){
 
 function irParaAba(grupo, aba){
   if (grupo === 'fabrica' && typeof renderHeroiDaVista === 'function') setTimeout(() => renderHeroiDaVista('fabrica'), 0);
-  if ((grupo === 'fabrica' || grupo === 'saldo' || grupo === 'comprar') && typeof atualizarArea === 'function') setTimeout(atualizarArea, 0);
+  if (typeof atualizarArea === 'function') setTimeout(atualizarArea, 0);   /* todas as áreas: barra, coluna e pílula acompanham a seção */
   if (grupo === 'saldo' && typeof renderHeroiDaVista === 'function') setTimeout(() => renderHeroiDaVista('saldo'), 0);
   if (typeof agendarPadronizar === 'function') agendarPadronizar();
   if (grupo === 'cartoes' && typeof renderHeroiCartoes === 'function') setTimeout(renderHeroiCartoes, 0);
@@ -14174,12 +14193,45 @@ function renderFita(){
    transferência, como no resto da Torre). Investido: o que entrou com custo e
    ainda está em estoque. A curva é o milheiro médio de cada mês, nos últimos
    doze meses com compra. */
+
+/* Como a carteira é avaliada, programa por programa: o que custou o que está lá,
+   quanto vale e por qual régua. Responde "estou no prejuízo?" com os números. */
+function janelaValorCarteira(){
+  const sal = saldoPorPrograma() || {}, custoEst = custoEmEstoque();
+  const l = Object.keys(sal).filter(p => sal[p] > 0).map(p => {
+    const v = valorPrograma(p, sal[p]), c = custoEst[p] || 0;
+    return {p, qtd:sal[p], custo:c, vale:v.valor || 0, via:v.via, alvo:faixasDe(p).alvo, meu:c && sal[p] ? c / sal[p] * 1000 : null};
+  }).sort((a, b) => (a.vale - a.custo) - (b.vale - b.custo));
+  const tv = soma(l.map(x => x.vale)), tc = soma(l.map(x => x.custo));
+  abrirFolha({titulo:'Quanto a carteira vale, e por quê', largura:'larga', corpo:`
+    <p class="fraco jn-sub">Cada programa vale <b>saldo × valor-alvo</b> do milheiro, a régua de Ajustes → Programas: o preço que vale a pena pagar hoje por mil.
+      Ponto de banco vale pelo que vira na melhor transferência viva. O custo é só o do que <b>ainda está</b> na carteira.</p>
+    <div class="rolo"><table class="tb-dados">
+      <thead><tr><th>Programa</th><th class="n">Saldo</th><th class="n">Seu milheiro</th><th class="n">Valor-alvo</th><th class="n">Custou</th><th class="n">Vale</th><th class="n">Diferença</th></tr></thead>
+      <tbody>${l.map(x => { const d = x.vale - x.custo; return `<tr>
+        <td><div class="linha" style="gap:8px;flex-wrap:nowrap">${discoProg(x.p, 'p')}<span>${esc(prog(x.p).n)}${prog(x.p).tipo === 'pontos' ? `<br><small class="fraco">${esc(x.via || '')}</small>` : ''}</span></div></td>
+        <td class="n">${nBR(x.qtd)}</td><td class="n">${x.meu ? brl2(x.meu) : '<span class="fraco">sem custo</span>'}</td>
+        <td class="n">${prog(x.p).tipo === 'pontos' ? '<span class="fraco">pela rota</span>' : brl2(x.alvo)}</td>
+        <td class="n">${brl(x.custo)}</td><td class="n">${brl(x.vale)}</td>
+        <td class="n"><b style="color:var(--${d >= 0 ? 'jade' : 'brasa'})">${d >= 0 ? '+' : '−'}${brl(Math.abs(d))}</b></td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>Total</td><td></td><td></td><td></td><td class="n">${brl(tc)}</td><td class="n">${brl(tv)}</td><td class="n"><b style="color:var(--${tv - tc >= 0 ? 'jade' : 'brasa'})">${tv - tc >= 0 ? '+' : '−'}${brl(Math.abs(tv - tc))}</b></td></tr></tfoot>
+    </table></div>
+    <p class="fraco" style="margin-top:12px;font-size:calc(12.5px * var(--esc))">Diferença negativa num programa quer dizer que você pagou pelo milheiro mais do que o valor-alvo dele. Não é perda realizada: só vira resultado quando a milha é vendida ou usada. Se o valor-alvo de algum programa estiver fora do mercado de hoje, ajuste em Ajustes → Programas.</p>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><div class="esticar"></div><button class="bt primario" onclick="fecharFolha();setTimeout(()=>irItemMenu('ajustes','aj-mercado'),60)"><svg><use href="#i-alvo"/></svg>Ajustar valores-alvo</button>`});
+}
+
 function renderMesaHeroi(){
   const alvo = $('#mesaHeroi'); if (!alvo) return;
   const sal = saldoPorPrograma() || {};
   const progs = Object.keys(sal).filter(p => sal[p] > 0);
   const vale = soma(progs.map(p => valorPrograma(p, sal[p]).valor || 0));
-  const investido = soma(linhasCarteira(PROG_IDS).map(x => x.inv));
+  /* Comparar com o CUSTO DO QUE ESTÁ NA CARTEIRA, e não com tudo o que já foi
+     gasto (10/10/2026). Antes somava o custo de todo lançamento da história,
+     inclusive de pontos já transferidos e milhas já usadas ou vendidas: o
+     estoque de hoje ficava comparado com o gasto de sempre, e aparecia um
+     "prejuízo" que não existe. */
+  const custoEst = custoEmEstoque();
+  const investido = soma(progs.map(p => custoEst[p] || 0));
   const milhas = soma(progs.filter(p => prog(p).tipo !== 'pontos').map(p => sal[p]));
   const pontos = soma(progs.filter(p => prog(p).tipo === 'pontos').map(p => sal[p]));
   const dif = vale - investido, difPct = investido ? dif / investido * 100 : null;
@@ -14218,8 +14270,8 @@ function renderMesaHeroi(){
       <div class="heroi-rot">Sua carteira vale hoje</div>
       <div class="heroi-valor">${brl(vale)}</div>
       <div class="heroi-linha">
-        <span>Você investiu <b>${brl(investido)}</b></span>
-        ${difPct != null ? `<span class="heroi-chip ${dif >= 0 ? 'sobe' : 'desce'}">${dif >= 0 ? '+' : '−'}${brl(Math.abs(dif))} · ${dif >= 0 ? '+' : '−'}${pct(Math.abs(difPct), 1)}</span>` : ''}
+        <span>Custou <b>${brl(investido)}</b></span>
+        ${difPct != null ? `<button type="button" class="heroi-chip heroi-chip-bt ${dif >= 0 ? 'sobe' : 'desce'}" id="mesaVerValor" data-dica="Como este valor é calculado, programa por programa">${dif >= 0 ? '+' : '−'}${brl(Math.abs(dif))} · ${dif >= 0 ? '+' : '−'}${pct(Math.abs(difPct), 1)} ›</button>` : ''}
       </div>
       <div class="heroi-numeros">
         <div><b>${nBR(milhas)}</b><span>milhas prontas</span></div>
@@ -14247,6 +14299,7 @@ function renderMesaHeroi(){
     fatias:Object.assign(fatias.slice(), {todos:comp.map((x, i) => ({n:prog(x.p).n, v:x.v, cor:cores[Math.min(i, 4)]}))}),
     dirRot:'Custo do milheiro, mês a mês', dirSub:'Média do que entrou com custo nos programas aéreos.', serie, fmtSerie:v => brl2(v)};
   if ($('#mesaVerComp')) $('#mesaVerComp').onclick = () => janelaComposicao(oMesa);
+  if ($('#mesaVerValor')) $('#mesaVerValor').onclick = janelaValorCarteira;
   const cab = alvo.querySelector('.heroi-dir-cab');
   if (cab && serie.length >= 2 && !alvo.querySelector('[data-abre="serie"]')){
     cab.insertAdjacentHTML('afterend', `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">Ver mês a mês<svg><use href="#i-seta-d"/></svg></button>`);
@@ -18463,6 +18516,7 @@ function abrirPerfil(){
     DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || ''};
     salvar(); pintarAvatar(); fecharFolha(); avisar('Perfil salvo.', 'ok');
     if (vistaAtual === 'saldo' && typeof renderSaldo === 'function') renderSaldo();
+    if (typeof nuvemPronta === 'function' && nuvemPronta()) setTimeout(() => nuvemSincronizar(false), 300);
   };
 }
 
@@ -19074,7 +19128,7 @@ const GUIA_ABA = {
           'Guarde o print da confirmação do cadastro até as milhas caírem. É a única prova se o crédito não vier.']},
       {i:'i-alvo', n:'Quando vale a pena',
        p:['O bônus sozinho não decide: o que decide é o milheiro que sobra no fim. Some o que os pontos custaram, divida pelas milhas que chegaram, e compare com o alvo do destino.',
-          'Em Milhas → Comprar e transferir, a Torre faz essa conta com os seus números e diz se o resultado ficou dentro ou fora da faixa.']}
+          'Em Acumular → Transferir pontos, a Torre faz essa conta com os seus números e diz se o resultado ficou dentro ou fora da faixa.']}
     ]
   },
   compra: {
@@ -34707,6 +34761,7 @@ function pintarFaixaModulo(v){
   if (!nome || !res) return;
   nome.textContent = (TITULOS[v] || ['n/d'])[0];
   if ($('#fmCurto')) $('#fmCurto').textContent = CURTO_MODULO[v] || (TITULOS[v] || ['n/d'])[0];
+  { const ar = areaDe(v); if (ar){ nome.textContent = ar.n; if ($('#fmCurto')) $('#fmCurto').textContent = ar.n; } }
 
   const saldos = saldoPorPrograma() || {};
   const progs = Object.keys(saldos).filter(p => saldos[p] > 0).length;
@@ -34904,6 +34959,18 @@ function ajustarLarguraMenu(){
       maior = Math.max(maior, precisa);
     });
   });
+  /* itens dos menus próprios, área por área, inclusive as que dividem módulo */
+  AREAS.filter(a => a.menu).forEach(a => {
+    const nv = sombra.querySelector('.cm-nav'); if (!nv) return;
+    nv.innerHTML = a.menu.map(g => (g.g ? `<div class="cm-grupo">${esc(g.g)}</div>` : '') + g.itens.map(it =>
+      `<button type="button" class="cm-item cm-modulo" data-aba="${it[1]}"><svg><use href="${it[3]}"/></svg><span>${esc(it[2])}</span><span class="cm-selo">126</span></button>`).join('')).join('');
+    nv.querySelectorAll('.cm-grupo').forEach(t => { maior = Math.max(maior, t.getBoundingClientRect().left - cl + larguraTexto(t) + 12); });
+    nv.querySelectorAll('.cm-item').forEach(it => {
+      const st = getComputedStyle(it), filhos = [...it.children], gap = parseFloat(st.columnGap || st.gap) || 0;
+      const conteudo = filhos.reduce((x, f) => x + f.getBoundingClientRect().width, 0) + gap * Math.max(0, filhos.length - 1);
+      maior = Math.max(maior, it.getBoundingClientRect().left - cl + (parseFloat(st.paddingLeft) || 0) + conteudo + (parseFloat(st.paddingRight) || 0) + 2);
+    });
+  });
   sombra.remove();
   const nova = Math.ceil(maior + 2) + 'px';
   if (document.documentElement.style.getPropertyValue('--menu-medido') !== nova)
@@ -35046,13 +35113,18 @@ function montarColunaMenu(raiz, vistaMedida){
 /* ── barra de módulos do celular ──────────────────────────────────────────────
    Logo acima da barra das áreas: os módulos da área aberta, com ícone e nome.
    Área de um módulo só não precisa dela. */
+/* nome curto de cada item na segunda barra do celular, onde cabe pouco */
+const CURTO_ITEM = {'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Compras inteligentes':'Compras', 'Painel de bordo':'Painel',
+  'Compra e transferência':'Transferência', 'Clubes e lojas':'Clubes e lojas', 'Meus cartões':'Meus cartões', 'Lançamentos':'Lançamentos'};
 function pintarBarraModulos(v){
   const bm = $('#barraModulos'); if (!bm) return;
   const area = areaDe(v);
-  if (area.menu && area.vistas.length > 1){
+  /* Padrão único (10/10/2026): em toda área com menu, a segunda barra de baixo
+     mostra os itens dela, como em Acumular; as seções do alto da página saem. */
+  if (area.menu && area.menu.flatMap(g => g.itens).length > 1){
     const its = area.menu.flatMap(g => g.itens);
     document.body.classList.add('com-modulos'); document.body.classList.add('barra-itens');
-    bm.innerHTML = its.map((it, i) => `<button type="button" class="bm-item${itemAberto(it) ? ' on' : ''}" data-i="${i}"><svg><use href="${it[3]}"/></svg><span>${esc(({'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Compras inteligentes':'Compras'})[it[2]] || it[2])}</span></button>`).join('');
+    bm.innerHTML = its.map((it, i) => `<button type="button" class="bm-item${itemAberto(it) ? ' on' : ''}" data-i="${i}"><svg><use href="${it[3]}"/></svg><span>${esc(CURTO_ITEM[it[2]] || it[2])}</span></button>`).join('');
     $$('.bm-item', bm).forEach(b => b.onclick = () => { const it = its[+b.dataset.i]; irItemMenu(it[0], it[1], it[4]); });
     return;
   }
@@ -37218,11 +37290,22 @@ async function nuvemGravar(sha){
 
    Descobrindo do banco, uma coleção nova entra sozinha no dia em que for
    criada. */
+/* O perfil (nome, foto e contato do dono da Torre) mora em cfg, ao lado das
+   preferências de aparelho, mas é DADO: tem de ir para o outro aparelho. Antes
+   (até 09/10/2026) a comparação só olhava as listas, e uma foto nova no
+   computador não contava como mudança: nada era enviado, e o celular nunca a
+   recebia. Agora o perfil entra como uma coleção a mais. */
+const COLECOES_DE_CFG = ['perfil'];
+function colecaoDe(db, k){
+  if (COLECOES_DE_CFG.includes(k)) return db && db.cfg && db.cfg[k] ? [db.cfg[k]] : [];
+  return (db || {})[k] || [];
+}
 function colecoesDe(a, b){
   const chaves = new Set();
-  [a, b].forEach(db => Object.keys(db || {}).forEach(k => {
-    if (Array.isArray((db || {})[k])) chaves.add(k);
-  }));
+  [a, b].forEach(db => {
+    Object.keys(db || {}).forEach(k => { if (Array.isArray((db || {})[k])) chaves.add(k); });
+    COLECOES_DE_CFG.forEach(k => { if (db && db.cfg && db.cfg[k]) chaves.add(k); });
+  });
   return [...chaves].sort();
 }
 
@@ -37236,8 +37319,8 @@ function mesmoConteudo(a, b){
    linhas idênticas e nenhuma explicação, que é como pedir uma decisão às cegas. */
 function diferencasEntre(a, b){
   return colecoesDe(a, b).filter(k =>
-    JSON.stringify((a || {})[k] || []) !== JSON.stringify((b || {})[k] || []))
-    .map(k => ({colecao:k, aqui:(((a || {})[k]) || []).length, la:(((b || {})[k]) || []).length}));
+    JSON.stringify(colecaoDe(a, k)) !== JSON.stringify(colecaoDe(b, k)))
+    .map(k => ({colecao:k, aqui:colecaoDe(a, k).length, la:colecaoDe(b, k).length}));
 }
 
 /* Retrato do conteúdo num texto só, para comparar bancos sem percorrer registro
@@ -37245,7 +37328,7 @@ function diferencasEntre(a, b){
    tudo: este aparelho mexeu em alguma coisa desde a última vez? */
 function assinaturaDados(db){
   if (!db) return '';
-  return colecoesDe(db, db).map(k => JSON.stringify((db[k] || []))).join('|');
+  return colecoesDe(db, db).map(k => JSON.stringify(colecaoDe(db, k))).join('|');
 }
 
 let nuvemOcupada = false;
@@ -37349,7 +37432,7 @@ const NOME_COLECAO = {
   cpfs:'Política de CPF', pagamentos:'Pagamentos', mural:'Mural',
   cotacoes:'Cotações', monitores:'Monitores de voo', buscas:'Buscas guardadas',
   simulacoes:'Simulações', vitrines:'Vitrines', desejos:'Lista de desejos',
-  planos:'Planos de clube'
+  planos:'Planos de clube', perfil:'Perfil (nome e foto)'
 };
 
 function nuvemAbrirConflito(remoto, motivo){
@@ -37663,6 +37746,8 @@ function desenharConferenciaDatas(){
 }
 
 function aplicarTudo(){
+  /* o perfil também vem de outro aparelho (nuvem, importação): repinta a foto */
+  if (typeof pintarAvatar === 'function') setTimeout(pintarAvatar, 0);
   migrarDadosOutubro();
   aplicarCondicoesCampanhas();
   corrigirDatasDasSaidasDeEmissao();
@@ -39160,7 +39245,7 @@ async function varrerPromocoes(silencioso){
      Jadiel tocar em Varrer agora (de graça, pela assinatura). */
   if (silencioso){
     if (alvo) alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-relogio"/></svg><div class="pilha compacta"><div><b>Hora da varredura de promoções.</b></div><div>Toque em <b>Varrer agora</b>: o Claude pesquisa de graça, pela sua assinatura.</div></div></div>`;
-    avisar('Hora da varredura de promoções. Em <b>Milhas → Campanhas</b>, toque em <b>Varrer agora</b>.', 'info', 8000);
+    avisar('Hora da varredura de promoções. Em <b>Promoções → Compra e transferência</b>, toque em <b>Varrer agora</b>.', 'info', 8000);
     return;
   }
   if (!silencioso) alvo.innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Varrendo fontes públicas…</div></div>`;
