@@ -8087,6 +8087,42 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 /* coluna do menu mais justa ao texto (10/10/2026) */
 .cm-nav .cm-item{ column-gap:8px; }
 .cm-nav .cm-selo{ margin-left:auto; }
+
+/* guias de Compras Inteligentes */
+.seg.seg-guias{ margin:2px 0 4px; }
+.seg.seg-guias button{ display:inline-flex; align-items:center; gap:7px; }
+.seg.seg-guias svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ══ VITRINE DE PLANOS DE CLUBE ═══════════════════════════════════════════════ */
+.pl-grade{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap:16px; align-items:stretch; padding-top:6px; }
+.pl-cartao{ position:relative; display:flex; flex-direction:column; gap:14px; padding:20px 18px 18px; border-radius:18px; background:var(--sup-0);
+  border:1px solid var(--fio); box-shadow:0 10px 26px -20px rgba(8,18,34,.45); transition:transform .25s var(--ease), box-shadow .25s var(--ease); }
+.pl-cartao:hover{ transform:translateY(-3px); box-shadow:0 18px 34px -20px rgba(8,18,34,.5); }
+.pl-melhor{ border:1.5px solid color-mix(in oklab, var(--dourado) 70%, transparent);
+  background:linear-gradient(180deg, color-mix(in oklab, var(--dourado) 9%, var(--sup-0)), var(--sup-0) 45%);
+  box-shadow:0 18px 40px -22px color-mix(in oklab, var(--ouro) 60%, transparent); }
+.pl-fita{ position:absolute; top:-11px; left:18px; padding:3px 11px; border-radius:99px; font-size:calc(11.5px * var(--esc)); font-weight:700;
+  color:#2a1d05; background:linear-gradient(135deg, #f5d98a, #d9a93f); box-shadow:0 4px 12px -4px rgba(169,120,30,.6); }
+.pl-cab{ display:flex; flex-direction:column; gap:3px; }
+.pl-cab b{ font-size:calc(16px * var(--esc)); font-weight:700; }
+.pl-fid{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); }
+.pl-pontos{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.pl-pontos b{ font-family:var(--f-d, var(--f-b)); font-size:calc(34px * var(--esc)); font-weight:800; letter-spacing:-.02em; line-height:1; color:var(--giz); }
+.pl-pontos span{ font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.pl-preco{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; padding-bottom:12px; border-bottom:1px solid var(--fio-suave); }
+.pl-preco b{ font-family:var(--f-m); font-size:calc(19px * var(--esc)); font-weight:600; }
+.pl-preco span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); }
+.pl-cpm{ display:flex; flex-direction:column; gap:8px; }
+.pl-cpm-l{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pl-cpm-l > span:first-child{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.pl-cpm-l b{ font-family:var(--f-m); font-size:calc(17px * var(--esc)); font-weight:700; }
+.pl-regua{ height:7px !important; }
+.pl-cpm small{ font-size:calc(12px * var(--esc)); }
+.pl-assinar{ margin-top:auto; justify-content:center; width:100%; }
+.pl-fora{ opacity:.6; }
+.pl-nd{ margin:0; font-size:calc(12.5px * var(--esc)); }
+.pl-nota{ margin:14px 2px 0; font-size:calc(12px * var(--esc)); }
+@media (prefers-reduced-motion:reduce){ .pl-cartao:hover{ transform:none; } }
 </style>
 </head>
 <body>
@@ -8486,7 +8522,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                 <div class="ct-entrada">
                   <div class="grade ct-grade" id="ctCampos"></div>
                   <div class="grade ct-cards" id="ctCards"></div>
-                  <div id="ctMercado"></div>
                 </div>
                 <!-- Régua, tabela e conclusão num bloco só. A conclusão precisa
                      atravessar os dois cards e encostar neles, e isso não se
@@ -8501,6 +8536,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                   <div id="ctAdNota"></div>
                 </div>
               </div>
+              <!-- "Se vender": a linha inteira, embaixo dos campos e da régua (10/10/2026) -->
+              <div id="ctMercado"></div>
 
               <!-- A faixa de saldos saiu: a tabela ao lado já mostra antes e depois
                    de cada programa, e as duas diziam a mesma coisa em formatos
@@ -9893,7 +9930,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-10 22:15';
+const BUILD = '2026-10-10 23:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13265,8 +13302,11 @@ const AREAS = [
     menu:[{g:'Campanhas', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube']]},
       {g:'Anúncios', itens:[['fabrica', 'fb-mural', 'Mural', '#i-livro']]}]},
   {k:'acumular',  n:'Acumular',  sub:'Como juntar milhas',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
-    menu:[{g:'Com dinheiro', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras Inteligentes', '#i-sacola'],
-      ['fabrica', 'fb-campanhas', 'Compra Bonificada', '#i-brilho', 'bonificada'], ['comprar', 'ct-comprar', 'Comprar Milhas', '#i-carrinho']]},
+    /* Compras Inteligentes junta duas guias (10/10/2026): "Compra em lojas
+       parceiras" (a seção de compras) e "Compra em programas aéreos" (as
+       campanhas de compra bonificada). O 6º campo é a segunda casa do item. */
+    menu:[{g:'Com dinheiro', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras Inteligentes', '#i-sacola', '', ['fabrica', 'fb-campanhas', 'Compra Bonificada', '#i-brilho', 'bonificada']],
+      ['comprar', 'ct-comprar', 'Comprar Milhas', '#i-carrinho']]},
       {g:'Com pontos', itens:[['comprar', 'ct-transferir', 'Transferir Pontos', '#i-subir']]}]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
@@ -13295,7 +13335,8 @@ const areaDe = v => {
   const cands = AREAS.filter(a => a.vistas.includes(v));
   if (cands.length <= 1) return cands[0] || AREAS[0];
   const ab = document.querySelector(`#v-${v} .abas .aba.on`), aba = ab ? ab.dataset.aba : '';
-  return cands.find(a => (a.menu || []).some(g => g.itens.some(it => it[0] === v && it[1] === aba && (!it[4] || subAtivo(it[4])))))
+  const casa = it => (it[0] === v && it[1] === aba && (!it[4] || subAtivo(it[4]))) || (it[5] && casa(it[5]));
+  return cands.find(a => (a.menu || []).some(g => g.itens.some(casa)))
     || cands.find(a => (a.menu || []).some(g => g.itens.some(it => it[0] === v && it[1] === aba))) || cands[0];
 };
 /* item do menu que está aberto agora (módulo, seção e, em Campanhas, o lado) */
@@ -13308,6 +13349,7 @@ function subAtivo(sub){
   return g === sub;
 }
 function itemAberto(it){
+  if (it[5] && itemAberto(it[5])) return true;   /* a segunda casa do item também conta */
   if (it[0] !== vistaAtual || !document.querySelector(`#v-${it[0]} .abas .aba.on[data-aba="${it[1]}"]`)) return false;
   return !it[4] || subAtivo(it[4]);
 }
@@ -14592,6 +14634,24 @@ function nomeDaSecao(){
   if (aba){ const p = aba.childNodes[0]; return ((p && p.nodeType === 3 ? p.textContent : aba.textContent) || '').trim(); }
   return (TITULOS[vistaAtual] || [''])[0];
 }
+
+/* Guias de Compras Inteligentes: aparecem logo abaixo do título nas duas telas
+   que o item reúne, sempre na mesma ordem. */
+function guiasComprasInteligentes(raiz, cab){
+  const velha = document.getElementById('segComprasInt');
+  const naLoja = vistaAtual === 'fabrica' && raiz.id === 'p-fb-compras';
+  const noAereo = vistaAtual === 'fabrica' && raiz.id === 'p-fb-campanhas' && subAtivo('bonificada') && areaDe('fabrica').k === 'acumular';
+  if (!naLoja && !noAereo){ if (velha && !raiz.contains(velha)) velha.remove(); else if (velha && !naLoja && !noAereo) velha.remove(); return; }
+  let sg = velha;
+  if (!sg){ sg = document.createElement('div'); sg.className = 'seg seg-guias'; sg.id = 'segComprasInt';
+    sg.innerHTML = `<button type="button" data-g="lojas"><svg><use href="#i-sacola"/></svg>Compra em lojas parceiras</button><button type="button" data-g="aereos"><svg><use href="#i-aviao"/></svg>Compra em programas aéreos</button>`;
+    sg.querySelector('[data-g=lojas]').onclick = () => irItemMenu('fabrica', 'fb-compras');
+    sg.querySelector('[data-g=aereos]').onclick = () => irItemMenu('fabrica', 'fb-campanhas', 'bonificada'); }
+  if (sg.parentElement !== cab.parentElement || sg.previousElementSibling !== cab) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
+  sg.querySelector('[data-g=lojas]').classList.toggle('on', naLoja);
+  sg.querySelector('[data-g=aereos]').classList.toggle('on', noAereo);
+}
+
 function padronizarSecao(){
   const vista = document.getElementById('v-' + vistaAtual); if (!vista) return;
   const raiz = vista.querySelector(':scope > .painel-aba.on') || vista;
@@ -14624,6 +14684,7 @@ function padronizarSecao(){
     }
   }
   tit.textContent = nome;
+  guiasComprasInteligentes(raiz, cab);
   if (vistaAtual === 'mesa' && raiz.id === 'p-ms-hoje' && !cab.querySelector('#btHoje')){
     const n = (typeof avisos === 'function' ? avisos() : []).length;
     cab.insertAdjacentHTML('beforeend', `<div class="esticar"></div><button type="button" class="bt primario" id="btHoje"><svg><use href="#i-sino"/></svg>O que fazer hoje${n ? ` <span class="cont">${n}</span>` : ''}</button>`);
@@ -14653,7 +14714,8 @@ function padronizarSecao(){
     painel.dataset.veioDe = casa.id;
     caixa.insertBefore(painel, cab.nextElementSibling);
   }
-  if (painel && painel.parentElement === caixa && cab.parentElement === caixa && cab.nextElementSibling !== painel) caixa.insertBefore(painel, cab.nextElementSibling);
+  const ancora = (() => { const g = document.getElementById('segComprasInt'); return g && g.parentElement === caixa && g.previousElementSibling === cab ? g : cab; })();
+  if (painel && painel.parentElement === caixa && ancora.parentElement === caixa && ancora.nextElementSibling !== painel) caixa.insertBefore(painel, ancora.nextElementSibling);
 
   /* 3. o guia "Como ler…" logo depois do painel */
   const guia = [...caixa.children].find(e => /Guia$/.test(e.id || '') && vis(e) && /^\s*[▸▾›»]?\s*Como ler/i.test(e.innerText || ''));
@@ -22941,27 +23003,45 @@ function renderComparador(){
   const leitura = c => c <= f.alvo ? {z:'jade', t:c <= f.otimo ? 'ótimo' : 'no alvo'}
                      : c <= f.razoavel ? {z:'ouro', t:'razoável'} : {z:'brasa', t:'caro'};
 
-  $('#fbComparador').innerHTML = `<div class="rolo"><table class="tb-dados tb-cmp">
-    <thead><tr><th>Plano</th><th class="n">Pontos/mês</th><th class="n">Mensalidade</th><th class="n">Milheiro</th><th>Leitura</th><th class="n">Carência</th></tr></thead>
-    <tbody>${linhas.map((l, i) => l.preco === undefined
-      ? `<tr class="cmp-fora"><td data-r="Plano">${esc(l.pl.n)}</td>
-         <td class="n" data-r="Pontos/mês">${nBR(l.pl.qtd)}</td>
-         <td class="n" data-r="Mensalidade">n/d</td><td class="n" data-r="Milheiro">n/d</td>
-         <td data-r="Leitura" class="fraco">Não existe nesta modalidade</td>
-         <td class="n" data-r="Carência">n/d</td></tr>`
-      : `<tr><td data-r="Plano"><b>${esc(l.pl.n)}</b>${i === 0 ? ' <span class="etq jade" style="margin-left:5px">melhor</span>' : ''}</td>
-        <td class="n" data-r="Pontos/mês">${nBR(l.pl.qtd)}</td>
-        <td class="n" data-r="Mensalidade">${brl2(l.preco)}</td>
-        <!-- O peso vem de uma classe, não de <b>: dentro da tabela o <b> tem cor
-             própria no sistema e engolia a cor da faixa, deixando o milheiro azul
-             em vez de jade, ouro ou brasa. -->
-        <td class="n cmp-cpm" data-r="Milheiro" style="color:${cor(l.cpm)}">${brl2(l.cpm)}</td>
-        <td data-r="Leitura"><span class="etq ${leitura(l.cpm).z}">${leitura(l.cpm).t}</span></td>
-        <td class="n" data-r="Carência">${l.pl.fid ? l.pl.fid + ' m' : 'n/d'}</td></tr>`).join('')}</tbody></table></div>
+  /* ── Vitrine de planos (10/10/2026) ──────────────────────────────────────
+     Antes era uma tabela que, sem caber, virava pilha de rótulos e números
+     soltos. Agora cada plano é um cartão de assinatura, lado a lado, como nas
+     páginas de planos: o plano de menor milheiro em destaque, os pontos por mês
+     grandes, o preço, o milheiro com a régua das faixas do programa e o botão
+     para assinar com o plano já escolhido. */
+  /* o preço de cada modalidade já vem em valor por mês (é ele que dá o milheiro) */
+  const MOD_ROT = {mensal:'por mês', anual_parcelado:'por mês, no plano anual parcelado', anual_avista:'por mês, no plano anual à vista'};
+  const teto = f.razoavel * 1.4;
+  const melhorCpm = (linhas.find(l => l.preco !== undefined) || {}).cpm;
+  $('#fbComparador').innerHTML = `<div class="pl-grade">${linhas.map(l => {
+    if (l.preco === undefined) return `<article class="pl-cartao pl-fora">
+      <header class="pl-cab"><b>${esc(l.pl.n)}</b></header>
+      <div class="pl-pontos"><b>${nBR(l.pl.qtd)}</b><span>pontos por mês</span></div>
+      <p class="fraco pl-nd">Não existe na modalidade escolhida.</p></article>`;
+    const lt = leitura(l.cpm), pos = Math.min(100, l.cpm / teto * 100), melhor = l.cpm === melhorCpm;
+    const dif = melhorCpm && !melhor ? (l.cpm - melhorCpm) / melhorCpm * 100 : 0;
+    return `<article class="pl-cartao${melhor ? ' pl-melhor' : ''}">
+      ${melhor ? '<span class="pl-fita">Menor milheiro</span>' : ''}
+      <header class="pl-cab"><b>${esc(l.pl.n)}</b>${l.pl.fid ? `<span class="pl-fid">${l.pl.fid} meses de carência</span>` : ''}</header>
+      <div class="pl-pontos"><b>${nBR(l.pl.qtd)}</b><span>pontos por mês</span></div>
+      <div class="pl-preco"><b>${brl2(l.preco)}</b><span>${MOD_ROT[mod] || ''}</span></div>
+      <div class="pl-cpm">
+        <div class="pl-cpm-l"><span>Milheiro</span><b style="color:${cor(l.cpm)}">${brl2(l.cpm)}</b><span class="etq ${lt.z}">${lt.t}</span></div>
+        <span class="sl-regua pl-regua" title="ótimo até ${brl2(f.otimo)} · alvo até ${brl2(f.alvo)} · razoável até ${brl2(f.razoavel)}"><i style="flex:${f.otimo}"></i><i style="flex:${f.alvo - f.otimo}"></i><i style="flex:${f.razoavel - f.alvo}"></i><i style="flex:${teto - f.razoavel}"></i><b style="left:${pos.toFixed(1)}%"></b></span>
+        <small class="fraco">${melhor ? 'O melhor milheiro entre os planos deste clube.' : `${pct(dif, 0)} mais caro que o melhor plano.`}</small>
+      </div>
+      <button type="button" class="bt ${melhor ? 'primario' : 'fantasma'} pl-assinar" data-plano="${l.pl.id}"><svg><use href="#i-mais"/></svg>Assinar este plano</button>
+    </article>`;
+  }).join('')}</div>
+  <p class="fraco pl-nota">Milheiro só da mensalidade, fora de campanha. O bônus de adesão, quando existe, é diluído na carência. As faixas (ótimo, alvo, razoável, caro) são as do programa, em Ajustes → Programas.</p>
     <div class="cmp-rodape">
       <div class="cmp-obs">${cat.planos.some(pl => pl.obs) ? `<p class="fraco" style="font-size:calc(13px * var(--esc));margin:0">${cat.planos.filter(pl => pl.obs).map(pl => `<b>${esc(pl.n)}:</b> ${esc(pl.obs)}`).join('<br>')}</p>` : ''}</div>
       ${avisoCampanhaClube(p)}
     </div>`;
+  $$('#fbComparador .pl-assinar').forEach(bt => bt.onclick = () => {
+    const l = linhas.find(x => x.pl.id === bt.dataset.plano);
+    editarAssinatura(null, {prog:p, planoId:l.pl.id, modalidade:mod, valor:l.preco, qtd:l.pl.qtd});
+  });
 }
 
 /* Canto do comparador: a tabela mostra o preço de tabela, fora de campanha, e
@@ -35429,7 +35509,7 @@ function montarColunaMenu(raiz, vistaMedida){
         if (gi) nav.insertAdjacentHTML('beforeend', '<div class="cm-ico-div" aria-hidden="true"></div>');
         g.itens.forEach(([vv, a, nome, ic, sub]) => {
           if (!document.getElementById('v-' + vv)) return;
-          const aberta = vv === v && itemAberto([vv, a, nome, ic, sub]);
+          const aberta = itemAberto(g.itens.find(x => x[0] === vv && x[1] === a && (x[4] || '') === (sub || '')) || [vv, a, nome, ic, sub]);
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'cm-ico' + (aberta ? ' on' : '');
           b.dataset.vista = vv; b.dataset.aba = a; b.dataset.dica = g.g ? g.g + ' · ' + nome : nome; b.dataset.dicaLado = 'direita';
@@ -35467,8 +35547,8 @@ function montarColunaMenu(raiz, vistaMedida){
       if (g.g) nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${atual ? ' atual' : ''}">${esc(g.g)}</div>`);
       g.itens.forEach(([vv, a, nome, ic, sub]) => {
         const aba = document.querySelector(`#v-${vv} .abas .aba[data-aba="${a}"]`); if (!aba) return;
-        const it = [vv, a, nome, ic, sub];
-        const aberta = vv === v && itemAberto(it);
+        const it = g.itens.find(x => x[0] === vv && x[1] === a && (x[4] || '') === (sub || '')) || [vv, a, nome, ic, sub];
+        const aberta = itemAberto(it);
         const selo = it[4] ? null : aba.querySelector('.selo, .aba-selo, .badge, .cont');
         const sv = selo ? selo.textContent.trim() : (it[4] ? (it[4] === 'ct' ? ($('#cnGrupoCT') || {}).textContent : ($('#cnGrupoClube') || {}).textContent) || '' : '');
         const b = document.createElement('button');
@@ -35477,6 +35557,7 @@ function montarColunaMenu(raiz, vistaMedida){
         b.dataset.vista = vv; b.dataset.aba = a;
         b.innerHTML = `<svg><use href="${ic}"/></svg><span>${esc(nome)}</span>${sv && sv !== '0' ? `<span class="cm-selo">${esc(sv)}</span>` : ''}`;
         if (it[4]) b.dataset.sub = it[4];
+        if (it[5]) b.dataset.alt = it[5].slice(0, 2).concat(it[5][4] || '').join('|');
         b.onclick = () => irItemMenu(vv, a, it[4]);
         nav.appendChild(b);
         if (aberta && !it[4]){ const grp = (aba.closest('.abas') || {}).dataset ? aba.closest('.abas').dataset.grupo : vv; const sub = htmlSubmenu(grp, a); if (sub) nav.insertAdjacentHTML('beforeend', sub); }
@@ -35541,7 +35622,7 @@ function montarColunaMenu(raiz, vistaMedida){
    Logo acima da barra das áreas: os módulos da área aberta, com ícone e nome.
    Área de um módulo só não precisa dela. */
 /* nome curto de cada item na segunda barra do celular, onde cabe pouco */
-const CURTO_ITEM = {'Compra Bonificada':'Bonificada', 'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
+const CURTO_ITEM = {'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
   'Compra e transferência':'Transferência', 'Clubes e lojas':'Clubes e lojas', 'Meus cartões':'Meus cartões', 'Lançamentos':'Lançamentos'};
 function pintarBarraModulos(v){
   const bm = $('#barraModulos'); if (!bm) return;
@@ -35583,8 +35664,9 @@ function marcarColunaMenu(){
   const chave = vistaAtual + '|' + (ativa ? ativa.dataset.aba : '') + '|' + (DB.cfg && DB.cfg.colunaFechada ? 1 : 0);
   if (chave !== _marcaColuna){ _marcaColuna = chave; montarColunaMenu(); }
   document.querySelectorAll('.cm-item[data-aba]').forEach(b => {
-    b.classList.toggle('on', !!ativa && b.dataset.vista === vistaAtual && b.dataset.aba === ativa.dataset.aba
-      && (!b.dataset.sub || subAtivo(b.dataset.sub)));
+    const [av, aa, as] = (b.dataset.alt || '||').split('|');
+    b.classList.toggle('on', (!!ativa && b.dataset.vista === vistaAtual && b.dataset.aba === ativa.dataset.aba
+      && (!b.dataset.sub || subAtivo(b.dataset.sub))) || (!!b.dataset.alt && !!ativa && av === vistaAtual && aa === ativa.dataset.aba && (!as || subAtivo(as))));
   });
   atualizarSubmenus();
 }
@@ -35918,7 +36000,7 @@ function pintarMercadoCT(r){
   const ref = referenciaMercado(r.prog, r.qtd);
   if (!ref){
     porSeMudou(cx, `<div class="ctm ctm-sem"><svg><use href="#i-grafico"/></svg><span>Quer saber se vale a pena? Importe a leitura do Rota 360 de
-      ${esc(prog(r.prog).n)} em <button type="button" class="ctc-link" onclick="irPara('mesa');irParaAba('mesa','ms-vender')">Mesa → Vender</button>
+      ${esc(prog(r.prog).n)} em <button type="button" class="ctc-link" onclick="irItemMenu('mesa','ms-vender')">Início → Prateleira</button>
       e aqui aparece quanto essas milhas valem no mercado.</span></div>`);
     return;
   }
