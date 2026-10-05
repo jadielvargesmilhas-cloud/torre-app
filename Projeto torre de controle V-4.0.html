@@ -7511,6 +7511,14 @@ table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"] .up-cab{ justify-conten
 
 /* "Na Pagante" vai grafado assim, sem a caixa alta das etiquetas */
 .etq.tal-qual{ text-transform:none; letter-spacing:0; font-family:var(--f-b); font-weight:600; }
+
+/* ── Cotações: busca pelo Claude no Chrome ── */
+.cc-progs{ display:flex; flex-wrap:wrap; gap:7px; }
+.cc-prog{ display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 6px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0);
+  color:var(--grafite); font:inherit; font-size:calc(13px * var(--esc)); cursor:pointer; }
+.cc-prog.on{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 10%, transparent); color:var(--giz); font-weight:600; }
+.cc-buscadores > summary{ cursor:pointer; list-style:none; display:flex; gap:9px; align-items:baseline; }
+.cc-buscadores > summary::-webkit-details-marker{ display:none; }
 </style>
 </head>
 <body>
@@ -7625,8 +7633,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
            (no computador) ou na barra logo acima desta (no celular). -->
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-mesa"/></svg><span class="sg">Início</span></button>
       <button class="tb" data-area="milhas" data-vista="saldo" data-dica="Milhas: carteira, comprar e transferir, fábrica e cartões" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Milhas</span></button>
-      <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas, controle de CPF e radar de voos" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
-      <button class="tb" data-area="negocio" data-vista="vendas" data-dica="Negócio: vendas, cotações, emitidos, clientes e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas e controle de CPF" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
+      <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, cotações, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
     </nav>
   </aside>
@@ -8021,76 +8029,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       
         </section>
 
-      <section class="vista" id="v-radar">
-        <div class="abas" data-grupo="radar">
-          <button class="aba on" data-aba="rd-buscar">Buscar</button>
-          <button class="aba" data-aba="rd-monitores">Vigilância <span class="cont" id="contMonitores">0</span></button>
-          <button class="aba" data-aba="rd-arsenal">Instrumentos</button>
-        </div>
-
-        <div class="painel-aba on" id="p-rd-buscar">
-          <div class="pilha" style="gap:18px">
-            <div class="cartao">
-              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(128px,1fr));align-items:end">
-                <div class="campo"><label>Origem</label><input type="text" id="bOri" value="GRU" maxlength="3" placeholder="GRU" style="text-transform:uppercase"></div>
-                <div class="campo"><label>Destino</label><input type="text" id="bDes" value="LIS" maxlength="3" placeholder="LIS" style="text-transform:uppercase"></div>
-                <div class="campo"><label>Ida</label><input type="date" id="bIda"></div>
-                <div class="campo"><label>Volta</label><input type="date" id="bVolta"></div>
-                <div class="campo"><label>Cabine</label><select id="bCabine" data-ordem="natural"><option value="Y">Econômica</option><option value="W">Premium</option><option value="J" selected>Executiva</option><option value="F">Primeira</option></select></div>
-                <div class="campo"><label>Passageiros</label><input type="number" id="bPax" value="1" min="1" max="9"></div>
-                <button class="bt primario" id="btBuscar" style="height:36px"><svg><use href="#i-busca"/></svg>Buscar</button>
-              </div>
-              <div class="linha" style="margin-top:13px;gap:8px">
-                <span class="etq" id="etqMotor">motor local</span>
-                <span class="fraco" style="font-size:calc(13.5px * var(--esc))" id="bResumoFonte">O motor local funciona sem chave e sem internet. Ligue um provedor em Ajustes para trazer preço real.</span>
-              </div>
-            </div>
-            <div id="rdResultado"></div>
-          </div>
-        </div>
-
-        <div class="painel-aba" id="p-rd-monitores">
-          <div class="pilha" style="gap:16px">
-            <div class="linha">
-              <div class="esticar">
-                <div class="olho anil" style="margin-bottom:4px">Vigilância</div>
-                <p class="fraco" style="font-size:calc(13.5px * var(--esc));margin:0">Cada monitor guarda uma rota, uma janela de datas e uma regra. Enquanto a Torre estiver aberto ele consulta no intervalo definido, guarda o histórico e avisa quando a regra é cruzada.</p>
-              </div>
-              <button class="bt fantasma" id="btVerificarTodos"><svg><use href="#i-atualizar"/></svg>Verificar agora</button>
-              <button class="bt primario" id="btNovoMonitor"><svg><use href="#i-mais"/></svg>Novo Monitor</button>
-            </div>
-            <div class="pilha" style="gap:10px" id="rdMonitores"></div>
-          </div>
-        </div>
-
-        <div class="painel-aba" id="p-rd-arsenal">
-          <div class="pilha" style="gap:16px">
-            <div class="nota ouro">
-              <svg><use href="#i-faisca"/></svg>
-              <div><b>Combine ferramentas, não confie em uma.</b> Nenhum buscador de prêmio encontra sozinho todas as boas opções de uma mesma rota; a cobertura declarada de cada um é diferente, e cache envelhece. A tabela abaixo é o mapa de para que serve cada um.</div>
-            </div>
-            <div class="linha">
-              <div class="seg" id="segArsenal">
-                <button class="on" data-t="todos">Todos</button>
-                <button data-t="global">Globais</button>
-                <button data-t="br">Brasil</button>
-                <button data-t="extensao">Extensões</button>
-                <button data-t="tecnico">Técnicos</button>
-              </div>
-            </div>
-            <div class="grade g2" id="rdArsenal"></div>
-          </div>
-            <div class="linha" style="margin-top:4px"><div class="olho destaque" style="margin:0">Alcance de cada instrumento</div></div>
-          <div class="pilha" style="gap:16px">
-            <div class="cartao">
-              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Matriz de cobertura<div class="sub">Programa × buscador, segundo a cobertura declarada por cada ferramenta. Linha inteira apagada = ponto cego: nenhum buscador do arsenal enxerga esse programa, e a busca tem que ser feita direto no site ou por procuração.</div></h3></div>
-              <div class="matriz" id="rdMatriz"></div>
-            </div>
-            <div id="rdCegos"></div>
-          </div>
-        </div>
-
-      </section>
+      
 
       <!-- ══════════════ FÁBRICA ═══════════════════════════════════════════ -->
       <section class="vista" id="v-fabrica">
@@ -8858,22 +8797,65 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div id="ctLeitura" style="margin-top:13px"></div>
             </div>
 
-            <div class="cartao">
+            <div class="cartao" id="ccCartao">
+              <!-- BUSCA REAL PELO CLAUDE NO CHROME (07/10/2026). A Torre monta a
+                   instrução; a extensão entra nos sites dos programas, faz a busca e
+                   devolve milhas, taxas e voos de verdade; a resposta colada aqui
+                   vira opções da cotação. Nenhum número é estimado. -->
               <div class="cartao-cab">
-                <h3 style="color:var(--anil-claro)">Buscar voos para a cotação
-                  <div class="sub">Origem, destino e data. A Torre consulta os provedores ligados e traz horários, preços e disponibilidade real de resgate por programa.</div></h3>
-                <span class="etq" id="etqFontes"></span>
+                <h3 style="color:var(--anil-claro)">Buscar com o Claude no Chrome
+                  <div class="sub">A extensão entra no site de cada programa, faz a busca e traz milhas, taxas e voos reais. Grátis pela sua assinatura.</div></h3>
+                <span class="etq jade">dados reais</span>
               </div>
-              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end">
+              <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));align-items:end">
                 <div class="campo"><label>Origem</label><input type="text" id="bcOri" value="GRU" maxlength="3" style="text-transform:uppercase"></div>
                 <div class="campo"><label>Destino</label><input type="text" id="bcDes" value="LIS" maxlength="3" style="text-transform:uppercase"></div>
-                <div class="campo"><label>Data</label><input type="date" id="bcData"></div>
+                <div class="campo"><label>Ida</label><input type="date" id="bcData"></div>
+                <div class="campo"><label>Volta <span class="fraco">opcional</span></label><input type="date" id="bcVolta"></div>
                 <div class="campo"><label>Cabine</label><select id="bcCab" data-ordem="natural"></select></div>
                 <div class="campo"><label>Passageiros</label><input type="number" id="bcPax" value="1" min="1" max="9"></div>
-                <button class="bt primario" id="btBuscarCotacao" style="height:36px"><svg><use href="#i-busca"/></svg>Buscar voos</button>
               </div>
+              <div class="campo" style="margin-top:12px"><label>Programas para buscar</label><div class="cc-progs" id="ccProgs"></div></div>
+              <label class="ck-rotulo" style="margin-top:4px"><input type="checkbox" id="ccPagante" checked> Trazer também o menor preço na pagante (Google Voos)</label>
+              <div class="linha" style="margin-top:14px;gap:9px">
+                <button class="bt primario" id="btCcMontar"><svg><use href="#i-copiar"/></svg>Copiar a instrução</button>
+              </div>
+              <div id="ccPassos" style="margin-top:14px"></div>
+              <div class="campo" style="margin-top:12px"><label>Cole aqui a resposta do Claude</label>
+                <textarea id="ccResposta" rows="4" spellcheck="false" style="font-family:var(--f-m);font-size:calc(12.5px * var(--esc));line-height:1.6" placeholder="=== RESULTADO TORRE === ... === FIM ==="></textarea></div>
+              <div class="linha" style="gap:9px"><button class="bt fantasma" id="btCcLer"><svg><use href="#i-ok"/></svg>Ler a resposta</button></div>
               <div id="bcSaida" style="margin-top:15px"></div>
             </div>
+
+            <details class="cartao cc-buscadores">
+              <summary><b>Buscadores gratuitos</b> <span class="fraco">para conferir por conta própria</span></summary>
+              <div style="margin-top:14px">
+          <div class="pilha" style="gap:16px">
+            <div class="nota ouro">
+              <svg><use href="#i-faisca"/></svg>
+              <div><b>Combine ferramentas, não confie em uma.</b> Nenhum buscador de prêmio encontra sozinho todas as boas opções de uma mesma rota; a cobertura declarada de cada um é diferente, e cache envelhece. A tabela abaixo é o mapa de para que serve cada um.</div>
+            </div>
+            <div class="linha">
+              <div class="seg" id="segArsenal">
+                <button class="on" data-t="todos">Todos</button>
+                <button data-t="global">Globais</button>
+                <button data-t="br">Brasil</button>
+                <button data-t="extensao">Extensões</button>
+                <button data-t="tecnico">Técnicos</button>
+              </div>
+            </div>
+            <div class="grade g2" id="rdArsenal"></div>
+          </div>
+            <div class="linha" style="margin-top:4px"><div class="olho destaque" style="margin:0">Alcance de cada instrumento</div></div>
+          <div class="pilha" style="gap:16px">
+            <div class="cartao">
+              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Matriz de cobertura<div class="sub">Programa × buscador, segundo a cobertura declarada por cada ferramenta. Linha inteira apagada = ponto cego: nenhum buscador do arsenal enxerga esse programa, e a busca tem que ser feita direto no site ou por procuração.</div></h3></div>
+              <div class="matriz" id="rdMatriz"></div>
+            </div>
+            <div id="rdCegos"></div>
+          </div>
+        </div>
+            </details>
 
             <div class="cartao">
               <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Montar cotação para o cliente<div class="sub">Você lança o custo real (milhas × seu CPM + taxas + serviço). O cliente recebe só o preço final e as opções.</div></h3></div>
@@ -9289,7 +9271,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 08:00';
+const BUILD = '2026-10-07 10:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12598,7 +12580,6 @@ function faisca(vals, cor = 'var(--ouro)'){
    motivo Mesa virou Painel, sob Cabine de comando. */
 const TITULOS = {
   mesa:    ['Painel', 'Onde o dinheiro e a milha se encontram'],
-  radar:   ['Radar de voos', 'Busca de tarifa e vigilância de rota'],
   fabrica: ['Fábrica de milhas', 'Onde a milha é fabricada; e a que preço'],
   comprar: ['Comprar e transferir', 'Quanto custa a milha por cada caminho'],
   saldo:   ['Carteira', 'Quanto tem guardado, de quem, e até quando'],
@@ -12620,8 +12601,8 @@ const TITULOS = {
 const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-mesa',    vistas:['mesa']},
   {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica', 'cartoes']},
-  {k:'viagens', n:'Viagens', sub:'Jornadas e cota de CPF',  ic:'#i-aviao',   vistas:['rota', 'emissoes', 'radar']},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['vendas', 'cotacoes', 'emitidos', 'clientes', 'imposto']},
+  {k:'viagens', n:'Viagens', sub:'Jornadas e cota de CPF',  ic:'#i-aviao',   vistas:['rota', 'emissoes']},
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'cotacoes', 'emitidos', 'vendas', 'imposto']}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
 ];
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-saldo', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
@@ -12647,7 +12628,6 @@ const ABA_INICIAL = {
   mesa:     'ms-hoje',          /* o que exige decisão hoje */
   fabrica:  'fb-clubes',        /* a assinatura que fabrica sozinha, todo mês */
   saldo:    'sl-resumo',        /* quanto há, em uma tela */
-  radar:    'rd-monitores',     /* o que está sendo vigiado */
   rota:     'rt-plano',         /* as jornadas: para onde se está indo */
   emissoes: 'em-controle',      /* a cota de CPF (os emitidos foram para Negócio) */
   cartoes:  'cr-painel'         /* o estado das faturas */
@@ -13472,12 +13452,12 @@ function avisos(){
     }
   });
 
-  DB.monitores.filter(m => m.ativo && m.hist && m.hist.length).forEach(m => {
+  [].filter(m => m.ativo && m.hist && m.hist.length).forEach(m => {   /* sem Radar, sem aviso de monitor */
     const u = m.hist[m.hist.length - 1];
     if (u && u.bateu){
       L.push({ grau:2, tipo:'monitor', dias:0,
         t:`${m.ori} → ${m.des} cruzou a regra`,
-        s:`${m.regra === 'milhas' ? nBR(u.v) + ' milhas' : brl(u.v)} contra o alvo de ${m.regra === 'milhas' ? nBR(m.alvo) : brl(m.alvo)}.`, ir:['radar','rd-monitores'] });
+        s:`${m.regra === 'milhas' ? nBR(u.v) + ' milhas' : brl(u.v)} contra o alvo de ${m.regra === 'milhas' ? nBR(m.alvo) : brl(m.alvo)}.`, ir:['cotacoes'] });
     }
   });
 
@@ -24742,7 +24722,8 @@ async function verificarTodos(){
 let relogioVigilancia = null;
 function ligarVigilancia(){
   clearInterval(relogioVigilancia);
-  if (!DB.cfg.vigiaAuto) return;
+  /* desligada junto com o Radar: os monitores consultavam a estimativa */
+  return;
   relogioVigilancia = setInterval(() => {
     const agora = Date.now();
     DB.monitores.filter(m => m.ativo).forEach(m => {
@@ -35405,13 +35386,10 @@ function comandos(){
     {t:'Registrar Compra Bonificada', s:'', i:'#i-caixa', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-compras'); novaCompra(); }},
     {t:'Nova Jornada de Viagem', s:'', i:'#i-alvo', g:'criar', f:() => { irPara('rota'); irParaAba('rota', 'rt-plano'); editarPlanoViagem(); }},
     {t:'Registrar Emissão', s:'Própria ou para cliente', i:'#i-balcao', g:'criar', f:() => { irPara('emitidos'); editarReserva(); }},
-    {t:'Novo monitor de rota', s:'', i:'#i-radar', g:'criar', f:() => { irPara('radar'); irParaAba('radar', 'rd-monitores'); abrirMonitor(); }},
     {t:'Lançar saldo', s:'', i:'#i-saldo', g:'criar', f:() => { irPara('saldo'); editarSaldo(); }},
     {t:'Anotar Lote com Prazo', s:'', i:'#i-relogio', g:'criar', f:() => { irPara('saldo'); irParaAba('saldo', 'sl-validade'); editarLote(); }},
-    {t:'Buscar voo', s:'', i:'#i-busca', g:'fazer', f:() => { irPara('radar'); irParaAba('radar', 'rd-buscar'); setTimeout(() => $('#bOri').focus(), 120); }},
     {t:'Calcular rota mais barata', s:'Roteador de aquisição de milhas', i:'#i-troca', g:'fazer', f:() => abrirRoteadorFolha()},
     {t:'Gerar roteiro de viagem', s:'', i:'#i-mapa', g:'fazer', f:() => { irPara('rota'); irParaAba('rota', 'rt-roteiros'); }},
-    {t:'Verificar todos os monitores', s:'', i:'#i-atualizar', g:'fazer', f:() => { irPara('radar'); irParaAba('radar', 'rd-monitores'); verificarTodos(); }},
     {t:'Central de Avisos', s:'', i:'#i-sino', g:'fazer', f:abrirAvisos},
     {t:'Alternar tema', s:'Breu e papel', i:'#i-lua', g:'fazer', f:alternarTema},
     {t:'Baixar cópia de segurança', s:'', i:'#i-baixar', g:'dados', f:exportar},
@@ -35934,7 +35912,7 @@ function importar(arquivo){
 
 /* O livro de lançamentos mora numa aba do Painel: sem ele aqui, apagar ou editar
    um lançamento pelo Painel deixava a linha velha na tabela até apertar F5. */
-const RENDER = { emitidos:() => renderBalcao(), cotacoes:() => renderCotacoesSalvas(), mesa:() => { renderMesa(); renderVender(); renderLancamentos(); }, radar:renderRadar, fabrica:renderFabrica,
+const RENDER = { emitidos:() => renderBalcao(), cotacoes:() => { renderCotacoesSalvas(); ligarBuscaCC(); renderArsenal(); renderCobertura(); }, mesa:() => { renderMesa(); renderVender(); renderLancamentos(); },  fabrica:renderFabrica,
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 /* ── correções de dados de 05/10/2026 ─────────────────────────────────────────
    Rodam a cada carga, inclusive quando o banco chega da nuvem, e são seguras de
@@ -36367,11 +36345,8 @@ function ligarEventos(){
     renderMesa();
   });
 
-  /* radar */
-  $('#btBuscar').onclick = buscar;
-  ['#bOri','#bDes'].forEach(s => $(s).oninput = e => e.target.value = e.target.value.toUpperCase());
-  $('#btNovoMonitor').onclick = () => abrirMonitor();
-  $('#btVerificarTodos').onclick = verificarTodos;
+  /* o Radar de voos saiu em 07/10/2026: mostrava preço e milhas estimados, não
+     reais. A busca real passou para Cotações, pelo Claude no Chrome. */
   $$('#segArsenal button').forEach(b => b.onclick = () => {
     filtroArsenal = b.dataset.t;
     $$('#segArsenal button').forEach(x => x.classList.toggle('on', x === b));
@@ -36628,7 +36603,7 @@ function ligarEventos(){
     por('#ctIdaDur', durTexto(c.total));
     por('#ctIdaEscala', c.escalas.map(e => `${e.onde} · ${durTexto(e.min)}`).join(' · '));
   });
-  $('#btBuscarCotacao').onclick = buscarParaCotacao;
+  /* a busca por estimativa de Cotações saiu: a busca real é pelo Claude no Chrome (ligarBuscaCC) */
   ['#bcOri','#bcDes'].forEach(s => $(s).oninput = e => e.target.value = e.target.value.toUpperCase());
   $('#btEscreverIA').onclick = escreverCotacaoIA;
   $('#btLimparCotacao').onclick = () => { opcoesCotacao = []; renderOpcoesCotacao(); };
@@ -36669,10 +36644,9 @@ function ligarEventos(){
     const dentro = ['INPUT','TEXTAREA','SELECT'].includes((e.target.tagName || '').toUpperCase());
     if (dentro || e.metaKey || e.ctrlKey || e.altKey) return;
     /* mesma ordem do trilho, para o atalho numérico bater com o que se vê */
-    const ordem = ['mesa','fabrica','saldo','radar','rota','vendas','ajustes'];
+    const ordem = ['mesa','fabrica','saldo','cotacoes','rota','vendas','ajustes'];
     if (/^[1-7]$/.test(e.key)){ irPara(ordem[Number(e.key) - 1]); return; }
     if (e.key.toLowerCase() === 'n'){ irPara('mesa'); irParaAba('mesa', 'ms-lancamentos'); editarLancamento(); }
-    if (e.key.toLowerCase() === 'b'){ irPara('radar'); irParaAba('radar', 'rd-buscar'); setTimeout(() => $('#bOri').focus(), 120); }
     if (e.key.toLowerCase() === 't') alternarTema();
     if (e.key === '+' || e.key === '='){ const p = [1, 1.07, 1.3]; aplicarEscala(p[Math.min(2, p.indexOf(DB.cfg.escala || 1) + 1)]); }
     if (e.key === '-'){ const p = [1, 1.07, 1.3]; aplicarEscala(p[Math.max(0, p.indexOf(DB.cfg.escala || 1) - 1)]); }
@@ -36682,8 +36656,6 @@ function ligarEventos(){
 function arrancar(){
   carregar();
   /* datas iniciais dos formulários */
-  $('#bIda').value = somaDias(75);
-  $('#bVolta').value = somaDias(89);
   /* o compositor virou folha: os campos dele só existem quando ela abre, e a
      data inicial passou a ser definida lá dentro */
   $('#ctData').value = somaDias(60);
@@ -37313,6 +37285,157 @@ function renderBuscaCotacao({p, dinheiro, resgate, erros, f}){
         <button class="bt p fantasma" onclick="irPara('ajustes');irParaAba('ajustes','aj-provedores')"><svg><use href="#i-ajustes"/></svg>Ligar um provedor real</button>
       </div>
     </div>` : ''}`;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COTAÇÕES · BUSCA PELO CLAUDE NO CHROME
+   ──────────────────────────────────────────────────────────────────────────────
+   A Torre não consegue acionar a extensão: ela monta a instrução, você cola na
+   extensão, e a resposta volta colada aqui. O formato da resposta é fixo (uma
+   linha por opção, campos separados por ponto e vírgula) para a leitura não
+   depender de interpretação.
+   ══════════════════════════════════════════════════════════════════════════════ */
+/* todos os programas aéreos da Torre: os três brasileiros primeiro, depois os
+   internacionais; programa novo cadastrado em PROGRAMAS entra sozinho no fim */
+const CC_ORDEM = ['smiles', 'azul', 'latampass', 'tap', 'iberia', 'suma', 'connect', 'flyingblue', 'british', 'qatar', 'finnair', 'lifemiles', 'aeroplan', 'united', 'aeromexico', 'virgin'];
+const CC_PROGS = CC_ORDEM.filter(k => PROGRAMAS[k]).concat(Object.keys(PROGRAMAS).filter(k => PROGRAMAS[k].tipo === 'milhas' && !CC_ORDEM.includes(k)));
+const CC_PADRAO = ['smiles', 'azul', 'latampass'];
+let ccEscolhidos = null;
+function montarProgsCC(){
+  const host = $('#ccProgs'); if (!host) return;
+  if (!ccEscolhidos) ccEscolhidos = new Set(DB.cfg.ccProgs || CC_PADRAO);
+  host.innerHTML = CC_PROGS.filter(p => PROGRAMAS[p]).map(p => `<button type="button" class="cc-prog${ccEscolhidos.has(p) ? ' on' : ''}" data-p="${p}">${discoProg(p, 'p')}<span>${esc(prog(p).n)}</span></button>`).join('');
+  $$('.cc-prog', host).forEach(b => b.onclick = () => {
+    const p = b.dataset.p; ccEscolhidos.has(p) ? ccEscolhidos.delete(p) : ccEscolhidos.add(p);
+    DB.cfg.ccProgs = [...ccEscolhidos]; salvar(); montarProgsCC();
+  });
+}
+function paramsCC(){
+  return {ori:$('#bcOri').value.toUpperCase().trim(), des:$('#bcDes').value.toUpperCase().trim(), ida:$('#bcData').value, volta:$('#bcVolta').value,
+    cabine:$('#bcCab').value, pax:Math.max(1, Number($('#bcPax').value) || 1)};
+}
+function instrucaoCC(p){
+  const cab = (CABINES[p.cabine] || {}).n || 'Econômica';
+  const progs = [...(ccEscolhidos || new Set(CC_PADRAO))].filter(k => PROGRAMAS[k]);
+  const site = k => ({smiles:'smiles.com.br', azul:'voeazul.com.br (Azul Fidelidade, pagar com pontos)', latampass:'latampass.latam.com (resgatar passagem)', tap:'flytap.com (Miles&Go)',
+    iberia:'iberia.com (Iberia Plus, pagar com Avios)', flyingblue:'flyingblue.com (Air France-KLM)', suma:'aireuropa.com (SUMA, pagar com milhas)', connect:'copaair.com (ConnectMiles, usar milhas)',
+    british:'britishairways.com (Avios, Reward Flight Finder)', qatar:'qatarairways.com (Privilege Club, Avios)', finnair:'finnair.com (Finnair Plus, Avios)',
+    lifemiles:'lifemiles.com', aeroplan:'aircanada.com (Aeroplan)', united:'united.com (MileagePlus, usar milhas)', aeromexico:'aeromexico.com (Aeromexico Rewards)',
+    virgin:'virginatlantic.com (Flying Club)'})[k] || prog(k).n;
+  const dBR = iso => iso ? dataBR(iso) : '';
+  return `Preciso de uma cotação de passagem com milhas. Faça a busca nos sites abaixo, no navegador, e me devolva o resultado no formato pedido no fim.
+
+VIAGEM
+- Origem: ${p.ori} (${(AEROPORTOS[p.ori] || {}).c || ''})
+- Destino: ${p.des} (${(AEROPORTOS[p.des] || {}).c || ''})
+- Ida: ${dBR(p.ida)}${p.volta ? `\n- Volta: ${dBR(p.volta)}` : '\n- Só ida'}
+- Cabine: ${cab}
+- Passageiros: ${p.pax} adulto${p.pax > 1 ? 's' : ''}
+
+ONDE BUSCAR (resgate com milhas/pontos)
+${progs.map((k, i) => `${i + 1}. ${prog(k).n}: ${site(k)}`).join('\n')}
+${$('#ccPagante') && $('#ccPagante').checked ? `\nPREÇO NA PAGANTE\n- Google Voos (google.com/travel/flights): o menor preço em reais para a mesma data e cabine.\n` : ''}
+REGRAS
+- Se um site pedir login, pare e me avise; eu faço o login e você continua. Nunca digite senha.
+- Anote só o que aparecer na tela. Não estime nem invente número. Se não houver disponibilidade, escreva SEM DISPONIBILIDADE na linha daquele programa.
+- Até 3 opções por programa e por sentido (ida/volta), das que custam menos milhas.
+- Milhas e taxas são o TOTAL para ${p.pax} passageiro${p.pax > 1 ? 's' : ''}.
+
+FORMATO DA RESPOSTA (copie exatamente, uma linha por opção):
+=== RESULTADO TORRE ===
+sentido;programa;voos;data;saida;chegada;paradas;milhas;taxas_reais;cabine
+IDA;Smiles;G3 1234, AF 457;${p.ida || 'AAAA-MM-DD'};22:10;14:30+1;1 (CDG);120000;350,00;${cab}
+IDA;PAGANTE;LA 8084;${p.ida || 'AAAA-MM-DD'};23:55;13:40+1;0;0;4320,00;${cab}
+=== FIM ===
+
+Na coluna programa, use: ${progs.map(k => prog(k).n).join(', ')}${$('#ccPagante') && $('#ccPagante').checked ? ' ou PAGANTE' : ''}. Data no formato AAAA-MM-DD. Horários HH:MM, com +1 quando chega no dia seguinte.`;
+}
+function progDoNomeCC(n){
+  const x = semAcento(String(n || '').toLowerCase());
+  if (!x) return '';
+  if (/pagante|google/.test(x)) return 'PAGANTE';
+  const direto = Object.keys(PROGRAMAS).find(k => semAcento(prog(k).n.toLowerCase()) === x);
+  if (direto) return direto;
+  return Object.keys(PROGRAMAS).find(k => { const nome = semAcento(prog(k).n.toLowerCase()); return x.includes(nome) || nome.includes(x) || x.includes(k); }) || '';
+}
+function lerRespostaCC(texto){
+  const t = String(texto || '');
+  const a = t.indexOf('=== RESULTADO TORRE ==='), b = t.indexOf('=== FIM ===');
+  const corpo = a >= 0 ? t.slice(a + 23, b > a ? b : undefined) : t;
+  const linhas = corpo.split('\n').map(l => l.trim()).filter(l => l && l.includes(';') && !/^sentido;/i.test(l));
+  const num = v => { const s2 = String(v || '').replace(/[^\d,.-]/g, ''); if (!s2) return 0; return s2.includes(',') ? Number(s2.replace(/\./g, '').replace(',', '.')) : Number(s2.replace(/\./g, '')); };
+  return linhas.map(l => {
+    const c = l.split(';').map(x => x.trim());
+    const sem = /SEM DISPONIBILIDADE/i.test(l);
+    return {sentido:/volta/i.test(c[0]) ? 'VOLTA' : 'IDA', nome:c[1] || '', prog:progDoNomeCC(c[1]), voos:c[2] || '', data:(c[3] || '').slice(0, 10), sai:c[4] || '', chega:c[5] || '',
+      paradas:c[6] || '', milhas:sem ? 0 : Math.round(num(c[7])), taxas:sem ? 0 : num(c[8]), cabine:c[9] || '', sem};
+  }).filter(o => o.nome);
+}
+function renderRespostaCC(){
+  const alvo = $('#bcSaida'); if (!alvo) return;
+  const ops = lerRespostaCC($('#ccResposta').value);
+  if (!ops.length){ alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>Não encontrei o bloco <b>=== RESULTADO TORRE ===</b> na resposta. Peça ao Claude para responder no formato da instrução e cole de novo.</div></div>`; return; }
+  const p = paramsCC();
+  const cpms = cpmPorPrograma(), sal = saldoPorPrograma();
+  const pagIda = ops.filter(o => o.prog === 'PAGANTE' && o.sentido === 'IDA' && o.taxas > 0).sort((x, y) => x.taxas - y.taxas)[0];
+  const pagVolta = ops.filter(o => o.prog === 'PAGANTE' && o.sentido === 'VOLTA' && o.taxas > 0).sort((x, y) => x.taxas - y.taxas)[0];
+  const linhas = ops.map((o, i) => ({...o, i})).filter(o => o.prog !== 'PAGANTE').map(o => {
+    const meu = o.prog ? (cpms[o.prog] != null ? cpms[o.prog] : faixasDe(o.prog).alvo) : null;
+    const custo = !o.sem && meu ? o.milhas / 1000 * meu + o.taxas : null;
+    const ref = o.sentido === 'VOLTA' ? pagVolta : pagIda;
+    return {...o, meu, custo, eco:custo != null && ref ? ref.taxas - custo : null};
+  });
+  const bloco = sent => {
+    const ls = linhas.filter(o => o.sentido === sent).sort((x, y) => (x.custo ?? 9e12) - (y.custo ?? 9e12));
+    const pg = sent === 'VOLTA' ? pagVolta : pagIda;
+    if (!ls.length && !pg) return '';
+    return `<div class="cartao" style="background:var(--sup-1);margin-bottom:12px">
+      <div class="cartao-cab" style="margin-bottom:10px"><h3>${sent === 'VOLTA' ? 'Volta' : 'Ida'}<div class="sub">${esc(sent === 'VOLTA' ? p.des + ' → ' + p.ori : p.ori + ' → ' + p.des)}${pg ? ` · na pagante a partir de ${brl(pg.taxas)}` : ''}</div></h3></div>
+      <div class="rolo"><table class="tb-dados"><thead><tr><th>Programa</th><th>Voo</th><th class="n">Milhas + taxas</th><th class="n">Ao seu milheiro</th><th class="n">Contra a pagante</th><th></th></tr></thead><tbody>
+      ${ls.map(o => `<tr>
+        <td><div class="linha" style="gap:7px;flex-wrap:nowrap">${o.prog ? discoProg(o.prog, 'p') : ''}<span>${esc(o.prog ? prog(o.prog).n : o.nome)}</span>${o.prog && (sal[o.prog] || 0) >= o.milhas && o.milhas ? '<span class="etq jade">tem saldo</span>' : ''}</div></td>
+        <td>${o.sem ? '<span class="etq brasa">sem disponibilidade</span>' : `<b>${esc(o.sai)} → ${esc(o.chega)}</b><div class="fraco" style="font-size:calc(12px * var(--esc))">${esc(o.voos || '')}${o.paradas && o.paradas !== '0' ? ` · paradas: ${esc(o.paradas)}` : ' · direto'}</div>`}</td>
+        <td class="n">${o.sem ? 'n/d' : `${nBR(o.milhas)}<div class="fraco" style="font-size:calc(12px * var(--esc))">+ ${brl(o.taxas)}</div>`}</td>
+        <td class="n">${o.custo != null ? `<b>${brl(o.custo)}</b>` : 'n/d'}</td>
+        <td class="n">${o.eco == null ? 'n/d' : `<b style="color:var(--${o.eco >= 0 ? 'jade' : 'brasa'})">${o.eco >= 0 ? '' : '−'}${brl(Math.abs(o.eco))}</b>`}</td>
+        <td class="n">${!o.sem && o.prog ? `<button class="bt p fantasma" onclick="usarOpcaoCC(${o.i})">Usar</button>` : ''}</td>
+      </tr>`).join('')}
+      </tbody></table></div></div>`;
+  };
+  _opsCC = ops;
+  alvo.innerHTML = bloco('IDA') + bloco('VOLTA') + `<p class="fraco" style="font-size:calc(12.5px * var(--esc))">"Ao seu milheiro" é milhas × o seu custo médio naquele programa (ou o alvo, onde você não tem compra lançada) + taxas. "Contra a pagante" é quanto a opção sai mais barata que o menor preço na pagante.</p>`;
+}
+let _opsCC = [];
+function usarOpcaoCC(i){
+  const o = _opsCC[i]; if (!o) return;
+  const p = paramsCC();
+  const ori = o.sentido === 'VOLTA' ? p.des : p.ori, des = o.sentido === 'VOLTA' ? p.ori : p.des;
+  usarNaCotacao(ori, des, o.data || p.ida, o.prog, o.milhas, moedaTxt(o.taxas));
+  if (o.sentido === 'IDA'){ if ($('#ctIdaSai')) $('#ctIdaSai').value = o.sai; if ($('#ctIdaChega')) $('#ctIdaChega').value = o.chega; if ($('#ctIdaEscala') && o.paradas && o.paradas !== '0') $('#ctIdaEscala').value = o.paradas; }
+  else { if ($('#ctVoltaData')) $('#ctVoltaData').value = o.data; if ($('#ctVoltaSai')) $('#ctVoltaSai').value = o.sai; if ($('#ctVoltaChega')) $('#ctVoltaChega').value = o.chega; if ($('#ctVoltaEscala') && o.paradas && o.paradas !== '0') $('#ctVoltaEscala').value = o.paradas; }
+}
+async function copiarInstrucaoCC(){
+  const p = paramsCC();
+  if (!AEROPORTOS[p.ori] || !AEROPORTOS[p.des]){ avisar('Use códigos de aeroporto de três letras que a Torre conhece (GRU, LIS, MCO...).', 'alerta'); return; }
+  if (!p.ida){ avisar('Escolha a data de ida.', 'alerta'); return; }
+  if (!(ccEscolhidos && ccEscolhidos.size)){ avisar('Escolha pelo menos um programa.', 'alerta'); return; }
+  const txt = instrucaoCC(p);
+  let ok = false;
+  try{ await navigator.clipboard.writeText(txt); ok = true; }catch(e){}
+  $('#ccPassos').innerHTML = `<div class="nota jade"><svg><use href="#i-ok"/></svg><div class="pilha compacta">
+    <div><b>${ok ? 'Instrução copiada.' : 'Copie a instrução abaixo.'}</b> Agora:</div>
+    <div>1. No Chrome, faça login nos sites dos programas escolhidos (a extensão não digita senha).</div>
+    <div>2. Abra a extensão do Claude e cole a instrução.</div>
+    <div>3. Quando ele terminar, copie a resposta inteira dele e cole no campo abaixo.</div>
+    ${ok ? '' : `<textarea readonly rows="6" style="width:100%;margin-top:8px;font-family:var(--f-m);font-size:calc(12px * var(--esc))">${esc(txt)}</textarea>`}
+  </div></div>`;
+}
+function ligarBuscaCC(){
+  montarProgsCC();
+  if ($('#btCcMontar')) $('#btCcMontar').onclick = copiarInstrucaoCC;
+  if ($('#btCcLer')) $('#btCcLer').onclick = renderRespostaCC;
+  ['#bcOri', '#bcDes'].forEach(sel => { const e = $(sel); if (e) e.oninput = ev => ev.target.value = ev.target.value.toUpperCase(); });
 }
 
 function usarNaCotacao(ori, des, data, prg, milhas, taxas){
