@@ -7916,6 +7916,15 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 .sec-cab > .esticar{ align-self:stretch; }
 
 .abas.abas-unica{ display:none !important; }
+
+/* rodapé dos lançamentos: cada número com o seu nome */
+tr.lanc-tot > td{ padding:14px 16px !important; }
+.lt-linha{ display:flex; flex-wrap:wrap; gap:10px 28px; align-items:flex-end; }
+.lt-it{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.lt-it small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); font-weight:500; font-family:var(--f-b); }
+.lt-it b{ font-family:var(--f-m); font-weight:600; white-space:nowrap; }
+.lt-nota{ margin-top:8px; font-size:calc(12px * var(--esc)); color:var(--grafite-dim); font-family:var(--f-b); font-weight:400; }
+@media (max-width:860px){ tr.lanc-tot, tr.lanc-tot > td{ display:block !important; width:100% !important; } tr.lanc-tot > td::before{ display:none !important; } .lt-linha{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; } }
 </style>
 </head>
 <body>
@@ -8467,7 +8476,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                das duas mandava na outra. -->
           <button class="aba on" data-aba="fb-campanhas">Campanhas <span class="cont" id="contCampTotal">0</span></button>
           <button class="aba" data-aba="fb-clubes">Meus Clubes <span class="cont" id="contClubes">0</span></button>
-          <button class="aba" data-aba="fb-compras">Compras inteligentes</button>
+          <button class="aba" data-aba="fb-compras">Compras Inteligentes</button>
           <button class="aba" data-aba="fb-mural">Mural</button>
         </div>
 
@@ -9721,7 +9730,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-10 12:30';
+const BUILD = '2026-10-10 13:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13091,8 +13100,8 @@ const AREAS = [
     menu:[{g:'Campanhas', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube']]},
       {g:'Anúncios', itens:[['fabrica', 'fb-mural', 'Mural', '#i-livro']]}]},
   {k:'acumular',  n:'Acumular',  sub:'Como juntar milhas',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
-    menu:[{g:'Com dinheiro', itens:[['comprar', 'ct-comprar', 'Comprar milhas', '#i-carrinho'], ['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola']]},
-      {g:'Com pontos', itens:[['comprar', 'ct-transferir', 'Transferir pontos', '#i-subir']]}]},
+    menu:[{g:'Com dinheiro', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras Inteligentes', '#i-sacola'], ['comprar', 'ct-comprar', 'Comprar Milhas', '#i-carrinho']]},
+      {g:'Com pontos', itens:[['comprar', 'ct-transferir', 'Transferir Pontos', '#i-subir']]}]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
   {k:'cartoes', n:'Cartões', sub:'Crédito e faturas',    ic:'#i-cartao',   vistas:['cartoes'],
@@ -13145,7 +13154,7 @@ function atualizarArea(){
      Carteira), e não o nome técnico do módulo por baixo ("Fábrica de milhas") */
   if (['carteira', 'promocoes', 'acumular'].includes(ar.k)){
     if ($('#topoTit')) $('#topoTit').textContent = ar.n;
-    if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, saldos e vencimentos', promocoes:'Onde a milha está barata hoje', acumular:'Como juntar milhas: comprar, transferir, clubes e compras'}[ar.k];
+    if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, saldos e vencimentos', promocoes:'Onde a milha está barata hoje', acumular:'Como juntar milhas: clubes, compras, comprar e transferir'}[ar.k];
   }
   /* a pílula do alto diz a área, sempre: a segunda barra (celular) e a coluna
      (computador) dizem o item */
@@ -15375,7 +15384,7 @@ function renderMesa(){
   }).join('')
   : `<div class="nota"><svg><use href="#i-info"/></svg><div class="pilha compacta">
       <div>Nenhum item marcado como prioridade.</div>
-      <div>Em <b>Fábrica → Compras inteligentes</b>, defina a prioridade de um item da lista para que ele apareça aqui pronto para registrar.</div>
+      <div>Em <b>Acumular → Compras Inteligentes</b>, defina a prioridade de um item da lista para que ele apareça aqui pronto para registrar.</div>
     </div></div>`;
 
   renderFiltroConta();
@@ -19149,7 +19158,7 @@ const GUIA_ABA = {
           'Guarde o print da confirmação do cadastro até as milhas caírem. É a única prova se o crédito não vier.']},
       {i:'i-alvo', n:'Quando vale a pena',
        p:['O bônus sozinho não decide: o que decide é o milheiro que sobra no fim. Some o que os pontos custaram, divida pelas milhas que chegaram, e compare com o alvo do destino.',
-          'Em Acumular → Transferir pontos, a Torre faz essa conta com os seus números e diz se o resultado ficou dentro ou fora da faixa.']}
+          'Em Acumular → Transferir Pontos, a Torre faz essa conta com os seus números e diz se o resultado ficou dentro ou fora da faixa.']}
     ]
   },
   compra: {
@@ -23353,17 +23362,27 @@ function renderLancamentos(){
     })()}</tbody>
     <!-- Rodapé com o que o recorte soma: percorrer trinta linhas para saber
          quanto entrou é a conta que a tabela devia estar fazendo. -->
-    <tfoot><tr>
-      <td colspan="4">${nBR(filtrados.length)} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'} no recorte</td>
-      <td class="n"><b>${nBR(soma(filtrados.map(x => Number(x.qtd) || 0)))}</b></td>
-      <td class="n"><b>${brl(soma(filtrados.map(x => Number(x.custo) || 0)))}</b></td>
-      <td class="n"><b>${(() => {
-        const q = soma(filtrados.map(x => Number(x.qtd) || 0));
-        const c = soma(filtrados.map(x => Number(x.custo) || 0));
-        return q > 0 ? brl2(c / q * 1000) : 'n/d';
-      })()}</b></td>
-      <td></td>
-    </tr></tfoot></table>`;
+    <tfoot><tr class="lanc-tot"><td colspan="9">${(() => {
+      /* Rodapé com nome em cada número (10/10/2026). Antes eram três números
+         soltos sob as colunas, que no celular perdiam a coluna e ficavam sem
+         sentido; e a soma de quantidade misturava milha com ponto e entrada com
+         saída, o que não mede nada. Agora: quantos lançamentos, o que entrou e
+         saiu (em quantidade só quando o recorte é de um programa), quanto foi
+         pago e o milheiro médio do que foi pago. */
+      const ent = filtrados.filter(x => Number(x.qtd) > 0), sai = filtrados.filter(x => Number(x.qtd) < 0);
+      const pagos = ent.filter(x => Number(x.custo) > 0);
+      const pago = soma(pagos.map(x => Number(x.custo))), qPago = soma(pagos.map(x => Number(x.qtd)));
+      const progs = [...new Set(filtrados.map(x => x.prog))];
+      const unid = progs.length === 1 ? (prog(progs[0]).tipo === 'pontos' ? 'pontos' : 'milhas') : '';
+      const it = (rot, val, cls = '') => `<span class="lt-it"><small>${rot}</small><b class="${cls}">${val}</b></span>`;
+      return `<div class="lt-linha">
+        ${it('No recorte', `${nBR(filtrados.length)} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`)}
+        ${unid ? it(`Entraram (${esc(prog(progs[0]).n)})`, nBR(soma(ent.map(x => Number(x.qtd)))) + ' ' + unid, 'n-azul') : it('Entradas', nBR(ent.length))}
+        ${unid ? it('Saíram', nBR(Math.abs(soma(sai.map(x => Number(x.qtd))))) + ' ' + unid, 'n-ouro') : it('Saídas', nBR(sai.length))}
+        ${it('Pago nas compras', brl(pago), 'n-brasa')}
+        ${it('Milheiro médio pago', qPago > 0 ? brl2(pago / qPago * 1000) : 'n/d')}
+      </div>${progs.length > 1 ? '<div class="lt-nota">Milha e ponto de programas diferentes não se somam: filtre um programa para ver quanto entrou e saiu em quantidade.</div>' : ''}`;
+    })()}</td></tr></tfoot></table>`;
 
   /* Rodapé só quando há mais de uma página: navegação de página única é botão
      que não leva a lugar nenhum. Mesmo desenho do cadastro de passageiros —
@@ -35135,7 +35154,7 @@ function montarColunaMenu(raiz, vistaMedida){
    Logo acima da barra das áreas: os módulos da área aberta, com ícone e nome.
    Área de um módulo só não precisa dela. */
 /* nome curto de cada item na segunda barra do celular, onde cabe pouco */
-const CURTO_ITEM = {'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Compras inteligentes':'Compras', 'Painel de bordo':'Painel',
+const CURTO_ITEM = {'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
   'Compra e transferência':'Transferência', 'Clubes e lojas':'Clubes e lojas', 'Meus cartões':'Meus cartões', 'Lançamentos':'Lançamentos'};
 function pintarBarraModulos(v){
   const bm = $('#barraModulos'); if (!bm) return;
@@ -37449,7 +37468,7 @@ const NOME_COLECAO = {
   lancamentos:'Lançamentos', campanhas:'Campanhas', contas:'Contas', saldos:'Saldos',
   assinaturas:'Assinaturas de clube', metas:'Metas de viagem', reservas:'Emissões',
   cartoes:'Cartões', lotes:'Lotes de validade', lojas:'Lojas parceiras',
-  compras:'Compras inteligentes', roteiros:'Roteiros', pendentes:'Pendências',
+  compras:'Compras Inteligentes', roteiros:'Roteiros', pendentes:'Pendências',
   cpfs:'Política de CPF', pagamentos:'Pagamentos', mural:'Mural',
   cotacoes:'Cotações', monitores:'Monitores de voo', buscas:'Buscas guardadas',
   simulacoes:'Simulações', vitrines:'Vitrines', desejos:'Lista de desejos',
