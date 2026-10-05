@@ -7667,6 +7667,41 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 .cm-nav .cm-item.cm-modulo[data-aba]{ font-size:calc(14px * var(--esc)); }
 .cm-nav .cm-item.cm-modulo[data-aba] svg{ opacity:.8; }
 .cm-nav .cm-item.cm-modulo.on[data-aba] svg{ opacity:1; }
+
+/* ══ JANELAS DE DETALHE DOS PAINÉIS ═══════════════════════════════════════════ */
+.heroi-numeros .hn-det{ position:relative; text-align:left; font:inherit; color:inherit; cursor:pointer; padding-right:26px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:12px 26px 12px 13px;
+  display:flex; flex-direction:column; gap:3px; transition:background .2s var(--ease), border-color .2s var(--ease), transform .2s var(--ease); }
+.heroi-numeros .hn-det:hover{ background:rgba(255,255,255,.08); border-color:rgba(242,193,78,.45); transform:translateY(-1px); }
+.heroi-numeros .hn-det:focus-visible{ outline:2px solid var(--dourado); outline-offset:2px; }
+.hn-seta{ position:absolute; right:9px; top:50%; width:14px; height:14px; margin-top:-7px; fill:none; stroke:rgba(242,193,78,.75); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.heroi-mais{ display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:4px 0; border:0; background:none; cursor:pointer;
+  color:rgba(242,193,78,.9); font:inherit; font-size:calc(12.5px * var(--esc)); font-weight:600; }
+.heroi-mais svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s var(--ease); }
+.heroi-mais:hover svg{ transform:translateX(3px); }
+.heroi-mais:hover{ color:var(--dourado); }
+.heroi-mais-dir{ align-self:flex-start; margin:2px 0 0; }
+.jn-sub{ margin:-4px 0 14px; font-size:calc(13px * var(--esc)); }
+.jn-lista{ display:flex; flex-direction:column; }
+.jn-linha{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto; align-items:center; gap:12px; padding:10px 2px; border-bottom:1px solid var(--fio-suave); }
+.jn-linha:last-child{ border-bottom:0; }
+.jn-pos{ width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--sup-1); color:var(--grafite); font-family:var(--f-m); font-size:calc(11.5px * var(--esc)); }
+.jn-mes{ font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); color:var(--grafite); min-width:52px; }
+.jn-nome b{ display:block; font-weight:600; margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.jn-barra{ height:7px; border-radius:99px; background:var(--sup-1); overflow:hidden; }
+.jn-barra i{ display:block; height:100%; border-radius:99px; animation:jnEstica .6s var(--ease) both; transform-origin:left; }
+@keyframes jnEstica{ from{ transform:scaleX(0); } }
+.jn-num{ text-align:right; display:flex; flex-direction:column; gap:2px; font-family:var(--f-m); white-space:nowrap; }
+.jn-num b{ font-weight:600; }
+.jn-num span{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); }
+.jn-num span.sobe{ color:var(--jade); } .jn-num span.desce{ color:var(--brasa); }
+.jn-total{ display:flex; justify-content:space-between; margin-top:10px; padding-top:12px; border-top:1.5px solid var(--fio-forte); font-family:var(--f-m); }
+.jn-kpis{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:14px; }
+.jn-kpis > div{ background:var(--sup-1); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:3px; }
+.jn-kpis span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.jn-kpis b{ font-family:var(--f-m); font-size:calc(16px * var(--esc)); }
+.jn-kpis small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); }
+@media (prefers-reduced-motion:reduce){ .jn-barra i{ animation:none; } .heroi-numeros .hn-det:hover{ transform:none; } }
 </style>
 </head>
 <body>
@@ -9459,7 +9494,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-08 02:15';
+const BUILD = '2026-10-08 04:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13925,6 +13960,7 @@ function renderMesaHeroi(){
       <div class="heroi-comp" role="img" aria-label="Composição do valor por programa">
         <div class="heroi-barra">${fatias.map(f => `<i style="flex:${f.v.toFixed(2)};background:${f.cor}" data-dica="${esc(f.n)}: ${esc(brl(f.v))} (${esc(pct(f.v / vale * 100, 1))})"></i>`).join('')}</div>
         <div class="heroi-leg">${fatias.map(f => `<span><i style="background:${f.cor}"></i>${esc(f.n)} <b>${pct(f.v / vale * 100, 0)}</b></span>`).join('')}</div>
+        <button type="button" class="heroi-mais" id="mesaVerComp">Ver ${comp.length > 4 ? `os ${comp.length} programas` : 'em detalhe'}<svg><use href="#i-seta-d"/></svg></button>
       </div>
     </div>
     <div class="heroi-dir">
@@ -13936,6 +13972,16 @@ function renderMesaHeroi(){
       <div class="heroi-curva" id="mesaHeroiCurva">${serie.length >= 2 ? '' : '<p class="heroi-sub" style="padding:24px 0">A curva aparece a partir do segundo mês com compra lançada.</p>'}</div>
     </div>`;
   if (serie.length >= 2) $('#mesaHeroiCurva').innerHTML = grLinha(serie, {altura:170, fmt:v => 'R$ ' + v.toFixed(0), cor:'#F2C14E', alvo:'#mesaHeroiCurva'});
+  /* as mesmas janelas de detalhe dos outros painéis */
+  const oMesa = {rot:'Sua carteira vale hoje', compRot:'Valor por programa', fmtFatia:v => brl(v),
+    fatias:Object.assign(fatias.slice(), {todos:comp.map((x, i) => ({n:prog(x.p).n, v:x.v, cor:cores[Math.min(i, 4)]}))}),
+    dirRot:'Custo do milheiro, mês a mês', dirSub:'Média do que entrou com custo nos programas aéreos.', serie, fmtSerie:v => brl2(v)};
+  if ($('#mesaVerComp')) $('#mesaVerComp').onclick = () => janelaComposicao(oMesa);
+  const cab = alvo.querySelector('.heroi-dir-cab');
+  if (cab && serie.length >= 2 && !alvo.querySelector('[data-abre="serie"]')){
+    cab.insertAdjacentHTML('afterend', `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">Ver mês a mês<svg><use href="#i-seta-d"/></svg></button>`);
+    alvo.querySelector('[data-abre="serie"]').onclick = () => janelaSerie(oMesa);
+  }
 }
 
 /* ── PEÇAS DE DESTAQUE DAS ÁREAS (06/10/2026) ─────────────────────────────────
@@ -13947,7 +13993,9 @@ const CORES_HEROI = ['#F2C14E', '#6FB7FF', '#5FD3A6', '#C79BFF', 'rgba(226,233,2
 function fatiasHeroi(itens, nome){
   const v = itens.filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const top = v.slice(0, 4), resto = soma(v.slice(4).map(x => x.v));
-  return top.map((x, i) => ({n:nome(x), v:x.v, cor:CORES_HEROI[i]})).concat(resto > 0 ? [{n:'Outros', v:resto, cor:CORES_HEROI[4]}] : []);
+  const out = top.map((x, i) => ({n:nome(x), v:x.v, cor:CORES_HEROI[i]})).concat(resto > 0 ? [{n:'Outros', v:resto, cor:CORES_HEROI[4]}] : []);
+  out.todos = v.map((x, i) => ({n:nome(x), v:x.v, cor:CORES_HEROI[Math.min(i, 4)]}));
+  return out;
 }
 function montarHeroi(alvo, o){
   if (!alvo) return;
@@ -13962,10 +14010,13 @@ function montarHeroi(alvo, o){
       <div class="heroi-rot">${esc(o.rot)}</div>
       <div class="heroi-valor">${o.valor}</div>
       <div class="heroi-linha">${o.linha || ''}</div>
-      <div class="heroi-numeros">${o.numeros.map(([b, sp]) => `<div><b>${b}</b><span>${esc(sp)}</span></div>`).join('')}</div>
+      <div class="heroi-numeros">${o.numeros.map(([b, sp, det]) => det && DETALHES_HEROI[det]
+        ? `<button type="button" class="hn-det" data-det="${det}" aria-label="Ver detalhes: ${esc(sp)}"><b>${b}</b><span>${esc(sp)}</span><svg class="hn-seta"><use href="#i-seta-d"/></svg></button>`
+        : `<div><b>${b}</b><span>${esc(sp)}</span></div>`).join('')}</div>
       ${tot > 0 ? `<div class="heroi-comp" role="img" aria-label="${esc(o.compRot || 'Composição')}">
         <div class="heroi-barra">${o.fatias.map(f => `<i style="flex:${f.v.toFixed(2)};background:${f.cor}" data-dica="${esc(f.n)}: ${esc(o.fmtFatia ? o.fmtFatia(f.v) : nBR(f.v))} (${esc(pct(f.v / tot * 100, 1))})"></i>`).join('')}</div>
         <div class="heroi-leg">${o.fatias.map(f => `<span><i style="background:${f.cor}"></i>${esc(f.n)} <b>${pct(f.v / tot * 100, 0)}</b></span>`).join('')}</div>
+        <button type="button" class="heroi-mais" data-abre="comp">Ver ${o.fatias.todos && o.fatias.todos.length > o.fatias.length - (o.fatias.some(f => f.n === 'Outros') ? 1 : 0) ? `os ${o.fatias.todos.length}` : 'em detalhe'}<svg><use href="#i-seta-d"/></svg></button>
       </div>` : ''}
     </div>
     <div class="heroi-dir">
@@ -13973,10 +14024,101 @@ function montarHeroi(alvo, o){
         <div><div class="heroi-rot">${esc(o.dirRot)}</div><div class="heroi-sub">${esc(o.dirSub || '')}</div></div>
         ${o.ult ? `<div class="heroi-ult"><b>${o.ult.b}</b><span>${esc(o.ult.sp)}</span></div>` : ''}
       </div>
+      ${o.serie && o.serie.length >= 2 ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">Ver mês a mês<svg><use href="#i-seta-d"/></svg></button>` : ''}
       <div class="heroi-curva" id="${idc}">${o.serie && o.serie.length >= 2 ? '' : `<p class="heroi-sub" style="padding:24px 0">${esc(o.semSerie || 'A curva aparece a partir do segundo mês com movimento.')}</p>`}</div>
     </div>`;
   if (o.serie && o.serie.length >= 2) document.getElementById(idc).innerHTML = grLinha(o.serie, {altura:170, fmt:o.fmtSerie || (v => nBR(v)), cor:'#F2C14E', alvo:'#' + idc});
+  /* janelas de detalhe: cada parte do painel abre a sua, sem poluir a tela */
+  alvo.querySelectorAll('.hn-det').forEach(b => b.onclick = () => DETALHES_HEROI[b.dataset.det]());
+  const bc = alvo.querySelector('[data-abre="comp"]'); if (bc) bc.onclick = () => janelaComposicao(o);
+  const bs = alvo.querySelector('[data-abre="serie"]'); if (bs) bs.onclick = () => janelaSerie(o);
 }
+
+/* ══ JANELAS DE DETALHE DOS PAINÉIS (08/10/2026) ═══════════════════════════════
+   O painel mostra o essencial; o resto abre por partes, numa janela suspensa:
+   a composição inteira (não só os quatro maiores), a série mês a mês com a
+   variação, e o detalhe de cada número que pede ação. */
+function abrirJanela(titulo, sub, corpo){
+  abrirFolha({titulo, largura:'media', corpo:`${sub ? `<p class="fraco jn-sub">${sub}</p>` : ''}${corpo}`,
+    pe:`<div class="esticar"></div><button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+}
+function janelaComposicao(o){
+  const l = (o.fatias.todos && o.fatias.todos.length ? o.fatias.todos : o.fatias).filter(f => f.n !== 'Outros' || !o.fatias.todos);
+  const tot = soma(l.map(f => f.v)) || 1, f = o.fmtFatia || (v => nBR(v)), mx = Math.max(...l.map(x => x.v));
+  abrirJanela(o.compRot || 'Composição', `${esc(o.rot)}: ${l.length} ${l.length === 1 ? 'item' : 'itens'}, do maior para o menor.`, `
+    <div class="jn-lista">${l.map((x, i) => `<div class="jn-linha">
+      <span class="jn-pos">${i + 1}</span>
+      <div class="jn-nome"><b>${esc(x.n)}</b><div class="jn-barra"><i style="width:${(x.v / mx * 100).toFixed(1)}%;background:${x.cor}"></i></div></div>
+      <div class="jn-num"><b>${esc(f(x.v))}</b><span>${pct(x.v / tot * 100, 1)}</span></div></div>`).join('')}</div>
+    <div class="jn-total"><span>Total</span><b>${esc(f(tot))}</b></div>`);
+}
+function janelaSerie(o){
+  const f = o.fmtSerie || (v => nBR(v)), l = o.serie;
+  const vals = l.map(x => x.v), total = soma(vals), media = total / l.length, mx = Math.max(...vals), imx = vals.indexOf(mx);
+  abrirJanela(o.dirRot || 'Mês a mês', `${esc(o.dirSub || '')}`, `
+    <div class="jn-kpis">
+      <div><span>Soma</span><b>${esc(f(total))}</b></div><div><span>Média</span><b>${esc(f(media))}</b></div><div><span>Maior</span><b>${esc(f(mx))}</b><small>${esc(l[imx].r)}</small></div>
+    </div>
+    <div class="jn-lista">${l.slice().reverse().map((x, j) => { const i = l.length - 1 - j, ant = i > 0 ? l[i - 1].v : null, d = ant != null && ant !== 0 ? (x.v - ant) / Math.abs(ant) * 100 : null;
+      return `<div class="jn-linha"><span class="jn-mes">${esc(x.r)}</span>
+        <div class="jn-nome"><div class="jn-barra"><i style="width:${mx ? (x.v / mx * 100).toFixed(1) : 0}%;background:var(--dourado)"></i></div></div>
+        <div class="jn-num"><b>${esc(f(x.v))}</b>${d != null ? `<span class="${d >= 0 ? 'sobe' : 'desce'}">${d >= 0 ? '▲' : '▼'} ${pct(Math.abs(d), 0)}</span>` : '<span>primeiro mês</span>'}</div></div>`; }).join('')}</div>`);
+}
+const nomeContaId = id => ((DB.contas || []).find(c => c.id === id) || {}).nome || 'sem conta';
+function tabelaJanela(cab, linhas, vazio){
+  if (!linhas.length) return `<div class="vazio" style="padding:22px"><p>${vazio}</p></div>`;
+  return `<div class="rolo"><table class="tb-dados"><thead><tr>${cab.map(c => `<th${c[1] ? ` class="${c[1]}"` : ''}>${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${linhas.map(l => `<tr>${l.map((v, i) => `<td${cab[i][1] ? ` class="${cab[i][1]}"` : ''}>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+const DETALHES_HEROI = {
+  vencimentos(){
+    const l = lotesEmRisco(90).slice().sort((a, b) => String(a.vence).localeCompare(String(b.vence)));
+    abrirJanela('Milhas que vencem em 90 dias', 'Use antes, transfira ou renove: cada lote com a conta e o prazo.',
+      tabelaJanela([['Programa'], ['Conta'], ['Milhas', 'n'], ['Vence', 'c'], ['Faltam', 'n']],
+        l.map(x => [`<div class="linha" style="gap:7px;flex-wrap:nowrap">${discoProg(x.prog, 'p')}${esc(prog(x.prog).n)}</div>`, esc(nomeContaId(x.contaId)), nBR(Number(x.qtd) || 0), dataBR(x.vence),
+          `<b style="color:var(--${diasAte(x.vence) <= 30 ? 'brasa' : 'ouro'})">${nBR(diasAte(x.vence))} dias</b>`]), 'Nenhum lote vence nos próximos 90 dias.'));
+  },
+  clubes(){
+    const l = (DB.assinaturas || []).filter(a => a.status === 'ativa').sort((a, b) => String(a.renova || '').localeCompare(String(b.renova || '')));
+    abrirJanela('Clubes ativos', `${brl(soma(l.map(a => Number(a.valor) || 0)))} por mês somando todos.`,
+      tabelaJanela([['Programa'], ['Conta'], ['Por mês', 'n'], ['Renova', 'c']],
+        l.map(a => [`<div class="linha" style="gap:7px;flex-wrap:nowrap">${discoProg(a.prog, 'p')}${esc(prog(a.prog).n)}</div>`, esc(nomeContaId(a.contaId)), brl(Number(a.valor) || 0), a.renova ? dataBR(a.renova) : 'n/d']), 'Nenhum clube ativo.'));
+  },
+  emAberto(){
+    const hoje = hojeISO();
+    const l = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && r.status !== 'realizada' && (r.dataVolta || r.data || '') >= hoje).sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    abrirJanela('Emissões em aberto', 'Para clientes, do voo mais próximo para o mais distante.',
+      tabelaJanela([['Data', 'c'], ['Cliente'], ['Trecho'], ['Localizador', 'c']],
+        l.map(r => [dataBR(r.data), esc(r.cliente || 'n/d'), esc(String(r.desc || '').split(' · ')[0]), r.loc ? `<span class="etq">${esc(r.loc)}</span>` : 'n/d']), 'Nada em aberto.'));
+  },
+  aReceber(){
+    /* em Vendas, o mesmo recorte do painel (ano, mês e base); em Emitidos, todas */
+    const base = vistaAtual === 'vendas' && typeof vendasFiltradas === 'function' ? vendasFiltradas() : (DB.reservas || []);
+    const l = base.filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && !vendaRecebida(r) && Number(r.cobrado) > 0).sort((a, b) => String(a.criada || a.data).localeCompare(String(b.criada || b.data)));
+    abrirJanela('A receber', `${brl(soma(l.map(r => Number(r.cobrado) || 0)))} de vendas ainda não creditadas.`,
+      tabelaJanela([['Venda', 'c'], ['Cliente'], ['Trecho'], ['Valor', 'n']],
+        l.map(r => [dataBR(String(r.criada || r.data).slice(0, 10)), esc(r.cliente || 'n/d'), esc(String(r.desc || '').split(' · ')[0]), `<b>${brl(Number(r.cobrado) || 0)}</b>`]), 'Tudo recebido.'));
+  },
+  cotas(){
+    const l = matrizCota().filter(x => x.limite).sort((a, b) => (a.livres ?? 99) - (b.livres ?? 99));
+    abrirJanela('Cota de CPF por conta', 'Das mais apertadas para as mais folgadas.',
+      tabelaJanela([['Conta'], ['Programa'], ['Usadas', 'n'], ['Livres', 'n']],
+        l.map(x => [esc(x.conta.nome), `<div class="linha" style="gap:7px;flex-wrap:nowrap">${discoProg(x.prog, 'p')}${esc(prog(x.prog).n)}</div>`, `${nBR(x.usados)} de ${nBR(x.limite)}`,
+          `<b style="color:var(--${x.livres === 0 ? 'brasa' : x.livres <= 3 ? 'ouro' : 'jade'})">${nBR(x.livres)}</b>`]), 'Nenhuma conta em programa com teto de CPF.'));
+  },
+  documentos(){
+    const l = (DB.pessoas || []).flatMap(p => [['Documento', p.docVal], ['Passaporte', p.passVal]].filter(d => d[1] && diasAte(d[1]) <= 180).map(d => ({p, tipo:d[0], v:d[1]}))).sort((a, b) => String(a.v).localeCompare(String(b.v)));
+    abrirJanela('Documentos vencidos ou vencendo', 'Nos próximos 6 meses. Passaporte vencido impede a emissão internacional.',
+      tabelaJanela([['Passageiro'], ['Documento'], ['Vence', 'c'], ['Situação', 'n']],
+        l.map(x => [`<b>${esc(x.p.nome)}</b>`, x.tipo, dataBR(x.v), diasAte(x.v) < 0 ? '<span class="etq brasa">vencido</span>' : `<span class="etq ouro">${nBR(diasAte(x.v))} dias</span>`]), 'Nenhum documento vencendo.'));
+  },
+  alertasCartoes(){
+    const l = (typeof alertasCartoes === 'function' ? alertasCartoes() : []).filter(a => a.grau >= 2);
+    abrirJanela('Alertas dos cartões', 'O que pede ação agora ou nos próximos dias.',
+      l.length ? `<div class="pilha" style="gap:9px">${l.map(a => `<div class="item ${a.grau === 3 ? 'hoje' : 'urgente'}"><div class="item-corpo"><div class="item-tit">${esc(a.t)}</div><div class="item-sub">${esc(a.cartao.banco)} ${esc(a.cartao.produto)} · ${esc(a.s)}</div></div></div>`).join('')}</div>`
+        : '<div class="vazio" style="padding:22px"><p>Nenhum alerta pedindo ação.</p></div>');
+  }
+};
 const rotuloMes = k => MESES[Number(k.slice(5, 7)) - 1] + '/' + k.slice(2, 4);
 const milCurto = v => Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('pt-BR', {maximumFractionDigits:0}) + ' mil' : nBR(Math.round(v));
 
@@ -14008,7 +14150,7 @@ function renderHeroiMilhas(){
     valor:`${nBR(milhas)}<small> milhas</small>`,
     linha: custoMedio != null ? `<span>Custo médio do milheiro <b>${brl2(custoMedio)}</b></span>
       <span class="heroi-chip ${dif <= 0 ? 'sobe' : 'desce'}">${dif <= 0 ? pct(Math.abs(dif), 0) + ' abaixo do alvo' : pct(dif, 0) + ' acima do alvo'}</span>` : '<span>Sem custo lançado nas milhas em estoque.</span>',
-    numeros:[[nBR(pontos), 'pontos a direcionar'], [brl(mensal), clubes.length ? `${clubes.length} ${clubes.length === 1 ? 'clube ativo' : 'clubes ativos'}, por mês` : 'nenhum clube ativo'], [nBR(vencem), 'vencem em 90 dias']],
+    numeros:[[nBR(pontos), 'pontos a direcionar'], [brl(mensal), clubes.length ? `${clubes.length} ${clubes.length === 1 ? 'clube ativo' : 'clubes ativos'}, por mês` : 'nenhum clube ativo', 'clubes'], [nBR(vencem), 'vencem em 90 dias', 'vencimentos']],
     fatias:fatiasHeroi(aereos.map(p => ({p, v:sal[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas por programa',
     dirRot:'Milhas que entraram, mês a mês', dirSub:'Compras, clubes e transferências nos programas aéreos.',
     ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:`${serie[serie.length - 1].r}${media != null ? ' · média ' + milCurto(media) : ''}`} : null,
@@ -14099,7 +14241,7 @@ function renderHeroiVendas(alvo){
     rot:`Resultado das vendas ${quando}`,
     valor:brl(res),
     linha:`<span>Receita <b>${brl(rec)}</b></span>${mg != null ? `<span class="heroi-chip ${mg >= 0 ? 'sobe' : 'desce'}">margem de ${pct(mg, 1)}</span>` : ''}`,
-    numeros:[[nBR(vs.length), `${vs.length === 1 ? 'venda' : 'vendas'}, ticket ${brl(rec / vs.length)}`], [brl(aReceber), aReceber > 0 ? 'a receber' : 'tudo recebido'], [milhas ? brl2(rec / (milhas / 1000)) : 'n/d', 'rendimento do milheiro']],
+    numeros:[[nBR(vs.length), `${vs.length === 1 ? 'venda' : 'vendas'}, ticket ${brl(rec / vs.length)}`], [brl(aReceber), aReceber > 0 ? 'a receber' : 'tudo recebido', 'aReceber'], [milhas ? brl2(rec / (milhas / 1000)) : 'n/d', 'rendimento do milheiro']],
     fatias:fatiasHeroi(Object.keys(clientes).map(c => ({c, v:clientes[c]})), x => x.c.length > 22 ? x.c.slice(0, 21) + '…' : x.c), fmtFatia:v => brl(v), compRot:'Resultado por cliente',
     dirRot:(rsAno && rsAno !== 'todos') ? `Receita e resultado em ${rsAno}` : 'Receita e resultado por mês',
     dirSub:'Barra clara: receita. Barra cheia: o que sobrou.',
@@ -14135,9 +14277,9 @@ function renderHeroiEmitidos(){
     rot:`Emissões para clientes${rotTipo}`,
     valor:`${nBR(lista.length)}<small> ${lista.length === 1 ? 'emissão' : 'emissões'}</small>`,
     linha:`<span>Milhas usadas <b>${nBR(milhas)}</b></span>${prox ? `<span class="heroi-chip sobe">${oQue} ${dias === 0 ? 'hoje' : prazoTexto(dias)}</span>` : '<span class="heroi-chip">nada marcado à frente</span>'}`,
-    numeros:[[nBR(abertas.length), abertas.length === 1 ? 'em aberto, ainda vai acontecer' : 'em aberto, ainda vão acontecer'],
+    numeros:[[nBR(abertas.length), abertas.length === 1 ? 'em aberto, ainda vai acontecer' : 'em aberto, ainda vão acontecer', 'emAberto'],
       [prox ? dataBR(prox.data) : 'n/d', prox ? `${oQue} · ${prox.cliente || 'cliente'}` : oQue],
-      [brl(aReceber), aReceber > 0 ? 'a receber' : 'tudo recebido']],
+      [brl(aReceber), aReceber > 0 ? 'a receber' : 'tudo recebido', 'aReceber']],
     fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas por programa',
     dirRot:'Milhas emitidas, mês a mês', dirSub:'Pela data da emissão, só as de cliente.',
     ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
@@ -14162,7 +14304,7 @@ function renderHeroiClientes(){
     rot:'Passageiros cadastrados',
     valor:`${nBR(todas.length)}<small> ${todas.length === 1 ? 'passageiro' : 'passageiros'}</small>`,
     linha:`<span>Com CPF <b>${nBR(comCpf)}</b></span>${comCpf < todas.length ? `<span class="heroi-chip desce">${todas.length - comCpf} sem CPF</span>` : '<span class="heroi-chip sobe">todos identificados</span>'}`,
-    numeros:[[nBR(viajaram), 'já viajaram'], [nBR(menores), menores === 1 ? 'criança ou bebê' : 'crianças e bebês'], [nBR(docs), docs === 1 ? 'documento vencido ou vencendo em 6 meses' : 'documentos vencidos ou vencendo em 6 meses']],
+    numeros:[[nBR(viajaram), 'já viajaram'], [nBR(menores), menores === 1 ? 'criança ou bebê' : 'crianças e bebês'], [nBR(docs), docs === 1 ? 'documento vencido ou vencendo em 6 meses' : 'documentos vencidos ou vencendo em 6 meses', 'documentos']],
     fatias:fatiasHeroi(Object.keys(usos).map(id => ({id, v:usos[id]})), x => nome(x.id).length > 22 ? nome(x.id).slice(0, 21) + '…' : nome(x.id)), fmtFatia:v => `${v} ${v === 1 ? 'emissão' : 'emissões'}`, compRot:'Emissões por passageiro',
     dirRot:'Passageiros em emissões, mês a mês', dirSub:'Quantos lugares foram emitidos em cada mês.',
     ult: serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
@@ -14187,7 +14329,7 @@ function renderHeroiCPF(){
     valor:`${nBR(livres)}<small> ${livres === 1 ? 'vaga livre' : 'vagas livres'}</small>`,
     linha:`<span>Vagas usadas <b>${nBR(usadas)}</b> de <b>${nBR(teto)}</b></span>${semVaga ? `<span class="heroi-chip desce">${semVaga} sem vaga</span>` : apertadas ? `<span class="heroi-chip">${apertadas} ${apertadas === 1 ? 'apertada' : 'apertadas'}</span>` : '<span class="heroi-chip sobe">nenhuma cota apertada</span>'}`,
     numeros:[[nBR(totEm), `emissões em ${l.length} ${l.length === 1 ? 'par' : 'pares'} conta e programa`], [nBR(totMilhas), totEm ? `milhas, ${nBR(Math.round(totMilhas / totEm))} por emissão` : 'milhas usadas'],
-      [nBR(apertadas), apertadas === 1 ? 'cota com três vagas ou menos' : 'cotas com três vagas ou menos']],
+      [nBR(apertadas), apertadas === 1 ? 'cota com três vagas ou menos' : 'cotas com três vagas ou menos', 'cotas']],
     fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => `${v} ${v === 1 ? 'vaga usada' : 'vagas usadas'}`, compRot:'Vagas usadas por programa',
     dirRot:'Lugares emitidos, mês a mês', dirSub:'Nos programas que limitam CPF: é o que consome a cota.',
     ult: serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
@@ -14237,7 +14379,7 @@ function renderHeroiCartoesPainel(alvo){
     valor:brl(comprometido),
     linha:`<span><b>${nBR(cs.length)}</b> ${cs.length === 1 ? 'cartão' : 'cartões'} em <b>${new Set(cs.map(c => c.banco)).size}</b> ${new Set(cs.map(c => c.banco)).size === 1 ? 'banco' : 'bancos'}</span>${venc.length ? `<span class="heroi-chip ${diasAte(venc[0]) <= 3 ? 'desce' : ''}">vence ${diasAte(venc[0]) === 0 ? 'hoje' : prazoTexto(diasAte(venc[0]))} · ${dataBR(venc[0])}</span>` : '<span class="heroi-chip sobe">nada a vencer</span>'}`,
     numeros:[[limite ? pct(comprometido / limite * 100, 1) : 'n/d', limite ? `do limite de ${brl(limite)}` : 'do limite'], [nBR(parcelas), parcelas === 1 ? 'parcelamento ativo' : 'parcelamentos ativos'],
-      [nBR(alertas.filter(a => a.grau >= 2).length), 'alertas para agir']],
+      [nBR(alertas.filter(a => a.grau >= 2).length), 'alertas para agir', 'alertasCartoes']],
     fatias:fatiasHeroi(porCr.map(x => ({c:x.c, v:x.v})), x => nomeCrCurto(x.c)), fmtFatia:v => brl(v), compRot:'Comprometido por cartão',
     dirRot:'Gasto nos cartões, mês a mês', dirSub:'Clubes, parcelas, taxas e o que foi lançado em cada fatura.',
     ult: serie.length ? {b:brl(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
