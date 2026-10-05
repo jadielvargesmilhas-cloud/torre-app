@@ -8009,6 +8009,41 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .cc-uso > i{ display:block; height:100%; border-radius:99px; background:var(--ouro); }
 .cc-acoes{ display:flex; gap:8px; justify-content:flex-end; margin-top:2px; }
 .cc-face.cc-grande .cc-numero{ font-size:calc(16px * var(--esc)); }
+
+/* seletor medindo: uma linha, sem quebra, para saber se cabe */
+.seg.seg-medindo{ flex-wrap:nowrap !important; width:max-content !important; max-width:none !important; }
+.seg.seg-medindo > *{ flex:0 0 auto !important; white-space:nowrap; }
+@media (max-width:860px){
+  /* no celular todo seletor ocupa a linha inteira: ou as opções dividem a
+     largura numa linha só, ou cada uma ganha a sua */
+  .vista .seg:not(#segEscala){ flex:1 1 100%; max-width:100%; box-sizing:border-box; }
+  .vista .seg:not(.seg-coluna){ flex-wrap:nowrap; }
+  .vista .seg:not(.seg-coluna) > *{ white-space:nowrap; flex:1 1 auto; justify-content:center; }
+  .vista .linha:has(> .seg){ flex-wrap:wrap; flex-shrink:1 !important; min-width:0; max-width:100%; }
+  .vista .linha .linha:has(> .seg){ flex-basis:100%; }
+  .vista .seg.seg-coluna{ display:flex !important; flex-direction:column; align-items:stretch; width:100%; }
+  .vista .seg.seg-coluna > *{ width:100%; justify-content:center; text-align:center; }
+}
+/* paginador no celular: os botões numa linha e "página X de Y" embaixo, inteiro */
+@media (max-width:560px){
+  .paginador{ flex-wrap:wrap !important; justify-content:center; overflow:visible !important; row-gap:8px; }
+  .paginador > .esticar{ display:none; }
+  .paginador > span.fraco{ flex-basis:100%; text-align:center; order:5; }
+}
+
+/* meta de isenção da anuidade */
+.cc-meta{ display:flex; flex-direction:column; gap:5px; padding:10px 12px; border-radius:12px; background:color-mix(in oklab, var(--ouro) 8%, transparent); border:1px solid color-mix(in oklab, var(--ouro) 28%, transparent); }
+.cc-meta.ok{ background:color-mix(in oklab, var(--jade) 8%, transparent); border-color:color-mix(in oklab, var(--jade) 28%, transparent); }
+.cc-meta-cab{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.cc-meta-cab b{ font-family:var(--f-m); color:var(--ouro); font-size:calc(13.5px * var(--esc)); }
+.cc-meta.ok .cc-meta-cab b{ color:var(--jade); }
+.cc-meta-barra{ display:block; height:7px; border-radius:99px; background:var(--sup-1); overflow:hidden; }
+.cc-meta-barra > i{ display:block; height:100%; border-radius:99px; background:var(--ouro); transition:width .6s var(--ease); }
+.cc-meta.ok .cc-meta-barra > i{ background:var(--jade); }
+.cc-meta-txt{ font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); }
+.cc-meta small{ font-size:calc(11px * var(--esc)); line-height:1.35; }
+.cc-meta.grande .cc-meta-txt{ font-size:calc(14px * var(--esc)); }
+.cc-nums sup{ font-size:.75em; margin-left:1px; }
 </style>
 </head>
 <body>
@@ -9815,7 +9850,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-10 17:20';
+const BUILD = '2026-10-10 19:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14581,8 +14616,29 @@ function padronizarSecao(){
   const guia = [...caixa.children].find(e => /Guia$/.test(e.id || '') && vis(e) && /^\s*[▸▾›»]?\s*Como ler/i.test(e.innerText || ''));
   if (guia && painel && painel.parentElement === caixa && painel.nextElementSibling !== guia) caixa.insertBefore(guia, painel.nextElementSibling);
 }
+
+/* ── Seletores no celular: uma linha só, ou um por linha (10/10/2026) ──────────
+   Três opções que não cabem lado a lado quebravam em duas mais uma, irregular.
+   A Torre mede: se o seletor cabe numa linha, fica numa linha; se não cabe,
+   cada opção ganha a sua linha, de largura inteira. */
+function ajustarSeletores(){
+  const cel = matchMedia('(max-width:860px)').matches;
+  document.querySelectorAll('.vista.on .seg').forEach(sg => {
+    if (sg.id === 'segEscala' || !sg.offsetParent) return;
+    sg.classList.remove('seg-coluna');
+    if (!cel) return;
+    sg.classList.add('seg-medindo');
+    const precisa = sg.scrollWidth;
+    sg.classList.remove('seg-medindo');
+    const disponivel = sg.clientWidth;   /* a linha inteira (o seletor ocupa 100%) */
+    if (precisa > disponivel + 1) sg.classList.add('seg-coluna');
+  });
+}
+let _segTimer = null;
+addEventListener('resize', () => { clearTimeout(_segTimer); _segTimer = setTimeout(ajustarSeletores, 120); }, {passive:true});
+
 let _padTimer = null;
-function agendarPadronizar(){ clearTimeout(_padTimer); _padTimer = setTimeout(() => { try{ padronizarSecao(); }catch(e){ console.warn('molde', e); } }, 30); }
+function agendarPadronizar(){ clearTimeout(_padTimer); _padTimer = setTimeout(() => { try{ padronizarSecao(); ajustarSeletores(); }catch(e){ console.warn('molde', e); } }, 30); }
 
 
 
@@ -14672,11 +14728,13 @@ function abrirFichaCartao(id){
   const al = (typeof alertasCartoes === 'function' ? alertasCartoes() : []).filter(a => a.cartao && a.cartao.id === c.id);
   abrirFolha({titulo:`${esc(c.banco)} — ${esc(c.produto)}`, largura:'media', corpo:`
     <div class="cc-ficha-topo">${faceCartao({e:c.banco, m:`${c.bandeira || ''} ${c.produto || ''}`.trim(), final:c.final, titular:nomeCurto(c.titular || '') || ''}, true)}</div>
-    <div class="ficha-topo"><span class="etq">${esc(c.bandeira || '')} ···· ${esc(c.final || '')}</span>${c.isento ? '<span class="etq jade">anuidade isenta</span>' : ''}${c.clube ? `<span class="etq">${esc(c.clube)}</span>` : ''}</div>
+    <div class="ficha-topo"><span class="etq">${esc(c.bandeira || '')} ···· ${esc(c.final || '')}</span>${(e => e.k === 'livre' ? '<span class="etq jade">anuidade isenta</span>' : e.k === 'meta-ok' ? '<span class="etq jade">isenta neste mês</span>' : e.k === 'meta' ? '<span class="etq ouro">isenção com meta de gasto</span>' : '')(estadoAnuidade(c, m))}${c.clube ? `<span class="etq">${esc(c.clube)}</span>` : ''}</div>
     <div class="ficha-destaque"><div><span>Fatura deste mês</span><b>${brl(agora)}</b></div><div><span>Limite</span><b>${brl(lim)}</b></div><div><span>Em uso</span><b>${lim ? pct(agora / lim * 100, 1) : 'n/d'}</b></div></div>
+    ${blocoMetaIsencao(c, m, true) ? `<div class="olho anil" style="margin:16px 0 8px">Meta de isenção deste mês</div>${blocoMetaIsencao(c, m, true)}` : ''}
     <div class="olho anil" style="margin:16px 0 8px">Cartão</div>
     ${fichaCampos([
-      ['Anuidade', c.isento ? `isenta${c.isencaoTipo ? ' · ' + esc(c.isencaoTipo) : ''}` : brl(Number(c.anuidade) || 0)],
+      ['Anuidade', (e => e.k === 'paga' ? e.rot : e.k === 'livre' ? `<span class="n-jade">isenta</span>${c.isencaoTipo ? ' · ' + esc(c.isencaoTipo) : ''}`
+        : `${brl(e.anual)} por ano · <span class="n-${e.cor}">isenta com ${brl(e.meta.min)}/mês</span>`)(estadoAnuidade(c, m))],
       ['Fecha', (c.fechamento || c.fecha) ? 'dia ' + (c.fechamento || c.fecha) : 'n/d'], ['Vence', (c.vencimento || c.vence) ? 'dia ' + (c.vencimento || c.vence) : 'n/d'],
       ['Titular', esc(c.titular || 'n/d')], ['Clube de pontos', esc(c.clube || 'n/d')],
       ['Pontos por dólar', (c.ptsMin || c.ptsMax) ? `${String(c.ptsMin || 0).replace('.', ',')} – ${String(c.ptsMax || 0).replace('.', ',')}` : (c.ptsPorReal ? String(c.ptsPorReal).replace('.', ',') + ' por real' : 'n/d')]
@@ -15133,17 +15191,20 @@ function renderHeroiCatalogo(alvo){
 function renderHeroiMeusCartoes(alvo){
   const cs = crAtivos(), m = mesAtual();
   if (!cs.length){ montarHeroi(alvo, {rot:'Meus cartões', vazio:'Nenhum cartão cadastrado ainda. Toque em Novo Cartão para começar.'}); return; }
-  const anuidade = soma(cs.map(c => c.isento ? 0 : (Number(c.anuidade) || 0)));
-  const isentos = cs.filter(c => c.isento || !(Number(c.anuidade) > 0)).length;
+  const ests = cs.map(c => estadoAnuidade(c, m));
+  const anuidade = soma(ests.filter(e => e.k === 'paga').map(e => e.anual));
+  const emRisco = soma(ests.filter(e => e.k === 'meta').map(e => e.anual));
+  const isentos = ests.filter(e => e.k === 'livre' || (e.k === 'paga' && !e.anual)).length;
+  const comMeta = ests.filter(e => e.k === 'meta' || e.k === 'meta-ok').length;
   const limite = soma(cs.map(c => Number(c.limite) || 0));
   const usado = soma(cs.map(c => totalFatura(c.id, m)));
   const porBanco = {}; cs.forEach(c => { porBanco[c.banco] = (porBanco[c.banco] || 0) + (Number(c.limite) || 0); });
   const serie = mesesAte(m, 12).map(k => ({r:rotuloMes(k), v:limite ? soma(cs.map(c => totalFatura(c.id, k))) / limite * 100 : 0})).filter((x, i, a) => x.v > 0 || i === a.length - 1);
   montarHeroi(alvo, {
-    rot:'Anuidade que você paga por ano',
+    rot:'Anuidade garantida por ano',
     valor:brl(anuidade),
-    linha:`<span>Limite total <b>${brl(limite)}</b></span><span class="heroi-chip ${limite && usado / limite >= .5 ? 'desce' : 'sobe'}">${limite ? pct(usado / limite * 100, 1) : 'n/d'} em uso este mês</span>`,
-    numeros:[[nBR(cs.length), cs.length === 1 ? 'cartão ativo' : 'cartões ativos'], [nBR(isentos), isentos === 1 ? 'isento de anuidade' : 'isentos de anuidade'], [nBR(new Set(cs.map(c => c.banco)).size), 'bancos']],
+    linha:`<span>Limite total <b>${brl(limite)}</b></span>${emRisco ? `<span class="heroi-chip desce" data-dica="Anuidade dos cartões com meta de gasto ainda não batida neste mês">+ ${brl(emRisco)} se não bater as metas</span>` : `<span class="heroi-chip ${limite && usado / limite >= .5 ? 'desce' : 'sobe'}">${limite ? pct(usado / limite * 100, 1) : 'n/d'} em uso este mês</span>`}`,
+    numeros:[[nBR(cs.length), cs.length === 1 ? 'cartão ativo' : 'cartões ativos'], [nBR(isentos), isentos === 1 ? 'isento sem condição' : 'isentos sem condição'], [nBR(comMeta), comMeta === 1 ? 'isento com meta de gasto' : 'isentos com meta de gasto']],
     fatias:fatiasHeroi(Object.keys(porBanco).map(b => ({b, v:porBanco[b]})), x => x.b), fmtFatia:v => brl(v), compRot:'Limite por banco',
     dirRot:'Uso do limite, mês a mês', dirSub:'O total das faturas sobre o limite somado.',
     ult: serie.length ? {b:pct(serie[serie.length - 1].v, 1), sp:serie[serie.length - 1].r} : null,
@@ -30664,8 +30725,7 @@ function renderFaturas(){
       </div>
       ${e.pg ? `<div class="crd-fat-pe">Pago em ${dataBR(e.pg.em)} · ${brl(e.pago)}${e.resta > 0.005 ? ` · falta ${brl(e.resta)}` : ''}</div>` : ''}
       ${(i => i ? `<div class="crd-fat-isen ${i.ok ? 'ok' : 'falta'}"><span class="etq ${i.ok ? 'jade' : 'ouro'}">${i.ok ? 'anuidade isenta' : 'isenção pendente'}</span>
-        <span>${i.ok ? `Gasto de ${brl(i.gasto)}, acima do mínimo de ${brl(i.min)}.` : `Faltam <b>${brl(i.falta)}</b> para isentar; o mínimo é ${brl(i.min)}.`}
-        <small class="fraco">${esc(i.fonte.charAt(0).toUpperCase() + i.fonte.slice(1))}.</small></span></div>` : '')(isencaoDoMes(c, mesFatura))}
+        <span>${i.ok ? `Gasto de ${brl(i.gasto)}, acima do mínimo de ${brl(i.min)}.` : `Faltam <b>${brl(i.falta)}</b> para isentar; o mínimo é ${brl(i.min)}.`} ${infoFonteIsencao(i.fonte)}</span></div>` : '')(isencaoDoMes(c, mesFatura))}
       ${itensDaFatura(c.id, mesFatura).length ? `<div class="crd-itens">${
         Object.entries(itensDaFatura(c.id, mesFatura).reduce((a, i) => { a[i.cat] = (a[i.cat] || 0) + i.valor; return a; }, {}))
           .map(([k, v]) => `<div><span>${esc(k)}</span><b>${brl(v)}</b></div>`).join('')}</div>` : ''}
@@ -30990,10 +31050,47 @@ function copiarDoCatalogo(i){
   }, 240);
 }
 
+
+/* ══ ISENÇÃO DE ANUIDADE: COM OU SEM CONDIÇÃO (10/10/2026) ══════════════════════
+   "Isenta" em verde só quando a isenção não depende de nada no mês (relacionamento,
+   investimentos, negociada). Quando depende de gasto mínimo, o cartão mostra a
+   meta e a evolução do mês, em reais e em percentual:
+     · meta batida  → verde, "isenta neste mês";
+     · em andamento → âmbar, quanto já foi gasto, quanto falta e a barra;
+   O gasto é o da fatura paga, quando registrada; senão, o que está lançado na
+   Torre naquele cartão (e a Torre diz qual das duas fontes usou). */
+
+/* De onde veio o gasto da meta de isenção, num "i" com balão (10/10/2026) */
+function infoFonteIsencao(fonte){
+  const t = /fatura paga/.test(fonte || '')
+    ? 'Com base no valor da fatura paga, registrado na Torre. Caso haja alguma divergência, corrigir o pagamento da fatura.'
+    : 'Com base nos valores lançados na Torre. Caso haja alguma divergência, corrigir em lançamentos.';
+  return `<span class="info-i" tabindex="0" data-dica="${esc(t)}" aria-label="${esc(t)}"><svg><use href="#i-info"/></svg></span>`;
+}
+
+function estadoAnuidade(c, mes){
+  const anual = Number(c.anuidade) || 0;
+  if (!c.isento) return {k:'paga', rot:anual ? brl(anual) : 'grátis', cor:'', anual};
+  const i = isencaoDoMes(c, mes || mesAtual());
+  if (!i) return {k:'livre', rot:'isenta', cor:'jade', anual, nota:c.isencaoTipo ? `Isenção por ${c.isencaoTipo.toLowerCase()}, sem meta de gasto no mês.` : 'Isenção sem meta de gasto no mês.'};
+  const p = i.min ? Math.min(100, i.gasto / i.min * 100) : 0;
+  return i.ok ? {k:'meta-ok', rot:'isenta', cor:'jade', anual, meta:i, pct:p}
+              : {k:'meta', rot:'com meta', cor:'ouro', anual, meta:i, pct:p};
+}
+function blocoMetaIsencao(c, mes, grande){
+  const e = estadoAnuidade(c, mes); if (!e.meta) return '';
+  const i = e.meta;
+  return `<span class="cc-meta ${e.k === 'meta-ok' ? 'ok' : ''}${grande ? ' grande' : ''}">
+    <span class="cc-meta-cab"><span>${e.k === 'meta-ok' ? '* Isenta neste mês: meta de gasto batida' : '* Isenção só com meta de gasto no mês'}</span><b>${Math.round(e.pct)}%</b></span>
+    <span class="cc-meta-barra"><i style="width:${e.pct.toFixed(1)}%"></i></span>
+    <span class="cc-meta-txt">${brl(i.gasto)} de ${brl(i.min)} · ${e.k === 'meta-ok' ? '<b class="n-jade">meta batida</b>' : `faltam <b>${brl(i.falta)}</b> (${100 - Math.round(e.pct)}%)`} ${infoFonteIsencao(i.fonte)}</span>
+  </span>`;
+}
+
 function renderMeusCartoes(){
   const aviso = $('#crComoAdd');
   if (aviso) aviso.innerHTML = `<svg><use href="#i-info"/></svg><div>
-    Cartão do <b>Catálogo</b> entra com anuidade, pontuação e programa já preenchidos —
+    Cartão do <b>Catálogo</b> entra com anuidade, pontuação e programa já preenchidos <b>·</b>
     <button type="button" class="bt-linha" onclick="irPara('cartoes');irParaAba('cartoes','cr-catalogo')">procure lá primeiro</button>.
     Se ele não estiver no catálogo, use <b>Novo Cartão</b> e informe os dados à mão.</div>`;
   const cs = DB.cartoes || [];
@@ -31015,7 +31112,9 @@ function renderMeusCartoes(){
       <span class="cc-info">
         <span class="cc-l1"><b class="cc-nome">${esc(c.banco)} — ${esc(c.produto)}</b></span>
         <span class="cc-nums"><span><small>Fatura do mês</small><b>${brl(fat)}</b></span><span><small>Limite</small><b>${lim ? 'R$ ' + milCurto(lim) : 'n/d'}</b></span>
-          <span><small>Anuidade</small><b>${c.isento ? '<span class="n-jade">isenta</span>' : brl(c.anuidade || 0)}</b></span></span>
+          <span><small>Anuidade</small><b>${(e => e.k === 'livre' ? `<span class="n-jade" data-dica="${esc(e.nota)}">isenta</span>`
+            : e.k === 'paga' ? e.rot : `<span class="n-${e.cor}" data-dica="${esc(brl(e.anual))} por ano, isenta só no mês em que o gasto passa de ${esc(brl(e.meta.min))}">${e.rot}<sup>*</sup></span>`)(estadoAnuidade(c, m))}</b></span></span>
+        ${blocoMetaIsencao(c, m)}
         ${lim ? `<span class="cc-uso" data-dica="${pct(fat / lim * 100, 1)} do limite em uso neste mês"><i style="width:${Math.min(100, fat / lim * 100).toFixed(1)}%"></i></span>` : ''}
         <span class="cc-acoes"><button type="button" class="bt p fantasma" onclick="editarCartao('${c.id}')"><svg><use href="#i-lapis"/></svg>Editar</button>
           <button type="button" class="bt p vermelho-solido" onclick="apagar('cartoes','${c.id}','o cartão')"><svg><use href="#i-lixo"/></svg>Excluir</button></span>
