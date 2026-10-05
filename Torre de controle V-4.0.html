@@ -7677,7 +7677,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-mesa"/></svg><span class="sg">Início</span></button>
       <button class="tb" data-area="milhas" data-vista="saldo" data-dica="Milhas: carteira, comprar e transferir, fábrica e cartões" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Milhas</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas e controle de CPF" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
-      <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, cotações, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, orçamento, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
     </nav>
   </aside>
@@ -8811,13 +8811,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
            vender passagem a cliente, e por isso saíram de Emissões. O painel é o
            mesmo, com os mesmos nomes por dentro. -->
       <section class="vista" id="v-cotacoes">
-        <!-- PÁGINA VEM (pedido do Jadiel): a página de cotação com a identidade da
-             VEM, a mesma que o Claude monta pela skill cotacao-vem. Fica numa aba
-             própria para não misturar com o orçamento por CPM, que é outra conta. -->
-        <div class="abas" data-grupo="cotacoes">
-          <button class="aba on" data-aba="em-cotacoes">Orçamento</button>
-          <button class="aba" data-aba="ct-vem">Página VEM <span class="cont" id="contVem">0</span></button>
-        </div>
         <div class="painel-aba on" id="p-em-cotacoes">
           <div class="pilha" style="gap:18px">
             <div class="linha" style="flex-wrap:wrap;gap:9px">
@@ -8877,35 +8870,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div id="bcSaida" style="margin-top:15px"></div>
             </div>
 
-            <details class="cartao cc-buscadores">
-              <summary><b>Buscadores gratuitos</b> <span class="fraco">para conferir por conta própria</span></summary>
-              <div style="margin-top:14px">
-          <div class="pilha" style="gap:16px">
-            <div class="nota ouro">
-              <svg><use href="#i-faisca"/></svg>
-              <div><b>Combine ferramentas, não confie em uma.</b> Nenhum buscador de prêmio encontra sozinho todas as boas opções de uma mesma rota; a cobertura declarada de cada um é diferente, e cache envelhece. A tabela abaixo é o mapa de para que serve cada um.</div>
-            </div>
-            <div class="linha">
-              <div class="seg" id="segArsenal">
-                <button class="on" data-t="todos">Todos</button>
-                <button data-t="global">Globais</button>
-                <button data-t="br">Brasil</button>
-                <button data-t="extensao">Extensões</button>
-                <button data-t="tecnico">Técnicos</button>
-              </div>
-            </div>
-            <div class="grade g2" id="rdArsenal"></div>
-          </div>
-            <div class="linha" style="margin-top:4px"><div class="olho destaque" style="margin:0">Alcance de cada instrumento</div></div>
-          <div class="pilha" style="gap:16px">
-            <div class="cartao">
-              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Matriz de cobertura<div class="sub">Programa × buscador, segundo a cobertura declarada por cada ferramenta. Linha inteira apagada = ponto cego: nenhum buscador do arsenal enxerga esse programa, e a busca tem que ser feita direto no site ou por procuração.</div></h3></div>
-              <div class="matriz" id="rdMatriz"></div>
-            </div>
-            <div id="rdCegos"></div>
-          </div>
-        </div>
-            </details>
+            
 
             <div class="cartao">
               <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Montar cotação para o cliente<div class="sub">Você lança o custo real (milhas × seu CPM + taxas + serviço). O cliente recebe só o preço final e as opções.</div></h3></div>
@@ -8955,15 +8920,48 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="olho anil">Cotações salvas</div>
               <div class="pilha" style="gap:10px" id="blCotacoes"></div>
             </div>
-          </div>
-        </div>
-        <div class="painel-aba" id="p-ct-vem">
+          
+            <!-- PÁGINA VEM dentro do Orçamento (07/10/2026, pedido do Jadiel): é o
+                 último passo da mesma cotação — do custo à página que o cliente recebe. -->
+            <section class="vem-no-orcamento" id="vemSecao">
           <div class="pilha" style="gap:18px">
-            <div class="linha" style="flex-wrap:wrap;gap:9px"><div class="olho destaque" style="margin:0;flex:0 0 auto">Página de cotação VEM</div></div>
+            <div class="linha" style="flex-wrap:wrap;gap:9px"><div class="olho destaque" style="margin:0;flex:0 0 auto">Página VEM para o cliente <span class="cont" id="contVem">0</span></div></div>
             <div class="nota ouro"><svg><use href="#i-faisca"/></svg><div>A mesma página que o Claude monta a partir dos prints: identidade da VEM, voo, bagagem, valor, PIX com desconto, cartão à vista e em 12x, e o botão do WhatsApp. Preencha com os dados do print, confira as contas e baixe a página e a imagem da prévia para subir no GitHub.</div></div>
             <div class="pilha" style="gap:18px" id="vemRaiz"></div>
           </div>
+        </section>
+            <details class="cartao cc-buscadores">
+              <summary><b>Buscadores gratuitos</b> <span class="fraco">para conferir por conta própria</span></summary>
+              <div style="margin-top:14px">
+          <div class="pilha" style="gap:16px">
+            <div class="nota ouro">
+              <svg><use href="#i-faisca"/></svg>
+              <div><b>Combine ferramentas, não confie em uma.</b> Nenhum buscador de prêmio encontra sozinho todas as boas opções de uma mesma rota; a cobertura declarada de cada um é diferente, e cache envelhece. A tabela abaixo é o mapa de para que serve cada um.</div>
+            </div>
+            <div class="linha">
+              <div class="seg" id="segArsenal">
+                <button class="on" data-t="todos">Todos</button>
+                <button data-t="global">Globais</button>
+                <button data-t="br">Brasil</button>
+                <button data-t="extensao">Extensões</button>
+                <button data-t="tecnico">Técnicos</button>
+              </div>
+            </div>
+            <div class="grade g2" id="rdArsenal"></div>
+          </div>
+            <div class="linha" style="margin-top:4px"><div class="olho destaque" style="margin:0">Alcance de cada instrumento</div></div>
+          <div class="pilha" style="gap:16px">
+            <div class="cartao">
+              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Matriz de cobertura<div class="sub">Programa × buscador, segundo a cobertura declarada por cada ferramenta. Linha inteira apagada = ponto cego: nenhum buscador do arsenal enxerga esse programa, e a busca tem que ser feita direto no site ou por procuração.</div></h3></div>
+              <div class="matriz" id="rdMatriz"></div>
+            </div>
+            <div id="rdCegos"></div>
+          </div>
         </div>
+            </details>
+          </div>
+        </div>
+        
       </section>
 
       <!-- EMITIDOS em Negócio (06/10/2026, pedido do Jadiel): aqui ficam só as
@@ -9328,7 +9326,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-07 11:50';
+const BUILD = '2026-10-07 13:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12645,7 +12643,7 @@ const TITULOS = {
      primeiras eram texto morto, de versões anteriores do módulo. */
   emissoes:['Controle de CPF', 'Quem já ocupou vaga de CPF em cada programa'],
   emitidos:['Emitidos', 'Passagens emitidas para clientes'],
-  cotacoes:['Cotações', 'Orçamentos de passagem com milhas para clientes'],
+  cotacoes:['Orçamento', 'Cotação de passagem com milhas e a página VEM para o cliente'],
   cartoes: ['Cartões', 'Faturas, limites e o que a operação compromete'],
   clientes:['Clientes', 'Passageiros cadastrados e documentos'],
   vendas:  ['Vendas', 'O que foi vendido e o resultado'],
@@ -12659,13 +12657,15 @@ const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-mesa',    vistas:['mesa']},
   {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica', 'cartoes']},
   {k:'viagens', n:'Viagens', sub:'Jornadas e cota de CPF',  ic:'#i-aviao',   vistas:['rota', 'emissoes']},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'cotacoes', 'emitidos', 'vendas', 'imposto']}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'cotacoes', 'emitidos', 'vendas', 'imposto'],
+    /* na coluna, os módulos de Negócio vêm agrupados pelo que são */
+    grupos:[{n:'Cadastro', vistas:['clientes']}, {n:'Cotações', vistas:['cotacoes']}, {n:'Resultados', vistas:['emitidos', 'vendas']}, {n:'Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
 ];
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-saldo', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
   emissoes:'#i-usuarios', emitidos:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-vendas', imposto:'#i-imposto', ajustes:'#i-ajustes'};
 /* nome curto para a barra de módulos do celular, onde cabe pouco */
-const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'CPF', emitidos:'Emitidos', cotacoes:'Cotações',
+const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'CPF', emitidos:'Emitidos', cotacoes:'Orçamento',
   radar:'Radar', clientes:'Clientes', vendas:'Vendas', imposto:'Imposto'};
 const areaDe = v => AREAS.find(a => a.vistas.includes(v)) || AREAS[0];
 const ultimaDaArea = {};
@@ -33496,6 +33496,23 @@ function montarColunaMenu(raiz, vistaMedida){
     <span class="cm-tit-txt"><span class="cm-tit-nome">${esc(area.n)}</span><span class="cm-tit-sub">${esc(area.sub)}</span></span>`;
   nav.innerHTML = '';
   const varios = area.vistas.length > 1;
+  /* área com grupos (Negócio): um título por grupo e, embaixo, os módulos dele */
+  if (area.grupos){
+    area.grupos.forEach(g => {
+      nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${g.vistas.includes(v) ? ' atual' : ''}">${esc(g.n)}</div>`);
+      g.vistas.forEach(vv => {
+        if (!document.getElementById('v-' + vv)) return;
+        const nomeMod = (TITULOS[vv] || [vv])[0];
+        const b = document.createElement('button');
+        b.className = 'cm-item cm-modulo' + (vv === v ? ' on' : '');
+        b.dataset.vista = vv;
+        b.innerHTML = `<svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(nomeMod)}</span>`;
+        b.onclick = () => irPara(vv);
+        nav.appendChild(b);
+      });
+    });
+    return;
+  }
   area.vistas.forEach(vv => {
     if (!document.getElementById('v-' + vv)) return;
     const abas = [...document.querySelectorAll('#v-' + vv + ' .abas .aba')];
