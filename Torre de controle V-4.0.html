@@ -7735,7 +7735,7 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
   .grade.faixa-num > .metrica:nth-child(n+3){ border-top:1px solid var(--fio-suave); }
   .sec-tit{ font-size:calc(17px * var(--esc)); }
 }
-#slHeroiSlot > .heroi{ margin:0; }
+#slHeroiSlot > .heroi, #ctaHeroiSlot > .heroi{ margin:0; }
 
 /* ══ FICHAS E "O QUE FAZER HOJE" ══════════════════════════════════════════════ */
 .ficha-link{ border:0; background:none; padding:0; margin:0; font:inherit; color:inherit; cursor:pointer; text-align:left;
@@ -8337,7 +8337,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               </div>
               <button class="bt primario" id="btNovaConta"><svg><use href="#i-mais"/></svg>Nova Conta</button>
             </div>
-            <div class="grade g4" id="slResumoContas"></div>
+            <div id="ctaHeroiSlot"></div>
+            <div class="grade g4" id="slResumoContas" hidden></div>
             <div class="cartao" style="padding:0;overflow:hidden">
               <div style="padding:17px 20px 12px;border-bottom:1px solid var(--fio-suave)">
                 <div class="olho anil" style="margin:0">O que cada titular tem</div>
@@ -9670,7 +9671,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 17:45';
+const BUILD = '2026-10-09 18:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14701,13 +14702,43 @@ function renderHeroiVendas(alvo){
 const PRINCIPAL_DA_AREA = {carteira:'saldo', viagens:'rota', negocio:'vendas', cartoes:'cartoes'};
 /* em Milhas, o painel com curva mora na seção Saldos, abaixo do título */
 function heroiMilhasNoLugar(el){
+  /* Carteira: Saldos e Contas têm cada uma o seu painel com curva (09/10/2026) */
   const naSaldos = vistaAtual === 'saldo' && !!document.querySelector('#p-sl-carteira.on');
-  el.hidden = !naSaldos;
-  if (!naSaldos) return false;
-  const slot = document.getElementById('slHeroiSlot');
+  const naContas = vistaAtual === 'saldo' && !!document.querySelector('#p-sl-contas.on');
+  el.hidden = !(naSaldos || naContas);
+  if (el.hidden) return false;
+  const slot = document.getElementById(naContas ? 'ctaHeroiSlot' : 'slHeroiSlot');
   if (slot && el.parentElement !== slot) slot.appendChild(el);
   el.classList.remove('compacto');
-  return true;
+  return naContas ? 'contas' : 'saldos';
+}
+/* Contas: o grupo de titulares, quanto vale o que cada um tem e o que entrou
+   no grupo a cada mês. */
+function renderHeroiContas(){
+  const alvo = $('#heroiArea'); if (!alvo) return;
+  const cs = DB.contas || [];
+  if (!cs.length){ montarHeroi(alvo, {rot:'Contas no grupo', vazio:'Nenhuma conta cadastrada. Cada CPF é uma conta, e os limites de bônus das campanhas são por CPF: cadastre quem faz parte do grupo em Nova Conta.'}); return; }
+  const valeDe = c => soma(DB.saldos.filter(s => s.contaId === c.id && s.qtd > 0).map(s => valorPrograma(s.prog, s.qtd).valor));
+  const total = soma(cs.map(valeDe));
+  const clubes = (DB.assinaturas || []).filter(a => a.status === 'ativa');
+  const comClube = new Set(clubes.map(a => a.contaId)).size;
+  const comNivel = cs.filter(c => Object.values(c.niveis || {}).some(Boolean)).length;
+  const progs = PROG_IDS.filter(p => DB.saldos.some(s => s.prog === p && s.qtd > 0));
+  const nPts = progs.filter(p => prog(p).tipo === 'pontos').length;
+  const porMes = {}; (DB.lancamentos || []).forEach(l => { const k = (l.data || '').slice(0, 7); if (k && Number(l.qtd) > 0) porMes[k] = (porMes[k] || 0) + Number(l.qtd); });
+  const meses = Object.keys(porMes).sort().slice(-12);
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  montarHeroi(alvo, {
+    rot:'Contas no grupo',
+    valor:`${nBR(cs.length)}<small> ${cs.length === 1 ? 'titular' : 'titulares'}</small>`,
+    linha:`<span>O grupo vale hoje <b>${brl(total)}</b></span>${comClube ? `<span class="heroi-chip sobe">${comClube} ${comClube === 1 ? 'conta com clube' : 'contas com clube'}</span>` : '<span class="heroi-chip">nenhum clube ativo</span>'}`,
+    numeros:[[nBR(progs.length), progs.length === 1 ? 'programa com saldo' : 'programas com saldo'], [nBR(clubes.length), clubes.length === 1 ? 'clube ativo' : 'clubes ativos', 'clubes'],
+      [nBR(comNivel), comNivel === 1 ? 'conta com categoria elite' : 'contas com categoria elite']],
+    fatias:fatiasHeroi(cs.map(c => ({c, v:valeDe(c)})), x => nomeCurto(x.c.nome)), fmtFatia:v => brl(v), compRot:'Valor por titular',
+    dirRot:'O que entrou no grupo, mês a mês', dirSub:'Milhas e pontos lançados em todas as contas.',
+    ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com lançamento.'
+  });
 }
 /* Imposto de Renda: a peça mostra o ano escolhido na tela (ganho, vendas,
    isento e imposto) e as vendas de cada mês contra o teto de isenção. */
@@ -14975,7 +15006,7 @@ function renderHeroiDaVista(v){
   if (meu){ if (el.parentElement !== meu) meu.appendChild(el); }
   else if (palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
-  if (k === 'carteira'){ if (heroiMilhasNoLugar(el)) renderHeroiMilhas(); return; }
+  if (k === 'carteira'){ const qual = heroiMilhasNoLugar(el); if (qual === 'contas') renderHeroiContas(); else if (qual) renderHeroiMilhas(); return; }
   if (k === 'viagens') renderHeroiViagens();
   if (k === 'cartoes'){ renderHeroiCartoes(); return; }
   if (k === 'negocio'){
