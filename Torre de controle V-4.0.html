@@ -7835,6 +7835,19 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 
 .sg-curto{ display:none; }
 @media (max-width:860px){ #trilhoNav .sg-longo{ display:none; } #trilhoNav .sg-curto{ display:inline; } }
+
+/* Saldos em grupos (09/10/2026) */
+.sl-grupos{ display:flex; flex-direction:column; gap:26px; }
+.sl-grupo-cab{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin:0 4px 10px; }
+.sl-grupo-cab h4{ margin:0; font-size:calc(16px * var(--esc)); font-weight:700; color:var(--giz); }
+.sl-grupo-cab small{ display:block; color:var(--grafite-dim); font-size:calc(12.5px * var(--esc)); margin-top:2px; }
+.sl-grupo-tot{ text-align:right; }
+.sl-grupo-tot b{ font-family:var(--f-m); font-size:calc(18px * var(--esc)); font-weight:600; }
+.sl-grupo[data-tipo="milhas"] .sl-grupo-cab h4::before, .sl-grupo[data-tipo="pontos"] .sl-grupo-cab h4::before, .sl-grupo[data-tipo="hotel"] .sl-grupo-cab h4::before{
+  content:''; display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; vertical-align:1px; }
+.sl-grupo[data-tipo="milhas"] h4::before{ background:var(--anil-claro); }
+.sl-grupo[data-tipo="pontos"] h4::before{ background:var(--ouro); }
+.sl-grupo[data-tipo="hotel"] h4::before{ background:var(--jade); }
 </style>
 </head>
 <body>
@@ -8288,7 +8301,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <!-- Contagem regressiva por último: as três primeiras dizem o que existe,
                e ela diz o que está para acabar. Ler o estoque antes do prazo é a
                ordem em que a pergunta se faz. -->
-          <button class="aba" data-aba="sl-resumo">Resumo</button>
+          <button class="aba" data-aba="sl-resumo" hidden>Resumo</button>
           <button class="aba" data-aba="sl-validade">Vencimentos</button>
         </div>
         <div class="painel-aba on" id="p-sl-contas">
@@ -9633,7 +9646,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 15:40';
+const BUILD = '2026-10-09 16:25';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12983,7 +12996,7 @@ const AREAS = [
      uma tela é decidida pela seção aberta (areaDe). [módulo, seção, nome, ícone, subgrupo] */
   {k:'carteira',  n:'Carteira',  sub:'O que você tem',            ic:'#i-carteira', vistas:['saldo'],
     menu:[{g:'', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-contas', 'Contas', '#i-usuarios'],
-      ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio'], ['saldo', 'sl-resumo', 'Resumo', '#i-grafico']]}]},
+      ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]}]},
   {k:'promocoes', n:'Promoções', sub:'Onde a milha está barata',  ic:'#i-fogo',     vistas:['fabrica'],
     menu:[{g:'', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube'],
       ['fabrica', 'fb-mural', 'Mural', '#i-livro']]}]},
@@ -13027,7 +13040,7 @@ function atualizarArea(){
   /* no módulo dividido, as seções do alto mostram só as desta área */
   const cx = document.querySelector(`#v-${vistaAtual} .abas`);
   if (cx){ const daArea = new Set((ar.menu || []).flatMap(g => g.itens).filter(it => it[0] === vistaAtual).map(it => it[1]));
-    [...cx.querySelectorAll('.aba')].forEach(b => { b.hidden = ar.menu && AREAS.filter(a => a.vistas.includes(vistaAtual)).length > 1 ? !daArea.has(b.dataset.aba) : false; }); }
+    [...cx.querySelectorAll('.aba')].forEach(b => { b.hidden = ar.menu ? !daArea.has(b.dataset.aba) : false; }); }
   pintarBarraModulos(vistaAtual);
   _marcaColuna = ''; montarColunaMenu();
 }
@@ -13047,7 +13060,7 @@ const ABA_INICIAL = {
      uma aba que já não é dela, e por isso não abria em lugar nenhum. */
   mesa:     'ms-hoje',          /* o que exige decisão hoje */
   fabrica:  'fb-clubes',        /* a assinatura que fabrica sozinha, todo mês */
-  saldo:    'sl-resumo',        /* quanto há, em uma tela */
+  saldo:    'sl-carteira',      /* Saldos: o Resumo saiu em 09/10/2026 (repetia Saldos) */
   rota:     'rt-plano',         /* as jornadas: para onde se está indo */
   emissoes: 'em-controle',      /* a cota de CPF (os emitidos foram para Negócio) */
   cartoes:  'cr-painel'         /* o estado das faturas */
@@ -24958,15 +24971,16 @@ function renderSaldo(){
      quanto vale, o seu milheiro e a faixa dele); o resto abre na ficha. */
   const zonaCpm = (p, c) => { const f = faixasDe(p); if (!(c > 0)) return {k:'sem', t:'sem custo'};
     return c <= f.otimo ? {k:'otimo', t:'ótimo'} : c <= f.alvo ? {k:'alvo', t:'no alvo'} : c <= f.razoavel ? {k:'razoavel', t:'razoável'} : {k:'caro', t:'caro'}; };
-  const totalGeral = soma(ordem.map(p => soma(grupos[p].map(x => x.qtd)))) || 1;
-  $('#slCarteira').className = 'saldo-lista';
-  $('#slCarteira').innerHTML = ordem.length ? `<div class="sl-cab" aria-hidden="true"><span>Programa</span><span class="n">Saldo</span><span class="n">Vale</span><span class="n">Seu milheiro</span><span></span></div>` + ordem.map(p => {
+  /* Três grupos, cada um com a sua pergunta: milhas (prontas para emitir),
+     pontos (matéria-prima que vira milha) e hotéis. */
+  const TIPOS_SALDO = [['milhas', 'Programas de milhas', 'Prontas para emitir passagem'], ['pontos', 'Programas de pontos', 'Bancos e cartões: viram milhas na transferência'], ['hotel', 'Programas de hotel', 'Diárias e transferências para aéreas']];
+  const linhaSaldo = (p, totalGeral) => {
     const total = soma(grupos[p].map(x => x.qtd));
     const f = faixasDe(p), c = cpms[p], z = zonaCpm(p, c);
     const teto = f.razoavel * 1.4, pos = c > 0 ? Math.min(100, c / teto * 100) : null;
     const n = grupos[p].length;
     return `<button type="button" class="sl-linha" onclick="abrirFichaPrograma('${p}')" aria-label="Abrir a ficha de ${esc(prog(p).n)}">
-      <span class="sl-prog">${discoProg(p)}<span class="sl-nome"><b>${esc(prog(p).n)}</b><small>${n} ${n === 1 ? 'titular' : 'titulares'}${prog(p).ali && prog(p).ali !== 'n/d' ? ' · ' + esc(prog(p).ali) : ''}</small></span></span>
+      <span class="sl-prog">${discoProg(p)}<span class="sl-nome"><b>${esc(prog(p).n)}</b><small>${n} ${n === 1 ? 'titular' : 'titulares'}${prog(p).ali && !['n/d', 'hotel'].includes(prog(p).ali) ? ' · ' + esc(prog(p).ali) : ''}</small></span></span>
       <span class="sl-saldo n"><b>${nBR(total)}</b><i class="sl-peso"><i style="width:${(total / totalGeral * 100).toFixed(1)}%;background:${prog(p).cor || 'var(--ouro)'}"></i></i></span>
       <span class="sl-vale n">${brl(total / 1000 * f.alvo)}</span>
       <span class="sl-cpm n"><span class="sl-cpm-v">${c > 0 ? brl2(c) : 'n/d'}<small>/mil</small></span>
@@ -24974,6 +24988,17 @@ function renderSaldo(){
         <span class="sl-zona z-${z.k}">${z.t}</span></span>
       <svg class="sl-seta"><use href="#i-seta-d"/></svg>
     </button>`;
+  };
+  $('#slCarteira').className = 'sl-grupos';
+  $('#slCarteira').innerHTML = ordem.length ? TIPOS_SALDO.map(([tipo, tit, sub]) => {
+    const ps = ordem.filter(p => (prog(p).tipo === tipo) || (tipo === 'milhas' && !['pontos', 'hotel'].includes(prog(p).tipo)));
+    if (!ps.length) return '';
+    const tot = soma(ps.map(p => soma(grupos[p].map(x => x.qtd)))), vale = soma(ps.map(p => soma(grupos[p].map(x => x.qtd)) / 1000 * faixasDe(p).alvo));
+    return `<section class="sl-grupo" data-tipo="${tipo}">
+      <div class="sl-grupo-cab"><div><h4>${tit}</h4><small>${sub}</small></div>
+        <div class="sl-grupo-tot"><b>${nBR(tot)}</b><small>${ps.length} ${ps.length === 1 ? 'programa' : 'programas'} · vale ${brl(vale)}</small></div></div>
+      <div class="saldo-lista"><div class="sl-cab" aria-hidden="true"><span>Programa</span><span class="n">Saldo</span><span class="n">Vale</span><span class="n">Seu milheiro</span><span></span></div>${ps.map(p => linhaSaldo(p, tot || 1)).join('')}</div>
+    </section>`;
   }).join('') : `<div class="vazio"><svg><use href="#i-saldo"/></svg><h4>Carteira vazia</h4><p>Lance o saldo de cada programa para que a mesa saiba do que dispõe.</p><button class="bt primario" onclick="editarSaldo()">Lançar Saldo</button></div>`;
   window._gruposSaldo = grupos;
 
