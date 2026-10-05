@@ -7761,6 +7761,9 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 @media (max-width:560px){ .ficha-destaque{ grid-template-columns:1fr; } .ficha-destaque > div + div{ border-left:0; border-top:1px solid rgba(255,255,255,.09); } }
 
 .cartao.realce{ box-shadow:0 0 0 3px color-mix(in oklab, var(--dourado) 70%, transparent), 0 18px 40px -22px rgba(10,24,40,.4); transition:box-shadow .4s var(--ease); }
+
+.etq.j24{ display:inline-flex; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-family:var(--f-b); font-weight:600; }
+.etq.j24 .ponto{ width:7px; height:7px; border-radius:50%; background:currentColor; }
 </style>
 </head>
 <body>
@@ -9554,7 +9557,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-08 08:45';
+const BUILD = '2026-10-09 10:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12894,26 +12897,31 @@ const TITULOS = {
    Cinco áreas no lugar das doze siglas. Cada módulo pertence a uma área só, e a
    ordem aqui é a ordem em que aparecem no menu. */
 const AREAS = [
-  {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-casa',    vistas:['mesa']},
+  {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-casa',    vistas:['mesa'],
+    menu:[{g:'', itens:[['mesa', 'ms-hoje', 'Painel de bordo', '#i-mesa'], ['mesa', 'ms-vender', 'Prateleira', '#i-etiqueta'], ['mesa', 'ms-lancamentos', 'Lançamentos', '#i-livro']]}]},
   {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica'],
     /* 08/10/2026: o menu de Milhas pelo que se faz, não pelo módulo onde mora.
        Cada item tem ícone, o nome é curto, e o submenu só aparece embaixo do item
        aberto. [módulo, seção, nome, ícone] */
     menu:[
-      {g:'Carteira', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-contas', 'Contas', '#i-usuarios'],
-        ['saldo', 'sl-resumo', 'Resumo', '#i-grafico'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]},
-      {g:'Movimentar', itens:[['comprar', 'ct-comprar', 'Comprar', '#i-mais'], ['comprar', 'ct-transferir', 'Transferir', '#i-troca']]},
+      {g:'Carteira', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]},
       {g:'Fábrica de milhas', itens:[['fabrica', 'fb-campanhas', 'Campanhas', '#i-faisca'], ['fabrica', 'fb-clubes', 'Clubes', '#i-atualizar'],
-        ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola'], ['fabrica', 'fb-mural', 'Mural', '#i-livro']]}
+        ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola'], ['fabrica', 'fb-mural', 'Mural', '#i-livro']]},
+      {g:'Movimentar', itens:[['comprar', 'ct-comprar', 'Comprar', '#i-mais'], ['comprar', 'ct-transferir', 'Transferir', '#i-troca']]},
+      /* o fechamento: quanto há e quanto vale (09/10/2026) */
+      {g:'Balanço', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-resumo', 'Resumo', '#i-grafico']]}
     ]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
-  {k:'cartoes', n:'Cartões', sub:'Crédito e faturas',    ic:'#i-cartao',   vistas:['cartoes']},
-  {k:'viagens', n:'Viagens', sub:'Jornadas',  ic:'#i-aviao',   vistas:['rota']},
+  {k:'cartoes', n:'Cartões', sub:'Crédito e faturas',    ic:'#i-cartao',   vistas:['cartoes'],
+    menu:[{g:'', itens:[['cartoes', 'cr-painel', 'Painel', '#i-grafico'], ['cartoes', 'cr-catalogo', 'Catálogo', '#i-livro'], ['cartoes', 'cr-meus', 'Meus cartões', '#i-cartao'], ['cartoes', 'cr-faturas', 'Faturas', '#i-calendario']]}]},
+  {k:'viagens', n:'Viagens', sub:'Jornadas',  ic:'#i-aviao',   vistas:['rota'],
+    menu:[{g:'', itens:[['rota', 'rt-plano', 'Jornadas', '#i-rota'], ['rota', 'rt-viagens', 'Resultados', '#i-grafico']]}]},
   {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'emissoes', 'cotacoes', 'emitidos', 'vendas', 'imposto'],
     /* na coluna, os módulos de Negócio vêm agrupados pelo que são */
     grupos:[{n:'Cadastro', vistas:['clientes', 'emissoes']}, {n:'Cotações', vistas:['cotacoes']}, {n:'Resultados', vistas:['emitidos', 'vendas']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
-  {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes']}
+  {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes'],
+    menu:[{g:'', itens:[['ajustes', 'aj-provedores', 'Provedores', '#i-nuvem'], ['ajustes', 'aj-mercado', 'Programas', '#i-alvo'], ['ajustes', 'aj-dados', 'Dados', '#i-caixa'], ['ajustes', 'aj-sobre', 'Sobre', '#i-info']]}]}
 ];
 const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-caixa', comprar:'#i-troca', fabrica:'#i-fabrica', cartoes:'#i-cartao', rota:'#i-rota',
   emissoes:'#i-documento', emitidos:'#i-bilhete', cotacoes:'#i-etiqueta', radar:'#i-radar', clientes:'#i-clientes', vendas:'#i-carrinho', imposto:'#i-imposto', ajustes:'#i-ajustes'};
@@ -13535,6 +13543,18 @@ function janelasDeFabricacao(){
 /* ── motor de avisos ──────────────────────────────────────────────────────── */
 function avisos(){
   const L = [], d = DB.cfg.avisoDias;
+
+  /* janela de 24 horas da ANAC ainda aberta: é o prazo mais curto do sistema */
+  (DB.reservas || []).forEach(r => {
+    const j = janela24h(r); if (j.estado !== 'dentro') return;
+    const t = textoLimite(j);
+    /* sem dias: o grau já vem certo (3 nas últimas 6 horas, 2 antes); com dias 0
+       a regra geral promoveria tudo a "hoje" */
+    L.push({grau:j.resta <= 6 * 36e5 ? 3 : 2, tipo:'j24', dias:null, curto:'janela de 24h',
+      t:`Ainda dá para desistir sem multa até ${t.ate} (faltam ${t.falta})`,
+      s:`${String(r.desc || '').split(' · ')[0]}${r.quem === 'terceiro' ? ' · ' + (r.cliente || 'cliente') : ' · uso próprio'} · janela de 24 horas da ANAC`,
+      ir:r.quem === 'terceiro' ? ['emitidos'] : ['rota', 'rt-plano'], fn:`abrirFichaReserva('${r.id}')`});
+  });
 
   DB.lotes.forEach(lo => {
     const dias = diasAte(lo.vence);
@@ -14188,6 +14208,49 @@ let _padTimer = null;
 function agendarPadronizar(){ clearTimeout(_padTimer); _padTimer = setTimeout(() => { try{ padronizarSecao(); }catch(e){ console.warn('molde', e); } }, 30); }
 
 
+
+/* ══ JANELA DE 24 HORAS (ANAC, Resolução 400/2016, art. 11) — 09/10/2026 ═══════
+   Quem compra com pelo menos 7 dias de antecedência do embarque pode desistir
+   da passagem sem nenhum ônus em até 24 horas a contar do comprovante. A Torre
+   calcula, para cada emissão de voo, se o direito existe e até quando vale:
+   dá para cancelar e reemitir se aparecer tarifa melhor nesse intervalo.
+   A hora do voo, quando não foi informada, conta como meia-noite: assim a Torre
+   nunca promete um direito que pode não existir. */
+const horaAgora = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+function instanteLocal(iso, hhmm){ if (!iso) return null; const [a, m, d] = String(iso).slice(0, 10).split('-').map(Number); const [h, mi] = String(hhmm || '00:00').split(':').map(Number); return new Date(a, m - 1, d, h || 0, mi || 0); }
+function janela24h(r){
+  if (!r || r.tipo !== 'voo' || r.status === 'cancelada' || !r.criada || !r.data) return {estado:'na'};
+  const agora = new Date();
+  if (!r.criadaHora){
+    const dias = (agora - instanteLocal(r.criada)) / 864e5;
+    return dias < 2 ? {estado:'sem-hora'} : {estado:'na'};
+  }
+  const compra = instanteLocal(r.criada, r.criadaHora), embarque = instanteLocal(r.data, r.hora);
+  if ((embarque - compra) < 7 * 864e5) return {estado:'sem-direito', compra, embarque};
+  const limite = new Date(compra.getTime() + 864e5), resta = limite - agora;
+  return resta > 0 ? {estado:'dentro', limite, resta, compra} : {estado:'fora', limite, compra};
+}
+function textoLimite(j){
+  const hh = String(j.limite.getHours()).padStart(2, '0') + ':' + String(j.limite.getMinutes()).padStart(2, '0');
+  const h = Math.floor(j.resta / 36e5), m = Math.floor(j.resta % 36e5 / 6e4);
+  const iso = `${j.limite.getFullYear()}-${String(j.limite.getMonth() + 1).padStart(2, '0')}-${String(j.limite.getDate()).padStart(2, '0')}`;
+  return {ate:`${dataBR(iso)} às ${hh}`, falta:h ? `${h}h${m ? String(m).padStart(2, '0') : ''}` : `${m} min`};
+}
+function seloJanela24h(r){
+  const j = janela24h(r);
+  if (j.estado === 'dentro'){ const t = textoLimite(j); return `<span class="etq j24 ${j.resta <= 6 * 36e5 ? 'brasa' : 'jade'}" data-dica="Janela de 24 horas da ANAC: desistir sem multa até ${esc(t.ate)}"><i class="ponto pulsa"></i>sem multa até ${j.limite.toDateString() === new Date().toDateString() ? 'hoje' : 'amanhã'} às ${esc(t.ate.split(' às ')[1])} · faltam ${esc(t.falta)}</span>`; }
+  if (j.estado === 'sem-hora') return `<span class="etq ouro" data-dica="Sem a hora da emissão a Torre não sabe até quando vale a janela de 24 horas.">informe a hora da emissão</span>`;
+  return '';
+}
+function linhaJanela24h(r){
+  const j = janela24h(r);
+  if (j.estado === 'dentro'){ const t = textoLimite(j); return `<span class="n-jade">desistência sem multa até ${esc(t.ate)} (faltam ${esc(t.falta)})</span>`; }
+  if (j.estado === 'fora') return '<span class="fraco">encerrada</span>';
+  if (j.estado === 'sem-direito') return '<span class="fraco">sem direito: compra a menos de 7 dias do embarque</span>';
+  if (j.estado === 'sem-hora') return '<span class="n-ouro">informe a hora da emissão</span>';
+  return null;
+}
+
 /* ══ FICHAS (08/10/2026) ═══════════════════════════════════════════════════════
    Tocar no nome de uma emissão ou de um cartão abre a ficha dele numa janela:
    tudo o que se sabe daquele item, organizado, com as ações no pé. Editar
@@ -14214,11 +14277,12 @@ function abrirFichaReserva(id){
       ['Milhas', r.milhas ? `<span class="n-azul">${nBR(r.milhas)}</span>` : 'n/d'],
       ['Taxas', brl(Number(r.taxas) || 0)],
       ['Conta que emitiu', esc(nomeContaId(r.contaId))],
-      ['Data da emissão', r.criada ? dataBR(String(r.criada).slice(0, 10)) : 'n/d'],
+      ['Data da emissão', r.criada ? dataBR(String(r.criada).slice(0, 10)) + (r.criadaHora ? ' às ' + esc(r.criadaHora) : '') : 'n/d'],
       ['Voo', dataBR(r.data) + (r.dataVolta ? ' · volta ' + dataBR(r.dataVolta) : '')],
       cr ? ['Cartão', `${esc(cr.banco)} ${esc(cr.produto)} · ${esc(cr.final || '')}${(Number(r.parcelas) || 1) > 1 ? ` · ${r.parcelas}x` : ''}`] : null,
       ['Passageiros', pax.length ? esc(pax.join(', ')) : '<span class="fraco">nenhum vinculado</span>'],
-      venda ? ['Recebimento', vendaRecebida(r) ? '<span class="n-jade">recebido</span>' : '<span class="n-ouro">a receber</span>'] : null
+      venda ? ['Recebimento', vendaRecebida(r) ? '<span class="n-jade">recebido</span>' : '<span class="n-ouro">a receber</span>'] : null,
+      linhaJanela24h(r) ? ['Janela de 24 horas', linhaJanela24h(r)] : null
     ])}
     ${itin ? `<div class="olho anil" style="margin:18px 0 8px">Voo</div>${itin}` : ''}
     ${r.obs ? `<div class="olho anil" style="margin:18px 0 8px">Observações</div><p class="fraco">${esc(r.obs)}</p>` : ''}`,
@@ -31055,7 +31119,7 @@ function renderBalcao(){
         <div class="item-tit"><button type="button" class="ficha-link" onclick="abrirFichaReserva('${r.id}')" data-dica="Abrir a ficha">${tituloEmissao(r)}</button>
           <span class="etq">${ROTULO_TIPO[r.tipo]}</span>
           ${r.quem === 'terceiro' ? `<span class="etq lilas">${esc(r.cliente || 'cliente')}</span>` : '<span class="etq aco">meu</span>'}
-          ${r.status === 'realizada' ? '<span class="etq">realizada</span>' : r.status === 'cancelada' ? '<span class="etq brasa">cancelada</span>' : futura ? `<span class="etq jade">${prazoTexto(dias)}</span>` : ''}${marcaEmissao(r)}</div>
+          ${r.status === 'realizada' ? '<span class="etq">realizada</span>' : r.status === 'cancelada' ? '<span class="etq brasa">cancelada</span>' : futura ? `<span class="etq jade">${prazoTexto(dias)}</span>` : ''}${marcaEmissao(r)}${seloJanela24h(r)}</div>
         <!-- Mesma leitura de cor da prévia do formulário: milha em azul, dinheiro
              que sai do bolso em vermelho, custo apurado em verde. Quem monta a
              emissão e depois a revê na lista lê os mesmos números com o mesmo
@@ -31446,8 +31510,8 @@ function editarReserva(id, rascunho){
            que é quem determina quantas são. -->
       <div class="campo"><label>Data da emissão</label><input type="date" id="rsCriada" value="${esc(r.criada || hojeISO())}">
         <div class="dica">Quando a passagem foi emitida.</div></div>
-      <div class="campo"><label>Hora da emissão</label><input type="time" id="rsCriadaHora" value="${esc(r.criadaHora || '')}">
-        <div class="dica">Opcional.</div></div>
+      <div class="campo"><label>Hora da emissão</label><input type="time" id="rsCriadaHora" value="${esc(r.criadaHora || (!id && !rascunho ? horaAgora() : ''))}">
+        <div class="dica">Conta a janela de 24 horas da ANAC.</div></div>
 
       <!-- Ordem natural: ida, ida e volta, multitrechos — do mais simples ao mais
            composto, que é a ordem em que se pensa a viagem. Em ordem alfabética
@@ -34446,7 +34510,7 @@ function montarColunaMenu(raiz, vistaMedida){
           const aberta = vv === v && !!document.querySelector(`#v-${vv} .abas .aba.on[data-aba="${a}"]`);
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'cm-ico' + (aberta ? ' on' : '');
-          b.dataset.vista = vv; b.dataset.aba = a; b.dataset.dica = g.g + ' · ' + nome; b.dataset.dicaLado = 'direita';
+          b.dataset.vista = vv; b.dataset.aba = a; b.dataset.dica = g.g ? g.g + ' · ' + nome : nome; b.dataset.dicaLado = 'direita';
           b.setAttribute('aria-label', nome);
           b.innerHTML = `<svg><use href="${ic}"/></svg>`;
           b.onclick = () => irItemMenu(vv, a);
@@ -34478,7 +34542,7 @@ function montarColunaMenu(raiz, vistaMedida){
   if (area.menu){
     area.menu.forEach(g => {
       const atual = g.itens.some(([vv, a]) => vv === v && document.querySelector(`#v-${vv} .abas .aba.on[data-aba="${a}"]`));
-      nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${atual ? ' atual' : ''}">${esc(g.g)}</div>`);
+      if (g.g) nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${atual ? ' atual' : ''}">${esc(g.g)}</div>`);
       g.itens.forEach(([vv, a, nome, ic]) => {
         const aba = document.querySelector(`#v-${vv} .abas .aba[data-aba="${a}"]`); if (!aba) return;
         const aberta = vv === v && aba.classList.contains('on');
