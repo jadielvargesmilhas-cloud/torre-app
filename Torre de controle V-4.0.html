@@ -7807,6 +7807,18 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
   .sl-linha{ grid-template-columns:minmax(0, 1fr) auto 18px; grid-template-areas:"prog saldo seta" "cpm cpm seta"; gap:10px 14px; padding:14px 16px; }
   .sl-prog{ grid-area:prog; } .sl-saldo{ grid-area:saldo; } .sl-vale{ display:none; } .sl-cpm{ grid-area:cpm; } .sl-seta{ grid-area:seta; }
 }
+
+/* editor da foto do perfil */
+.crop{ display:flex; gap:22px; align-items:center; flex-wrap:wrap; justify-content:center; margin:16px 0 4px; padding:16px; border-radius:18px; background:var(--sup-1); }
+.crop-palco{ position:relative; overflow:hidden; border-radius:16px; background:#111; cursor:grab; touch-action:none; flex-shrink:0; user-select:none; }
+.crop-palco:active{ cursor:grabbing; }
+.crop-palco img{ position:absolute; left:0; top:0; max-width:none; transform-origin:0 0; pointer-events:none; }
+.crop-mascara{ position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 999px rgba(10,16,28,.58); border:2px solid rgba(255,255,255,.85); pointer-events:none; }
+.crop-ctrl{ display:flex; flex-direction:column; gap:12px; min-width:220px; flex:1 1 220px; }
+.crop-zoom{ display:flex; align-items:center; gap:10px; }
+.crop-zoom svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; color:var(--grafite); }
+.crop-zoom input{ flex:1; accent-color:var(--ouro); }
+.crop-dica{ font-size:calc(12.5px * var(--esc)); text-align:center; margin:0; }
 </style>
 </head>
 <body>
@@ -8350,7 +8362,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                que já está contratado. A ordem alfabética valia enquanto nenhuma
                das duas mandava na outra. -->
           <button class="aba on" data-aba="fb-campanhas">Campanhas <span class="cont" id="contCampTotal">0</span></button>
-          <button class="aba" data-aba="fb-clubes">Clubes <span class="cont" id="contClubes">0</span></button>
+          <button class="aba" data-aba="fb-clubes">Meus Clubes <span class="cont" id="contClubes">0</span></button>
           <button class="aba" data-aba="fb-compras">Compras inteligentes</button>
           <button class="aba" data-aba="fb-mural">Mural</button>
         </div>
@@ -9600,7 +9612,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 11:45';
+const BUILD = '2026-10-09 13:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12948,7 +12960,7 @@ const AREAS = [
        aberto. [módulo, seção, nome, ícone] */
     menu:[
       {g:'Carteira', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]},
-      {g:'Fábrica de milhas', itens:[['fabrica', 'fb-campanhas', 'Campanhas', '#i-faisca'], ['fabrica', 'fb-clubes', 'Clubes', '#i-atualizar'],
+      {g:'Fábrica de milhas', itens:[['fabrica', 'fb-campanhas', 'Campanhas', '#i-faisca'], ['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'],
         ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola'], ['fabrica', 'fb-mural', 'Mural', '#i-livro']]},
       {g:'Movimentar', itens:[['comprar', 'ct-comprar', 'Comprar', '#i-mais'], ['comprar', 'ct-transferir', 'Transferir', '#i-troca']]},
       /* o fechamento: quanto há e quanto vale (09/10/2026) */
@@ -18114,6 +18126,73 @@ function reduzirFoto(arquivo){
     r.readAsDataURL(arquivo);
   });
 }
+
+/* ══ EDITOR DA FOTO DO PERFIL (09/10/2026) ═════════════════════════════════════
+   Depois de escolher a imagem, ela abre num quadro com a máscara redonda: arrastar
+   posiciona, a barra (ou a roda do mouse, ou o gesto de pinça) aproxima, e há
+   girar e centralizar. "Usar esta foto" grava só o recorte, em 320 px. */
+let _fotoOriginal = '';
+function lerImagemGrande(arquivo){
+  return new Promise((ok, falha) => {
+    const r = new FileReader();
+    r.onerror = () => falha(new Error('Não deu para ler a imagem.'));
+    r.onload = () => { const img = new Image();
+      img.onerror = () => falha(new Error('Esse arquivo não é uma imagem que o navegador abra.'));
+      img.onload = () => { const max = 1400, k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        _fotoOriginal = c.toDataURL('image/jpeg', 0.9); ok(_fotoOriginal); };
+      img.src = r.result; };
+    r.readAsDataURL(arquivo);
+  });
+}
+function editorDeFoto(src, aoAplicar){
+  const caixa = $('#pfEditor'); if (!caixa) return;
+  const S = 260;
+  caixa.hidden = false;
+  caixa.innerHTML = `<div class="crop">
+    <div class="crop-palco" id="cropPalco" style="width:${S}px;height:${S}px" aria-label="Arraste para posicionar a foto"><img id="cropImg" alt="" draggable="false"><div class="crop-mascara"></div></div>
+    <div class="crop-ctrl">
+      <label class="crop-zoom"><svg><use href="#i-busca"/></svg><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" aria-label="Aproximar"></label>
+      <div class="linha" style="gap:8px;justify-content:center;flex-wrap:wrap">
+        <button type="button" class="bt fantasma p" id="cropGirar"><svg><use href="#i-atualizar"/></svg>Girar</button>
+        <button type="button" class="bt fantasma p" id="cropCentro"><svg><use href="#i-alvo"/></svg>Centralizar</button>
+      </div>
+      <p class="fraco crop-dica">Arraste a foto para posicionar. Use a barra, a roda do mouse ou dois dedos para aproximar.</p>
+      <div class="linha" style="gap:8px;justify-content:center"><button type="button" class="bt perigo p" id="cropCancelar">Cancelar</button><button type="button" class="bt primario p" id="cropUsar"><svg><use href="#i-ok"/></svg>Usar esta foto</button></div>
+    </div></div>`;
+  const img = $('#cropImg'), palco = $('#cropPalco'), zoom = $('#cropZoom');
+  const st = {w:0, h:0, base:1, z:1, x:0, y:0, rot:0, fonte:src};
+  const prender = () => { const k = st.base * st.z, w = st.w * k, h = st.h * k;
+    st.x = Math.min(0, Math.max(S - w, st.x)); st.y = Math.min(0, Math.max(S - h, st.y)); };
+  const pintar = () => { prender(); const k = st.base * st.z; img.style.width = (st.w * k) + 'px'; img.style.height = (st.h * k) + 'px'; img.style.transform = `translate(${st.x}px, ${st.y}px)`; };
+  const carregar = (url, manter) => { const t = new Image(); t.onload = () => {
+      st.w = t.width; st.h = t.height; st.base = Math.max(S / st.w, S / st.h); img.src = url; st.fonte = url;
+      if (!manter){ st.z = 1; zoom.value = 1; }
+      st.x = (S - st.w * st.base * st.z) / 2; st.y = (S - st.h * st.base * st.z) / 2; pintar(); }; t.src = url; };
+  const zoomEm = (nz, cx = S / 2, cy = S / 2) => { nz = Math.min(4, Math.max(1, nz)); const k0 = st.base * st.z, k1 = st.base * nz;
+    st.x = cx - (cx - st.x) * k1 / k0; st.y = cy - (cy - st.y) * k1 / k0; st.z = nz; zoom.value = nz; pintar(); };
+  carregar(src);
+  zoom.oninput = () => zoomEm(Number(zoom.value));
+  palco.addEventListener('wheel', e => { e.preventDefault(); const r = palco.getBoundingClientRect(); zoomEm(st.z * (e.deltaY < 0 ? 1.08 : 1 / 1.08), e.clientX - r.left, e.clientY - r.top); }, {passive:false});
+  const toques = new Map(); let ini = null;
+  palco.addEventListener('pointerdown', e => { palco.setPointerCapture(e.pointerId); toques.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (toques.size === 2){ const [a, b] = [...toques.values()]; ini = {d:Math.hypot(a.x - b.x, a.y - b.y), z:st.z}; } });
+  palco.addEventListener('pointermove', e => { if (!toques.has(e.pointerId)) return; const ant = toques.get(e.pointerId); toques.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (toques.size === 2 && ini){ const [a, b] = [...toques.values()]; zoomEm(ini.z * Math.hypot(a.x - b.x, a.y - b.y) / ini.d); }
+    else { st.x += e.clientX - ant.x; st.y += e.clientY - ant.y; pintar(); } });
+  const soltar = e => { toques.delete(e.pointerId); if (toques.size < 2) ini = null; };
+  palco.addEventListener('pointerup', soltar); palco.addEventListener('pointercancel', soltar);
+  $('#cropCentro').onclick = () => { st.x = (S - st.w * st.base * st.z) / 2; st.y = (S - st.h * st.base * st.z) / 2; pintar(); };
+  $('#cropGirar').onclick = () => { const t = new Image(); t.onload = () => { const c = document.createElement('canvas'); c.width = t.height; c.height = t.width;
+      const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate(Math.PI / 2); g.drawImage(t, -t.width / 2, -t.height / 2); carregar(c.toDataURL('image/jpeg', 0.92)); }; t.src = st.fonte; };
+  $('#cropCancelar').onclick = () => { caixa.hidden = true; caixa.innerHTML = ''; };
+  $('#cropUsar').onclick = () => { const t = new Image(); t.onload = () => { const L = 320, f = L / S, k = st.base * st.z * f;
+      const c = document.createElement('canvas'); c.width = c.height = L; const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, L, L); g.drawImage(t, st.x * f, st.y * f, st.w * k, st.h * k);
+      aoAplicar(c.toDataURL('image/jpeg', 0.88)); caixa.hidden = true; caixa.innerHTML = ''; }; t.src = st.fonte; };
+  window._cropEstado = st;
+}
+
 let _fotoPerfil = undefined;
 function abrirPerfil(){
   const p = perfilAtual(); _fotoPerfil = p.foto || '';
@@ -18123,9 +18202,11 @@ function abrirPerfil(){
       <div class="perfil-foto" id="pfFoto">${p.foto ? `<img src="${p.foto}" alt="">` : `<b>${esc(iniciaisDe(p.nome))}</b>`}</div>
       <div class="pilha" style="gap:8px">
         <label class="bt fantasma p" style="cursor:pointer"><svg><use href="#i-imagem"/></svg>Escolher foto<input type="file" id="pfArquivo" accept="image/*" hidden></label>
+        <button type="button" class="bt fantasma p" id="pfAjustar"${p.foto ? '' : ' hidden'}><svg><use href="#i-lapis"/></svg>Ajustar a foto</button>
         <button type="button" class="bt fantasma p" id="pfTirar"${p.foto ? '' : ' hidden'}><svg><use href="#i-x"/></svg>Tirar a foto</button>
       </div>
     </div>
+    <div id="pfEditor" hidden></div>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));margin-top:14px">
       <div class="campo"><label>Nome</label><input type="text" id="pfNome" value="${esc(p.nome || '')}" placeholder="Como aparece para você"></div>
       <div class="campo"><label>E-mail</label><input type="text" inputmode="email" autocomplete="email" id="pfEmail" value="${esc(p.email || '')}" placeholder="voce@exemplo.com"></div>
@@ -18135,17 +18216,20 @@ function abrirPerfil(){
     </div>
     <p class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:10px">${contas} ${contas === 1 ? 'titular de programa cadastrado' : 'titulares de programa cadastrados'} em Milhas → Contas. Este perfil é o seu, o dono da Torre.</p>`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="pfSair"><svg><use href="#i-sair"/></svg>Sair da conta</button><div class="esticar"></div><button class="bt primario" id="pfSalvar"><svg><use href="#i-ok"/></svg>Salvar</button>`});
+  const aplicarFoto = url => { _fotoPerfil = url; $('#pfFoto').innerHTML = `<img src="${url}" alt="">`; $('#pfTirar').hidden = false; $('#pfAjustar').hidden = false; };
   $('#pfArquivo').onchange = async ev => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
-    try{
-      _fotoPerfil = await reduzirFoto(f);
-      $('#pfFoto').innerHTML = `<img src="${_fotoPerfil}" alt="">`; $('#pfTirar').hidden = false;
-    }catch(e){ avisar(e.message, 'alerta'); }
+    try{ editorDeFoto(await lerImagemGrande(f), aplicarFoto); }catch(e){ avisar(e.message, 'alerta'); }
+    ev.target.value = '';
   };
-  $('#pfTirar').onclick = () => { _fotoPerfil = ''; $('#pfFoto').innerHTML = `<b>${esc(iniciaisDe($('#pfNome').value))}</b>`; $('#pfTirar').hidden = true; };
+  /* reajustar parte da foto original desta sessão, se houver; senão, da que está gravada */
+  $('#pfAjustar').onclick = () => { if (_fotoOriginal || _fotoPerfil) editorDeFoto(_fotoOriginal || _fotoPerfil, aplicarFoto); };
+  $('#pfTirar').onclick = () => { _fotoPerfil = ''; _fotoOriginal = ''; $('#pfFoto').innerHTML = `<b>${esc(iniciaisDe($('#pfNome').value))}</b>`; $('#pfTirar').hidden = true; $('#pfAjustar').hidden = true; };
   $('#pfNome').oninput = () => { if (!_fotoPerfil) $('#pfFoto').innerHTML = `<b>${esc(iniciaisDe($('#pfNome').value))}</b>`; };
   $('#pfSair').onclick = () => { fecharFolha(); sairDaConta(); };
-  $('#pfSalvar').onclick = () => {
+  $('#pfSalvar').onclick = async () => {
+    /* foto escolhida e ainda no editor: salvar usa o recorte como está */
+    if ($('#cropUsar')){ $('#cropUsar').click(); await new Promise(ok => setTimeout(ok, 250)); }
     const email = $('#pfEmail').value.trim();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ erroNoCampo('#pfEmail', 'Esse e-mail não parece completo (falta o @ ou o domínio).'); return; }
     DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || ''};
