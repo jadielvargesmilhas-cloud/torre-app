@@ -7872,6 +7872,17 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 .tit-vazio{ padding:14px 16px; margin:0; }
 .tit-pe{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px 14px; font-size:calc(12px * var(--esc)); }
 @media (max-width:560px){ .tit-linha{ grid-template-columns:auto minmax(0, 1fr) 40px auto; gap:8px; } .tit-qtd{ min-width:0; } .tit-grade{ padding:12px; } .tit-cab{ grid-template-columns:auto minmax(0, 1fr) auto; } .tit-cab .acoes-cel{ grid-column:1 / -1; justify-self:end; } }
+
+/* foto nas contas e cabeçalho do cartão em duas linhas (09/10/2026) */
+.tit-cab{ grid-template-columns:auto minmax(0, 1fr) !important; align-items:start !important; }
+.tit-l1{ display:flex; align-items:center; gap:8px; min-width:0; }
+.tit-l1 b{ flex:1; min-width:0; font-size:calc(15px * var(--esc)); line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.tit-l1{ align-items:flex-start; }
+.tit-quem .tit-l1 b{ white-space:normal; text-overflow:clip; }
+.tit-l2{ display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:6px; flex-wrap:wrap; }
+.tit-av.com-foto, .jn-pos.com-foto{ padding:0; overflow:hidden; }
+.tit-av img, .jn-pos img{ width:100%; height:100%; object-fit:cover; display:block; border-radius:50%; }
+@media (max-width:560px){ .tit-cab .acoes-cel{ grid-column:auto; justify-self:auto; } }
 </style>
 </head>
 <body>
@@ -9671,7 +9682,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 18:15';
+const BUILD = '2026-10-09 19:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12142,6 +12153,11 @@ const PARTICULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'del', 'di', 'd
    A caixa é preservada como foi cadastrada: quem escreveu em maiúsculas espera
    ver em maiúsculas, e mudar isso é reescrever o dado da pessoa. Partículas
    ficam de fora da disputa e voltam grudadas no sobrenome. */
+/* nomes próprios comuns que costumam vir em segundo lugar: nunca são tomados por sobrenome */
+const NOMES_PROPRIOS = new Set(('maria ana jose joao antonio francisco carlos paulo pedro luiz luis henrique eduardo fernando fernanda beatriz clara lucas gabriel rafael '
+  + 'miguel vitor vitoria julia alice laura helena sofia isabel isabela cristina aparecida fatima lucia teresa tereza rita rosa augusto alberto roberto ricardo marcos marco '
+  + 'andre felipe guilherme gustavo hugo leonardo mateus matheus daniel davi arthur artur bruno diego igor luana eduarda gabriela mariana juliana patricia luiza luisa '
+  + 'heloisa manuela valentina livia cecilia elisa emanuel emanuelle cristiano renata regina sebastiao jorge mario').split(' '));
 function nomeCurto(nomeCompleto){
   const bruto = String(nomeCompleto || '').trim().replace(/\s+/g, ' ');
   if (!bruto) return 'n/d';
@@ -12151,15 +12167,24 @@ function nomeCurto(nomeCompleto){
   const cheias = partes.map((p, i) => ({p, i})).filter(x => !PARTICULAS.has(x.p.toLowerCase()));
   if (cheias.length < 2) return bruto;
 
+  /* Regra do Jadiel (09/10/2026):
+     · o primeiro nome próprio, sempre;
+     · o segundo nome próprio fica de fora: com quatro ou mais nomes ("Pedro
+       Henrique Ferraz Varges"), ou com três e uma partícula logo depois dele
+       ("Ana Maria da Silva"), o segundo é nome, não sobrenome;
+     · dos sobrenomes, o menor (no empate, o primeiro);
+     · "de", "da", "do"... só entram quando o primeiro nome é curtinho, de até
+       três letras ("Ana da Silva"); fora disso saem ("Jadiel Souza"). */
   const nome = cheias[0];
-  const sobrenomes = cheias.slice(1);
-  /* reduce com > mantém o primeiro em caso de empate */
+  let sobrenomes = cheias.slice(1);
+  const segundoEhNome = sobrenomes.length >= 2 && (cheias.length >= 4
+    || (cheias.length === 3 && partes.slice(sobrenomes[0].i + 1, sobrenomes[1].i).some(x => PARTICULAS.has(x.toLowerCase())))
+    /* com três nomes e sem partícula, o do meio é nome quando é um nome próprio comum ("Nestegite Maria Varges") */
+    || NOMES_PROPRIOS.has(semAcento(sobrenomes[0].p.toLowerCase())));
+  if (segundoEhNome) sobrenomes = sobrenomes.slice(1);
   const sobrenome = sobrenomes.reduce((a, b) => (b.p.length < a.p.length ? b : a));
-
-  /* "Menezes" e "de Menezes" são o mesmo sobrenome; cortar a partícula soa
-     truncado, então ela volta quando estiver logo antes dele */
   const antes = partes[sobrenome.i - 1];
-  const prefixo = (antes && PARTICULAS.has(antes.toLowerCase()) && sobrenome.i - 1 > nome.i)
+  const prefixo = (nome.p.length <= 3 && antes && PARTICULAS.has(antes.toLowerCase()) && sobrenome.i - 1 > nome.i)
     ? antes + ' ' : '';
   return nome.p + ' ' + prefixo + sobrenome.p;
 }
@@ -18313,10 +18338,25 @@ function editorDeFoto(src, aoAplicar){
   window._cropEstado = st;
 }
 
+
+/* A foto de uma pessoa do grupo: a da própria conta, se houver; e, na conta do
+   titular, a foto do perfil — titular e dono da Torre são a mesma pessoa. */
+function fotoDaConta(c){
+  if (!c) return '';
+  if (c.foto) return c.foto;
+  const p = (DB.cfg && DB.cfg.perfil) || {};
+  return typeof ehTitular === 'function' && ehTitular(c) && p.foto ? p.foto : '';
+}
+function avatarConta(c, cls = 'tit-av'){
+  const f = fotoDaConta(c);
+  return `<span class="${cls}${f ? ' com-foto' : ''}">${f ? `<img src="${f}" alt="">` : esc(iniciaisDe(c ? c.nome : ''))}</span>`;
+}
+
 let _fotoPerfil = undefined;
 function abrirPerfil(){
   const p = perfilAtual(); _fotoPerfil = p.foto || '';
   const contas = (DB.contas || []).length;
+  const titularC = (DB.contas || []).find(c => typeof ehTitular === 'function' && ehTitular(c));
   abrirFolha({titulo:'Meu perfil', largura:'media', corpo:`
     <div class="perfil-topo">
       <div class="perfil-foto" id="pfFoto">${p.foto ? `<img src="${p.foto}" alt="">` : `<b>${esc(iniciaisDe(p.nome))}</b>`}</div>
@@ -18334,7 +18374,7 @@ function abrirPerfil(){
       <div class="campo"><label>Cidade</label><input type="text" id="pfCidade" value="${esc(p.cidade || '')}" placeholder="Salvador, BA"></div>
       <div class="campo"><label>Empresa ou marca <span class="fraco">opcional</span></label><input type="text" id="pfMarca" value="${esc(p.marca || '')}" placeholder="VEM · Viagens & Experiências com Milhas"></div>
     </div>
-    <p class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:10px">${contas} ${contas === 1 ? 'titular de programa cadastrado' : 'titulares de programa cadastrados'} em Milhas → Contas. Este perfil é o seu, o dono da Torre.</p>`,
+    <p class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:10px">${contas} ${contas === 1 ? 'titular de programa cadastrado' : 'titulares de programa cadastrados'} em Carteira → Contas. Este perfil é o seu, o dono da Torre${titularC ? `: a foto também aparece na conta de titular (${esc(titularC.nome)})` : ''}.</p>`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="pfSair"><svg><use href="#i-sair"/></svg>Sair da conta</button><div class="esticar"></div><button class="bt primario" id="pfSalvar"><svg><use href="#i-ok"/></svg>Salvar</button>`});
   const aplicarFoto = url => { _fotoPerfil = url; $('#pfFoto').innerHTML = `<img src="${url}" alt="">`; $('#pfTirar').hidden = false; $('#pfAjustar').hidden = false; };
   $('#pfArquivo').onchange = async ev => {
@@ -18354,6 +18394,7 @@ function abrirPerfil(){
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ erroNoCampo('#pfEmail', 'Esse e-mail não parece completo (falta o @ ou o domínio).'); return; }
     DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || ''};
     salvar(); pintarAvatar(); fecharFolha(); avisar('Perfil salvo.', 'ok');
+    if (vistaAtual === 'saldo' && typeof renderSaldo === 'function') renderSaldo();
   };
 }
 
@@ -24985,7 +25026,7 @@ function abrirFichaPrograma(p){
   abrirFolha({titulo:`<span class="linha" style="gap:10px;flex-wrap:nowrap">${discoProg(p)}${esc(prog(p).n)}</span>`, largura:'media', corpo:`
     <div class="ficha-destaque"><div><span>Saldo</span><b>${nBR(total)}</b></div><div><span>Vale ao alvo</span><b>${brl(total / 1000 * f.alvo)}</b></div><div><span>Seu milheiro</span><b>${c > 0 ? brl2(c) : 'n/d'}</b></div></div>
     <div class="olho anil" style="margin:16px 0 6px">Por titular</div>
-    <div class="jn-lista">${l.map(sv => `<div class="jn-linha"><span class="jn-pos">${esc(iniciaisDe(nomeConta(sv.contaId)))}</span>
+    <div class="jn-lista">${l.map(sv => `<div class="jn-linha">${avatarConta((DB.contas || []).find(c => c.id === sv.contaId) || {nome:nomeConta(sv.contaId)}, 'jn-pos')}
       <div class="jn-nome"><b>${esc(nomeConta(sv.contaId))}</b><div class="jn-barra"><i style="width:${total ? (sv.qtd / total * 100).toFixed(1) : 0}%;background:${prog(p).cor || 'var(--ouro)'}"></i></div></div>
       <div class="linha" style="gap:8px;flex-wrap:nowrap"><div class="jn-num"><b>${nBR(sv.qtd)}</b><span>${total ? pct(sv.qtd / total * 100, 0) : ''}</span></div>
       <button class="bt p fantasma icone" onclick="fecharFolha();setTimeout(()=>editarSaldo('${sv.id}'),60)" data-dica="Ajustar"><svg><use href="#i-lapis"/></svg></button></div></div>`).join('')}</div>
@@ -25159,13 +25200,15 @@ function renderMatrizContas(){
     const vazios = progs.length - meus.length;
     return `<article class="tit-cartao">
       <header class="tit-cab">
-        <span class="tit-av">${esc(iniciaisDe(c.nome))}</span>
-        <div class="tit-quem"><b>${esc(c.nome)}</b>
-          <div class="tit-etqs"><span class="etq${/^titular/i.test(c.papel || '') ? ' ouro' : ''}">${esc(c.papel || 'conta')}</span>${clubes.length ? `<span class="etq jade">${clubes.length} ${clubes.length === 1 ? 'clube ativo' : 'clubes ativos'}</span>` : ''}</div></div>
-        <div class="tit-vale"><small>vale hoje</small><b>${brl(vale)}</b></div>
-        <div class="acoes-cel">
-          <button class="bt p fantasma icone" onclick="editarConta('${c.id}')" data-dica="Editar ${esc(c.nome)}"><svg><use href="#i-lapis"/></svg></button>
-          <button class="bt p fantasma icone" onclick="apagarConta('${c.id}')" data-dica="Apagar ${esc(c.nome)}"><svg><use href="#i-lixo"/></svg></button>
+        ${avatarConta(c)}
+        <div class="tit-quem">
+          <div class="tit-l1"><b data-dica="${esc(c.nome)}">${esc(nomeCurto(c.nome))}</b>
+            <div class="acoes-cel">
+              <button class="bt p fantasma icone" onclick="editarConta('${c.id}')" data-dica="Editar ${esc(c.nome)}"><svg><use href="#i-lapis"/></svg></button>
+              <button class="bt p fantasma icone" onclick="apagarConta('${c.id}')" data-dica="Apagar ${esc(c.nome)}"><svg><use href="#i-lixo"/></svg></button>
+            </div></div>
+          <div class="tit-l2"><div class="tit-etqs"><span class="etq${/^titular/i.test(c.papel || '') ? ' ouro' : ''}">${esc(c.papel || 'conta')}</span>${clubes.length ? `<span class="etq jade">${clubes.length} ${clubes.length === 1 ? 'clube ativo' : 'clubes ativos'}</span>` : ''}</div>
+            <div class="tit-vale"><small>vale hoje</small><b>${brl(vale)}</b></div></div>
         </div>
       </header>
       ${meus.length ? GR.map(([t, nomeG]) => {
