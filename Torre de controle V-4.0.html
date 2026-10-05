@@ -7583,7 +7583,10 @@ table.tb-trechos.tb-cartao.em-cartao td[data-r="Trecho"] .up-cab{ justify-conten
 @media (min-width:861px){
   html.coluna-fechada{ --menu:0px; }
   html.coluna-fechada .coluna-menu{ display:none; }
-  html.coluna-fechada .vista > .abas{ display:flex; }
+  /* desde 09/10/2026 o menu recolhido tem um ícone por seção: as abas do alto
+     não voltam (empurravam o título 66 px para baixo só em parte das telas) */
+  html.coluna-fechada .vista > .abas{ display:none; }
+  html.coluna-fechada #segCampGrupo{ display:none !important; }
   html.coluna-fechada .seg-na-coluna{ display:inline-flex !important; }
   html.coluna-fechada .linha-so-seg{ display:flex !important; }
 }
@@ -7901,6 +7904,18 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 
 .heroi-chip-bt{ border:0; cursor:pointer; font:inherit; }
 .heroi-chip-bt:hover{ filter:brightness(1.15); }
+
+/* O título da seção fica SEMPRE no mesmo lugar (10/10/2026): preso ao topo da
+   linha de cabeçalho, numa caixa da altura de um botão. Antes ele era centrado
+   na linha, e uma descrição de três linhas ou um botão alto o empurravam para
+   baixo: ao trocar de seção, o título "pulava" de 4 a 18 px. */
+.sec-cab{ align-items:flex-start; }
+.sec-cab > .sec-tit{ align-self:flex-start; min-height:calc(38px * var(--esc)); display:flex; align-items:center; box-sizing:border-box; }
+.sec-tit::before{ top:calc(50% - 0.6em); bottom:auto; height:1.2em; }
+.sec-cab > :not(.sec-tit){ align-self:center; }
+.sec-cab > .esticar{ align-self:stretch; }
+
+.abas.abas-unica{ display:none !important; }
 </style>
 </head>
 <body>
@@ -9706,7 +9721,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-10 11:15';
+const BUILD = '2026-10-10 12:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13117,7 +13132,13 @@ function atualizarArea(){
   /* no módulo dividido, as seções do alto mostram só as desta área */
   const cx = document.querySelector(`#v-${vistaAtual} .abas`);
   if (cx){ const daArea = new Set((ar.menu || []).flatMap(g => g.itens).filter(it => it[0] === vistaAtual).map(it => it[1]));
-    [...cx.querySelectorAll('.aba')].forEach(b => { b.hidden = ar.menu ? !daArea.has(b.dataset.aba) : false; }); }
+    [...cx.querySelectorAll('.aba')].forEach(b => { b.hidden = ar.menu ? !daArea.has(b.dataset.aba) : false; });
+    /* um seletor de seções com uma seção só não seleciona nada: some (e não
+       empurra o título para baixo, como acontecia em Controle de CPF) */
+    cx.classList.toggle('abas-unica', [...cx.querySelectorAll('.aba')].filter(b => !b.hidden && getComputedStyle(b).display !== 'none').length <= 1); }
+  /* a pílula vai para a barra de cima no celular em toda troca, inclusive na
+     primeira tela (no Início ela ficava numa faixa própria e empurrava tudo) */
+  if (typeof lugarDaPilula === 'function') lugarDaPilula();
   pintarBarraModulos(vistaAtual);
   _marcaColuna = ''; montarColunaMenu();
   /* nas áreas que nasceram de Milhas, o topo diz a área (Promoções, Acumular,
