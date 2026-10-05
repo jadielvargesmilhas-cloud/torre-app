@@ -7819,6 +7819,22 @@ html.coluna-fechada .tb-coluna{ background:rgba(242,193,78,.18); border-color:rg
 .crop-zoom svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; color:var(--grafite); }
 .crop-zoom input{ flex:1; accent-color:var(--ouro); }
 .crop-dica{ font-size:calc(12.5px * var(--esc)); text-align:center; margin:0; }
+
+/* celular: área com barra de itens (Acumular) não repete as seções no alto */
+@media (max-width:860px){ body.barra-itens .vista.on > .abas{ display:none !important; } }
+
+/* celular: oito áreas na barra de baixo cabem em qualquer largura (09/10/2026) */
+@media (max-width:860px){
+  #trilhoNav{ gap:0 !important; }
+  #trilhoNav .tb[data-area]{ flex:1 1 0; min-width:0; width:auto; padding:0 1px; }
+  #trilhoNav .tb[data-area] .sg{ font-size:min(calc(10.5px * var(--esc)), 11.5px); max-width:100%; overflow:hidden; text-overflow:clip; white-space:nowrap; letter-spacing:-.01em; }
+  #trilhoNav .tb[data-area] svg{ width:19px; height:19px; }
+}
+@media (max-width:400px){ #trilhoNav .tb[data-area] .sg{ font-size:min(calc(9.6px * var(--esc)), 10.4px); } }
+@media (max-width:370px){ #trilhoNav .tb[data-area] .sg{ font-size:min(calc(9px * var(--esc)), 9.6px); letter-spacing:-.02em; } }
+
+.sg-curto{ display:none; }
+@media (max-width:860px){ #trilhoNav .sg-longo{ display:none; } #trilhoNav .sg-curto{ display:inline; } }
 </style>
 </head>
 <body>
@@ -7849,6 +7865,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="i-documento" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10.8" r="2"/><path d="M5.6 16.2c.6-1.5 1.6-2.3 2.9-2.3s2.3.8 2.9 2.3"/><path d="M14 10h4.5M14 13.5h3"/></symbol>
 <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.5V19a1 1 0 0 0 1 1H10v-5.5h4V20h3.5a1 1 0 0 0 1-1V9.5"/></symbol>
+<symbol id="i-carteira" viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v3"/><rect x="3.5" y="7.5" width="17" height="12" rx="2.5"/><path d="M16 13.5h4.5"/><circle cx="16.5" cy="13.5" r=".6"/></symbol>
 <symbol id="i-carrinho" viewBox="0 0 24 24"><path d="M3 4h2.2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.4a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></symbol>
 <symbol id="i-lapis" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></symbol>
 <symbol id="i-lixo" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
@@ -7937,7 +7954,11 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
            com nome por extenso; os módulos de cada área aparecem na coluna ao lado
            (no computador) ou na barra logo acima desta (no celular). -->
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-casa"/></svg><span class="sg">Início</span></button>
-      <button class="tb" data-area="milhas" data-vista="saldo" data-dica="Milhas: carteira, comprar e transferir e fábrica" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Milhas</span></button>
+      <!-- Milhas dividida em três (09/10/2026): o que você tem, onde a milha está
+           barata e como juntar mais. Um assunto por botão. -->
+      <button class="tb" data-area="carteira" data-vista="saldo" data-dica="Carteira: o que você tem — saldos, contas, vencimentos e resumo" data-dica-lado="direita"><svg><use href="#i-carteira"/></svg><span class="sg">Carteira</span></button>
+      <button class="tb" data-area="promocoes" data-vista="fabrica" data-dica="Promoções: onde a milha está barata hoje — compra e transferência bonificada, clubes e lojas, mural" data-dica-lado="direita"><svg><use href="#i-fogo"/></svg><span class="sg"><span class="sg-longo">Promoções</span><span class="sg-curto">Promos</span></span></button>
+      <button class="tb" data-area="acumular" data-vista="comprar" data-dica="Acumular: como juntar milhas — comprar, transferir, assinar clubes e comprar produtos" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Acumular</span></button>
       <button class="tb" data-area="cartoes" data-vista="cartoes" data-dica="Cartões: painel, catálogo, meus cartões e faturas" data-dica-lado="direita"><svg><use href="#i-cartao"/></svg><span class="sg">Cartões</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
       <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, controle de CPF, orçamento, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
@@ -9612,7 +9633,7 @@ const VERSAO = '3.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-09 13:00';
+const BUILD = '2026-10-09 15:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12954,18 +12975,21 @@ const TITULOS = {
 const AREAS = [
   {k:'inicio',  n:'Início',  sub:'Painel do dia',        ic:'#i-casa',    vistas:['mesa'],
     menu:[{g:'', itens:[['mesa', 'ms-hoje', 'Painel de bordo', '#i-mesa'], ['mesa', 'ms-vender', 'Prateleira', '#i-etiqueta'], ['mesa', 'ms-lancamentos', 'Lançamentos', '#i-livro']]}]},
-  {k:'milhas',  n:'Milhas',  sub:'Carteira e fábrica',   ic:'#i-dinheiro', vistas:['saldo', 'comprar', 'fabrica'],
-    /* 08/10/2026: o menu de Milhas pelo que se faz, não pelo módulo onde mora.
-       Cada item tem ícone, o nome é curto, e o submenu só aparece embaixo do item
-       aberto. [módulo, seção, nome, ícone] */
-    menu:[
-      {g:'Carteira', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]},
-      {g:'Fábrica de milhas', itens:[['fabrica', 'fb-campanhas', 'Campanhas', '#i-faisca'], ['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'],
-        ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola'], ['fabrica', 'fb-mural', 'Mural', '#i-livro']]},
-      {g:'Movimentar', itens:[['comprar', 'ct-comprar', 'Comprar', '#i-mais'], ['comprar', 'ct-transferir', 'Transferir', '#i-troca']]},
-      /* o fechamento: quanto há e quanto vale (09/10/2026) */
-      {g:'Balanço', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-resumo', 'Resumo', '#i-grafico']]}
-    ]},
+  /* Milhas dividida em três áreas (09/10/2026), uma pergunta cada:
+     Carteira  — o que eu tenho?
+     Promoções — onde a milha está barata hoje?
+     Acumular  — como eu junto mais?
+     Duas delas dividem o módulo Fábrica (as seções dele se repartem); a área de
+     uma tela é decidida pela seção aberta (areaDe). [módulo, seção, nome, ícone, subgrupo] */
+  {k:'carteira',  n:'Carteira',  sub:'O que você tem',            ic:'#i-carteira', vistas:['saldo'],
+    menu:[{g:'', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-contas', 'Contas', '#i-usuarios'],
+      ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio'], ['saldo', 'sl-resumo', 'Resumo', '#i-grafico']]}]},
+  {k:'promocoes', n:'Promoções', sub:'Onde a milha está barata',  ic:'#i-fogo',     vistas:['fabrica'],
+    menu:[{g:'', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube'],
+      ['fabrica', 'fb-mural', 'Mural', '#i-livro']]}]},
+  {k:'acumular',  n:'Acumular',  sub:'Como juntar milhas',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
+    menu:[{g:'', itens:[['comprar', 'ct-comprar', 'Comprar milhas', '#i-carrinho'], ['comprar', 'ct-transferir', 'Transferir pontos', '#i-subir'],
+      ['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras inteligentes', '#i-sacola']]}]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
   {k:'cartoes', n:'Cartões', sub:'Crédito e faturas',    ic:'#i-cartao',   vistas:['cartoes'],
@@ -12983,7 +13007,30 @@ const ICONE_MODULO = {mesa:'#i-mesa', saldo:'#i-caixa', comprar:'#i-troca', fabr
 /* nome curto para a barra de módulos do celular, onde cabe pouco */
 const CURTO_MODULO = {saldo:'Carteira', comprar:'Comprar', fabrica:'Fábrica', cartoes:'Cartões', rota:'Jornadas', emissoes:'CPF', emitidos:'Emitidos', cotacoes:'Orçamento',
   radar:'Radar', clientes:'Clientes', vendas:'Vendas', imposto:'Imposto'};
-const areaDe = v => AREAS.find(a => a.vistas.includes(v)) || AREAS[0];
+const areaDe = v => {
+  const cands = AREAS.filter(a => a.vistas.includes(v));
+  if (cands.length <= 1) return cands[0] || AREAS[0];
+  const ab = document.querySelector(`#v-${v} .abas .aba.on`), aba = ab ? ab.dataset.aba : '';
+  return cands.find(a => (a.menu || []).some(g => g.itens.some(it => it[0] === v && it[1] === aba))) || cands[0];
+};
+/* item do menu que está aberto agora (módulo, seção e, em Campanhas, o lado) */
+function itemAberto(it){
+  if (it[0] !== vistaAtual || !document.querySelector(`#v-${it[0]} .abas .aba.on[data-aba="${it[1]}"]`)) return false;
+  return !it[4] || (typeof campGrupo !== 'undefined' && campGrupo === it[4]);
+}
+/* a barra, a coluna, a barra do celular e as seções do alto acompanham a área da seção aberta */
+function atualizarArea(){
+  const ar = areaDe(vistaAtual);
+  const ab = document.querySelector(`#v-${vistaAtual} .abas .aba.on`);
+  ultimaDaArea[ar.k] = {v:vistaAtual, aba:ab ? ab.dataset.aba : '', sub:(ar.menu || []).flatMap(g => g.itens).find(itemAberto)?.[4] || ''};
+  $$('.tb[data-area]').forEach(b => b.classList.toggle('on', b.dataset.area === ar.k));
+  /* no módulo dividido, as seções do alto mostram só as desta área */
+  const cx = document.querySelector(`#v-${vistaAtual} .abas`);
+  if (cx){ const daArea = new Set((ar.menu || []).flatMap(g => g.itens).filter(it => it[0] === vistaAtual).map(it => it[1]));
+    [...cx.querySelectorAll('.aba')].forEach(b => { b.hidden = ar.menu && AREAS.filter(a => a.vistas.includes(vistaAtual)).length > 1 ? !daArea.has(b.dataset.aba) : false; }); }
+  pintarBarraModulos(vistaAtual);
+  _marcaColuna = ''; montarColunaMenu();
+}
 const ultimaDaArea = {};
 let vistaAtual = 'mesa';
 /* ── porta de entrada de cada módulo ──────────────────────────────────────────
@@ -13026,7 +13073,7 @@ function irPara(v){
 
   const trocar = () => {
     vistaAtual = v;
-    const ar = areaDe(v); ultimaDaArea[ar.k] = v;
+    const ar = areaDe(v);
     $$('.tb').forEach(b => b.classList.toggle('on', b.dataset.area ? b.dataset.area === ar.k : b.dataset.vista === v));
     pintarBarraModulos(v);
     $$('.vista').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
@@ -13036,6 +13083,7 @@ function irPara(v){
     /* A coluna é montada DEPOIS da troca de vista: ela lê as abas da tela que
        está aberta, e montada antes leria as da anterior. */
     montarColunaMenu();
+    setTimeout(atualizarArea, 0);
     /* o subtítulo é um elemento só para os sete módulos: a vista atual entra
        como atributo para o CSS poder tratar um deles sem tocar nos outros */
     $('#topoSub').dataset.vista = v;
@@ -13074,6 +13122,7 @@ function montarCorpoCT(aba){
 }
 
 function irParaAba(grupo, aba){
+  if ((grupo === 'fabrica' || grupo === 'saldo' || grupo === 'comprar') && typeof atualizarArea === 'function') setTimeout(atualizarArea, 0);
   if (grupo === 'saldo' && typeof renderHeroiDaVista === 'function') setTimeout(() => renderHeroiDaVista('saldo'), 0);
   if (typeof agendarPadronizar === 'function') agendarPadronizar();
   if (grupo === 'cartoes' && typeof renderHeroiCartoes === 'function') setTimeout(renderHeroiCartoes, 0);
@@ -14188,6 +14237,9 @@ function montarHeroi(alvo, o){
    finas: o peso visual fica só no painel.
    ══════════════════════════════════════════════════════════════════════════════ */
 function nomeDaSecao(){
+  /* com menu próprio, o título é o nome do item do menu (ex.: "Clubes e lojas") */
+  const ar = areaDe(vistaAtual), it = ar && ar.menu ? ar.menu.flatMap(g => g.itens).find(itemAberto) : null;
+  if (it) return it[2];
   const aba = document.querySelector(`#v-${vistaAtual} .abas .aba.on`);
   if (aba){ const p = aba.childNodes[0]; return ((p && p.nodeType === 3 ? p.textContent : aba.textContent) || '').trim(); }
   return (TITULOS[vistaAtual] || [''])[0];
@@ -14609,7 +14661,7 @@ function renderHeroiVendas(alvo){
   const c = document.getElementById(alvo.id + 'Curva');
   if (c) c.innerHTML = graficoMesesVendas() || '<p class="heroi-sub" style="padding:24px 0">Sem vendas no período para desenhar.</p>';
 }
-const PRINCIPAL_DA_AREA = {milhas:'saldo', viagens:'rota', negocio:'vendas', cartoes:'cartoes'};
+const PRINCIPAL_DA_AREA = {carteira:'saldo', viagens:'rota', negocio:'vendas', cartoes:'cartoes'};
 /* em Milhas, o painel com curva mora na seção Saldos, abaixo do título */
 function heroiMilhasNoLugar(el){
   const naSaldos = vistaAtual === 'saldo' && !!document.querySelector('#p-sl-carteira.on');
@@ -14886,7 +14938,7 @@ function renderHeroiDaVista(v){
   if (meu){ if (el.parentElement !== meu) meu.appendChild(el); }
   else if (palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
-  if (k === 'milhas'){ if (heroiMilhasNoLugar(el)) renderHeroiMilhas(); return; }
+  if (k === 'carteira'){ if (heroiMilhasNoLugar(el)) renderHeroiMilhas(); return; }
   if (k === 'viagens') renderHeroiViagens();
   if (k === 'cartoes'){ renderHeroiCartoes(); return; }
   if (k === 'negocio'){
@@ -34637,10 +34689,11 @@ function ajustarLarguraMenu(){
 }
 
 /* ir a uma seção de um módulo, a partir do menu */
-function irItemMenu(vv, a){
+function irItemMenu(vv, a, sub){
   const grupo = (document.querySelector(`#v-${vv} .abas`) || {dataset:{}}).dataset.grupo || vv;
-  if (vistaAtual !== vv){ irPara(vv); setTimeout(() => { irParaAba(grupo, a); marcarColunaMenu(); }, 0); }
-  else { irParaAba(grupo, a); marcarColunaMenu(); }
+  const depois = () => { if (sub && typeof mostrarGrupoCamp === 'function') mostrarGrupoCamp(sub); marcarColunaMenu(); setTimeout(atualizarArea, 0); };
+  if (vistaAtual !== vv){ irPara(vv); setTimeout(() => { irParaAba(grupo, a); depois(); }, 0); }
+  else { irParaAba(grupo, a); depois(); }
 }
 function montarColunaMenu(raiz, vistaMedida){
   const base = raiz || document;
@@ -34658,15 +34711,15 @@ function montarColunaMenu(raiz, vistaMedida){
     if (area.menu){
       area.menu.forEach((g, gi) => {
         if (gi) nav.insertAdjacentHTML('beforeend', '<div class="cm-ico-div" aria-hidden="true"></div>');
-        g.itens.forEach(([vv, a, nome, ic]) => {
+        g.itens.forEach(([vv, a, nome, ic, sub]) => {
           if (!document.getElementById('v-' + vv)) return;
-          const aberta = vv === v && !!document.querySelector(`#v-${vv} .abas .aba.on[data-aba="${a}"]`);
+          const aberta = vv === v && itemAberto([vv, a, nome, ic, sub]);
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'cm-ico' + (aberta ? ' on' : '');
           b.dataset.vista = vv; b.dataset.aba = a; b.dataset.dica = g.g ? g.g + ' · ' + nome : nome; b.dataset.dicaLado = 'direita';
           b.setAttribute('aria-label', nome);
           b.innerHTML = `<svg><use href="${ic}"/></svg>`;
-          b.onclick = () => irItemMenu(vv, a);
+          b.onclick = () => irItemMenu(vv, a, sub);
           nav.appendChild(b);
         });
       });
@@ -34694,21 +34747,23 @@ function montarColunaMenu(raiz, vistaMedida){
   /* área com menu próprio (Milhas): grupos pelo que se faz, itens com ícone */
   if (area.menu){
     area.menu.forEach(g => {
-      const atual = g.itens.some(([vv, a]) => vv === v && document.querySelector(`#v-${vv} .abas .aba.on[data-aba="${a}"]`));
+      const atual = g.itens.some(it => it[0] === v && itemAberto(it));
       if (g.g) nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${atual ? ' atual' : ''}">${esc(g.g)}</div>`);
-      g.itens.forEach(([vv, a, nome, ic]) => {
+      g.itens.forEach(([vv, a, nome, ic, sub]) => {
         const aba = document.querySelector(`#v-${vv} .abas .aba[data-aba="${a}"]`); if (!aba) return;
-        const aberta = vv === v && aba.classList.contains('on');
-        const selo = aba.querySelector('.selo, .aba-selo, .badge, .cont');
-        const sv = selo ? selo.textContent.trim() : '';
+        const it = [vv, a, nome, ic, sub];
+        const aberta = vv === v && itemAberto(it);
+        const selo = it[4] ? null : aba.querySelector('.selo, .aba-selo, .badge, .cont');
+        const sv = selo ? selo.textContent.trim() : (it[4] ? (it[4] === 'ct' ? ($('#cnGrupoCT') || {}).textContent : ($('#cnGrupoClube') || {}).textContent) || '' : '');
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'cm-item cm-modulo' + (aberta ? ' on' : '');
         b.dataset.vista = vv; b.dataset.aba = a;
         b.innerHTML = `<svg><use href="${ic}"/></svg><span>${esc(nome)}</span>${sv && sv !== '0' ? `<span class="cm-selo">${esc(sv)}</span>` : ''}`;
-        b.onclick = () => irItemMenu(vv, a);
+        if (it[4]) b.dataset.sub = it[4];
+        b.onclick = () => irItemMenu(vv, a, it[4]);
         nav.appendChild(b);
-        if (aberta){ const grp = (aba.closest('.abas') || {}).dataset ? aba.closest('.abas').dataset.grupo : vv; const sub = htmlSubmenu(grp, a); if (sub) nav.insertAdjacentHTML('beforeend', sub); }
+        if (aberta && !it[4]){ const grp = (aba.closest('.abas') || {}).dataset ? aba.closest('.abas').dataset.grupo : vv; const sub = htmlSubmenu(grp, a); if (sub) nav.insertAdjacentHTML('beforeend', sub); }
       });
     });
     return;
@@ -34772,6 +34827,14 @@ function montarColunaMenu(raiz, vistaMedida){
 function pintarBarraModulos(v){
   const bm = $('#barraModulos'); if (!bm) return;
   const area = areaDe(v);
+  if (area.menu && area.vistas.length > 1){
+    const its = area.menu.flatMap(g => g.itens);
+    document.body.classList.add('com-modulos'); document.body.classList.add('barra-itens');
+    bm.innerHTML = its.map((it, i) => `<button type="button" class="bm-item${itemAberto(it) ? ' on' : ''}" data-i="${i}"><svg><use href="${it[3]}"/></svg><span>${esc(({'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Compras inteligentes':'Compras'})[it[2]] || it[2])}</span></button>`).join('');
+    $$('.bm-item', bm).forEach(b => b.onclick = () => { const it = its[+b.dataset.i]; irItemMenu(it[0], it[1], it[4]); });
+    return;
+  }
+  document.body.classList.remove('barra-itens');
   const tem = area.vistas.length > 1;
   document.body.classList.toggle('com-modulos', tem);
   bm.innerHTML = tem ? area.vistas.map(vv => `<button type="button" class="bm-item${vv === v ? ' on' : ''}" data-vista="${vv}" aria-current="${vv === v}">
@@ -34789,7 +34852,8 @@ function marcarColunaMenu(){
   const chave = vistaAtual + '|' + (ativa ? ativa.dataset.aba : '') + '|' + (DB.cfg && DB.cfg.colunaFechada ? 1 : 0);
   if (chave !== _marcaColuna){ _marcaColuna = chave; montarColunaMenu(); }
   document.querySelectorAll('.cm-item[data-aba]').forEach(b => {
-    b.classList.toggle('on', !!ativa && b.dataset.vista === vistaAtual && b.dataset.aba === ativa.dataset.aba);
+    b.classList.toggle('on', !!ativa && b.dataset.vista === vistaAtual && b.dataset.aba === ativa.dataset.aba
+      && (!b.dataset.sub || (typeof campGrupo !== 'undefined' && campGrupo === b.dataset.sub)));
   });
   atualizarSubmenus();
 }
@@ -34842,6 +34906,7 @@ function renderVistaComprar(){
 /* ── Campanhas: compra e transferência, ou clubes e lojas ── */
 let campGrupo = 'ct';
 function mostrarGrupoCamp(g){
+  setTimeout(() => { if (typeof atualizarArea === 'function') atualizarArea(); if (typeof padronizarSecao === 'function') padronizarSecao(); }, 0);
   setTimeout(() => typeof agendarPadronizar === 'function' && agendarPadronizar(), 0);
   campGrupo = g === 'clube' ? 'clube' : 'ct';
   $$('#segCampGrupo button').forEach(b => b.classList.toggle('on', b.dataset.g === campGrupo));
@@ -37580,7 +37645,13 @@ function ligarEventos(){
   $$('.tb[data-vista]').forEach(b => b.onclick = () => {
     /* a área volta para o último módulo aberto nela */
     const ar = b.dataset.area && AREAS.find(a => a.k === b.dataset.area);
-    irPara(ar ? (ultimaDaArea[ar.k] || ar.vistas[0]) : b.dataset.vista);
+    if (!ar) return irPara(b.dataset.vista);
+    const u = ultimaDaArea[ar.k];
+    if (ar.menu){
+      const it = u && typeof u === 'object' ? [u.v, u.aba, '', '', u.sub] : ar.menu[0].itens[0];
+      return irItemMenu(it[0], it[1], it[4]);
+    }
+    irPara((u && u.v) || u || ar.vistas[0]);
   });
   if ($('#btSair')) $('#btSair').onclick = sairDaConta;
   ['#btPerfil', '#btPerfilTopo'].forEach(sel => { if ($(sel)) $(sel).onclick = abrirPerfil; });
