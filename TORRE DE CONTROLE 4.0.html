@@ -310,6 +310,9 @@ p:last-child{ margin-bottom:0; }
 .cp-criticas > div{ max-width:100%; }
 .cp-criticas > div > span{ white-space:normal; min-width:0; }
 @media (max-width:900px){ .cp-criticas > div{ white-space:normal; } }
+/* Três avisos só quando cabem numa linha; senão ficam dois, e o resto continua
+   em Regras Completas. */
+.cp-criticas > .cp-sobra{ display:none !important; }
 
 
 /* ── celular: empilha, e a régua ganha a largura toda ──────────────────────── */
@@ -10030,7 +10033,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 14:40';
+const BUILD = '2026-10-11 14:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19454,6 +19457,44 @@ function cartaoCampanha(c){
         aria-haspopup="dialog"><svg><use href="#i-info"/></svg>Regras Completas</button>` : ''}</div>` : ''}
   </article>`;
 }
+
+/* Os avisos do cartão de campanha (para quem vale, o que é obrigatório) ficam
+   numa linha só. Se os três cabem, ficam os três; se não cabem, ficam dois —
+   o obrigatório tem prioridade, porque esquecê-lo custa o bônus. O que sai
+   continua inteiro em Regras Completas. Refeito quando a largura muda. */
+function encaixarCriticas(box){
+  const itens = [...box.children].filter(e => e.tagName === 'DIV');
+  itens.forEach(e => e.classList.remove('cp-sobra'));
+  if (itens.length < 3 || !box.offsetWidth) return;
+  const rs = itens.map(e => e.getBoundingClientRect());
+  const fundo = Math.min(...rs.map(r => r.bottom));
+  if (rs.every(r => r.top < fundo - 1)) return;
+  const ordem = itens.map((e, i) => ({e, i, pri: e.classList.contains('regra-limite') ? 0 : 1}))
+    .sort((a, b) => a.pri - b.pri || a.i - b.i);
+  ordem.slice(2).forEach(o => o.e.classList.add('cp-sobra'));
+}
+const _larguraCriticas = new WeakMap();
+const _obsCriticas = window.ResizeObserver ? new ResizeObserver(ents => {
+  ents.forEach(en => {
+    const w = Math.round(en.contentRect.width);
+    if (_larguraCriticas.get(en.target) === w) return;
+    _larguraCriticas.set(en.target, w);
+    encaixarCriticas(en.target);
+  });
+}) : null;
+let _pendCriticas = false;
+function vigiarCriticas(){
+  if (_pendCriticas) return; _pendCriticas = true;
+  requestAnimationFrame(() => {
+    _pendCriticas = false;
+    document.querySelectorAll('.cp > .cp-criticas').forEach(box => {
+      if (box._vigiado){ return; }
+      box._vigiado = true;
+      if (_obsCriticas) _obsCriticas.observe(box); else encaixarCriticas(box);
+    });
+  });
+}
+if (window.MutationObserver) new MutationObserver(vigiarCriticas).observe(document.documentElement, {childList:true, subtree:true});
 
 function renderCampanhas(){
   aplicarCondicoesCampanhas();
