@@ -10200,7 +10200,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 16:20';
+const BUILD = '2026-10-11 16:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15281,7 +15281,11 @@ function janelaSerie(o){
   const vals = l.map(x => x.v), total = soma(vals), media = total / l.length, mx = Math.max(...vals), imx = vals.indexOf(mx);
   abrirJanela(o.dirRot || 'Mês a mês', `${esc(o.dirSub || '')}`, `
     <div class="jn-kpis">
-      <div><span>Soma</span><b>${esc(f(total))}</b></div><div><span>Média</span><b>${esc(f(media))}</b></div><div><span>Maior</span><b>${esc(f(mx))}</b><small>${esc(l[imx].r)}</small></div>
+      ${/%\s*$/.test(String(f(1))) ? (() => { const mn = Math.min(...vals), imn = vals.indexOf(mn);
+        /* Percentual não se soma: 1.318% de "soma de bônus" não quer dizer nada. Na série em
+           porcentagem, o terceiro número é o menor mês. */
+        return `<div><span>Média</span><b>${esc(f(media))}</b></div><div><span>Maior</span><b>${esc(f(mx))}</b><small>${esc(l[imx].r)}</small></div><div><span>Menor</span><b>${esc(f(mn))}</b><small>${esc(l[imn].r)}</small></div>`; })()
+        : `<div><span>Soma</span><b>${esc(f(total))}</b></div><div><span>Média</span><b>${esc(f(media))}</b></div><div><span>Maior</span><b>${esc(f(mx))}</b><small>${esc(l[imx].r)}</small></div>`}
     </div>
     <div class="jn-lista">${l.slice().reverse().map((x, j) => { const i = l.length - 1 - j, ant = i > 0 ? l[i - 1].v : null, d = ant != null && ant !== 0 ? (x.v - ant) / Math.abs(ant) * 100 : null;
       return `<div class="jn-linha"><span class="jn-mes">${esc(x.r)}</span>
@@ -17264,7 +17268,7 @@ function irParaPartePanorama(n){
    e o Fechar em vermelho no rodapé. A página fica limpa; o detalhe ganha espaço
    para ser explicado em linguagem de quem está começando.
    ══════════════════════════════════════════════════════════════════════════════ */
-function abrirJanela(o){
+function abrirJanelaInfo(o){
   let d = document.getElementById('dlgInfo');
   if (!d){
     d = document.createElement('dialog');
@@ -17399,7 +17403,7 @@ function abrirDetalheRadar(p, tipo, gatilho){
       + `<p class="dj-nota">Aqui menor é melhor: é quanto custam mil pontos. As faixas são as mesmas do termômetro e se ajustam em Ajustes → Programas.</p>`;
   }
 
-  abrirJanela({
+  abrirJanelaInfo({
     gatilho, discos: discoProg(p), titulo: esc(prog(p).n),
     sub: `${bonus ? 'Bônus de transferência' : tipo === 'compra' ? 'Compra de pontos' : 'Clube'} · últimos ${nomeJ}`,
     rotulo: 'Histórico', icone: 'grafico',
@@ -17440,7 +17444,7 @@ function abrirHistoricoCampanha(id, gatilho){
   ].filter(Boolean);
   const limHtml = lim.length ? `<div class="dj-fatos">${lim.map(([n, v, e]) => `<div class="dj-fato"><span>${n}</span><b>${v}</b><small>${e}</small></div>`).join('')}</div>` : '';
 
-  abrirJanela({
+  abrirJanelaInfo({
     gatilho, tom: 'info',
     discos: (c.de ? discoProg(c.de) + '<svg class="cp-seta"><use href="#i-seta-d"/></svg>' : '') + discoProg(c.para),
     titulo: nomeRota, sub: `${fmtMedida(met, atual)} ${met.reais ? 'o milheiro' : 'de bônus'}${c.fim ? ' · até ' + dataBR(c.fim) : ''}`,
@@ -17456,7 +17460,7 @@ function abrirHistoricoCampanha(id, gatilho){
 function abrirGuiaAba(k, gatilho){ abrirGuia(GUIA_ABA[k], gatilho); }
 function abrirGuia(g, gatilho){
   if (!g) return;
-  abrirJanela({
+  abrirJanelaInfo({
     gatilho, titulo: esc(g.t.replace(/^Como ler (a aba )?(de |do |da |o |a )?/i, '').replace(/^./, m => m.toUpperCase())),
     sub: 'Guia rápido em quatro perguntas', rotulo: 'Como ler', icone: 'info', larga: true,
     corpo: `<div class="dj-guia">${g.blocos.map((b, i) => `<section class="dj-guia-b">
