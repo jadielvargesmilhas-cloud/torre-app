@@ -4559,6 +4559,43 @@ a.bt{ text-decoration:none; }
 }
 .radar-noar .cp-olho{ margin:-4px -5px -4px 0; }
 .radar-noar .ponto{ color:var(--jade); }
+/* Com o veredito dentro, a faixa "no ar" ganha a cor da resposta e uma segunda
+   linha: a pessoa lê a oferta e, logo abaixo, se ela vale a pena. */
+/* Grade de três colunas: ponto, texto, olhinho. O veredito ocupa a linha de
+   baixo sob o texto. Com flex, no celular o ponto e o olhinho caíam soltos. */
+.radar-noar{ display:grid; grid-template-columns:auto 1fr auto; column-gap:8px; row-gap:4px; align-items:center; }
+.radar-noar > .esticar{ display:none; }
+.radar-noar > .ponto{ grid-column:1; }
+.radar-noar > span:not(.rn-ver):not(.esticar){ grid-column:2; line-height:1.4; }
+.radar-noar > .cp-olho{ grid-column:3; grid-row:1; }
+.radar-noar .rn-ver{ grid-column:2 / 4; font-weight:600; line-height:1.4; font-size:calc(12.5px * var(--esc)); }
+.radar-noar.v-topo{ border-color:color-mix(in oklab, var(--jade) 50%, transparent); background:color-mix(in oklab, var(--jade) 10%, transparent); }
+.radar-noar.v-topo .rn-ver{ color:var(--jade); }
+.radar-noar.v-meio{ border-color:color-mix(in oklab, var(--ouro) 55%, transparent); background:color-mix(in oklab, var(--ouro) 11%, transparent); }
+.radar-noar.v-meio .rn-ver{ color:color-mix(in oklab, var(--ouro) 70%, var(--giz)); }
+.radar-noar.v-baixo{ border-color:color-mix(in oklab, var(--brasa) 45%, transparent); background:color-mix(in oklab, var(--brasa) 8%, transparent); }
+.radar-noar.v-baixo .rn-ver{ color:var(--brasa); }
+
+/* ── camadas de leitura ──────────────────────────────────────────────────────
+   Primeiro o que decide, à vista; o resto atrás de "Mais detalhes". Quem está
+   começando lê o cartão em segundos; quem quer o histórico abre. */
+.mais-det{ margin-top:12px; }
+.mais-det > summary{
+  list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  font-size:calc(12.5px * var(--esc)); font-weight:600; color:var(--anil-claro);
+  padding:4px 2px; border-radius:6px; user-select:none;
+}
+.mais-det > summary::-webkit-details-marker{ display:none; }
+.mais-det > summary svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; transition:transform .18s var(--ease); }
+.mais-det[open] > summary svg{ transform:rotate(180deg); }
+.mais-det > summary .fe{ display:none; }
+.mais-det[open] > summary .ab{ display:none; }
+.mais-det[open] > summary .fe{ display:inline; }
+.mais-det > summary:hover{ text-decoration:underline; }
+.mais-det > summary:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:2px; }
+.mais-det > .mais-corpo{ padding-top:12px; }
+.mais-corpo .cp-fatos-extra{ margin-top:12px; }
+.mais-corpo .cp-janelas{ margin-top:0; }
 .radar-noar b{ color:var(--jade); }
 .radar-noar .esticar{ flex:1; }
 .radar-data{
@@ -4781,6 +4818,14 @@ a.bt{ text-decoration:none; }
 .posicao-serie.topo{
   background:color-mix(in oklab, var(--jade) 12%, transparent);
   color:var(--jade); font-weight:600;
+}
+.posicao-serie.meio{
+  background:color-mix(in oklab, var(--ouro) 13%, transparent);
+  color:color-mix(in oklab, var(--ouro) 70%, var(--giz)); font-weight:600;
+}
+.posicao-serie.baixo{
+  background:color-mix(in oklab, var(--brasa) 11%, transparent);
+  color:var(--brasa); font-weight:600;
 }
 
 /* estado de amostra magra: em vez de um gráfico com uma barra só, o número de
@@ -10050,7 +10095,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 15:10';
+const BUILD = '2026-10-11 15:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -10489,6 +10534,51 @@ function posicaoNaSerie(valor, serie, maiorMelhor){
   const pct = clamp((v.length - melhores) / v.length * 100, 0, 100);
   return {posicao, total:v.length, melhores, pct, recorde:melhores === 0};
 }
+/* O quadro de leitura do radar. Com campanha no ar, ele julga A OFERTA ABERTA
+   contra as campanhas já encerradas do período, que é a pergunta de quem olha:
+   "esta vale a pena?". Antes ele dizia "É o melhor das N campanhas" sobre o
+   maior valor da série, o que é sempre verdade por definição e, ao lado da
+   campanha aberta, se lia como elogio a ela.
+   Sem campanha no ar, julga a última encerrada contra as demais.
+   `itens`: [{v, c}] em ordem de data; `maior`: true quando maior é melhor;
+   `fmt`: formata o valor; `topoClube`: o degrau mais alto de clube da aberta. */
+function quadroLeituraRadar(itens, maior, fmt, topoClube){
+  const vivo = x => (diasAte(x.c.fim) ?? -1) >= 0;
+  const abertas = itens.filter(vivo), fechadas = itens.filter(x => !vivo(x));
+  const melhorDe = arr => arr.slice().sort((a, b) => maior ? b.v - a.v : a.v - b.v)[0];
+  const ganha = (a, b) => maior ? a > b : a < b;
+  const dm = x => dataBR(x.c.fim).slice(0, 5);
+  const caixa = (tom, ic, txt) => `<div class="posicao-serie ${tom}"><svg><use href="#i-${ic}"/></svg><span>${txt}</span></div>`;
+  if (abertas.length){
+    const ag = melhorDe(abertas);
+    if (!fechadas.length) return caixa('', 'info', `Sem campanha encerrada no período para comparar com a do ar (${fmt(ag.v)}).`);
+    const acima = fechadas.filter(x => ganha(x.v, ag.v)).length;
+    const top = melhorDe(fechadas);
+    const med = mediana(fechadas.map(x => x.v));
+    let tom, ic, txt;
+    if (!acima){
+      tom = 'topo'; ic = 'alvo';
+      const n = fechadas.length, emp = fechadas.some(x => x.v === ag.v);
+      txt = n === 1 ? `A campanha no ar (${fmt(ag.v)}) ${emp ? 'empata com' : 'supera'} a única anterior do período.`
+        : `A campanha no ar (${fmt(ag.v)}) ${emp ? 'empata com a melhor' : 'supera todas'} das ${n} anteriores do período.`;
+    } else {
+      tom = ganha(ag.v, med) || ag.v === med ? 'meio' : 'baixo'; ic = 'alerta';
+      const n = fechadas.length;
+      const quem = n === 1 ? 'da única anterior do período' : acima === n ? `de todas as ${n} anteriores do período` : `de ${acima} das ${n} anteriores do período`;
+      txt = `A campanha no ar (${fmt(ag.v)}) fica atrás ${quem}. ${n === 1 ? 'Ela pagou' : 'A melhor foi'} ${fmt(top.v)} em ${dm(top)}.`;
+    }
+    if (topoClube != null && ganha(topoClube, ag.v))
+      txt += ` No degrau mais alto de clube, chega a ${fmt(topoClube)}${fechadas.some(x => ganha(x.v, topoClube)) ? ', ainda abaixo da melhor' : ''}.`;
+    return caixa(tom, ic, txt);
+  }
+  if (fechadas.length < 2) return '';
+  const ult = fechadas[fechadas.length - 1], resto = fechadas.slice(0, -1);
+  const acima = resto.filter(x => ganha(x.v, ult.v)).length;
+  return acima
+    ? caixa('', 'grafico', `A última campanha (${fmt(ult.v)} em ${dm(ult)}) ficou atrás ${resto.length === 1 ? 'da única anterior' : acima === resto.length ? `de todas as ${resto.length} anteriores` : `de ${acima} das ${resto.length} anteriores`} do período.`)
+    : caixa('topo', 'alvo', `A última campanha (${fmt(ult.v)} em ${dm(ult)}) foi a melhor do período.`);
+}
+
 /* Frase pronta, porque a mesma leitura aparece em vários painéis. */
 function fraseposicao(p){
   if (!p) return '';
@@ -17061,9 +17151,42 @@ function irParaPartePanorama(n){
 
 /* O cartão de um destino no Radar de bônus. Separado da grade para ser o MESMO
    cartão na grade e na janela do olhinho, sem cópia que possa divergir. */
+/* "Mais detalhes": a segunda camada de leitura, recolhida. */
+function maisDetalhes(html, rot){
+  if (!html || !String(html).trim()) return '';
+  return `<details class="mais-det"><summary><span class="ab">${rot || 'Mais detalhes'}</span><span class="fe">Menos detalhes</span><svg><use href="#i-baixo"/></svg></summary><div class="mais-corpo">${html}</div></details>`;
+}
+
+/* O veredito curto da campanha no ar contra as encerradas do período, para a
+   faixa "no ar". Devolve null quando não há campanha aberta. */
+function vereditoNoAr(itens, maior, fmt, base, topo){
+  const vivo = x => (diasAte(x.c.fim) ?? -1) >= 0;
+  const abertas = itens.filter(vivo), fechadas = itens.filter(x => !vivo(x));
+  if (!abertas.length) return null;
+  const v = base != null ? base : abertas.map(x => x.v).sort((a, b) => maior ? b - a : a - b)[0];
+  const ganha = (a, b) => maior ? a > b : a < b;
+  const lead = topo != null && ganha(topo, v) ? `Na base, ${fmt(v)}` : fmt(v);
+  if (!fechadas.length) return {tom:'', txt:'Sem campanha anterior no período para comparar.'};
+  const n = fechadas.length;
+  const top = fechadas.slice().sort((a, b) => maior ? b.v - a.v : a.v - b.v)[0];
+  const quando = x => `${fmt(x.v)} em ${dataBR(x.c.fim).slice(0, 5)}`;
+  const acima = fechadas.filter(x => ganha(x.v, v)).length;
+  if (!acima){
+    const emp = fechadas.some(x => x.v === v);
+    return {tom:'topo', txt: n === 1
+      ? `${lead} ${emp ? 'empata com' : 'supera'} a anterior (${quando(top)}).`
+      : `${lead} ${emp ? 'empata com a melhor das' : 'supera todas as'} ${n} anteriores.`};
+  }
+  const med = mediana(fechadas.map(x => x.v));
+  const tom = ganha(v, med) || v === med ? 'meio' : 'baixo';
+  if (n === 1) return {tom, txt:`${lead} fica abaixo da anterior (${quando(top)}).`};
+  return {tom, txt:`${lead} fica atrás de ${acima === n ? 'todas as ' + n : acima + ' das ' + n} anteriores. Melhor: ${quando(top)}.`};
+}
+
 /* A linha "no ar" dos cartões do radar: a melhor oferta aberta para o destino
-   (com o degrau mais alto de clube, quando há) e o atalho para o cartão dela. */
-function linhaNoArRadar(p, tipo){
+   (com o degrau mais alto de clube, quando há) e o atalho para o cartão dela.
+   `ver`: o veredito curto, que vira a segunda linha e dá a cor da faixa. */
+function linhaNoArRadar(p, tipo, ver){
   const vivas = campanhasVivas(tipo).filter(c => c.para === p);
   if (!vivas.length) return '';
   const topo = c => { const dg = tipo === 'transferencia' ? degrausClube(c) : null;
@@ -17075,17 +17198,23 @@ function linhaNoArRadar(p, tipo){
   const d = diasAte(melhor.fim);
   const prazo = d === null ? '' : d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `fecha em ${d} dias`;
   const qtd = vivas.length > 1 ? ` · ${vivas.length} rotas` : '';
-  return `<div class="radar-noar">
+  return `<div class="radar-noar${ver ? ' com-ver' + (ver.tom ? ' v-' + ver.tom : '') : ''}">
     <i class="ponto pulsa"></i><span>No ar ${oferta}${qtd}${prazo ? ' · ' + prazo : ''}</span>
     <span class="esticar"></span><button type="button" class="cp-olho" onclick="irParaCampanha('${melhor.id}')"
-      aria-label="Ver Campanha" data-dica="Ver Campanha"><svg><use href="#i-olho"/></svg></button></div>`;
+      aria-label="Ver Campanha" data-dica="Ver Campanha"><svg><use href="#i-olho"/></svg></button>
+    ${ver ? `<span class="rn-ver">${esc(ver.txt)}</span>` : ''}</div>`;
 }
 
 function cartaoRadarBonus(p, janela){
       const r = radarBonus(p, janela);
       const ref = refBonus(p);
       const teto = Math.max(ref.recorde, r.melhor || 0);
-      const leitura = lerBonus(p, r.melhor);
+      /* Com campanha no ar, a etiqueta e a agulha falam da oferta aberta: são
+         lidas ao lado da linha "No ar" e seriam tomadas como nota dela. */
+      const abertaB = r.campanhas.filter(c => (diasAte(c.fim) ?? -1) >= 0)
+        .sort((a, b) => (Number(b.bonus) || 0) - (Number(a.bonus) || 0))[0];
+      const valorLido = abertaB ? Number(abertaB.bonus) || 0 : r.melhor;
+      const leitura = lerBonus(p, valorLido);
       const barras = r.campanhas.slice(-8);
       const maiorBarra = Math.max(...barras.map(c => c.bonus || 0));
       /* A altura da barra se mede contra o TETO DO PROGRAMA, não contra a maior
@@ -17108,16 +17237,11 @@ function cartaoRadarBonus(p, janela){
           <div class="esticar"></div>
           <span class="etq ${leitura.z}">${esc(leitura.n)}</span>
         </div>
-        ${linhaNoArRadar(p, 'transferencia')}
-
-        <div class="grade radar-kpis" style="grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px">
-          <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">Melhor</div>
-            <div class="num" style="font-size:calc(16px * var(--esc));color:var(--ouro)">+${r.melhor}%</div></div>
-          <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">${r.n >= 3 ? (r.nomeRef === 'mediana' ? 'Mediana' : 'Média') : 'Típico'}</div>
-            <div class="num" style="font-size:calc(16px * var(--esc));${r.n >= 3 ? '' : 'color:var(--grafite-dim)'}">${r.n >= 3 ? '+' + Math.round(r.mediana) + '%' : 'n/d'}</div></div>
-          <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">Ofertas</div>
-            <div class="num" style="font-size:calc(16px * var(--esc))">${r.n}</div></div>
-        </div>
+        ${(() => { const dg = abertaB ? degrausClube(abertaB) : null;
+          const topoC = dg ? Math.max(...dg.pts.map(x => Number(x.total) || 0)) : null;
+          const fmtB = v => '+' + nBRdec(v) + '%';
+          return linhaNoArRadar(p, 'transferencia',
+            vereditoNoAr(r.campanhas.map(c => ({v:Number(c.bonus) || 0, c})), true, fmtB, abertaB ? Number(abertaB.bonus) || 0 : null, topoC)); })()}
 
         ${temSerie ? `<div class="radar-barras${barras.length > 6 ? ' densa' : ''}">
           ${barras.map(c => {
@@ -17134,13 +17258,7 @@ function cartaoRadarBonus(p, janela){
               <span class="radar-data${viva ? ' vivo' : ''}">${dataBR(c.fim).slice(0, 5)}</span>
             </div>`;
           }).join('')}
-        </div>
-        <div class="fraco" style="font-size:calc(12px * var(--esc));margin:9px 0 14px">${
-          r.n > barras.length ? `Últimas ${barras.length} de ${r.n} campanhas` : `${r.n} campanha${r.n > 1 ? 's' : ''}`} deste destino; altura medida contra o recorde do programa.${
-          r.n < 3 ? ' Amostra pequena: ainda não é padrão.' : ' A barra em ouro é o melhor do período.'}${
-          barras.some(c => (diasAte(c.fim) ?? -1) >= 0) ? ' A listrada em verde está no ar.' : ''}</div>
-        ${(() => { const pos = posicaoNaSerie(r.melhor, r.serie, true);
-          return pos ? `<div class="posicao-serie${pos.recorde ? ' topo' : ''}"><svg><use href="#i-${pos.recorde ? 'alvo' : 'grafico'}"/></svg><span>${esc(fraseposicao(pos))}</span></div>` : ''; })()}`
+        </div>`
         : `<div class="radar-magro">
             <div class="radar-magro-n">${r.n}</div>
             <div>
@@ -17149,6 +17267,16 @@ function cartaoRadarBonus(p, janela){
             </div>
           </div>`}
 
+        ${maisDetalhes(`
+        <div class="grade radar-kpis" style="grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px">
+          <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">Melhor</div>
+            <div class="num" style="font-size:calc(16px * var(--esc));color:var(--ouro)">+${r.melhor}%</div></div>
+          <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">${r.n >= 3 ? (r.nomeRef === 'mediana' ? 'Mediana' : 'Média') : 'Típico'}</div>
+            <div class="num" style="font-size:calc(16px * var(--esc));${r.n >= 3 ? '' : 'color:var(--grafite-dim)'}">${r.n >= 3 ? '+' + Math.round(r.mediana) + '%' : 'n/d'}</div></div>
+          <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">Ofertas</div>
+            <div class="num" style="font-size:calc(16px * var(--esc))">${r.n}</div></div>
+        </div>
+        ${abertaB ? '' : quadroLeituraRadar(r.campanhas.map(c => ({v:Number(c.bonus) || 0, c})), true, v => '+' + nBRdec(v) + '%', null)}
         <div class="regua-bonus" data-dica-tabela="${esc(dicaFicha('Régua deste programa', [
           `Fraco até +${ref.fraco}%`, `Bom a partir de +${ref.bom}%`,
           `Ótimo a partir de +${ref.otimo}%`, `Recorde conhecido +${ref.recorde}%`,
@@ -17157,7 +17285,7 @@ function cartaoRadarBonus(p, janela){
           <i class="ouro"  style="flex:${ref.bom - ref.fraco}"></i>
           <i class="neutra" style="flex:${ref.otimo - ref.bom}"></i>
           <i class="jade"  style="flex:${Math.max(1, teto - ref.otimo)}"></i>
-          <span class="regua-agulha" style="left:${clamp(r.melhor / teto * 100, 0, 100)}%"></span>
+          <span class="regua-agulha" style="left:${clamp(valorLido / teto * 100, 0, 100)}%" data-dica="${abertaB ? 'Campanha no ar' : 'Melhor do período'}: +${nBRdec(valorLido)}%"></span>
         </div>
         <div class="linha" style="justify-content:space-between;margin-top:5px">
           <span class="fraco" style="font-size:calc(11.5px * var(--esc))">0%</span>
@@ -17165,6 +17293,9 @@ function cartaoRadarBonus(p, janela){
         </div>
         ${ref.janela ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:10px;line-height:1.5">Janela histórica: ${esc(minusculaInicial(ref.janela))}.</div>` : ''}
         ${ref.semRef ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:8px;line-height:1.5">Sem referência de mercado publicada para este programa. A régua é neutra e serve só para comparar com o próprio histórico.</div>` : ''}
+        <div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:10px;line-height:1.5">${
+          r.n > barras.length ? `Últimas ${barras.length} de ${r.n} campanhas` : `${r.n} campanha${r.n > 1 ? 's' : ''}`} deste destino; altura medida contra o recorde do programa.${
+          r.n < 3 ? ' Amostra pequena: ainda não é padrão.' : ' A barra em ouro é o melhor do período.'}</div>`)}
       </div>`;
     }
 
@@ -17175,8 +17306,11 @@ function cartaoRadarMilheiro(p, r, tipo, janela){
      "R$ 17,20" encavalava no do lado. A partir de cinco, só o número. */
       const f = faixasDe(p);
       const teto = Math.max(f.razoavel * 1.25, r.melhor || 0);
-      const z = r.melhor <= f.otimo ? 'jade' : r.melhor <= f.alvo ? 'aco' : r.melhor <= f.razoavel ? 'ouro' : 'brasa';
-      const nz = r.melhor <= f.otimo ? 'ótimo' : r.melhor <= f.alvo ? 'no alvo' : r.melhor <= f.razoavel ? 'razoável' : 'caro';
+      /* Com campanha no ar, etiqueta e agulha julgam a oferta aberta. */
+      const vivasM = r.campanhas.filter(x => (diasAte(x.c.fim) ?? -1) >= 0);
+      const lidoM = vivasM.length ? Math.min(...vivasM.map(x => x.cpm)) : r.melhor;
+      const z = lidoM <= f.otimo ? 'jade' : lidoM <= f.alvo ? 'aco' : lidoM <= f.razoavel ? 'ouro' : 'brasa';
+      const nz = lidoM <= f.otimo ? 'ótimo' : lidoM <= f.alvo ? 'no alvo' : lidoM <= f.razoavel ? 'razoável' : 'caro';
       const barras = r.campanhas.slice(-8);
       const melhorV = Math.min(...barras.map(x => x.cpm));
       return `<div class="cartao" style="background:var(--sup-0)">
@@ -17184,7 +17318,25 @@ function cartaoRadarMilheiro(p, r, tipo, janela){
           ${discoProg(p, 'p')}<b>${esc(prog(p).n)}</b><div class="esticar"></div>
           <span class="etq ${z}">${nz}</span>
         </div>
-        ${linhaNoArRadar(p, tipo)}
+        ${linhaNoArRadar(p, tipo, vereditoNoAr(r.campanhas.map(x => ({v:x.cpm, c:x.c})), false, v => brl2(v), null, null))}
+        <div class="radar-barras${barras.length > 4 ? ' densa' : ''}">
+          ${barras.map(({cpm, c}) => {
+            const alt = Math.max(6, clamp(cpm / teto * 100, 0, 100));
+            const best = cpm === melhorV;
+            const viva = (diasAte(c.fim) ?? -1) >= 0;
+            return `<div class="radar-col" data-dica-tabela="${esc(dicaFicha(c.titulo || 'Campanha', [
+              `${brl2(cpm)} o milheiro`,
+              c.bonus ? `${c.bonus}% de bônus` : '', c.desconto ? `${c.desconto}% de desconto` : '',
+              `${viva ? 'No ar até' : 'Terminou em'} ${dataBR(c.fim)}`]))}">
+              <span class="radar-caixa">
+                <span class="radar-val${best ? ' melhor' : ''}">${
+                  barras.length > 4 ? nBR2(cpm) : brl2(cpm)}</span>
+                <span class="radar-barra${viva ? ' vivo' : best ? ' melhor' : ''}" style="height:${alt}%"></span></span>
+              <span class="radar-data${viva ? ' vivo' : ''}">${dataBR(c.fim).slice(0, 5)}</span>
+            </div>`;
+          }).join('')}
+        </div>
+        ${maisDetalhes(`
         <div class="grade radar-kpis" style="grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px">
           <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">Melhor</div>
             <div class="num" style="font-size:calc(15px * var(--esc));color:var(--ouro)">${brl2(r.melhor)}</div></div>
@@ -17193,26 +17345,7 @@ function cartaoRadarMilheiro(p, r, tipo, janela){
           <div><div class="olho" style="margin:0 0 2px;font-size:calc(11px * var(--esc))">Ofertas</div>
             <div class="num" style="font-size:calc(15px * var(--esc))">${r.n}</div></div>
         </div>
-        <div class="radar-barras${barras.length > 4 ? ' densa' : ''}">
-          ${barras.map(({cpm, c}) => {
-            const alt = Math.max(6, clamp(cpm / teto * 100, 0, 100));
-            const best = cpm === melhorV;
-            return `<div class="radar-col" data-dica-tabela="${esc(dicaFicha(c.titulo || 'Campanha', [
-              `${brl2(cpm)} o milheiro`,
-              c.bonus ? `${c.bonus}% de bônus` : '', c.desconto ? `${c.desconto}% de desconto` : '',
-              `Terminou em ${dataBR(c.fim)}`]))}">
-              <span class="radar-caixa">
-                <span class="radar-val${best ? ' melhor' : ''}">${
-                  barras.length > 4 ? nBR2(cpm) : brl2(cpm)}</span>
-                <span class="radar-barra${best ? ' melhor' : ''}" style="height:${alt}%"></span></span>
-              <span class="radar-data">${dataBR(c.fim).slice(0, 5)}</span>
-            </div>`;
-          }).join('')}
-        </div>
-        <div class="fraco" style="font-size:calc(12px * var(--esc));margin:9px 0 14px">${
-          r.n > barras.length ? `Últimas ${barras.length} de ${r.n} campanhas` : `${r.n} campanha${r.n > 1 ? 's' : ''}`}; barra menor é milheiro melhor. A de ouro é a mais barata.${r.n < 3 ? ' Amostra pequena.' : ''}</div>
-        ${(() => { const pos = posicaoNaSerie(r.melhor, r.serie, false);
-          return pos ? `<div class="posicao-serie${pos.recorde ? ' topo' : ''}"><svg><use href="#i-${pos.recorde ? 'alvo' : 'grafico'}"/></svg><span>${esc(fraseposicao(pos))}</span></div>` : ''; })()}
+        ${vivasM.length ? '' : quadroLeituraRadar(r.campanhas.map(x => ({v:x.cpm, c:x.c})), false, v => brl2(v), null)}
         <div class="regua-bonus" data-dica-tabela="${esc(dicaFicha('Faixas deste programa', [
           `Ótimo até ${brl2(f.otimo)}`, `Alvo até ${brl2(f.alvo)}`, `Razoável até ${brl2(f.razoavel)}`,
           'As mesmas faixas do termômetro, ajustáveis em Sistema → Programas']))}">
@@ -17220,12 +17353,14 @@ function cartaoRadarMilheiro(p, r, tipo, janela){
           <i class="neutra" style="flex:${Math.max(1, f.alvo - f.otimo)}"></i>
           <i class="ouro" style="flex:${Math.max(1, f.razoavel - f.alvo)}"></i>
           <i class="ruim" style="flex:${Math.max(1, teto - f.razoavel)}"></i>
-          <span class="regua-agulha" style="left:${clamp(r.melhor / teto * 100, 0, 100)}%"></span>
+          <span class="regua-agulha" style="left:${clamp(lidoM / teto * 100, 0, 100)}%"></span>
         </div>
         <div class="linha" style="justify-content:space-between;margin-top:5px">
           <span class="fraco" style="font-size:calc(11.5px * var(--esc))">R$ 0</span>
           <span class="fraco" style="font-size:calc(11.5px * var(--esc))">${brl2(teto)}</span>
         </div>
+        <div class="fraco" style="font-size:calc(12px * var(--esc));margin-top:10px;line-height:1.5">${
+          r.n > barras.length ? `Últimas ${barras.length} de ${r.n} campanhas` : `${r.n} campanha${r.n > 1 ? 's' : ''}`}; barra menor é milheiro melhor. A de ouro é a mais barata.${r.n < 3 ? ' Amostra pequena.' : ''}</div>`)}
       </div>`;
     }
 
@@ -17243,7 +17378,7 @@ function renderRadarBonus(){
   if (cab) cab.innerHTML = tipo === 'bonificada'
     ? 'Quantos pontos por real cada programa já pagou em compras nas lojas parceiras, no melhor degrau de clube. Aqui maior é melhor.'
     : tipo === 'transferencia'
-    ? 'O que cada destino andou pagando de bônus. A régua é por programa: 39% na LATAM é excelente, 39% na Azul é fraco.'
+    ? 'Quanto cada programa pagou de bônus. A barra listrada é a campanha no ar.'
     : tipo === 'compra'
       ? 'O milheiro que cada campanha de compra produziu. Aqui menor é melhor, e porcentagem não serve de medida: 365% de bônus e 63% de desconto não se comparam.'
       : 'O melhor milheiro que cada campanha de clube ofereceu, já com o desconto do cartão. Menor é melhor.';
@@ -19428,6 +19563,17 @@ function cartaoCampanha(c){
   const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
     : dias === 0 ? 'Fecha hoje' : dias === 1 ? 'Fecha amanhã' : `Fecha em ${dias} dias`;
 
+  /* Limites, mínimo e carrinho são consulta, não decisão: ficam na segunda
+     camada, junto do histórico por janela. À vista fica o milheiro projetado,
+     que já resume tudo isso num número. */
+  const fatosExtra = [
+    c.limite ? `<span class="cp-fato">Limite de <b>${nBR(c.limite)}</b> por CPF</span>` : '',
+    c.limiteClube ? `<span class="cp-fato">Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube</span>` : '',
+    c.minimo ? `<span class="cp-fato">Mínimo de <b>${nBR(c.minimo)}</b></span>` : '',
+    c.carrinho ? `<span class="cp-fato" data-dica="Sujeito a alterações: o carrinho muda ao longo do dia.">Carrinho a <b>${brl2(c.carrinho)}</b> por mil${quandoCarrinho(c) && !quandoCarrinho(c).velho ? ` <small class="fraco">${esc(quandoCarrinho(c).txt.replace('informado ', ''))}</small>` : ''}</span>` : ''
+  ].filter(Boolean).join('');
+  const fatosExtraHtml = fatosExtra ? `<div class="cp-fatos cp-fatos-extra">${fatosExtra}</div>` : '';
+
   return `<article class="cp cp-${urg}" data-camp-id="${esc(c.id)}">
     <header class="cp-cab">
       <div class="cp-rota">
@@ -19464,7 +19610,7 @@ function cartaoCampanha(c){
           ${marcas}
           <span class="cp-atual" style="left:${pos(atual)}%"><b>${fmtMedida(met, atual)}</b></span>
         </div>
-        <div class="cp-janelas">
+        ${maisDetalhes(`<div class="cp-janelas">
           ${refs.map(r => {
             if (!r.melhor) return `<div class="cp-jan"><span>${r.rot}</span><b class="fraco">sem outra</b></div>`;
             const d = Math.round((atual - r.valor) * 100) / 100;
@@ -19478,17 +19624,13 @@ function cartaoCampanha(c){
               <b>${fmtMedida(met, r.valor)} <small>${mesAnoCurto(r.melhor.fim)}</small></b>
               <em class="cp-${tom}">${txtD}</em></div>`;
           }).join('')}
-        </div>` : `<p class="cp-sem-hist">Cada campanha nova desta rota que você cadastrar passa a servir de régua para as próximas.</p>`}
+        </div>${fatosExtraHtml}`, fatosExtra ? 'Histórico e limites' : 'Histórico')}` : `${fatosExtraHtml ? maisDetalhes(fatosExtraHtml, 'Limites') : ''}`}
       </div>
     </div>
 
     <div class="cp-fatos">
       ${cpm != null ? `<span class="cp-fato cp-${tomCpm}">Milheiro projetado <b>${brl2(cpm)}</b></span>` : ''}
       ${c.cartaoUsado ? `<span class="cp-fato cp-jade">Com o seu cartão <b>${esc(c.cartaoUsado)}</b>: ${pct(c.desconto, 0)} de desconto</span>` : ''}
-      ${c.limite ? `<span class="cp-fato">Limite de <b>${nBR(c.limite)}</b> por CPF</span>` : ''}
-      ${c.limiteClube ? `<span class="cp-fato">Limite anual de <b>${nBR(c.limiteClube)}</b> por Tempo de Clube</span>` : ''}
-      ${c.minimo ? `<span class="cp-fato">Mínimo de <b>${nBR(c.minimo)}</b></span>` : ''}
-      ${c.carrinho ? `<span class="cp-fato" data-dica="Sujeito a alterações: o carrinho muda ao longo do dia.">Carrinho a <b>${brl2(c.carrinho)}</b> por mil${quandoCarrinho(c) && !quandoCarrinho(c).velho ? ` <small class="fraco">${esc(quandoCarrinho(c).txt.replace('informado ', ''))}</small>` : ''}</span>` : ''}
     </div>
 
     ${escopo.length || obrig.length || linhas.length ? `<div class="cp-criticas">${
