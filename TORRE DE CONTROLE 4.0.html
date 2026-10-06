@@ -8189,6 +8189,16 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 /* tablet: a busca não quebra em duas linhas */
 .busca-gatilho{ white-space:nowrap; }
 @media (max-width:1280px){ .busca-gatilho kbd, .busca-gatilho .atalho{ display:none; } }
+
+/* coluna do menu ainda mais justa (11/10/2026): a frase da área quebra em duas
+   linhas se preciso, e o item tem menos folga entre ícone, texto e número */
+.cm-tit-sub{ white-space:normal !important; line-height:1.25; }
+.cm-nav .cm-item{ column-gap:7px; padding-left:7px !important; padding-right:7px !important; }
+/* painel: os números dos quadrinhos nunca saem do quadro; a letra encolhe um
+   pouco quando o quadro é estreito (tablet com o menu aberto) */
+.heroi-numeros > *{ container-type:inline-size; min-width:0; }
+.heroi-numeros{ grid-template-columns:repeat(auto-fit, minmax(min(128px, 100%), 1fr)) !important; }
+.heroi-numeros > * > b, .heroi-numeros > * > :first-child{ white-space:nowrap; font-size:max(14px, min(calc(17px * var(--esc)), 11.5cqi)) !important; }
 </style>
 </head>
 <body>
@@ -9996,7 +10006,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 11:30';
+const BUILD = '2026-10-11 12:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25626,7 +25636,8 @@ function renderSaldo(){
     return c <= f.otimo ? {k:'otimo', t:'ótimo'} : c <= f.alvo ? {k:'alvo', t:'no alvo'} : c <= f.razoavel ? {k:'razoavel', t:'razoável'} : {k:'caro', t:'caro'}; };
   /* Três grupos, cada um com a sua pergunta: milhas (prontas para emitir),
      pontos (matéria-prima que vira milha) e hotéis. */
-  const TIPOS_SALDO = [['milhas', 'Programas de milhas', 'Prontas para emitir passagem'], ['pontos', 'Programas de pontos', 'Bancos e cartões: viram milhas na transferência'], ['hotel', 'Programas de hotel', 'Diárias e transferências para aéreas']];
+  /* ordem (11/10/2026): pontos primeiro, que é a matéria-prima; depois milhas e hotel */
+  const TIPOS_SALDO = [['pontos', 'Programas de pontos', 'Bancos e cartões: viram milhas na transferência'], ['milhas', 'Programas de milhas', 'Prontas para emitir passagem'], ['hotel', 'Programas de hotel', 'Diárias e transferências para aéreas']];
   const linhaSaldo = (p, totalGeral) => {
     const total = soma(grupos[p].map(x => x.qtd));
     const f = faixasDe(p), c = cpms[p], z = zonaCpm(p, c);
@@ -25747,7 +25758,7 @@ function renderMatrizContas(){
      sem caber, virava uma pilha de rótulos e números soltos. Agora é um cartão
      por pessoa: só os programas em que ela tem saldo, em grupos de milhas,
      pontos e hotel, com a parte dela no que o grupo tem em cada um. */
-  const GR = [['milhas', 'Milhas'], ['pontos', 'Pontos'], ['hotel', 'Hotel']];
+  const GR = [['pontos', 'Pontos'], ['milhas', 'Milhas'], ['hotel', 'Hotel']];
   const tipoDe = p => ['pontos', 'hotel'].includes(prog(p).tipo) ? prog(p).tipo : 'milhas';
   alvo.innerHTML = `${notaSemSaldo('margin:16px 20px 4px')}<div class="tit-grade">${contas.map(c => {
     const meus = DB.saldos.filter(s => s.contaId === c.id && s.qtd > 0);
@@ -35558,7 +35569,8 @@ function ajustarLarguraMenu(){
     if (!document.getElementById('v-' + v)) return;
     montarColunaMenu(sombra, v);
     const pt = sombra.querySelector('.cm-titulo'), padT = pt ? parseFloat(getComputedStyle(pt).paddingRight) || 0 : 0;
-    sombra.querySelectorAll('.cm-tit-nome, .cm-tit-sub, .cm-grupo').forEach(t => { maior = Math.max(maior, t.getBoundingClientRect().left - cl + larguraTexto(t) + padT); });
+    /* a frase embaixo do nome da área pode ir para duas linhas: não alarga a coluna (11/10/2026) */
+    sombra.querySelectorAll('.cm-tit-nome, .cm-grupo').forEach(t => { maior = Math.max(maior, t.getBoundingClientRect().left - cl + larguraTexto(t) + padT); });
     /* Os nomes das viagens do Roteiro são livres e podem ser longos: eles não
        alargam a coluna; se não couberem, ganham reticências, e o nome inteiro
        aparece ao passar o dedo ou o mouse. */
