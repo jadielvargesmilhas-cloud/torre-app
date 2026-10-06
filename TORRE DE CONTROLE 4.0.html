@@ -8199,6 +8199,30 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .heroi-numeros > *{ container-type:inline-size; min-width:0; }
 .heroi-numeros{ grid-template-columns:repeat(auto-fit, minmax(min(128px, 100%), 1fr)) !important; }
 .heroi-numeros > * > b, .heroi-numeros > * > :first-child{ white-space:nowrap; font-size:max(14px, min(calc(17px * var(--esc)), 11.5cqi)) !important; }
+
+/* ══ etapas Orçamentos → Emitidos ══ */
+.etapas{ display:flex; align-items:center; gap:10px; margin:2px 0 4px; flex-wrap:nowrap; }
+.etapas > button{ flex:1 1 0; min-width:0; display:flex; align-items:center; gap:12px; padding:11px 16px; border-radius:14px; border:1px solid var(--fio);
+  background:var(--sup-0); color:var(--grafite); font:inherit; cursor:pointer; text-align:left; transition:border-color .2s, background .2s, box-shadow .2s; }
+.etapas > button:hover{ border-color:color-mix(in oklab, var(--ouro) 45%, var(--fio)); }
+.etapas > button.on{ border-color:color-mix(in oklab, var(--ouro) 70%, transparent); background:color-mix(in oklab, var(--dourado) 10%, var(--sup-0)); color:var(--giz);
+  box-shadow:0 8px 20px -16px color-mix(in oklab, var(--ouro) 70%, transparent); }
+.et-n{ flex:0 0 auto; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:calc(13px * var(--esc));
+  background:var(--sup-1); color:var(--grafite); border:1px solid var(--fio); }
+.etapas > button.on .et-n{ background:var(--ouro); color:#fff; border-color:var(--ouro); }
+.et-t{ display:flex; flex-direction:column; min-width:0; }
+.et-t b{ font-size:calc(14.5px * var(--esc)); white-space:nowrap; }
+.et-t small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); white-space:nowrap; }
+.et-seta{ flex:0 0 auto; width:18px; height:18px; fill:none; stroke:var(--grafite-dim); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+/* escolha da opção aprovada */
+.emo-op{ display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--fio);
+  background:var(--sup-0); font:inherit; color:inherit; cursor:pointer; text-align:left; }
+.emo-op:hover{ border-color:var(--ouro); background:color-mix(in oklab, var(--dourado) 8%, var(--sup-0)); }
+.emo-op span{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.emo-op small{ color:var(--grafite-dim); font-size:calc(12px * var(--esc)); }
+.emo-preco{ font-family:var(--f-m); white-space:nowrap; }
+
+@media (max-width:480px){ .etapas{ gap:6px; } .etapas > button{ padding:9px 10px; gap:8px; } .et-n{ width:24px; height:24px; } .et-t b{ font-size:min(calc(13.5px * var(--esc)), 14px); } .et-seta{ width:14px; } }
 </style>
 </head>
 <body>
@@ -10006,7 +10030,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 12:20';
+const BUILD = '2026-10-11 13:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13393,7 +13417,7 @@ const AREAS = [
     menu:[{g:'Planejar', itens:[['rota', 'rt-plano', 'Jornadas', '#i-rota']]}, {g:'Resultados', itens:[['rota', 'rt-viagens', 'Resultados', '#i-grafico']]}]},
   {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'emissoes', 'cotacoes', 'emitidos', 'vendas', 'imposto'],
     /* na coluna, os módulos de Negócio vêm agrupados pelo que são */
-    grupos:[{n:'Cadastro', vistas:['clientes', 'emissoes']}, {n:'Cotações', vistas:['cotacoes']}, {n:'Resultados', vistas:['emitidos', 'vendas']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
+    grupos:[{n:'Cadastro', vistas:['clientes', 'emissoes']}, {n:'Atendimento', vistas:['cotacoes']}, {n:'Resultados', vistas:['vendas']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes'],
     menu:[{g:'Conexões', itens:[['ajustes', 'aj-provedores', 'Provedores', '#i-nuvem']]}, {g:'Mercado', itens:[['ajustes', 'aj-mercado', 'Programas', '#i-alvo']]},
       {g:'Sistema', itens:[['ajustes', 'aj-dados', 'Dados', '#i-caixa'], ['ajustes', 'aj-sobre', 'Sobre', '#i-info']]}]}
@@ -14703,6 +14727,7 @@ function montarHeroi(alvo, o){
    finas: o peso visual fica só no painel.
    ══════════════════════════════════════════════════════════════════════════════ */
 function nomeDaSecao(){
+  if (NOME_JUNTO[donoDoPar(vistaAtual)]) return NOME_JUNTO[donoDoPar(vistaAtual)];
   /* com menu próprio, o título é o nome do item do menu (ex.: "Clubes e lojas") */
   const ar = areaDe(vistaAtual), it = ar && ar.menu ? ar.menu.flatMap(g => g.itens).find(itemAberto) : null;
   if (it) return it[2];
@@ -14726,6 +14751,58 @@ function guiasComprasInteligentes(raiz, cab){
   if (sg.parentElement !== cab.parentElement || sg.previousElementSibling !== cab) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
   sg.querySelector('[data-g=lojas]').classList.toggle('on', naLoja);
   sg.querySelector('[data-g=aereos]').classList.toggle('on', noAereo);
+}
+
+
+/* ══ ORÇAMENTOS E EMISSÕES (11/10/2026) ═════════════════════════════════════════
+   Orçar e emitir são duas etapas do mesmo atendimento: o orçamento aprovado vira
+   emissão. Como nos sistemas de venda (orçamento → pedido), as duas telas ficam
+   num item só do menu, com duas etapas numeradas no alto, e cada orçamento salvo
+   tem o botão "Emitir" que abre a emissão já preenchida com a opção aprovada. */
+const JUNTOS = {cotacoes:['cotacoes', 'emitidos']};
+const NOME_JUNTO = {cotacoes:'Orçamentos e Emissões'};
+const _ultimoDoPar = {};
+const donoDoPar = v => Object.keys(JUNTOS).find(k => JUNTOS[k].includes(v)) || v;
+const filhaDePar = v => Object.keys(JUNTOS).some(k => k !== v && JUNTOS[k].includes(v));
+function irParaPar(dono){ irPara(_ultimoDoPar[dono] || dono); }
+function guiasAtendimento(raiz, cab){
+  const velha = document.getElementById('segAtendimento');
+  const naCot = vistaAtual === 'cotacoes' && raiz.id === 'p-em-cotacoes';
+  const naEmi = vistaAtual === 'emitidos' && raiz.id === 'p-em-resgates';
+  if (!naCot && !naEmi){ if (velha) velha.remove(); return; }
+  _ultimoDoPar.cotacoes = vistaAtual;
+  const nOrc = (DB.cotacoes || []).length;
+  const nEmi = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada').length;
+  let sg = velha;
+  if (!sg){ sg = document.createElement('div'); sg.className = 'etapas'; sg.id = 'segAtendimento'; sg.setAttribute('role', 'tablist'); }
+  sg.innerHTML = `<button type="button" role="tab" data-g="cotacoes" class="${naCot ? 'on' : ''}" aria-selected="${naCot}"><span class="et-n">1</span><span class="et-t"><b>Orçamentos</b><small>${nOrc} ${nOrc === 1 ? 'salvo' : 'salvos'}</small></span></button>
+    <svg class="et-seta" aria-hidden="true"><use href="#i-seta-d"/></svg>
+    <button type="button" role="tab" data-g="emitidos" class="${naEmi ? 'on' : ''}" aria-selected="${naEmi}"><span class="et-n">2</span><span class="et-t"><b>Emitidos</b><small>${nEmi} ${nEmi === 1 ? 'emissão' : 'emissões'}</small></span></button>`;
+  sg.querySelectorAll('button').forEach(b => b.onclick = () => { if (vistaAtual !== b.dataset.g) irPara(b.dataset.g); });
+  if (sg.parentElement !== cab.parentElement || sg.previousElementSibling !== cab) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
+}
+/* Emitir um orçamento salvo: escolhe a opção que o cliente aprovou e abre a
+   emissão já preenchida (cliente, trecho, data, programa, milhas, taxas, preço). */
+function emitirOrcamento(id){
+  const c = (DB.cotacoes || []).find(x => x.id === id); if (!c) return;
+  const abre = o => {
+    c.aprovada = o.id; salvar();
+    fecharFolha();
+    setTimeout(() => {
+      irPara('emitidos');
+      editarReserva(null, {tipo:'voo', quem:'terceiro', cliente:c.cliente || '', desc:o.trecho || '', data:o.data || hojeISO(), prog:o.prog || 'smiles',
+        milhas:Number(o.milhas) || 0, taxas:Number(o.taxas) || 0, cobrado:Number(o.preco) || 0, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO(), cotacaoId:c.id});
+    }, 80);
+  };
+  const ops = c.opcoes || [];
+  if (ops.length === 1) return abre(ops[0]);
+  abrirFolha({titulo:`Emitir o orçamento de ${esc(c.cliente || 'cliente')}`, largura:'media', corpo:`
+    <p class="fraco" style="margin:0 0 12px">Qual opção o cliente aprovou? A emissão abre já preenchida com ela.</p>
+    <div class="pilha" style="gap:8px">${ops.map((o, i) => `<button type="button" class="emo-op" data-i="${i}">
+      <span><b>${esc(o.trecho || 'Opção ' + (i + 1))}</b><small>${o.prog ? esc(prog(o.prog).n) + ' · ' : ''}${o.milhas ? nBR(o.milhas) + ' milhas' : ''}${o.data ? ' · ' + dataBR(o.data) : ''}</small></span>
+      <b class="emo-preco">${brl(Number(o.preco) || 0)}</b></button>`).join('')}</div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+  $$('#folhaCorpo .emo-op').forEach(b => b.onclick = () => abre(ops[+b.dataset.i]));
 }
 
 function padronizarSecao(){
@@ -14761,6 +14838,7 @@ function padronizarSecao(){
   }
   tit.textContent = nome;
   guiasComprasInteligentes(raiz, cab);
+  guiasAtendimento(raiz, cab);
   if (vistaAtual === 'mesa' && raiz.id === 'p-ms-hoje' && !cab.querySelector('#btHoje')){
     const n = (typeof avisos === 'function' ? avisos() : []).length;
     cab.insertAdjacentHTML('beforeend', `<div class="esticar"></div><button type="button" class="bt primario" id="btHoje"><svg><use href="#i-sino"/></svg>O que fazer hoje${n ? ` <span class="cont">${n}</span>` : ''}</button>`);
@@ -14790,7 +14868,7 @@ function padronizarSecao(){
     painel.dataset.veioDe = casa.id;
     caixa.insertBefore(painel, cab.nextElementSibling);
   }
-  const ancora = (() => { const g = document.getElementById('segComprasInt'); return g && g.parentElement === caixa && g.previousElementSibling === cab ? g : cab; })();
+  const ancora = (() => { const g = document.getElementById('segComprasInt') || document.getElementById('segAtendimento'); return g && g.parentElement === caixa && g.previousElementSibling === cab ? g : cab; })();
   if (painel && painel.parentElement === caixa && ancora.parentElement === caixa && ancora.nextElementSibling !== painel) caixa.insertBefore(painel, ancora.nextElementSibling);
 
   /* 3. o guia "Como ler…" logo depois do painel */
@@ -34290,6 +34368,8 @@ function renderCotacoesSalvas(){
       <div class="item-sub">${esc(c.opcoes.map(o => o.trecho).join(' · '))} · montada em ${new Date(c.quando).toLocaleDateString('pt-BR')}</div></div>
     <div class="item-num">${brl(soma(c.opcoes.map(o => o.preco)))}<small>total das opções</small></div>
     <div class="item-acoes">
+      ${c.aprovada ? '<span class="etq jade">aprovado</span>' : ''}
+      <button class="bt p primario" onclick="emitirOrcamento('${c.id}')" data-dica="Cliente aprovou: abrir a emissão já preenchida"><svg><use href="#i-seta-d"/></svg>Emitir</button>
       <button class="bt p fantasma icone" onclick="opcoesCotacao=DB.cotacoes.find(x=>x.id==='${c.id}').opcoes.slice();$('#ctCliente').value='${esc(c.cliente)}';renderOpcoesCotacao();avisar('Cotação carregada para edição.','info')" data-dica="Reabrir"><svg><use href="#i-lapis"/></svg></button>
       <button class="bt p fantasma icone" onclick="apagar('cotacoes','${c.id}','a cotação')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
     </div></div>`).join('')
@@ -35654,14 +35734,14 @@ function montarColunaMenu(raiz, vistaMedida){
       if (gi) nav.insertAdjacentHTML('beforeend', '<div class="cm-ico-div" aria-hidden="true"></div>');
       g.vistas.forEach(vv => {
         if (!document.getElementById('v-' + vv)) return;
-        const nomeMod = (TITULOS[vv] || [vv])[0];
+        const nomeMod = NOME_JUNTO[vv] || (TITULOS[vv] || [vv])[0];
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'cm-ico' + (vv === v ? ' on' : '');
+        b.className = 'cm-ico' + (vv === v || (JUNTOS[vv] || []).includes(v) ? ' on' : '');
         b.dataset.vista = vv; b.dataset.dica = (g.n ? g.n + ' · ' : '') + nomeMod; b.dataset.dicaLado = 'direita';
         b.setAttribute('aria-label', nomeMod);
         b.innerHTML = `<svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg>`;
-        b.onclick = () => irPara(vv);
+        b.onclick = () => JUNTOS[vv] ? irParaPar(vv) : irPara(vv);
         nav.appendChild(b);
       });
     });
@@ -35696,15 +35776,15 @@ function montarColunaMenu(raiz, vistaMedida){
   /* área com grupos (Negócio): um título por grupo e, embaixo, os módulos dele */
   if (area.grupos){
     area.grupos.forEach(g => {
-      nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${g.vistas.includes(v) ? ' atual' : ''}">${esc(g.n)}</div>`);
+      nav.insertAdjacentHTML('beforeend', `<div class="cm-grupo${g.vistas.includes(donoDoPar(v)) ? ' atual' : ''}">${esc(g.n)}</div>`);
       g.vistas.forEach(vv => {
         if (!document.getElementById('v-' + vv)) return;
-        const nomeMod = (TITULOS[vv] || [vv])[0];
+        const nomeMod = NOME_JUNTO[vv] || (TITULOS[vv] || [vv])[0];
         const b = document.createElement('button');
-        b.className = 'cm-item cm-modulo' + (vv === v ? ' on' : '');
+        b.className = 'cm-item cm-modulo' + (vv === v || (JUNTOS[vv] || []).includes(v) ? ' on' : '');
         b.dataset.vista = vv;
         b.innerHTML = `<svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(nomeMod)}</span>`;
-        b.onclick = () => irPara(vv);
+        b.onclick = () => JUNTOS[vv] ? irParaPar(vv) : irPara(vv);
         nav.appendChild(b);
       });
     });
@@ -35769,10 +35849,11 @@ function pintarBarraModulos(v){
   document.body.classList.remove('barra-itens');
   const tem = area.vistas.length > 1;
   document.body.classList.toggle('com-modulos', tem);
-  bm.innerHTML = tem ? area.vistas.map(vv => `<button type="button" class="bm-item${vv === v ? ' on' : ''}" data-vista="${vv}" aria-current="${vv === v}">
-      <svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(CURTO_MODULO[vv] || (TITULOS[vv] || [vv])[0])}</span></button>`).join('') : '';
-  $$('.bm-item', bm).forEach(b => b.onclick = () => irPara(b.dataset.vista));
-  bm.classList.toggle('muitos', tem && area.vistas.length >= 5);
+  const vistasBarra = area.vistas.filter(vv => !filhaDePar(vv));
+  bm.innerHTML = tem ? vistasBarra.map(vv => { const on = vv === v || (JUNTOS[vv] || []).includes(v); return `<button type="button" class="bm-item${on ? ' on' : ''}" data-vista="${vv}" aria-current="${on}">
+      <svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(JUNTOS[vv] ? 'Atendimento' : (CURTO_MODULO[vv] || (TITULOS[vv] || [vv])[0]))}</span></button>`; }).join('') : '';
+  $$('.bm-item', bm).forEach(b => b.onclick = () => JUNTOS[b.dataset.vista] ? irParaPar(b.dataset.vista) : irPara(b.dataset.vista));
+  bm.classList.toggle('muitos', tem && vistasBarra.length >= 5);
   if (tem) poeSairNaBarra(bm);
 }
 /* No celular, o Sair fica no canto direito da segunda barra (10/10/2026),
