@@ -10030,7 +10030,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 13:45';
+const BUILD = '2026-10-11 14:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13415,9 +13415,9 @@ const AREAS = [
       {g:'Mercado', itens:[['cartoes', 'cr-catalogo', 'Catálogo', '#i-livro']]}]},
   {k:'viagens', n:'Viagens', sub:'Jornadas',  ic:'#i-aviao',   vistas:['rota'],
     menu:[{g:'Planejar', itens:[['rota', 'rt-plano', 'Jornadas', '#i-rota']]}, {g:'Resultados', itens:[['rota', 'rt-viagens', 'Resultados', '#i-grafico']]}]},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'emissoes', 'cotacoes', 'emitidos', 'vendas', 'imposto'],
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'cotacoes', 'emitidos', 'vendas', 'emissoes', 'imposto'],
     /* na coluna, os módulos de Negócio vêm agrupados pelo que são */
-    grupos:[{n:'Cadastro', vistas:['clientes', 'emissoes']}, {n:'Atendimento', vistas:['cotacoes']}, {n:'Resultados', vistas:['vendas']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
+    grupos:[{n:'Cadastro', vistas:['clientes']}, {n:'Atendimento', vistas:['cotacoes']}, {n:'Resultados', vistas:['vendas', 'emissoes']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes'],
     menu:[{g:'Conexões', itens:[['ajustes', 'aj-provedores', 'Provedores', '#i-nuvem']]}, {g:'Mercado', itens:[['ajustes', 'aj-mercado', 'Programas', '#i-alvo']]},
       {g:'Sistema', itens:[['ajustes', 'aj-dados', 'Dados', '#i-caixa'], ['ajustes', 'aj-sobre', 'Sobre', '#i-info']]}]}
@@ -14760,8 +14760,10 @@ function guiasComprasInteligentes(raiz, cab){
    num item só do menu, com duas etapas numeradas no alto, e cada orçamento salvo
    tem o botão "Emitir" que abre a emissão já preenchida com a opção aprovada. */
 const JUNTOS = {cotacoes:['cotacoes', 'emitidos']};
-/* uma palavra só (11/10/2026): na agência, o balcão é onde se cota e se emite */
-const NOME_JUNTO = {cotacoes:'Balcão'};
+/* "Balcão" confundia com o balcão de milhas (venda direta a fornecedores):
+   o nome agora diz o fluxo, em duas palavras curtas (11/10/2026) */
+const NOME_JUNTO = {cotacoes:'Cotar e Emitir'};
+const CURTO_JUNTO = {cotacoes:'Cotar/Emitir'};
 const _ultimoDoPar = {};
 const donoDoPar = v => Object.keys(JUNTOS).find(k => JUNTOS[k].includes(v)) || v;
 const filhaDePar = v => Object.keys(JUNTOS).some(k => k !== v && JUNTOS[k].includes(v));
@@ -35852,7 +35854,7 @@ function pintarBarraModulos(v){
   document.body.classList.toggle('com-modulos', tem);
   const vistasBarra = area.vistas.filter(vv => !filhaDePar(vv));
   bm.innerHTML = tem ? vistasBarra.map(vv => { const on = vv === v || (JUNTOS[vv] || []).includes(v); return `<button type="button" class="bm-item${on ? ' on' : ''}" data-vista="${vv}" aria-current="${on}">
-      <svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(JUNTOS[vv] ? NOME_JUNTO[vv] : (CURTO_MODULO[vv] || (TITULOS[vv] || [vv])[0]))}</span></button>`; }).join('') : '';
+      <svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(JUNTOS[vv] ? CURTO_JUNTO[vv] : (CURTO_MODULO[vv] || (TITULOS[vv] || [vv])[0]))}</span></button>`; }).join('') : '';
   $$('.bm-item', bm).forEach(b => b.onclick = () => JUNTOS[b.dataset.vista] ? irParaPar(b.dataset.vista) : irPara(b.dataset.vista));
   bm.classList.toggle('muitos', tem && vistasBarra.length >= 5);
   if (tem) poeSairNaBarra(bm);
