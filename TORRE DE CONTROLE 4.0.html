@@ -10030,7 +10030,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 13:10';
+const BUILD = '2026-10-11 13:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14760,7 +14760,8 @@ function guiasComprasInteligentes(raiz, cab){
    num item só do menu, com duas etapas numeradas no alto, e cada orçamento salvo
    tem o botão "Emitir" que abre a emissão já preenchida com a opção aprovada. */
 const JUNTOS = {cotacoes:['cotacoes', 'emitidos']};
-const NOME_JUNTO = {cotacoes:'Orçamentos e Emissões'};
+/* uma palavra só (11/10/2026): na agência, o balcão é onde se cota e se emite */
+const NOME_JUNTO = {cotacoes:'Balcão'};
 const _ultimoDoPar = {};
 const donoDoPar = v => Object.keys(JUNTOS).find(k => JUNTOS[k].includes(v)) || v;
 const filhaDePar = v => Object.keys(JUNTOS).some(k => k !== v && JUNTOS[k].includes(v));
@@ -35851,7 +35852,7 @@ function pintarBarraModulos(v){
   document.body.classList.toggle('com-modulos', tem);
   const vistasBarra = area.vistas.filter(vv => !filhaDePar(vv));
   bm.innerHTML = tem ? vistasBarra.map(vv => { const on = vv === v || (JUNTOS[vv] || []).includes(v); return `<button type="button" class="bm-item${on ? ' on' : ''}" data-vista="${vv}" aria-current="${on}">
-      <svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(JUNTOS[vv] ? 'Atendimento' : (CURTO_MODULO[vv] || (TITULOS[vv] || [vv])[0]))}</span></button>`; }).join('') : '';
+      <svg><use href="${ICONE_MODULO[vv] || area.ic}"/></svg><span>${esc(JUNTOS[vv] ? NOME_JUNTO[vv] : (CURTO_MODULO[vv] || (TITULOS[vv] || [vv])[0]))}</span></button>`; }).join('') : '';
   $$('.bm-item', bm).forEach(b => b.onclick = () => JUNTOS[b.dataset.vista] ? irParaPar(b.dataset.vista) : irPara(b.dataset.vista));
   bm.classList.toggle('muitos', tem && vistasBarra.length >= 5);
   if (tem) poeSairNaBarra(bm);
@@ -39245,6 +39246,36 @@ async function lerPrint(arquivo){
   }
 }
 
+
+/* ── do print para a página do cliente (11/10/2026) ──────────────────────────────
+   A leitura do print já sabe o sentido, a rota, a data, os horários, a companhia
+   e o número de cada voo. Antes isso só ia para a busca de milhas, e a página
+   VEM era preenchida à mão. Agora um botão leva tudo para lá: os voos de ida na
+   Ida, os de volta na Volta (com "Tem volta" marcado), na ordem do print.
+   Milhas, milheiro e taxas continuam os que já estavam no formulário. */
+function vemLevarLidos(){
+  if (!voosLidos.length) return;
+  vemCarregarRascunho();
+  const o = vemEst.ops[0];
+  const somaDia = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+  const trecho = v => {
+    const t = vemNovoTrecho(v.origem || '', v.destino || '', v.cia || '');
+    t.numero = String(v.voo || '').trim().replace(/^([A-Z]{2}|[A-Z]\d|\d[A-Z])\s*(?=\d)/, '');
+    t.pData = v.data || ''; t.pHora = v.saida || '';
+    t.cHora = v.chegada || '';
+    /* chegada antes da saída no relógio = chegou no dia seguinte */
+    t.cData = v.data ? (v.chegada && v.saida && v.chegada < v.saida ? somaDia(v.data, 1) : v.data) : '';
+    return t;
+  };
+  const ida = voosLidos.filter(v => v.sentido !== 'volta'), volta = voosLidos.filter(v => v.sentido === 'volta');
+  o.ida = (ida.length ? ida : voosLidos.slice(0, 1)).map(trecho);
+  o.temVolta = volta.length > 0;
+  o.volta = volta.map(trecho);
+  vemGuardarRascunho(); renderVem();
+  const alvo = $('#vemRaiz'); if (alvo) alvo.scrollIntoView({behavior:'smooth', block:'start'});
+  avisar(`${o.ida.length} voo${o.ida.length > 1 ? 's' : ''} de ida${o.volta.length ? ` e ${o.volta.length} de volta` : ''} levado${o.ida.length + o.volta.length > 1 ? 's' : ''} para a página do cliente. Confira os horários.`, 'ok');
+}
+
 function renderVoosLidos(){
   const alvo = $('#ctLeitura');
   if (!voosLidos.length){ alvo.innerHTML = ''; return; }
@@ -39285,6 +39316,7 @@ function renderVoosLidos(){
     <div class="nota"><svg><use href="#i-info"/></svg><div>Confira antes de precificar: a leitura sai de uma imagem e um horário mal renderizado vira um dado errado. Os trechos com aviso vermelho precisam de conferência.</div></div>
     <div class="linha" style="gap:9px">
       <button class="bt primario" onclick="precificarLidos()"><svg><use href="#i-busca"/></svg>Buscar em milhas pelo Claude no Chrome</button>
+      <button class="bt fantasma" onclick="vemLevarLidos()"><svg><use href="#i-seta-d"/></svg>Levar para a página do cliente</button>
       <button class="bt fantasma" onclick="voosLidos=[];renderVoosLidos()">Limpar</button>
     </div>
   </div>`;
@@ -43716,8 +43748,8 @@ function vemHtmlTrecho(oi, sentido, j, t, total){
     <div class="grade vem-grade-voo">
       ${vemCampo('Companhia', `<input type="text" list="vemCias" ${vemAttr(k + '.cia', t.cia)} placeholder="GOL">`)}
       ${vemCampo('Nº do voo', `<input type="text" ${vemAttr(k + '.numero', t.numero)} placeholder="1883">`)}
-      ${vemCampo('De', `<input type="text" maxlength="3" class="vem-iata" ${vemAttr(k + '.de', t.de)} placeholder="SSA">`)}
-      ${vemCampo('Para', `<input type="text" maxlength="3" class="vem-iata" ${vemAttr(k + '.para', t.para)} placeholder="GIG">`)}
+      ${vemCampo('De', `<input type="text" maxlength="3" class="vem-iata" ${vemAttr(k + '.de', t.de)} placeholder="${sentido === 'volta' ? 'GIG' : 'SSA'}">`)}
+      ${vemCampo('Para', `<input type="text" maxlength="3" class="vem-iata" ${vemAttr(k + '.para', t.para)} placeholder="${sentido === 'volta' ? 'SSA' : 'GIG'}">`)}
       ${vemCampo('Partida: dia', `<input type="date" ${vemAttr(k + '.pData', t.pData)}>`)}
       ${vemCampo('Partida: hora', `<input type="time" ${vemAttr(k + '.pHora', t.pHora)}>`)}
       ${vemCampo('Chegada: dia', `<input type="date" ${vemAttr(k + '.cData', t.cData)}>`)}
