@@ -8152,6 +8152,43 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .par-selo.par-diferente{ background:color-mix(in oklab, var(--anil-claro) 8%, var(--sup-1)); border-color:color-mix(in oklab, var(--anil-claro) 30%, transparent); }
 .par-selo.par-diferente b{ color:var(--anil-claro); }
 #lcParidade .par-selo{ margin:8px 0 4px; }
+
+/* ══ TABELA EM CARTÕES NO TABLET (11/10/2026) ═══════════════════════════════════
+   Quando a tabela não cabe e vira cartões numa tela média (tablet, notebook
+   estreito), cada cartão era uma pilha de linhas "rótulo à esquerda, valor lá na
+   direita", com a largura toda entre os dois: tudo disperso. Agora é o mesmo
+   cartão compacto do celular, com o rótulo em cima do valor e os campos lado a
+   lado em quantas colunas couberem. */
+@media (min-width:561px){
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]){
+    display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px 20px; align-items:start;
+    padding:16px 18px 14px; border-radius:16px; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td{ padding:0 !important; text-align:left !important; min-width:0; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td::before{
+    position:static !important; display:block; width:auto !important; margin:0 0 4px; top:auto; left:auto; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:first-child{
+    grid-column:1 / -1; padding-bottom:10px !important; border-bottom:1px solid var(--fio-suave); font-weight:600; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:first-child::before{ content:none; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td[data-valor-largo="1"],
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td[data-longo="1"]{ grid-column:span 2; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:not([data-r]):not(:first-child){
+    grid-column:1 / -1; display:flex; justify-content:flex-end; flex-wrap:wrap; gap:6px; padding-top:2px !important; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td .etq{ max-width:100%; }
+  /* sem os fios de tabela que sobravam em cima de cada campo */
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:not(:first-child){ border:0 !important; box-shadow:none !important; }
+  /* as ações (copiar, editar, excluir) sempre numa linha própria, à direita */
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:has(.acoes-cel),
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:has(> .bt.icone){
+    grid-column:1 / -1; display:flex; justify-content:flex-end; padding-top:2px !important; }
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:has(.acoes-cel)::before{ content:none; }
+}
+
+@media (min-width:561px){
+  table.tb-cartao.em-cartao:not(.livro) tbody tr:not([data-sem-cartao]) > td:first-child{ border-top:0 !important; box-shadow:none !important; }
+}
+/* tablet: a busca não quebra em duas linhas */
+.busca-gatilho{ white-space:nowrap; }
+@media (max-width:1280px){ .busca-gatilho kbd, .busca-gatilho .atalho{ display:none; } }
 </style>
 </head>
 <body>
@@ -9959,7 +9996,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 10:20';
+const BUILD = '2026-10-11 11:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -35216,7 +35253,20 @@ function avaliarTabelas(){
        quando a tabela é elástica, o valor medido é o da própria caixa, e
        "1287 > 1287 − 12" dá verdadeiro. Cabendo, fica tabela; a folga entra do
        outro lado, no que se considera transbordo real. */
-    t.classList.toggle('em-cartao', precisa > caixa.clientWidth + 2);
+    /* Antes de virar cartão, a tabela tenta caber encolhendo por inteiro
+       (11/10/2026): no tablet com o menu aberto faltavam uns 20% de largura, e a
+       lista virava cartões, enquanto com o menu recolhido era tabela. Encolher
+       até 80% mantém a mesma tabela nos dois casos; abaixo disso a letra ficaria
+       pequena demais, e aí sim ela vira cartões. */
+    const cabe = caixa.clientWidth;
+    const fator = precisa > cabe + 2 ? cabe / precisa : 1;
+    if (fator < 1 && fator >= 0.8){
+      t.style.zoom = String(Math.floor(fator * 100) / 100);
+      t.classList.remove('em-cartao');
+    } else {
+      t.style.zoom = '';
+      t.classList.toggle('em-cartao', precisa > cabe + 2);
+    }
   });
 
   /* Segunda passada, depois de as tabelas já terem virado cartão: marca as
