@@ -8144,6 +8144,14 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 #ctCards .metrica .pe{ white-space:nowrap; font-size:max(11.5px, min(calc(13px * var(--esc)), 6.4cqi)); }
 /* no celular os dois cartões ficam um embaixo do outro, cada um com a linha inteira */
 @media (max-width:560px){ #ctCards{ grid-template-columns:1fr !important; } }
+
+/* selo da paridade */
+.par-selo{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:4px 0 12px; padding:9px 13px; border-radius:11px;
+  background:var(--sup-1); border:1px solid var(--fio); font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.par-selo b{ font-family:var(--f-m); color:var(--giz); white-space:nowrap; }
+.par-selo.par-diferente{ background:color-mix(in oklab, var(--anil-claro) 8%, var(--sup-1)); border-color:color-mix(in oklab, var(--anil-claro) 30%, transparent); }
+.par-selo.par-diferente b{ color:var(--anil-claro); }
+#lcParidade .par-selo{ margin:8px 0 4px; }
 </style>
 </head>
 <body>
@@ -9951,7 +9959,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 00:15';
+const BUILD = '2026-10-11 10:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23915,6 +23923,9 @@ function editarLancamento(id, pre){
        sido calculado — e o lançamento ia para o banco com o destino a custo zero
        e a saída a custo cheio, tirando dinheiro do investido total. */
     ligarCampoContagem('#lcSaiu', () => { calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); });
+    /* enquanto digita, o que entra já acompanha (antes só refazia ao sair do
+       campo, e por um instante a tela mostrava a saída nova com a entrada velha) */
+    $('#lcSaiu').addEventListener('input', () => { entradaTravada = false; calcularEntrada(); puxarCustoDaOrigem(); aplicarForma(); });
     /* Mudar o bônus é dizer quanto de fato entrou: a entrada é refeita pela
        paridade com o bônus, mesmo numa edição. O custo não muda, porque o
        dinheiro é o dos pontos que saíram. */
@@ -24013,6 +24024,13 @@ function editarLancamento(id, pre){
     const par = paridadeDaRota();
     const bonus = Math.max(0, Number(($('#lcBonus') || {}).value) || 0);
     campo.value = (par && saiu) ? nBR(Math.round(saiu / par * (1 + bonus / 100))) : nBR(0);
+    mostrarParidadeLanc();
+  };
+  const mostrarParidadeLanc = () => {
+    const o = $('#lcOrigem'), qtd = $('#lcQtd'); if (!qtd) return;
+    let el = document.getElementById('lcParidade');
+    if (!el){ el = document.createElement('div'); el.id = 'lcParidade'; const camp = qtd.closest('.grade') || qtd.parentElement; camp.parentElement.insertBefore(el, camp.nextSibling); }
+    el.innerHTML = o && o.value ? seloParidade(o.value, $('#lcProg').value) : '';
   };
 
   /* ── custo ──────────────────────────────────────────────────────────────────
@@ -34827,6 +34845,33 @@ const CT_CAMPOS = {
 /* Paridade da rota, com a do clube quando há assinatura ativa na origem. Mesma
    regra do formulário de lançamento; aqui ela não podia faltar, porque é o que
    separa transferir para um programa 1 : 1 de um 3 : 1. */
+
+/* ── Paridade à vista (11/10/2026) ───────────────────────────────────────────────
+   A conta sempre usou a paridade da rota (2 : 1, 3 : 1, 1 : 1 com clube), mas
+   ela não aparecia: quem via 609.890 virar 304.945 não sabia por quê. Agora a
+   Torre diz a proporção e de onde ela vem, na calculadora e no lançamento. */
+function textoParidade(par){
+  if (!par || par === 1) return '1 : 1';
+  return par > 1 ? `${nBRdec(par)} : 1` : `1 : ${nBRdec(1 / par)}`;
+}
+function infoParidade(de, para){
+  if (!de || !para) return null;
+  const x = PARIDADES.find(y => y.de === de && y.para === para);
+  if (!x) return null;
+  const temClube = (DB.assinaturas || []).some(a => a.status === 'ativa' && a.prog === de);
+  const par = (temClube && x.clube) ? x.clube : (x.p || 1);
+  const un = p => prog(p).tipo === 'pontos' ? 'pontos' : 'milhas';
+  const um = p => prog(p).tipo === 'pontos' ? 'ponto' : 'milha';
+  const frase = par === 1 ? `cada ${um(de)} de ${prog(de).n} vira 1 ${um(para)} no ${prog(para).n}`
+    : par > 1 ? `cada ${nBRdec(par)} ${un(de)} de ${prog(de).n} viram 1 ${um(para)} no ${prog(para).n}`
+    : `cada ${um(de)} de ${prog(de).n} vira ${nBRdec(1 / par)} ${un(para)} no ${prog(para).n}`;
+  return {par, txt:textoParidade(par), frase, clube:!!(temClube && x.clube), semClube:x.clube && !temClube ? textoParidade(x.clube) : null, nota:x.nota || ''};
+}
+function seloParidade(de, para){
+  const i = infoParidade(de, para); if (!i) return '';
+  return `<div class="par-selo${i.par === 1 ? '' : ' par-diferente'}"><b>Paridade ${i.txt}</b><span>${esc(i.frase)}${i.clube ? ' (paridade do clube, que você assina)' : ''}${i.semClube ? `. Com clube na origem, a rota passa a ${i.semClube}.` : '.'}</span>${i.nota ? `<span class="info-i" tabindex="0" data-dica="${esc(i.nota.replace(/\n/g, ' '))}"><svg><use href="#i-info"/></svg></span>` : ''}</div>`;
+}
+
 function paridadeCT(de, para){
   if (!de || !para) return 1;
   const x = PARIDADES.find(y => y.de === de && y.para === para);
@@ -34874,7 +34919,7 @@ function calcularCT(tipo, modo, v){
     const custo = usados * (n('cpmOrigem') / 1000) + n('valorCarrinho');
     return {qtd, base, bonus:qtd - base, custo, cpm: qtd > 0 ? custo / qtd * 1000 : null,
             prog: v.progDestino, origem: v.progOrigem, usados, saiuDaOrigem: usados,
-            carrinho: n('qtdCarrinho'),
+            carrinho: n('qtdCarrinho'), paridade: par,
             /* A proporção que o carrinho representa do total é o que os programas
                limitam. Guardada aqui para o aviso da tela. */
             fatiaOrganica: base > 0 ? usados / base * 100 : 0};
@@ -36310,9 +36355,15 @@ function pintarResultadoCT(){
   /* Dois cards, não três: o milheiro da operação está na régua ao lado e o médio
      do programa está na tabela à direita. O que sobra aqui é o que nenhum dos
      dois mostra — quanto entra e quanto custa. */
+  { const alvoPar = document.getElementById('ctParidade') || (() => { const d = document.createElement('div'); d.id = 'ctParidade'; const c = $('#ctCards'); c.parentElement.insertBefore(d, c); return d; })();
+    alvoPar.innerHTML = r && r.origem ? seloParidade(r.origem, r.prog) : ''; }
   $('#ctCards').innerHTML = `
     ${metrica('Quanto entra', temConta ? nBR(Math.round(r.qtd)) : 'n/d',
-      r.bonus > 0 ? `${nBR(Math.round(r.base))} + ${nBR(Math.round(r.bonus))} de bônus` : 'Sem bônus nesta operação', '')}
+      (() => {
+        const sai = r.origem ? Math.round((r.saiuDaOrigem || 0) + (r.carrinho || 0)) : 0;
+        const par = r.paridade && r.paridade !== 1 ? ` · ${nBR(sai)} ÷ ${nBRdec(r.paridade)} (paridade ${textoParidade(r.paridade)})` : '';
+        return r.bonus > 0 ? `${nBR(Math.round(r.base))} + ${nBR(Math.round(r.bonus))} de bônus${par}` : (par ? par.slice(3) : 'Sem bônus nesta operação');
+      })(), '')}
     ${metrica('Quanto custa', temConta ? brl(r.custo) : 'n/d',
       r.economia > 0 ? `${brl(r.economia)} de desconto` : 'Dinheiro que sai do bolso', 'ouro')}
 `;
