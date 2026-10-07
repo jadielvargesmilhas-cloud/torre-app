@@ -4734,6 +4734,14 @@ body.palco-estreito .topo-titulo{ flex:0 1 auto; min-width:min(160px, 30%); }
 .hv-linha{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:3px 0; width:100%; }
 #ajHeroiProv .heroi-curva{ width:100%; }
 #ljHeroi .heroi-curva{ width:100%; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:16px; }
+.mr-hq{ display:flex; flex-direction:column; gap:8px; padding-top:6px; width:100%; }
+.mr-hq-l{ display:flex; align-items:center; gap:10px; justify-content:space-between; padding:9px 12px; border-radius:11px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.06); }
+.mr-hq-l.lida{ opacity:.6; }
+.mr-hq-t{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:calc(13.5px * var(--esc)); color:var(--giz); }
+.mr-hq-l .etq{ flex:0 0 auto; }
+#mrHeroi .heroi-curva{ width:100%; align-items:flex-start; }
+.hp-tab-l.mr-tab-l{ grid-template-columns:minmax(0, 1fr) auto 72px; }
+@media (max-width:640px){ .hp-tab-l.mr-tab-l{ grid-template-columns:minmax(0, 1fr) 72px; } .hp-tab-l.mr-tab-l > .hp-c:nth-child(2){ display:none; } .mr-tab-l .hp-nome b{ white-space:normal; } }
 .lj-ficha{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
 .lj-ficha > div{ background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:11px 13px; min-width:0; }
 .lj-ficha b{ display:block; font-family:var(--mono, monospace); font-size:calc(15px * var(--esc)); color:var(--giz); }
@@ -8805,6 +8813,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               </div>
               <button class="bt primario" id="btNovoLancamento"><svg><use href="#i-mais"/></svg>Novo Lançamento</button>
             </div>
+            <section class="heroi" id="lcHeroi"></section>
             <!-- Filtros pelas próprias colunas da tabela: programa, titular e como
                  entrou são as três perguntas que se faz a um livro — o quê, de quem,
                  de que jeito —, e o período recorta o quando. Os selects nascem do
@@ -9465,6 +9474,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba" id="p-fb-mural">
           <div class="pilha" style="gap:14px">
+            <div class="linha sec-cab"></div>
+            <section class="heroi" id="mrHeroi"></section>
             <div id="mrGuia"></div>
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="seg" id="segMural"></div>
@@ -10347,7 +10358,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 21:00';
+const BUILD = '2026-10-11 21:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -18312,7 +18323,54 @@ function alertasAutomaticosMural(){
   return out;
 }
 
+/* Painel do Mural: logo abaixo do título, com as abas de categoria embaixo. */
+function renderHeroiMural(){
+  const alvo = $('#mrHeroi'); if (!alvo) return;
+  const todas = DB.mural || [];
+  const abertas = todas.filter(m => { const d = diasAte(m.fim); return d === null || d >= 0; });
+  const autos = alertasAutomaticosMural();
+  if (!abertas.length){
+    montarHeroi(alvo, {rot:'Oportunidades abertas', vazioUnid:'oportunidades',
+      vazio:`Nenhuma oportunidade com prazo aberto no Mural.${autos.length ? ` A Torre percebeu ${autos.length} ${autos.length === 1 ? 'alerta' : 'alertas'} nas campanhas, em Alertas importantes.` : ''} Cadastre o que chegar pelo canal em Nova Oportunidade e o prazo passa a avisar sozinho.`});
+    return;
+  }
+  const naoLidas = abertas.filter(m => !m.lida).length;
+  const semana = abertas.filter(m => { const d = diasAte(m.fim); return d !== null && d <= 7; }).length;
+  const quentes = abertas.slice().sort((a, b) => temperaturaMural(b) - temperaturaMural(a));
+  const prox = abertas.filter(m => diasAte(m.fim) !== null).sort((a, b) => String(a.fim).localeCompare(String(b.fim)))[0];
+  const prazo = m => { const d = diasAte(m.fim); return d === null ? 'sem prazo' : d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `${d} dias`; };
+  const porCat = {}; abertas.forEach(m => { porCat[m.cat] = (porCat[m.cat] || 0) + 1; });
+  const lista = quentes.slice(0, 5);
+  const dirHtml = `<div class="mr-hq">${lista.map(m => { const d = diasAte(m.fim);
+    return `<div class="mr-hq-l${m.lida ? ' lida' : ''}"><span class="mr-hq-t">${esc(m.titulo || 'Sem título')}</span>
+      <span class="etq ${d !== null && d <= 1 ? 'brasa' : d !== null && d <= 7 ? 'ouro' : ''}">${prazo(m)}</span></div>`; }).join('')}</div>`;
+  montarHeroi(alvo, {
+    rot:'Oportunidades abertas',
+    valor:`${nBR(abertas.length)}<small> ${abertas.length === 1 ? 'oportunidade' : 'oportunidades'}</small>`,
+    linha: prox ? `<span>Próxima a fechar: <b>${esc(prox.titulo || 'Sem título')}</b></span><span class="heroi-chip ${diasAte(prox.fim) <= 1 ? 'desce' : ''}">${diasAte(prox.fim) === 0 ? 'fecha hoje' : diasAte(prox.fim) === 1 ? 'fecha amanhã' : `fecha em ${diasAte(prox.fim)} dias`}</span>` : '<span>Nenhuma com data para acabar</span>',
+    numeros:[[nBR(naoLidas), naoLidas === 1 ? 'ainda não lida' : 'ainda não lidas'], [nBR(semana), semana === 1 ? 'fecha nesta semana' : 'fecham nesta semana'],
+      [nBR(autos.length), autos.length === 1 ? 'alerta que a Torre percebeu' : 'alertas que a Torre percebeu']],
+    fatias:fatiasHeroi(Object.keys(porCat).map(k => ({k, v:porCat[k]})), x => (CATEGORIAS_MURAL[x.k] || {n:'Outras'}).n), fmtFatia:v => nBR(v) + (v === 1 ? ' oportunidade' : ' oportunidades'), compRot:'Oportunidades por categoria',
+    dirRot:'As mais quentes', dirSub:'Pela classificação do anúncio, pelo seu voto e pelo prazo.',
+    dirHtml, dirBt: quentes.length > lista.length ? `Ver as ${quentes.length}` : 'Ver em detalhe',
+    dirAcao: g => abrirQuentesMural(g)
+  });
+}
+function abrirQuentesMural(gatilho){
+  const abertas = (DB.mural || []).filter(m => { const d = diasAte(m.fim); return d === null || d >= 0; })
+    .sort((a, b) => temperaturaMural(b) - temperaturaMural(a));
+  const linhas = abertas.map(m => { const d = diasAte(m.fim);
+    return `<div class="hp-tab-l mr-tab-l"><span class="hp-nome"><b>${esc(m.titulo || 'Sem título')}</b></span>
+      <span class="hp-c">${esc((CATEGORIAS_MURAL[m.cat] || {n:'Outras'}).n)}</span>
+      <span class="hp-c ${d !== null && d <= 1 ? 'ouro' : ''}">${d === null ? 'sem prazo' : d === 0 ? 'hoje' : d === 1 ? 'amanhã' : d + ' dias'}</span></div>`; }).join('');
+  abrirJanelaInfo({gatilho, titulo:'As mais quentes', sub:`${abertas.length} oportunidade${abertas.length !== 1 ? 's' : ''} com prazo aberto`, rotulo:'Mural', icone:'livro',
+    corpo: djSec('Da mais quente para a mais fria', 'faisca', `<div class="hp-tab">
+        <div class="hp-tab-l mr-tab-l hp-tab-cab"><span>Oportunidade</span><span class="hp-c">Categoria</span><span class="hp-c">Fecha</span></div>
+        ${linhas}</div>
+      <p class="dj-nota">Para ler, votar ou apagar uma oportunidade, use o cartão dela no Mural, abaixo do painel.</p>`)});
+}
 function renderMural(){
+  renderHeroiMural();
   const alvo = $('#mrLista'); if (!alvo) return;
   if ($('#mrGuia') && !$('#mrGuia').innerHTML) $('#mrGuia').innerHTML = htmlGuia(GUIA_MURAL);
 
@@ -24637,7 +24695,44 @@ function aplicarFiltroLanc(ls){
    faria perder o lugar em quem tem livro grande. */
 let paginaLanc = 1, porPaginaLanc = 10;
 
+/* Painel dos lançamentos: logo abaixo do título, como em todas as páginas.
+   As contas são pelo SALDO das linhas (entradas menos saídas): numa
+   transferência, o custo sai de um programa e entra no outro; somar só as
+   entradas contaria o mesmo dinheiro duas vezes. */
+function renderHeroiLancamentos(){
+  const alvo = $('#lcHeroi'); if (!alvo) return;
+  const ent = (DB.lancamentos || []).filter(l => Number(l.qtd) > 0);
+  if (!ent.length){
+    montarHeroi(alvo, {rot:'Pontos que entraram com custo', vazioUnid:'pontos',
+      vazio:'O livro está em branco. Cada compra, transferência ou bônus que você lançar vira uma linha, e daqui sai o seu milheiro médio.'});
+    return;
+  }
+  const todas = DB.lancamentos || [];
+  const totQ = Math.max(0, soma(todas.map(l => Number(l.qtd) || 0)));
+  const totC = Math.max(0, soma(todas.map(l => Number(l.custo) || 0)));
+  const mesAtual = hojeISO().slice(0, 7);
+  const doMes = todas.filter(l => String(l.data || '').slice(0, 7) === mesAtual);
+  const qMes = Math.max(0, soma(doMes.map(l => Number(l.qtd) || 0))), cMes = Math.max(0, soma(doMes.map(l => Number(l.custo) || 0)));
+  const ultimo = ent.map(l => l.data || '').sort().pop();
+  const porProg = {}; todas.forEach(l => { porProg[l.prog] = (porProg[l.prog] || 0) + (Number(l.qtd) || 0); });
+  Object.keys(porProg).forEach(p => { if (!(porProg[p] > 0)) delete porProg[p]; });
+  const porMes = {}; todas.forEach(l => { const k = String(l.data || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + (Number(l.custo) || 0); });
+  const serie = Object.keys(porMes).sort().slice(-12).map(k => ({r:rotuloMes(k), v:Math.max(0, porMes[k])}));
+  montarHeroi(alvo, {
+    rot:'Pontos que entraram com custo',
+    valor:`${milCurto(totQ)}<small> pontos e milhas</small>`,
+    linha:`<span>Investido: <b>${brl2(totC)}</b></span><span class="heroi-chip">último em ${dataBR(ultimo)}</span>`,
+    numeros:[[totQ ? brl2(totC / totQ * 1000) : 'n/d', 'milheiro médio de tudo o que entrou'],
+      [milCurto(qMes), cMes ? `entraram este mês · ${brl2(cMes)}` : 'entraram este mês'],
+      [nBR(todas.length), todas.length === 1 ? 'linha no livro' : 'linhas no livro']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' pontos', compRot:'Pontos por programa',
+    dirRot:'Investido mês a mês', dirSub:'Quanto você pagou pelos pontos que entraram em cada mês.',
+    ult: serie.length ? {b:brl2(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => brl2(v), semSerie:'A curva aparece a partir do segundo mês com lançamento.'
+  });
+}
 function renderLancamentos(){
+  renderHeroiLancamentos();
   const custosSaida = custosDasSaidas();
   /* Mais recente no topo, e dentro do mesmo dia o mais recente também. A data
      sozinha empata sempre que se lança duas vezes num dia — o caso comum de uma
