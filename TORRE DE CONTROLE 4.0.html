@@ -231,16 +231,19 @@ p:last-child{ margin-bottom:0; }
 .cp-rota-txt b{ font-size:calc(15.5px * var(--esc)); color:var(--giz); font-weight:600; }
 .cp-rota-txt span{ font-size:calc(13px * var(--esc)); color:var(--grafite-dim);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* Nome da rota e subtítulo grandes demais para a largura: até duas linhas
-   inteiras, em vez de cortar com reticências. Só passa de duas em caso extremo. */
-.cp-rota-txt > span:not(.cp-rota-nome), .cp-rota-txt .cp-rota-nome > b{ white-space:normal; text-overflow:clip;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; text-wrap:balance; }
-/* Duas colunas: o nome ocupa a sua, centralizado na altura; o olho fica na
-   outra, na ponta direita, centralizado nas duas direções. */
-.cp-rota-txt{ flex:1 1 auto; }
-.cp-rota-txt .cp-rota-nome{ display:flex; align-items:center; gap:10px; width:100%; white-space:normal; overflow:visible; }
-.cp-rota-txt .cp-rota-nome > b{ flex:1 1 auto; min-width:0; text-align:center; }
-.cp-rota-txt .cp-rota-nome > .cp-olho{ margin-left:auto; align-self:center; }
+/* SÓ NO CELULAR (até 640px). No computador e no tablet o cabeçalho do cartão
+   segue como sempre foi: nome numa linha, olho colado ao nome.
+   · nome e subtítulo grandes demais: até duas linhas inteiras, sem reticências;
+   · duas colunas: o nome centralizado na sua, nas duas direções; o olho na
+     outra, na ponta direita, também centralizado. */
+@media (max-width:640px){
+  .cp-rota-txt > span:not(.cp-rota-nome), .cp-rota-txt .cp-rota-nome > b{ white-space:normal; text-overflow:clip;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; text-wrap:balance; }
+  .cp-rota-txt{ flex:1 1 auto; }
+  .cp-rota-txt .cp-rota-nome{ display:flex; align-items:center; gap:10px; width:100%; white-space:normal; overflow:visible; }
+  .cp-rota-txt .cp-rota-nome > b{ flex:1 1 auto; min-width:0; text-align:center; }
+  .cp-rota-txt .cp-rota-nome > .cp-olho{ margin-left:auto; align-self:center; }
+}
 
 .cp-prazo{ display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
 .cp-fecha{ display:inline-flex; align-items:center; gap:6px; font-weight:600;
@@ -10499,7 +10502,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 12:00';
+const BUILD = '2026-10-12 12:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -20731,7 +20734,7 @@ function abrirRegras(id, gatilho){
 
       <footer class="dr-pe">
         <button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRegras').close()">Fechar</button>
-        ${voltaCamp ? `<button type="button" class="bt fantasma dr-voltar" onclick="abrirRegras('${voltaCamp}')"><svg><use href="#i-seta-e"/></svg>Voltar para ${esc(nomeVolta.tipo === 'bonificada' ? (nomeVolta.parceiro || 'a campanha') : 'a campanha')}</button>` : ''}
+        ${voltaCamp ? `<button type="button" class="bt fantasma dr-voltar" onclick="abrirRegras('${voltaCamp}')"><svg><use href="#i-seta-e"/></svg>Voltar para a campanha${nomeVolta.tipo === 'bonificada' && nomeVolta.parceiro ? ` da ${esc(nomeVolta.parceiro)}` : ''}</button>` : ''}
         ${c.link ? `<a class="bt fantasma" href="${esc(c.link)}" target="_blank" rel="noopener">
           <svg><use href="#i-link"/></svg>Abrir Página da Campanha</a>` : ''}
         ${ehCompra ? `<button type="button" class="bt primario" onclick="comprarAgora('${c.id}')">
@@ -20979,13 +20982,14 @@ function ajustarMarcasRegua(){
     /* Rótulo que passaria da borda do cartão (o da ponta direita, no celular)
        é puxado para dentro, inteiro, em vez de ficar cortado. */
     const caixa = (rg.closest('.cp') || rg).getBoundingClientRect();
+    const celular = window.matchMedia('(max-width:640px)').matches;   // puxar para dentro só no celular
     ms.forEach(m => {
       const em = m.querySelector('em'); if (!em) return;
       em.style.translate = '';
       let lin = m.classList.contains('baixo') ? 1 : 0;
       let r = em.getBoundingClientRect();
       if (r.left < fimLinha[lin] + 8){ lin = 1 - lin; m.classList.toggle('baixo', lin === 1); r = em.getBoundingClientRect(); }
-      const dir = r.right - (caixa.right - 12), esq = (caixa.left + 12) - r.left;
+      const dir = celular ? r.right - (caixa.right - 12) : 0, esq = celular ? (caixa.left + 12) - r.left : 0;
       if (dir > 0){ em.style.translate = `${-Math.ceil(dir)}px 0`; r = em.getBoundingClientRect(); }
       else if (esq > 0){ em.style.translate = `${Math.ceil(esq)}px 0`; r = em.getBoundingClientRect(); }
       fimLinha[lin] = r.right;
