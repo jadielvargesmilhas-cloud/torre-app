@@ -4731,6 +4731,24 @@ body.palco-estreito .topo-titulo{ flex:0 1 auto; min-width:min(160px, 30%); }
 .dj-pos{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--sup-2); font-size:calc(11.5px * var(--esc)); color:var(--grafite); font-family:var(--f-m); }
 @media (max-width:640px){ .dj-linha-bt{ grid-template-columns:26px minmax(0, 1fr) 56px; } .dj-linha-bt .dj-data{ display:none; } }
 
+.hp-regua{ display:flex; flex-direction:column; gap:9px; padding-top:6px; }
+.hp-linha{ display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(60px, 2fr) auto; align-items:center; gap:10px; }
+.hp-nome{ display:flex; align-items:center; gap:8px; min-width:0; }
+.hp-nome b{ font-weight:600; font-size:calc(13px * var(--esc)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hp-barra{ height:8px; border-radius:99px; background:color-mix(in oklab, var(--giz) 10%, transparent); overflow:hidden; }
+.hp-barra i{ display:block; height:100%; border-radius:99px; background:#F2C14E; }
+.hp-val{ font-family:var(--f-m); font-size:calc(13px * var(--esc)); font-weight:600; white-space:nowrap; }
+.hp-tab{ display:flex; flex-direction:column; border:1px solid var(--fio); border-radius:12px; overflow:hidden; }
+/* Colunas de largura fixa: o cabeçalho e as linhas são grades separadas e só se alinham se medirem igual. */
+.hp-tab-l{ display:grid; grid-template-columns:minmax(0, 1fr) repeat(3, calc(88px * var(--esc))); gap:12px; align-items:center; padding:9px 14px; }
+.hp-tab-l + .hp-tab-l{ border-top:1px solid var(--fio-suave, var(--fio)); }
+.hp-tab-cab{ background:var(--sup-1); font-size:calc(12px * var(--esc)); font-weight:600; color:var(--grafite-dim); }
+.hp-c{ text-align:right; font-family:var(--f-m); font-size:calc(13px * var(--esc)); white-space:nowrap; }
+.hp-c.jade{ color:var(--jade); } .hp-c.ouro{ color:var(--ouro); }
+.hp-tab-cab .hp-c{ white-space:normal; line-height:1.2; }
+.hp-meu{ font-style:normal; font-size:calc(11px * var(--esc)); color:var(--anil-claro); border:1px solid color-mix(in oklab, var(--anil-claro) 40%, transparent); border-radius:99px; padding:0 7px; }
+/* No celular o "R$" sai das células (o título da tabela já diz que é em reais) e o nome do programa ganha espaço. */
+@media (max-width:640px){ .hp-rs{ display:none; } .hp-tab-l{ grid-template-columns:minmax(0, 1fr) calc(44px * var(--esc)) calc(44px * var(--esc)) calc(58px * var(--esc)); gap:6px; padding:9px 10px; } .hp-tab-cab .hp-c{ font-size:calc(10.5px * var(--esc)); } .hp-c{ font-size:calc(11.5px * var(--esc)); } .hp-tab-cab .hp-c{ white-space:normal; line-height:1.2; } .hp-tab-l .hp-nome .disco, .hp-tab-l .hp-nome > span:first-child{ flex-shrink:0; } }
 .mais-det{ margin-top:12px; }
 .mais-det > summary{
   list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
@@ -10029,6 +10047,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
         </div>
 
         <div class="painel-aba" id="p-aj-mercado">
+          <!-- Painel da seção, logo abaixo do título, como nas demais. -->
+          <section class="heroi" id="ajHeroiProg" style="margin-bottom:16px"></section>
           <div class="pilha" style="gap:16px">
             <div class="nota ouro"><svg><use href="#i-alvo"/></svg><div>Estas são as quatro faixas que desenham o termômetro. Vêm da referência pública de mercado para 2026 e podem ser reescritas a qualquer momento, o termômetro se redesenha na hora.</div></div>
             <div class="cartao" style="padding:0"><div class="rolo" style="margin:0;padding:0" id="ajFaixas"></div></div>
@@ -10277,7 +10297,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 18:50';
+const BUILD = '2026-10-11 19:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15003,15 +15023,17 @@ function montarHeroi(alvo, o){
         <div><div class="heroi-rot">${esc(o.dirRot)}</div><div class="heroi-sub">${esc(o.dirSub || '')}</div></div>
         ${o.ult ? `<div class="heroi-ult"><b>${o.ult.b}</b><span>${esc(o.ult.sp)}</span></div>` : ''}
       </div>
-      ${o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">Ver mês a mês<svg><use href="#i-seta-d"/></svg></button>` : ''}
-      <div class="heroi-curva" id="${idc}">${o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? '' : `<p class="heroi-sub" style="padding:24px 0">${esc(o.semSerie || 'A curva aparece a partir do segundo mês com movimento.')}</p>`}</div>
+      ${o.dirHtml ? (o.dirBt ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="dir">${esc(o.dirBt)}<svg><use href="#i-seta-d"/></svg></button>` : '')
+        : o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">Ver mês a mês<svg><use href="#i-seta-d"/></svg></button>` : ''}
+      <div class="heroi-curva" id="${idc}">${o.dirHtml ? o.dirHtml : o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? '' : `<p class="heroi-sub" style="padding:24px 0">${esc(o.semSerie || 'A curva aparece a partir do segundo mês com movimento.')}</p>`}</div>
     </div>`;
-  if (o.serie && o.serie.length >= 2 && o.serie.some(p => p.v)) document.getElementById(idc).innerHTML = grLinha(o.serie, {altura:170, fmt:o.fmtSerie || (v => nBR(v)), cor:'#F2C14E', alvo:'#' + idc});
+  if (!o.dirHtml && o.serie && o.serie.length >= 2 && o.serie.some(p => p.v)) document.getElementById(idc).innerHTML = grLinha(o.serie, {altura:170, fmt:o.fmtSerie || (v => nBR(v)), cor:'#F2C14E', alvo:'#' + idc});
   contarValor(alvo.querySelector('.heroi-valor'));
   /* janelas de detalhe: cada parte do painel abre a sua, sem poluir a tela */
   alvo.querySelectorAll('.hn-det').forEach(b => b.onclick = () => DETALHES_HEROI[b.dataset.det]());
   const bc = alvo.querySelector('[data-abre="comp"]'); if (bc) bc.onclick = () => janelaComposicao(o);
   const bs = alvo.querySelector('[data-abre="serie"]'); if (bs) bs.onclick = () => janelaSerie(o);
+  const bd = alvo.querySelector('[data-abre="dir"]'); if (bd && o.dirAcao) bd.onclick = e => o.dirAcao(e.currentTarget);
 }
 
 
@@ -38248,6 +38270,50 @@ function renderDatas(){
     </tr>`).join('')}</tbody></table>`;
 }
 
+/* ── Ajustes → Programas: o painel (06/10/2026) ───────────────────────────────
+   O que a Torre conhece de cada programa e o que você já personalizou. À
+   direita, a régua do milheiro dos programas aéreos, do alvo mais barato ao
+   mais caro: é ela que decide se uma compra ou transferência vale a pena. */
+function renderHeroiProgramas(){
+  const alvo = $('#ajHeroiProg'); if (!alvo) return;
+  const tipoDe = p => PROGRAMAS[p].tipo;
+  const NOME_T = {milhas:'Aéreos', pontos:'Bancos e pontos', hotel:'Hotéis'};
+  const por = {}; PROG_IDS.forEach(p => { const t = NOME_T[tipoDe(p)] || 'Outros'; por[t] = (por[t] || 0) + 1; });
+  const ajust = Object.keys(DB.faixas || {}).filter(p => PROGRAMAS[p]).length;
+  const marcas = Object.keys(DB.logos || {}).filter(p => PROGRAMAS[p] && DB.logos[p]).length;
+  const aereos = PROG_IDS.filter(p => tipoDe(p) === 'milhas' && faixasDe(p) && Number(faixasDe(p).alvo) > 0)
+    .map(p => ({p, a:Number(faixasDe(p).alvo)})).sort((x, y) => x.a - y.a);
+  const mx = Math.max(...aereos.map(x => x.a), 1);
+  const lista = aereos.slice(0, 6);
+  const dirHtml = aereos.length ? `<div class="hp-regua">${lista.map(x => `<div class="hp-linha">
+      <span class="hp-nome">${discoProg(x.p, 'p')}<b>${esc(prog(x.p).n)}</b></span>
+      <span class="hp-barra"><i style="width:${(x.a / mx * 100).toFixed(1)}%"></i></span>
+      <span class="hp-val">${brl2(x.a)}</span></div>`).join('')}</div>`
+    : `<p class="heroi-sub" style="padding:24px 0">Nenhum programa aéreo com alvo definido.</p>`;
+  montarHeroi(alvo, {
+    rot:'Programas na Torre', valor:`${nBR(PROG_IDS.length)}<small> programas</small>`,
+    linha:`<span>Faixas ajustadas por você: <b>${nBR(ajust)}</b></span><span class="heroi-chip">${nBR(marcas)} com marca própria</span>`,
+    numeros:[[nBR(por['Aéreos'] || 0), 'programas aéreos'], [nBR(por['Bancos e pontos'] || 0), 'bancos e pontos'], [nBR(por['Hotéis'] || 0), 'hotéis']],
+    fatias:fatiasHeroi(Object.keys(por).map(k => ({k, v:por[k]})), x => x.k), fmtFatia:v => nBR(v) + (v === 1 ? ' programa' : ' programas'), compRot:'Programas por tipo',
+    dirRot:'Alvo do milheiro', dirSub:'Programas aéreos, do alvo mais barato ao mais caro.',
+    dirHtml, dirBt: aereos.length > lista.length ? `Ver os ${aereos.length}` : (aereos.length ? 'Ver em detalhe' : ''),
+    dirAcao: g => abrirReguaProgramas(g)
+  });
+}
+/* A régua completa: ótimo, alvo e razoável de cada programa aéreo e de hotel. */
+function abrirReguaProgramas(gatilho){
+  const ps = PROG_IDS.filter(p => ['milhas', 'hotel'].includes(PROGRAMAS[p].tipo) && faixasDe(p) && Number(faixasDe(p).alvo) > 0)
+    .sort((a, b) => Number(faixasDe(a).alvo) - Number(faixasDe(b).alvo));
+  const linhas = ps.map(p => { const f = faixasDe(p), meu = DB.faixas && DB.faixas[p];
+    return `<div class="hp-tab-l"><span class="hp-nome">${discoProg(p, 'p')}<b>${esc(prog(p).n)}</b>${meu ? '<em class="hp-meu">ajustado</em>' : ''}</span>
+      ${[['jade', f.otimo], ['', f.alvo], ['ouro', f.razoavel]].map(([t, v]) => `<span class="hp-c ${t}"><span class="hp-rs">R$ </span>${nBR2(v)}</span>`).join('')}</div>`; }).join('');
+  abrirJanelaInfo({gatilho, titulo:'Régua do milheiro', sub:`${ps.length} programas, do alvo mais barato ao mais caro`, rotulo:'Programas', icone:'alvo',
+    corpo: djSec('Até quanto vale pagar por mil', 'alvo', `<div class="hp-tab">
+        <div class="hp-tab-l hp-tab-cab"><span>Programa</span><span class="hp-c">Ótimo até</span><span class="hp-c">Alvo até</span><span class="hp-c">Razoável até</span></div>
+        ${linhas}</div>
+      <p class="dj-nota">Valores em reais por mil pontos. Abaixo do alvo, a compra ou a transferência é boa; acima do razoável, é cara. Para mudar um número, edite a tabela de faixas nesta página.</p>`)});
+}
+
 function renderAjustes(){
   renderDatas();
   /* Redesenhado a cada visita: emissões podem ter sido criadas ou ajustadas
@@ -38357,6 +38423,8 @@ function renderAjustes(){
     }).join('')}</tbody></table>`;
 
   renderLogos();
+
+  renderHeroiProgramas();
 
   const bytes = new Blob([JSON.stringify(DB)]).size;
   if ($('#ajHeroi')){
