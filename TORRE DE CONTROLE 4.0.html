@@ -4733,6 +4733,11 @@ body.palco-estreito .topo-titulo{ flex:0 1 auto; min-width:min(160px, 30%); }
 
 .hv-linha{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:3px 0; width:100%; }
 #ajHeroiProv .heroi-curva{ width:100%; }
+#ljHeroi .heroi-curva{ width:100%; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:16px; }
+.lj-ficha{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+.lj-ficha > div{ background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:11px 13px; min-width:0; }
+.lj-ficha b{ display:block; font-family:var(--mono, monospace); font-size:calc(15px * var(--esc)); color:var(--giz); }
+.lj-ficha span{ display:block; margin-top:3px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.4; }
 .hv-nome{ display:flex; align-items:baseline; gap:8px; min-width:0; }
 .hv-nome b{ font-weight:600; font-size:calc(13.5px * var(--esc)); white-space:nowrap; }
 .hv-nome small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); white-space:nowrap; }
@@ -7614,6 +7619,13 @@ svg.gr .pt-halo{ opacity:.16; pointer-events:none; }
 .heroi-curva svg.gr text{ fill:var(--grafite-dim); }
 .heroi-curva svg.gr .malha{ stroke:rgba(255,255,255,.07); }
 .heroi-vazio{ grid-column:1 / -1; display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
+.heroi-valor-zero{ color:rgba(242,193,78,.55); text-shadow:none; }
+.heroi-vazio-txt{ margin:0; color:var(--giz-2); font-size:calc(15px * var(--esc)); line-height:1.6; max-width:52ch; }
+.heroi-dir-vazio{ display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; padding:22px 24px; border-radius:16px;
+  border:1px dashed rgba(255,255,255,.14); background:rgba(255,255,255,.03); }
+.heroi-dir-vazio svg{ width:26px; height:26px; fill:none; stroke:#F2C14E; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; opacity:.85; }
+.heroi-dir-vazio b{ font-size:calc(15px * var(--esc)); color:var(--giz); font-weight:600; }
+.heroi-dir-vazio span{ font-size:calc(13.5px * var(--esc)); color:var(--grafite); line-height:1.55; max-width:44ch; }
 .heroi-vazio p{ margin:0; color:var(--grafite); max-width:56ch; }
 @media (max-width:1100px){ .heroi{ grid-template-columns:minmax(0, 1fr); } }
 @media (max-width:560px){
@@ -8868,6 +8880,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                painel certo antes do primeiro desenho. -->
           <div id="ctCorpo" hidden>
             <div class="pilha" style="gap:16px">
+              <!-- Painel da seção, logo abaixo do título, como nas demais. -->
+              <section class="heroi" id="ctHeroi"></section>
               <div class="linha" style="flex-wrap:wrap;gap:11px">
                 <div class="olho destaque" style="margin:0;flex:0 0 auto" id="ctTituloOp">Comprar Pontos/Milhas</div>
                 <div class="seg" id="segCtModo"></div>
@@ -9034,6 +9048,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
         </div>
       <div class="painel-aba" id="p-sl-validade">
           <div class="pilha" style="gap:16px">
+            <div id="vcHeroiSlot"></div>
             <div class="linha" style="margin-bottom:14px">
               <div><h3 style="font-size:calc(16px * var(--esc));font-weight:600;color:var(--brasa)">Contagem regressiva</h3>
                 <div class="sub">O lote mais perto de virar pó fica no topo.</div></div>
@@ -9087,6 +9102,9 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           </div>
           <div id="campGrupoCT">
 <div class="pilha" style="gap:16px">
+            <!-- O painel vem logo abaixo do título, como em todas as páginas; o
+                 seletor de tipo e o guia ficam logo depois dele. -->
+            <div id="fbHeroiSlot"></div>
 
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="seg" id="segCampanha">
@@ -9101,7 +9119,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                  seguinte é o que aquilo significa. Vem dobrado, porque quem já
                  sabe passa por ele sem gastar uma linha de tela. -->
             <div id="fbGuia"></div>
-            <div id="fbHeroiSlot"></div>
             <div class="grade g4" id="fbResumo" hidden></div>
             <!-- A lista vem antes do radar: o que está aberto agora é o que se
                  pode aproveitar hoje, e o radar é a leitura do padrão — contexto
@@ -9176,6 +9193,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           </div>
           <div id="campGrupoClube" hidden>
           <div class="pilha" style="gap:16px">
+            <div id="clCampHeroiSlot"></div>
+            <section class="heroi" id="ljHeroi" hidden></section>
 
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="seg" id="segCampClube">
@@ -9189,7 +9208,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <!-- Pilha, não caixa solta: sem isto os filhos ficavam encostados um no
                  outro, e a lista de campanhas colava no cartão do radar. -->
             <div id="clClubePainel" class="pilha" style="gap:16px">
-            <div id="clCampHeroiSlot"></div>
             <div class="grade g4" id="clResumo" hidden></div>
             <div class="pilha" style="gap:12px">
               <div class="linha" style="flex-wrap:wrap;gap:11px">
@@ -10329,7 +10347,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 19:40';
+const BUILD = '2026-10-11 21:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15021,6 +15039,9 @@ function renderMesaHeroi(){
    Um número grande, a comparação que dá sentido a ele, três números de apoio, a
    composição e, à direita, a curva mês a mês. */
 const CORES_HEROI = ['#F2C14E', '#6FB7FF', '#5FD3A6', '#C79BFF', 'rgba(226,233,245,.35)'];
+/* A unidade do zero, para cada painel vazio: "0 cotações", "0 contas". */
+const UNID_VAZIO = {'Cotações montadas':'cotações', 'Emissões para clientes':'emissões', 'Contas no grupo':'contas', 'Passageiros cadastrados':'passageiros',
+  'Meus cartões':'cartões', 'Milhas prontas para emitir':'milhas', 'Cota de CPF':'contas', 'Catálogo de cartões':'cartões', 'Pronto para vender':'milhas', 'Milhas que vencem':'milhas'};
 function fatiasHeroi(itens, nome){
   const v = itens.filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const top = v.slice(0, 4), resto = soma(v.slice(4).map(x => x.v));
@@ -15030,8 +15051,22 @@ function fatiasHeroi(itens, nome){
 }
 function montarHeroi(alvo, o){
   if (!alvo) return;
+  /* Sem dados, o painel continua com a cara de painel: o número zero à
+     esquerda com o primeiro passo, e à direita o aviso de que ele se monta
+     sozinho. Antes era uma frase solta numa faixa, e parecia tela inacabada. */
   if (o.vazio){
-    alvo.innerHTML = `<div class="heroi-vazio"><div class="heroi-rot">${esc(o.rot)}</div><p>${o.vazio}</p></div>`;
+    const unid = o.vazioUnid || UNID_VAZIO[o.rot.replace(/ \(.*\)$/, '')] || '';
+    alvo.innerHTML = `
+      <div class="heroi-esq heroi-vazio-esq">
+        <div class="heroi-rot">${esc(o.rot)}</div>
+        ${unid ? `<div class="heroi-valor heroi-valor-zero">0<small> ${esc(unid)}</small></div>` : ''}
+        <p class="heroi-vazio-txt">${o.vazio}</p>
+      </div>
+      <div class="heroi-dir heroi-dir-vazio">
+        <svg><use href="#i-grafico"/></svg>
+        <b>O painel se monta sozinho</b>
+        <span>Com o primeiro registro, aparecem aqui os números, a divisão por programa e a curva mês a mês.</span>
+      </div>`;
     return;
   }
   const tot = soma((o.fatias || []).map(f => f.v));
@@ -15100,10 +15135,11 @@ function guiasComprasInteligentes(raiz, cab){
   if (!naLoja && !noAereo){ if (velha && !raiz.contains(velha)) velha.remove(); else if (velha && !naLoja && !noAereo) velha.remove(); return; }
   let sg = velha;
   if (!sg){ sg = document.createElement('div'); sg.className = 'seg seg-guias'; sg.id = 'segComprasInt';
-    sg.innerHTML = `<button type="button" data-g="lojas"><svg><use href="#i-sacola"/></svg>Compra em lojas parceiras</button><button type="button" data-g="aereos"><svg><use href="#i-aviao"/></svg>Compra em programas aéreos</button>`;
+    sg.innerHTML = `<button type="button" data-g="lojas"><svg><use href="#i-sacola"/></svg>Compra em Lojas Parceiras</button><button type="button" data-g="aereos"><svg><use href="#i-aviao"/></svg>Compra em Programas Aéreos</button>`;
     sg.querySelector('[data-g=lojas]').onclick = () => irItemMenu('fabrica', 'fb-compras');
     sg.querySelector('[data-g=aereos]').onclick = () => irItemMenu('fabrica', 'fb-campanhas', 'bonificada'); }
-  if (sg.parentElement !== cab.parentElement || sg.previousElementSibling !== cab) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
+  /* Entra logo depois do título só na primeira vez; o molde da seção o põe abaixo do painel. */
+  if (sg.parentElement !== cab.parentElement) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
   sg.querySelector('[data-g=lojas]').classList.toggle('on', naLoja);
   sg.querySelector('[data-g=aereos]').classList.toggle('on', noAereo);
 }
@@ -15137,7 +15173,8 @@ function guiasAtendimento(raiz, cab){
     <svg class="et-seta" aria-hidden="true"><use href="#i-seta-d"/></svg>
     <button type="button" role="tab" data-g="emitidos" class="${naEmi ? 'on' : ''}" aria-selected="${naEmi}"><span class="et-n">2</span><span class="et-t"><b>Emitidos</b><small>${nEmi} ${nEmi === 1 ? 'emissão' : 'emissões'}</small></span></button>`;
   sg.querySelectorAll('button').forEach(b => b.onclick = () => { if (vistaAtual !== b.dataset.g) irPara(b.dataset.g); });
-  if (sg.parentElement !== cab.parentElement || sg.previousElementSibling !== cab) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
+  /* Entra logo depois do título só na primeira vez; o molde da seção o põe abaixo do painel. */
+  if (sg.parentElement !== cab.parentElement) cab.parentElement.insertBefore(sg, cab.nextElementSibling);
 }
 /* Emitir um orçamento salvo: escolhe a opção que o cliente aprovou e abre a
    emissão já preenchida (cliente, trecho, data, programa, milhas, taxas, preço). */
@@ -15226,12 +15263,19 @@ function padronizarSecao(){
     painel.dataset.veioDe = casa.id;
     caixa.insertBefore(painel, cab.nextElementSibling);
   }
-  const ancora = (() => { const g = document.getElementById('segComprasInt') || document.getElementById('segAtendimento'); return g && g.parentElement === caixa && g.previousElementSibling === cab ? g : cab; })();
-  if (painel && painel.parentElement === caixa && ancora.parentElement === caixa && ancora.nextElementSibling !== painel) caixa.insertBefore(painel, ancora.nextElementSibling);
+  /* O painel vem SEMPRE logo abaixo do título (padrão de todas as páginas). Os
+     passos ou guias da seção (Orçamentos › Emitidos, as telas de Compras
+     Inteligentes) descem para logo depois do painel. */
+  const passos = document.getElementById('segComprasInt') || document.getElementById('segAtendimento');
+  if (painel && painel.parentElement === caixa && cab.parentElement === caixa && cab.nextElementSibling !== painel) caixa.insertBefore(painel, cab.nextElementSibling);
+  /* Mesmo quando o painel mora dentro de um bloco (a Compra Bonificada, dentro
+     das campanhas), os passos vão para logo depois dele. */
+  if (passos && painel && painel.parentElement && painel.nextElementSibling !== passos) painel.parentElement.insertBefore(passos, painel.nextElementSibling);
 
   /* 3. o guia "Como ler…" logo depois do painel */
   const guia = [...caixa.children].find(e => /Guia$/.test(e.id || '') && vis(e) && /^\s*[▸▾›»]?\s*Como ler/i.test(e.innerText || ''));
-  if (guia && painel && painel.parentElement === caixa && painel.nextElementSibling !== guia) caixa.insertBefore(guia, painel.nextElementSibling);
+  const depois = passos && passos.parentElement === caixa && painel && painel.nextElementSibling === passos ? passos : painel;
+  if (guia && depois && depois.parentElement === caixa && depois.nextElementSibling !== guia) caixa.insertBefore(guia, depois.nextElementSibling);
 }
 
 /* ── Seletores no celular: uma linha só, ou um por linha (10/10/2026) ──────────
@@ -15662,12 +15706,41 @@ function heroiMilhasNoLugar(el){
   /* Carteira: Saldos e Contas têm cada uma o seu painel com curva (09/10/2026) */
   const naSaldos = vistaAtual === 'saldo' && !!document.querySelector('#p-sl-carteira.on');
   const naContas = vistaAtual === 'saldo' && !!document.querySelector('#p-sl-contas.on');
-  el.hidden = !(naSaldos || naContas);
+  const naVenc = vistaAtual === 'saldo' && !!document.querySelector('#p-sl-validade.on');
+  el.hidden = !(naSaldos || naContas || naVenc);
   if (el.hidden) return false;
-  const slot = document.getElementById(naContas ? 'ctaHeroiSlot' : 'slHeroiSlot');
+  const slot = document.getElementById(naContas ? 'ctaHeroiSlot' : naVenc ? 'vcHeroiSlot' : 'slHeroiSlot');
   if (slot && el.parentElement !== slot) slot.appendChild(el);
   el.classList.remove('compacto');
-  return naContas ? 'contas' : 'saldos';
+  return naContas ? 'contas' : naVenc ? 'vencimentos' : 'saldos';
+}
+/* Vencimentos: quanto vence nos próximos 90 dias, o próximo lote e, à direita,
+   as milhas que vencem a cada mês do próximo ano. */
+function renderHeroiVencimentos(){
+  const alvo = $('#heroiArea'); if (!alvo) return;
+  const lotes = (DB.lotes || []).filter(l => l.vence && Number(l.qtd) > 0);
+  if (!lotes.length){ montarHeroi(alvo, {rot:'Milhas que vencem', vazio:'Nenhum lote anotado. Toque em Anotar Lote e informe a quantidade e a data de validade: a Torre avisa antes de a milha virar pó.'}); return; }
+  const futuros = lotes.filter(l => !loteProtegido(l) && (diasAte(l.vence) ?? -1) >= 0).sort((a, b) => String(a.vence).localeCompare(String(b.vence)));
+  const em90 = futuros.filter(l => diasAte(l.vence) <= 90), em30 = futuros.filter(l => diasAte(l.vence) <= 30);
+  const q = arr => soma(arr.map(l => Number(l.qtd) || 0));
+  const protegidos = lotes.filter(l => loteProtegido(l)).length;
+  const prox = futuros[0], dp = prox ? diasAte(prox.vence) : null;
+  const porProg = {}; em90.forEach(l => { porProg[l.prog] = (porProg[l.prog] || 0) + (Number(l.qtd) || 0); });
+  const meses = mesesAte(hojeISO().slice(0, 7), 1).length ? (() => { const out = []; let [a, m] = hojeISO().slice(0, 7).split('-').map(Number);
+    for (let i = 0; i < 12; i++){ out.push(`${a}-${String(m).padStart(2, '0')}`); m++; if (m > 12){ m = 1; a++; } } return out; })() : [];
+  const porMes = {}; futuros.forEach(l => { const k = String(l.vence).slice(0, 7); porMes[k] = (porMes[k] || 0) + (Number(l.qtd) || 0); });
+  const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k] || 0}));
+  montarHeroi(alvo, {
+    rot:'Milhas que vencem em 90 dias',
+    valor:`${milCurto(q(em90))}<small> ${q(em90) === 1 ? 'milha' : 'milhas'}</small>`,
+    linha: prox ? `<span>Próximo lote: <b>${esc(prog(prox.prog).n)}</b>, ${nBR(Number(prox.qtd) || 0)} em ${dataBR(prox.vence)}</span><span class="heroi-chip ${dp <= 30 ? 'desce' : ''}">${dp === 0 ? 'vence hoje' : 'em ' + nBR(dp) + (dp === 1 ? ' dia' : ' dias')}</span>`
+      : `<span>Nenhum lote vence à frente</span>`,
+    numeros:[[milCurto(q(em30)), 'vencem em 30 dias', 'vencimentos'], [nBR(lotes.length), lotes.length === 1 ? 'lote anotado' : 'lotes anotados'], [nBR(protegidos), protegidos === 1 ? 'protegido por clube' : 'protegidos por clube']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'O que vence em 90 dias, por programa',
+    dirRot:'Milhas que vencem, mês a mês', dirSub:'Os próximos 12 meses, pelos lotes anotados.',
+    ult: serie.length ? {b:milCurto(serie[0].v), sp:serie[0].r} : null,
+    serie, fmtSerie:milCurto, semSerie:'A curva aparece quando houver lote vencendo nos próximos meses.'
+  });
 }
 /* Contas: o grupo de titulares, quanto vale o que cada um tem e o que entrou
    no grupo a cada mês. */
@@ -16020,7 +16093,13 @@ function renderHeroiDaVista(v){
   if (meu){ if (el.parentElement !== meu) meu.appendChild(el); }
   else if (palco && el.parentElement !== palco) palco.insertBefore(el, palco.firstChild);
   el.classList.toggle('compacto', v !== PRINCIPAL_DA_AREA[k]);
-  if (k === 'carteira'){ const qual = heroiMilhasNoLugar(el); if (qual === 'contas') renderHeroiContas(); else if (qual) renderHeroiMilhas(); return; }
+  if (k === 'carteira'){
+    /* Controle de CPF mudou para a Carteira: o painel dele continua o mesmo. */
+    if (v === 'emissoes'){ el.hidden = false; el.classList.remove('compacto'); renderHeroiCPF(); return; }
+    const qual = heroiMilhasNoLugar(el);
+    if (qual === 'contas') renderHeroiContas(); else if (qual === 'vencimentos') renderHeroiVencimentos(); else if (qual) renderHeroiMilhas();
+    return;
+  }
   if (k === 'viagens') renderHeroiViagens();
   if (k === 'cartoes'){ renderHeroiCartoes(); return; }
   if (k === 'promocoes'){ if (document.querySelector('#p-fb-campanhas.on') && _heroiCamp){ el.hidden = false; renderHeroiCampanhas(); } else el.hidden = true; return; }
@@ -20465,6 +20544,70 @@ function recordeLoja(l){
 
 function voltaPct(l){ return retornoLoja(l).valor * 100; }
 
+/* Painel das lojas parceiras: logo abaixo do título, acima das abas, como em
+   todas as outras páginas. O número grande é a maior volta de hoje. */
+function renderHeroiLojas(vivas, ordena){
+  const alvo = $('#ljHeroi'); if (!alvo) return;
+  const hoje = hojeISO();
+  const prazo = l => { const d = diasAte(l.fim); return d === null ? 'sem data de fim' : d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `fecha em ${d} dias`; };
+  if (!vivas.length){
+    montarHeroi(alvo, {rot:'Maior volta hoje', vazioUnid:'ofertas',
+      vazio:'Nenhuma oferta de loja parceira no ar. Cadastre a primeira em Nova Loja e a Torre calcula quanto de cada real volta em pontos.'});
+    return;
+  }
+  const porVolta = [...vivas].sort(ordena.volta);
+  const maior = porVolta[0];
+  const maiorMult = [...vivas].sort(ordena.mult)[0];
+  const fechamHoje = vivas.filter(l => l.fim === hoje).length;
+  const porProg = {}; vivas.forEach(l => { porProg[l.prog] = (porProg[l.prog] || 0) + 1; });
+  const lista = porVolta.slice(0, 6);
+  const mx = Math.max(...lista.map(voltaPct), 0.1);
+  const pct = l => nBRdec(Math.round(voltaPct(l) * 10) / 10) + '%';
+  const dirHtml = `<div class="hp-regua">${lista.map(l => `<div class="hp-linha">
+      <span class="hp-nome">${discoProg(l.prog, 'p')}<b>${esc(l.n)}</b></span>
+      <span class="hp-barra"><i style="width:${(voltaPct(l) / mx * 100).toFixed(1)}%"></i></span>
+      <span class="hp-val">${pct(l)}</span></div>`).join('')}</div>${lista.length < 4 ? fichaLoja(maior) : ''}`;
+  montarHeroi(alvo, {
+    rot:'Maior volta hoje',
+    valor:`${pct(maior)}<small> de volta</small>`,
+    linha:`<span><b>${esc(maior.n)}</b> · ${esc(prog(maior.prog).n)}</span><span class="heroi-chip ${diasAte(maior.fim) !== null && diasAte(maior.fim) <= 1 ? 'desce' : ''}">${prazo(maior)}</span>`,
+    numeros:[[nBR(vivas.length), vivas.length === 1 ? 'oferta na vitrine' : 'ofertas na vitrine'],
+      [multTxt(tetoLoja(maiorMult).promo || tetoLoja(maiorMult).base), `melhor multiplicador · ${maiorMult.n}`],
+      [nBR(fechamHoje), fechamHoje === 1 ? 'fecha hoje' : 'fecham hoje']],
+    fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + (v === 1 ? ' oferta' : ' ofertas'), compRot:'Ofertas por programa',
+    dirRot:'Quem mais devolve agora', dirSub:'Volta em %, com o valor do seu ponto em cada programa.',
+    dirHtml, dirBt: porVolta.length > lista.length ? `Ver as ${porVolta.length}` : 'Ver em detalhe',
+    dirAcao: g => abrirVoltasLojas(g)
+  });
+}
+/* Com poucas ofertas, a régua sozinha deixa o quadro vazio: entra a ficha da
+   primeira colocada, com o que explica a volta dela. */
+function fichaLoja(l){
+  const r = retornoLoja(l), rec = l.origem === 'loja' ? recordeLoja(l) : {tipo:'primeira'};
+  const recTxt = rec.tipo === 'recorde' ? 'recorde da loja em 12 meses' : rec.tipo === 'empata' ? 'empata com o recorde da loja'
+    : rec.tipo === 'abaixo' ? `o recorde foi ${multTxt(rec.rec)}` : 'primeira vez no seu arquivo';
+  const d = diasAte(l.fim);
+  return `<div class="lj-ficha">
+    <div><b>${multTxt(r.mult)}</b><span>pontos por real gasto</span></div>
+    <div><b>${brl2(r.cpm)}</b><span>valor do seu milheiro em ${esc(prog(l.prog).n)}</span></div>
+    <div><b>${rec.tipo === 'abaixo' ? 'Abaixo' : rec.tipo === 'recorde' ? 'Recorde' : rec.tipo === 'empata' ? 'Igual' : 'Nova'}</b><span>${recTxt}</span></div>
+    <div><b>${d === null ? 'Sem fim' : d === 0 ? 'Hoje' : d === 1 ? 'Amanhã' : d + ' dias'}</b><span>${d === null ? 'sem data para acabar' : 'até a oferta fechar'}</span></div>
+  </div>`;
+}
+function abrirVoltasLojas(gatilho){
+  const vivas = ofertasVitrine().sort((a, b) => voltaPct(b) - voltaPct(a));
+  const linhas = vivas.map(l => { const d = diasAte(l.fim);
+    return `<div class="hp-tab-l"><span class="hp-nome">${discoProg(l.prog, 'p')}<b>${esc(l.n)}</b></span>
+      <span class="hp-c jade">${nBRdec(Math.round(voltaPct(l) * 10) / 10)}%</span>
+      <span class="hp-c">${multTxt(tetoLoja(l).promo || tetoLoja(l).base)}</span>
+      <span class="hp-c ${d !== null && d <= 1 ? 'ouro' : ''}">${d === null ? 'sem fim' : d === 0 ? 'hoje' : d === 1 ? 'amanhã' : d + ' dias'}</span></div>`; }).join('');
+  abrirJanelaInfo({gatilho, titulo:'Quem mais devolve agora', sub:`${vivas.length} oferta${vivas.length !== 1 ? 's' : ''} na vitrine, da maior volta para a menor`, rotulo:'Lojas Parceiras', icone:'sacola',
+    corpo: djSec('Volta de cada oferta', 'sacola', `<div class="hp-tab">
+        <div class="hp-tab-l hp-tab-cab"><span>Loja</span><span class="hp-c">Volta</span><span class="hp-c">Por real</span><span class="hp-c">Fecha</span></div>
+        ${linhas}</div>
+      <p class="dj-nota">Volta é quanto de cada real gasto retorna em pontos, pelo valor do seu milheiro naquele programa. Multiplicador alto em programa barato pode valer menos que um baixo em programa caro.</p>`)});
+}
+
 function renderLojasParceiras(){
   const alvo = $('#ljVitrine'); if (!alvo) return;
   /* O guia "Como ler a aba de lojas parceiras" era desenhado pela vitrine
@@ -20508,8 +20651,10 @@ function renderLojasParceiras(){
   const maior = [...vivas].sort(ordena.volta)[0];
   const maiorMult = [...vivas].sort(ordena.mult)[0];
   const fechamHoje = vivas.filter(l => l.fim === hoje).length;
+  renderHeroiLojas(vivas, ordena);
   const res = $('#ljResumo');
-  if (res) res.innerHTML = `
+  if (res){ res.hidden = true; res.innerHTML = ''; }   /* os números subiram para o painel */
+  if (false) res.innerHTML = `
     ${metrica('Ofertas na vitrine', String(vivas.length), `${cats.length} categoria${cats.length !== 1 ? 's' : ''}, ${progs.length} programa${progs.length !== 1 ? 's' : ''}`, '')}
     ${metrica('Maior volta', maior ? nBRdec(Math.round(voltaPct(maior) * 10) / 10) + '%' : 'n/d',
       maior ? `${maior.n} · ${prog(maior.prog).n}` : 'Nenhuma oferta viva', maior ? 'jade' : '')}
@@ -20801,6 +20946,8 @@ function trocarAbaCampFab(t){
   if (pc) pc.hidden = t !== 'clube';
   if (pl) pl.hidden = t !== 'loja';
   if (gc) gc.hidden = t !== 'clube';
+  const hs = $('#clCampHeroiSlot'); if (hs) hs.hidden = t !== 'clube';   /* o painel é das campanhas de clube */
+  const hl = $('#ljHeroi'); if (hl) hl.hidden = t !== 'loja';            /* e este, das lojas parceiras */
   if (t === 'clube') renderCampanhasClube(); else renderLojasParceiras();
 }
 
@@ -37044,8 +37191,64 @@ function transferirAgora(id){
   }, 60);
 }
 
+/* ── Comprar Milhas e Transferir Pontos: o painel (06/10/2026) ────────────────
+   Compra: a compra mais barata no ar, em milheiro, e o milheiro das suas
+   compras mês a mês. Transferência: o maior bônus no ar e as milhas que você
+   já recebeu por transferência. Os números vêm das campanhas cadastradas e dos
+   seus lançamentos. */
+function renderHeroiCT(){
+  const alvo = $('#ctHeroi'); if (!alvo) return;
+  const compra = ctTipo === 'compra';
+  const vivas = campanhasVivas(compra ? 'compra' : 'transferencia');
+  const lanc = (DB.lancamentos || []).filter(l => l.tipo === (compra ? 'compra' : 'transferencia') && Number(l.qtd) > 0);
+  const rota = c => c.de ? `${prog(c.de).n} → ${prog(c.para).n}` : prog(c.para).n;
+  const prazo = c => { const d = diasAte(c.fim); return d === null ? '' : d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `fecha em ${d} dias`; };
+  const porMesQ = {}, porMesC = {}; lanc.forEach(l => { const k = String(l.data || '').slice(0, 7); if (!k) return; porMesQ[k] = (porMesQ[k] || 0) + Number(l.qtd); porMesC[k] = (porMesC[k] || 0) + (Number(l.custo) || 0); });
+  const meses = Object.keys(porMesQ).sort().slice(-12);
+  const porProg = {}; lanc.forEach(l => { porProg[l.prog] = (porProg[l.prog] || 0) + Number(l.qtd); });
+  if (!vivas.length && !lanc.length){
+    montarHeroi(alvo, {rot: compra ? 'Melhor compra no ar' : 'Melhor transferência no ar', vazioUnid: compra ? 'campanhas' : 'campanhas',
+      vazio: compra ? 'Nenhuma campanha de compra no ar e nenhuma compra lançada. Quando uma campanha entrar em Promoções, o milheiro dela aparece aqui.'
+                    : 'Nenhuma transferência bonificada no ar e nenhuma transferência lançada. Quando uma campanha entrar em Promoções, o bônus dela aparece aqui.'});
+    return;
+  }
+  if (compra){
+    const cpms = vivas.map(c => ({c, v:metricaCampanha(c)})).filter(x => x.v.reais).sort((a, b) => a.v.v - b.v.v);
+    const best = cpms[0];
+    const serie = meses.map(k => ({r:rotuloMes(k), v: porMesC[k] > 0 ? porMesC[k] / porMesQ[k] * 1000 : 0})).filter(x => x.v > 0);
+    const totQ = soma(Object.values(porMesQ)), totC = soma(Object.values(porMesC));
+    montarHeroi(alvo, {
+      rot:'Melhor compra no ar',
+      valor: best ? `${brl2(best.v.v)}<small> o milheiro</small>` : `0<small> no ar</small>`,
+      linha: best ? `<span><b>${esc(rota(best.c))}</b></span><span class="heroi-chip ${diasAte(best.c.fim) <= 1 ? 'desce' : ''}">${prazo(best.c)}</span>` : '<span>Nenhuma campanha de compra aberta agora</span>',
+      numeros:[[nBR(vivas.length), vivas.length === 1 ? 'campanha de compra no ar' : 'campanhas de compra no ar'],
+        [totQ ? brl2(totC / totQ * 1000) : 'n/d', 'o seu milheiro médio nas compras'], [nBR(lanc.length), lanc.length === 1 ? 'compra lançada' : 'compras lançadas']],
+      fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas compradas por programa',
+      dirRot:'Milheiro das suas compras, mês a mês', dirSub:'Quanto custou cada mil, nas compras que você lançou.',
+      ult: serie.length ? {b:brl2(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+      serie, fmtSerie:v => brl2(v), semSerie:'A curva aparece a partir do segundo mês com compra lançada.'
+    });
+  } else {
+    const best = vivas.slice().sort((a, b) => (Number(b.bonus) || 0) - (Number(a.bonus) || 0))[0];
+    const proj = vivas.map(c => { let v = null; try { v = cpmProjetadoCampanha(c); } catch(e){} return {c, v}; }).filter(x => x.v != null && isFinite(x.v)).sort((a, b) => a.v - b.v)[0];
+    const serie = meses.map(k => ({r:rotuloMes(k), v:porMesQ[k]}));
+    montarHeroi(alvo, {
+      rot:'Melhor transferência no ar',
+      valor: best ? `+${nBRdec(Number(best.bonus) || 0)}%<small> de bônus</small>` : `0<small> no ar</small>`,
+      linha: best ? `<span><b>${esc(rota(best))}</b></span><span class="heroi-chip ${diasAte(best.fim) <= 1 ? 'desce' : ''}">${prazo(best)}</span>` : '<span>Nenhuma transferência bonificada aberta agora</span>',
+      numeros:[[nBR(vivas.length), vivas.length === 1 ? 'transferência no ar' : 'transferências no ar'],
+        [proj ? brl2(proj.v) : 'n/d', proj ? `menor milheiro projetado · ${rota(proj.c)}` : 'menor milheiro projetado'], [nBR(lanc.length), lanc.length === 1 ? 'transferência lançada' : 'transferências lançadas']],
+      fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas recebidas por programa',
+      dirRot:'Milhas recebidas, mês a mês', dirSub:'Pelas transferências que você lançou.',
+      ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+      serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com transferência lançada.'
+    });
+  }
+}
+
 function renderComprarTransferir(){
   const alvo = $('#ctCampos'); if (!alvo) return;
+  renderHeroiCT();
 
   /* Os modos do tipo escolhido, com o que cada um significa. */
   const modos = CT_MODOS[ctTipo];
