@@ -10467,7 +10467,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 10:00';
+const BUILD = '2026-10-12 10:35';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -20414,7 +20414,7 @@ function htmlDicaClube(c){
         ${[m.sim.sem, m.sim.com].map(x => `<div role="row" class="${x === m.sim[m.sim.melhor] ? 'melhor' : ''}"><span role="cell">${esc(x.rot)}${x === m.sim[m.sim.melhor] ? ' <i class="dc-tag jade">melhor</i>' : ''}</span>
           <span role="cell">${nBR(x.pts)} pts${x.custo ? ` · ${brl2(x.custo)}` : ''}</span>
           <span role="cell">${brl2(m.sim.antes)} <svg><use href="#i-seta"/></svg> <b>${brl2(x.depois)}</b></span></div>`).join('')}
-        <small>Milheiro da ${esc(m.sim.onde)}, antes e depois.${m.sim.mgl != null ? ` Os ${nBR(m.sim.extra)} pontos a mais do clube saem a ${brl2(m.sim.mgl)} o milheiro.` : ''}</small>
+        <small>${frasesEmLinhas(`Milheiro da ${esc(m.sim.onde)}, antes e depois.${m.sim.mgl != null ? ` Os ${nBR(m.sim.extra)} pontos a mais do clube saem a ${brl2(m.sim.mgl)} o milheiro.` : ''}`)}</small>
       </div>` : ''}
       ${semCampanha ? `<div class="dr-dc-perg">
         <label class="dr-dc-valor"><span>Valor da compra</span><input type="text" inputmode="decimal" data-moeda data-id="${esc(c.id)}"
@@ -20439,10 +20439,10 @@ function abrirContaDicaClube(id, gatilho){
   const m = montarDicaClube(c); if (!m) return;
   const sec = x => `<section class="dc-sec">
       <header><span class="dc-ic"><svg><use href="#i-${x.ic}"/></svg></span><h3>${x.tit}</h3>${x.chip ? `<span class="dc-chip ${x.chip.z || ''}">${x.chip.t}</span>` : ''}</header>
-      ${x.intro ? `<p class="dc-intro">${x.intro}</p>` : ''}
+      ${x.intro ? `<p class="dc-intro">${frasesEmLinhas(x.intro)}</p>` : ''}
       ${x.tiles && x.tiles.length ? `<div class="dc-tiles${x.tilesLargo ? ' dc-so-largo' : ''}">${x.tiles.map(t => `<div class="dc-tile ${t.z || ''}"><span>${t.r}</span><b>${t.v}</b>${t.s ? `<small>${t.s}</small>` : ''}</div>`).join('')}</div>` : ''}
       ${x.tabela ? `<div class="dc-tab" style="--cols:${x.tabela.cab.length - 1}"><div class="dc-tl dc-tc">${x.tabela.cab.map(h => `<span>${h}</span>`).join('')}</div>${x.tabela.linhas.map(l => `<div class="dc-tl">${l.map(v => `<span>${v}</span>`).join('')}</div>`).join('')}</div>` : ''}
-      ${x.itens && x.itens.length ? `<ul class="dc-itens">${x.itens.map(i => `<li class="${i.z || ''}">${i.t}</li>`).join('')}</ul>` : ''}
+      ${x.itens && x.itens.length ? `<ul class="dc-itens">${x.itens.map(i => `<li class="${i.z || ''}">${frasesEmLinhas(i.t)}</li>`).join('')}</ul>` : ''}
     </section>`;
   abrirJanelaInfo({titulo:m.tit, rotulo:'A conta', icone:'info', gatilho, tom:'info', larga:true,
     corpo:`<div class="dc-contas">${m.conta.map(sec).join('')}</div>`});
@@ -20571,10 +20571,13 @@ function abrirRegras(id, gatilho){
      pontos extras no clube, bônus na transferência. */
   const num = c.tipo === 'bonificada' ? `<small class="dr-num-ate">Até</small>${nBRdec(Number(c.ptsPorReal) || 0)}`
     : c.tipo === 'compra' && c.desconto ? `${nBRdec(c.desconto)}%`
+    /* Clube de desconto, sem pontos extras: o número que decide é o milheiro. */
+    : c.tipo === 'clube' && !(Number(c.bonus) > 0) && Number(c.desconto) > 0 && cpmClubeSeguro(c) != null ? brl2(cpmClubeSeguro(c))
     : c.tipo === 'clube' ? `${nBRdec(Math.round((c.bonus || 0) * 10) / 10)}%`
     : `${nBRdec(c.bonus || 0)}%`;
   const numRot = c.tipo === 'bonificada' ? (Number(c.ptsPorReal) === 1 ? 'ponto por real' : 'pontos por real')
     : c.tipo === 'compra' && c.desconto ? 'de desconto'
+    : c.tipo === 'clube' && !(Number(c.bonus) > 0) && Number(c.desconto) > 0 && cpmClubeSeguro(c) != null ? `o milheiro, com ${nBRdec(Math.round(c.desconto))}% de desconto`
     : c.tipo === 'clube' ? 'de pontos extras' : 'de bônus';
   const nomeRota = c.tipo === 'bonificada' ? `${esc(c.parceiro || '')} para ${esc(prog(c.para).n)}`
     : c.tipo === 'clube' ? 'Clube ' + esc(prog(c.para).n) + (c.plano ? ' ' + esc((((catalogoDe(c.para) || {}).planos || []).find(x => x.id === c.plano) || {n:''}).n) : '')
@@ -22371,6 +22374,18 @@ const CAMPANHAS_PUBLICADAS = [
 
      Detalhe que muda a conta e quase nunca é lido: o bônus não cai de uma vez.
      Vem em doze parcelas mensais, e cancelar no meio perde as que faltam. */
+  /* Azul Friday 2025: oferta relâmpago de um dia só (24/11/2025), conferida no
+     alerta do SACM que o Jadiel guardou. Desconto no primeiro ano do Clube Azul
+     anual, em 12 parcelas, com mais 10% pagando com o Cartão Azul Itaú. O
+     desconto gravado é o do Clube 5.000, o melhor milheiro (R$ 10,00), medido
+     sobre o anual parcelado do catálogo (R$ 155,00): 12 × R$ 50,00. Com o
+     cartão, 12 × R$ 45,00 e milheiro de R$ 9,00. */
+  { id:'clube-azul-20251124', tipo:'clube', de:'', para:'azul', plano:'az5000', alcance:'adesao',
+    bonus:0, desconto:67.74, limite:0, fim:'2025-11-24',
+    cartaoDesconto:{banco:'itau', termo:'azul', desconto:70.97, nome:'Cartão Azul Itaú'},
+    titulo:'Azul Friday: Clube Azul 5.000 anual por 12 × R$ 50,00',
+    regra:'Oferta relâmpago da Black Friday, válida só em 24/11/2025. Desconto no primeiro ano para quem assina o Clube Azul anual, em 12 parcelas; pagando com o Cartão Azul Itaú, mais 10% de desconto. Mensalidade e milheiro de cada plano no anual:\n• Clube 1.000: R$ 21,00 por mês, milheiro R$ 21,00; com o cartão, R$ 18,90 e milheiro R$ 18,90;\n• Clube 2.000: R$ 37,00 por mês, milheiro R$ 18,50; com o cartão, R$ 33,30 e milheiro R$ 16,65;\n• Clube 5.000: R$ 50,00 por mês, milheiro R$ 10,00; com o cartão, R$ 45,00 e milheiro R$ 9,00;\n• Clube 10.000: R$ 172,00 por mês, milheiro R$ 17,20; com o cartão, R$ 154,80 e milheiro R$ 15,48;\n• Clube 20.000: R$ 381,00 por mês, milheiro R$ 19,05; com o cartão, R$ 342,90 e milheiro R$ 17,15. É preciso ter o valor do ano inteiro liberado no limite do cartão. Para assinar: acesse o link, digite o CPF, escolha o plano e pague. O melhor milheiro foi o do Clube 5.000, a metade do Clube 1.000.',
+    link:'https://www.voeazul.com.br/br/pt/ofertas/adesao-clube' },
   { id:'clube-esfera-20251030', tipo:'clube', de:'', para:'esfera',
     bonus:17, desconto:0, limite:0, fim:'2025-10-30',
     titulo:'Clube Esfera com até 40 mil pontos de bônus na adesão',
