@@ -296,6 +296,14 @@ p:last-child{ margin-bottom:0; }
   border-top:1px solid var(--fio); font-size:calc(13.5px * var(--esc)); color:var(--grafite); }
 .cp-fato b{ color:var(--giz); font-variant-numeric:tabular-nums; }
 .cp-fato.cp-jade b{ color:var(--jade); }
+/* Compra bonificada: os fatos empilhados, cada um numa faixa de fundo claro. */
+.bf-fatos{ flex-direction:column; flex-wrap:nowrap; gap:6px; }
+.bf-fatos .cp-fato{ display:block; padding:7px 10px 7px 12px; border-radius:6px; line-height:1.45; text-wrap:pretty;
+  border-left:3px solid var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 7%, transparent); }
+.bf-fatos .cp-fato:nth-child(2){ border-left-color:var(--jade); background:color-mix(in oklab, var(--jade) 8%, transparent); }
+.bf-fatos .cp-fato-clube{ border-left-color:var(--anil-claro); }
+.bf-fatos .cp-fato-clube.ouro{ border-left-color:var(--ouro); background:color-mix(in oklab, var(--ouro) 9%, transparent); }
+.bf-fatos .cp-fato b{ white-space:nowrap; }
 .cp-fato.cp-ouro b{ color:var(--ouro); }
 .cp-fato.cp-brasa b{ color:var(--brasa); }
 /* Cada item na própria caixa, com a cor da sua categoria — verde para quem a
@@ -543,6 +551,11 @@ p:last-child{ margin-bottom:0; }
 .dr-dc-passos [role=checkbox][aria-checked=true]{ background:var(--jade); border-color:var(--jade); }
 .dr-dc-passos [role=checkbox][aria-checked=true] svg{ stroke:var(--fundo, #0b0f17); }
 .dr-painel.altura-fixa .dr-corpo{ flex:1 1 auto; min-height:0; }
+.dr-topicos{ margin:6px 0 0; padding:0 0 0 2px; list-style:none; display:flex; flex-direction:column; gap:4px; }
+.dr-topicos li{ position:relative; padding-left:16px; }
+.dr-topicos li::before{ content:''; position:absolute; left:3px; top:.62em; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; }
+.dr-grupo .dr-topicos{ gap:4px; margin-top:6px; }
+.dr-grupo .dr-topicos li{ border:0; margin:0; padding:0 0 0 16px; }
 .dr-dc-cab{ display:flex; align-items:flex-start; gap:10px; }
 .dr-dc-cab h3{ flex:1; min-width:0; }
 .dr-dc-rec{ flex-shrink:0; width:30px; height:30px; margin:-4px -6px 0 0; display:grid; place-items:center; padding:0; cursor:pointer;
@@ -10454,7 +10467,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 09:35';
+const BUILD = '2026-10-12 10:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -18072,6 +18085,14 @@ const GATILHOS_VANTAGEM = [
   /^transfer[êe]ncia imediata/i, /^v[áa]lido para todos/i, /^vale para todos/i,
   /^acumul[aá]vel/i, /^sem custo/i, /^gr[áa]tis/i
 ];
+/* Tópicos escritos na regra: cada "\n• " abre um item. O que vem antes do
+   primeiro item é a frase que os apresenta. Sem tópicos, a quebra de linha
+   escrita vira quebra na tela. */
+function topicosRegra(html){
+  const partes = String(html).split(/\n•\s*/);
+  if (partes.length < 2) return String(html).replace(/\n/g, '<br>');
+  return `${partes[0].replace(/\n/g, '<br>')}<ul class="dr-topicos">${partes.slice(1).map(t => `<li>${t.replace(/\n/g, '<br>')}</li>`).join('')}</ul>`;
+}
 function regrasComDestaque(txt){
   return String(txt || '').split(/(?<=\.)\s+(?=[A-ZÀ-Ú0-9])/)
     .map(l => l.trim()).filter(Boolean)
@@ -20468,7 +20489,7 @@ function cartaoBonificada(c){
         </div>`).join('')}
       </div>
     </div>
-    <div class="cp-fatos">
+    <div class="cp-fatos bf-fatos">
       ${meu ? `<span class="cp-fato">No seu degrau, <b>${brl2(1000 / Number(meu.v))}</b> em compras rendem 1.000 pontos</span>` : ''}
       <span class="cp-fato">No melhor degrau, <b>${brl2(1000 / topo)}</b> para 1.000 pontos</span>
       ${linhaClubeCartao(c)}
@@ -20632,7 +20653,7 @@ function abrirRegras(id, gatilho){
             ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
               <section class="dr-grupo dr-${g.tom}">
                 <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
-                <ul>${grupos[g.k].map(l => `<li>${destacarNumeros(l).replace(/\n/g, '<br>')}</li>`).join('')}</ul>
+                <ul>${grupos[g.k].map(l => `<li>${topicosRegra(destacarNumeros(l))}</li>`).join('')}</ul>
               </section>`).join('')}
             </div>
           </div>
@@ -20737,7 +20758,7 @@ function cartaoCampanha(c){
     const alerta = tipo === 'obrig' || GATILHOS_RESTRICAO.some(r => r.test(l));
     /* Quebra de linha escrita na regra vira quebra na tela: um destaque com
        duas ofertas e as notas de rodapé lê melhor em linhas próprias. */
-    return `<div class="${alerta ? 'regra-limite' : 'regra-livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg><span>${esc(l).replace(/\n/g, '<br>')}</span></div>`;
+    return `<div class="${alerta ? 'regra-limite' : 'regra-livre'}"><svg><use href="#i-${alerta ? 'alerta' : 'ok'}"/></svg><span>${topicosRegra(esc(l))}</span></div>`;
   };
 
   const prazo = dias === null ? '' : dias < 0 ? 'Encerrada'
@@ -21924,7 +21945,7 @@ const CAMPANHAS_PUBLICADAS = [
             {rot:'Demais clientes + Cartão Azul Itaú', v:9, obs:'8 em telefonia'},
             {rot:'Demais clientes', v:6, obs:'6 em telefonia', clube:false}],
     titulo:'Magalu com até 14 pontos Azul por real',
-    regra:'Todas as categorias exceto telefonia: 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú, 12 só com o Clube, 9 para os demais com o Cartão Azul Itaú e 6 para os demais. Em telefonia: 13, 11, 8 e 6. Vale só para produtos vendidos e entregues pela Magazine Luiza; itens de marketplace rendem 1 ponto por real. Não pontuam embalagem para presente, frete, pagamentos com cupom, gift card ou vale-compra, juros e serviços como garantia estendida. Pontos creditados em até 30 dias úteis depois da entrega do pedido.',
+    regra:'Todas as categorias exceto telefonia:\n• 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú;\n• 12 só com o Clube (assinantes sem o Cartão Azul Itaú);\n• 9 para os demais com o Cartão Azul Itaú; e\n• 6 para os demais (sem o Cartão Azul Itaú). Em telefonia: 13, 11, 8 e 6. Vale só para produtos vendidos e entregues pela Magazine Luiza; itens de marketplace rendem 1 ponto por real. Não pontuam embalagem para presente, frete, pagamentos com cupom, gift card ou vale-compra, juros e serviços como garantia estendida. Pontos creditados em até 30 dias úteis depois da entrega do pedido.',
     link:'https://clube.magazineluiza.com.br/tudoazul' },
 
   { id:'pub-tb-itau-latampass-261009', tipo:'transferencia', de:'itau', para:'latampass',
@@ -22878,6 +22899,9 @@ function carregarVitrinePublicada(){
    cada troca é aplicada no banco — mas só se a frase original ainda estiver lá,
    intacta: se a pessoa editou a regra, a edição dela manda e nada é tocado. */
 const REVISOES_PUBLICADAS = {
+  /* Os quatro degraus em tópicos, do maior para o menor, com quem cabe em cada um. */
+  'pub-bf-magalu-azul-261010': [["Todas as categorias exceto telefonia: 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú, 12 só com o Clube, 9 para os demais com o Cartão Azul Itaú e 6 para os demais.",
+    "Todas as categorias exceto telefonia:\n• 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú;\n• 12 só com o Clube (assinantes sem o Cartão Azul Itaú);\n• 9 para os demais com o Cartão Azul Itaú; e\n• 6 para os demais (sem o Cartão Azul Itaú)."]],
   'pub-tb-esfera-latampass-260925': [["Cadastro na página da LATAM Pass antes de transferir.", "Cadastro na LATAM Pass antes de transferir."], ["25% para todos, sem exigir clube.", "25% para todos, sem clube."], ["Limite de 300 mil milhas de bônus.", "Limite de 300 mil de bônus."], ["Não participa quem teve bloqueio na conta LATAM nos últimos 12 meses.", "Não participa conta LATAM com bloqueio em 12 meses."]],
   'pub-tb-banriclube-latampass-260924': [["Cadastro do CPF na página da LATAM Pass antes de transferir.", "Cadastro do CPF na LATAM Pass antes de transferir."], ["25% para todos, sem exigir clube.", "25% para todos, sem clube."], ["Não participa quem teve bloqueio na conta LATAM nos últimos 12 meses.", "Não participa conta LATAM com bloqueio em 12 meses."]],
   'pub-tb-azul-accor-260925': [["Paridade promocional de 7,5 : 1 só para elegíveis: Clube Azul, Azul One, Diamante, Diamante Unique e Cartão Azul Itaú.", "Paridade de 7,5 : 1 só para Clube Azul, Azul One, Diamante, Unique e Cartão Azul Itaú."]],
