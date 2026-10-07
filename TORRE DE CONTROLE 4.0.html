@@ -1448,7 +1448,10 @@ p:last-child{ margin-bottom:0; }
 .lj-filtros{ display:flex; flex-wrap:wrap; gap:8px 12px; }
 .lj-filtros .seg{ max-width:100%; flex-wrap:wrap; }
 
-.lj-grade{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap:14px; }
+.lj-grade{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+/* Dois cartões por linha no computador e no tablet; um por linha no celular. */
+@media (max-width:640px){ .lj-grade{ grid-template-columns:minmax(0, 1fr); } }
+
 .lj-card{ position:relative; display:flex; flex-direction:column; gap:11px; padding:16px 16px 12px; border-radius:16px;
   background:var(--sup-0); border:1px solid var(--fio); overflow:hidden; transition:border-color .15s var(--ease), transform .15s var(--ease); }
 .lj-card::before{ content:''; position:absolute; inset:0 0 auto 0; height:3px; background:var(--fio-forte); }
@@ -1483,6 +1486,18 @@ p:last-child{ margin-bottom:0; }
 .lj-simula{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; padding:8px 11px; border-radius:10px;
   background:var(--sup-1); border:1px dashed var(--fio-forte); font-size:calc(13px * var(--esc)); color:var(--grafite); }
 .lj-simula b{ color:var(--giz); } .lj-simula b.jade{ color:var(--jade); }
+/* Cartão estreito (tablet com metade da largura): o quadro de volta desce para
+   baixo do multiplicador em vez de vazar pela borda, e o nome da loja quebra
+   em duas linhas em vez de cortar. */
+.lj-card{ container-type:inline-size; }
+@container (max-width:270px){
+  .lj-miolo{ grid-template-columns:minmax(0, 1fr); align-items:stretch; }
+  .vt-volta{ display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 10px; text-align:left; }
+  .vt-volta small{ flex-basis:100%; white-space:normal; }
+  .vt-nome b{ white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+  .lj-cab{ flex-wrap:wrap; row-gap:4px; }
+  .vt-prazo{ flex-basis:100%; padding-left:51px; }
+}
 .lj-pe{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:auto; padding-top:10px; border-top:1px solid var(--fio); }
 .lj-rodape{ display:flex; gap:8px; align-items:flex-start; margin:12px 0 0; font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); line-height:1.5; }
 .lj-rodape svg{ width:14px; height:14px; flex-shrink:0; margin-top:2px; fill:none; stroke:var(--ouro); stroke-width:2; }
@@ -10502,7 +10517,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 12:15';
+const BUILD = '2026-10-12 12:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -21477,7 +21492,7 @@ function cartaoLoja(l, vivas){
         <button type="button" class="bt p fantasma icone" onclick="registrarCompraLoja('${l.id}')" data-dica="Registrar uma compra nesta loja"><svg><use href="#i-sacola"/></svg></button>
         <button type="button" class="bt p fantasma icone" onclick="editarLoja('${l.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
         <button type="button" class="bt p fantasma icone" onclick="apagar('lojas','${l.id}','a loja')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>`
-      : `<button type="button" class="bt p fantasma" onclick="abrirCampanhasEm('bonificada')">Ver nas Campanhas</button>`}
+      : `<button type="button" class="bt p fantasma" onclick="abrirCampanhasEm('bonificada')">Ver Campanhas</button>`}
     </footer>
   </article>`;
 }
