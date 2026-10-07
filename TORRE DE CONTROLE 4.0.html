@@ -542,6 +542,15 @@ p:last-child{ margin-bottom:0; }
 .dr-dc-passos [role=checkbox] svg{ width:13px; height:13px; fill:none; stroke:transparent; stroke-width:2.6; }
 .dr-dc-passos [role=checkbox][aria-checked=true]{ background:var(--jade); border-color:var(--jade); }
 .dr-dc-passos [role=checkbox][aria-checked=true] svg{ stroke:var(--fundo, #0b0f17); }
+.dr-dc-cab{ display:flex; align-items:flex-start; gap:10px; }
+.dr-dc-cab h3{ flex:1; min-width:0; }
+.dr-dc-rec{ flex-shrink:0; width:30px; height:30px; margin:-4px -6px 0 0; display:grid; place-items:center; padding:0; cursor:pointer;
+  border-radius:99px; border:1px solid var(--fio); background:var(--sup-1); color:var(--grafite); }
+.dr-dc-rec svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.2; transition:transform .25s ease; }
+.dr-dc-rec[aria-expanded=true] svg{ transform:rotate(180deg); }
+.dr-dc-rec:hover{ color:var(--giz); border-color:var(--grafite-dim); }
+.dr-dica-clube.fechada .dr-dc-corpo{ display:none; }
+.dr-dica-clube.fechada h3{ margin-bottom:0; }
 .dr-dc-perg{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin:8px 0 4px; }
 .dr-dc-valor{ display:flex; align-items:center; gap:8px; font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); }
 .dr-dc-valor input{ width:120px; padding:5px 9px; border-radius:8px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font:inherit; font-size:calc(13.5px * var(--esc)); font-variant-numeric:tabular-nums; }
@@ -10435,7 +10444,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 08:25';
+const BUILD = '2026-10-12 08:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -20256,8 +20265,8 @@ function montarDicaClube(c){
       } else {
         tit = d.urgente ? 'Compra urgente: compre agora, sem assinar' : 'Compre sem assinar o clube'; tom = d.urgente ? 'anil' : 'ouro';
         resumo = `Assinar só por esta compra sai a ${pl ? `<b>${brl2(pl.milheiro)}</b>` : 'um milheiro alto'} o milheiro, acima do razoável.${d.compraRazoavel ? ` Só compensa com compra acima de <b>${brl2(d.compraRazoavel)}</b>.` : ''}`;
-        passos = [passoConta, passoMesmaPessoa, `Compre no ${parc}${ate} sem assinar o clube: ${semClube}`,
-          passoCartao(d.cartaoBase),
+        passos = [passoConta, passoMesmaPessoa, passoCartao(d.cartaoBase),
+          `Compre no ${parc}${ate} sem assinar o clube: ${ptsReal(d.base.v)} por real`,
           d.compraRazoavel ? `Se a compra passar de ${brl2(d.compraRazoavel)}, volte aqui: aí vale assinar o ${esc(pl.n)} antes` : null,
           bk ? `Na Black Friday (${dataBR(bk.data)}), confira se saiu campanha do ${C} para as próximas compras` : `Fique de olho no Radar para a próxima campanha do ${C}`];
       }
@@ -20266,16 +20275,32 @@ function montarDicaClube(c){
   return {d, tit, tom, resumo, passos:passos.filter(Boolean), conta};
 }
 
+/* Uma frase por linha: o ponto final seguido de nova frase vira quebra. */
+const frasesEmLinhas = t => String(t || '').replace(/\.\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ<])/g, '.<br>');
+function alternarDicaClube(bt){
+  const box = bt.closest('.dr-dica-clube'), aberta = bt.getAttribute('aria-expanded') !== 'true';
+  bt.setAttribute('aria-expanded', aberta ? 'true' : 'false');
+  bt.setAttribute('aria-label', aberta ? 'Recolher o checklist' : 'Abrir o checklist');
+  box.classList.toggle('fechada', !aberta);
+  DB.dicaClube = DB.dicaClube || {};
+  DB.dicaClube[bt.dataset.id] = Object.assign({}, DB.dicaClube[bt.dataset.id], {fechada:!aberta});
+  salvar();
+}
 function htmlDicaClube(c){
   const m = montarDicaClube(c); if (!m) return '';
-  const {d, tit, tom, resumo, passos} = m;
+  const {d, tit, tom} = m;
+  const resumo = frasesEmLinhas(m.resumo), passos = m.passos.map(frasesEmLinhas);
+  const fechada = !!d.pref.fechada;
   const k = chaveCheckClube(c, d), feitos = ((DB.checkClube || {})[k]) || [];
   const semCampanha = !!d.hist;
   const urg = d.pref.urg || '';
-  return `<aside class="dr-dica-clube dr-dc-${tom}" aria-label="Caminho para o melhor degrau">
+  return `<aside class="dr-dica-clube dr-dc-${tom}${fechada ? ' fechada' : ''}" aria-label="Caminho para o melhor degrau">
     <svg><use href="#i-info"/></svg>
     <div>
-      <h3>${tit}</h3>
+      <div class="dr-dc-cab"><h3>${tit}</h3>
+        <button type="button" class="dr-dc-rec" data-id="${esc(c.id)}" aria-expanded="${fechada ? 'false' : 'true'}"
+          aria-label="${fechada ? 'Abrir o checklist' : 'Recolher o checklist'}" onclick="alternarDicaClube(this)"><svg><use href="#i-baixo"/></svg></button></div>
+      <div class="dr-dc-corpo">
       <p>${resumo}</p>
       ${semCampanha ? `<div class="dr-dc-perg">
         <label class="dr-dc-valor"><span>Valor da compra</span><input type="text" inputmode="decimal" data-moeda data-id="${esc(c.id)}"
@@ -20291,6 +20316,7 @@ function htmlDicaClube(c){
           aria-label="Marcar o passo ${i + 1} como feito" data-k="${esc(k)}" data-i="${i}" onclick="marcarPassoClube(this)"><svg><use href="#i-ok"/></svg></button><span><b>${i + 1}.</b> ${t}</span></li>`).join('')}
       </ol>
       ${m.conta.length ? `<button type="button" class="bt p fantasma dr-dc-conta" onclick="abrirContaDicaClube('${c.id}', this)"><svg><use href="#i-info"/></svg>Ver a conta completa</button>` : ''}
+      </div>
     </div>
   </aside>`;
 }
