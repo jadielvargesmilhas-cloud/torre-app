@@ -414,6 +414,7 @@ p:last-child{ margin-bottom:0; }
 .dr-num{ display:flex; flex-direction:column; padding-right:22px; border-right:1px solid var(--fio); }
 .dr-num b{ font-family:var(--f-d); font-weight:700; font-size:calc(44px * var(--esc)); line-height:.95;
   letter-spacing:-.04em; color:var(--ouro); font-variant-numeric:tabular-nums; }
+.dr-num b{ white-space:nowrap; }
 .dr-num span{ margin-top:4px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 .dr-meta{ margin:0; display:flex; flex-direction:column; gap:5px; flex:1; min-width:200px; }
 .dr-meta div{ display:flex; gap:8px; align-items:baseline; }
@@ -607,6 +608,11 @@ p:last-child{ margin-bottom:0; }
 .dc-tl > span:not(:first-child){ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .dc-tc{ background:color-mix(in oklab, var(--fio) 35%, transparent); font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); }
 .dc-tl b.jade{ color:var(--jade); }
+.dc-link-camp{ display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:99px; cursor:pointer; font:inherit; font-weight:650;
+  color:var(--jade); background:color-mix(in oklab, var(--jade) 12%, transparent); border:1px solid color-mix(in oklab, var(--jade) 40%, transparent);
+  text-decoration:underline; text-underline-offset:2px; }
+.dc-link-camp svg{ width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; }
+.dc-link-camp:hover{ background:color-mix(in oklab, var(--jade) 20%, transparent); }
 .dc-tag{ font-style:normal; margin-left:6px; padding:1px 7px; border-radius:99px; font-size:calc(10.5px * var(--esc)); font-weight:650; white-space:nowrap;
   color:var(--grafite-dim); border:1px solid var(--fio); }
 .dc-tag.jade{ color:var(--jade); border-color:color-mix(in oklab, var(--jade) 45%, transparent); }
@@ -10467,7 +10473,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 10:35';
+const BUILD = '2026-10-12 10:55';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17680,6 +17686,13 @@ function abrirJanelaInfo(o){
   const f = d.querySelector('.dr-pe .sair'); if (f) f.focus({focusVisible:false});
 }
 /* Fecha esta janela e abre a da campanha: uma janela de cada vez. */
+/* Abre uma campanha encerrada a partir da conta de outra, com um botão de volta
+   no rodapé para retomar a campanha de onde se saiu. */
+function abrirCampanhaAnterior(id, deId){
+  const info = document.getElementById('dlgInfo'); if (info && info.open) info.close();
+  const d = document.getElementById('dlgRegras'); if (d) d._proxVolta = deId;
+  abrirRegras(id);
+}
 function janelaParaCampanha(id){
   const d = document.getElementById('dlgInfo');
   const volta = d && d._volta;
@@ -20077,6 +20090,8 @@ function temporadasPara(p, parceiro){
     out.push({k:t.k, nome:t.nome, artigo:t.artigo, casa:!!t.progs, ini:dt.ini, fim:dt.fim, data:t.black ? dt.pico : dt.ini,
       ativa, dias:ativa ? 0 : Math.max(0, diasAte(t.black ? dt.pico : dt.ini)),
       clubeAnoPassado:(DB.campanhas || []).filter(x => x.tipo === 'clube' && naJanela(x)).length,
+      idsAnoPassado:(DB.campanhas || []).filter(x => x.tipo === 'clube' && naJanela(x))
+        .sort((a, b) => (cpmClubeSeguro(a) ?? 9e9) - (cpmClubeSeguro(b) ?? 9e9)).map(x => x.id),
       lojaAnoPassado:parceiro ? (DB.campanhas || []).filter(x => x.tipo === 'bonificada' && naJanela(x) && x.parceiro === parceiro).length : 0});
   });
   return out.sort((a, b) => a.dias - b.dias || (b.casa ? 1 : 0) - (a.casa ? 1 : 0));
@@ -20335,7 +20350,8 @@ function montarDicaClube(c){
         intro:`Épocas em que os programas costumam lançar campanhas de clube e as lojas pagam mais pontos por real. Aparecem as dos próximos 120 dias.`,
         tabela:{cab:['Temporada', 'Quando', 'Ano passado'], linhas:d.temporadas.map(t => [`${esc(t.nome)}${t === bk ? ' <i class="dc-tag jade">pesa agora</i>' : ''}${t.casa ? ' <i class="dc-tag">do programa</i>' : ''}`,
           t.ativa ? '<b class="jade">valendo</b>' : `${dataBR(t.data).slice(0, 5)} <small class="fraco">${t.dias} d</small>`,
-          t.clubeAnoPassado ? '<b class="jade">teve</b>' : '<span class="fraco">sem registro</span>'])},
+          t.clubeAnoPassado ? `<button type="button" class="dc-link-camp" onclick="abrirCampanhaAnterior('${t.idsAnoPassado[0]}', '${c.id}')"
+            aria-label="Abrir a campanha de ${esc(t.nome)} do ano passado">teve<svg><use href="#i-seta"/></svg></button>` : '<span class="fraco">sem registro</span>'])},
         itens:[bk && bk.clubeAnoPassado ? {t:`No ano passado o ${C} teve campanha n${bk.artigo.startsWith('a ') ? 'a' : bk.artigo.startsWith('as ') ? 'as' : 'o'}${bk.artigo.replace(/^(a|o|as|os) /, ' ')}.`, z:'jade'} : null,
           bk && bk.lojaAnoPassado ? {t:`O ${parc} também pagou pontos ${P} nessa época no ano passado.`, z:'jade'} : null,
           !d.temporadas.some(t => t.clubeAnoPassado) ? {t:`A coluna "Ano passado" só se enche com campanhas cadastradas. Cadastrar as antigas do ${C} deixa a previsão mais segura.`} : null].filter(Boolean)});
@@ -20547,6 +20563,8 @@ function abrirRegras(id, gatilho){
   }
   d._volta = gatilho || null;
   d._id = id;
+  const voltaCamp = d._proxVolta && d._proxVolta !== id ? d._proxVolta : null; d._proxVolta = null;
+  const nomeVolta = voltaCamp ? (((DB.campanhas || []).find(x => x.id === voltaCamp)) || {}) : null;
   /* Com limite, o simulador abre já no limite da campanha: é o máximo que a
      oferta permite e a conta que mais interessa. Sem limite, a quantidade de
      costume. */
@@ -20669,6 +20687,7 @@ function abrirRegras(id, gatilho){
 
       <footer class="dr-pe">
         <button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRegras').close()">Fechar</button>
+        ${voltaCamp ? `<button type="button" class="bt fantasma dr-voltar" onclick="abrirRegras('${voltaCamp}')"><svg><use href="#i-seta-e"/></svg>Voltar para ${esc(nomeVolta.tipo === 'bonificada' ? (nomeVolta.parceiro || 'a campanha') : 'a campanha')}</button>` : ''}
         ${c.link ? `<a class="bt fantasma" href="${esc(c.link)}" target="_blank" rel="noopener">
           <svg><use href="#i-link"/></svg>Abrir Página da Campanha</a>` : ''}
         ${ehCompra ? `<button type="button" class="bt primario" onclick="comprarAgora('${c.id}')">
