@@ -557,6 +557,19 @@ p:last-child{ margin-bottom:0; }
 .dr-topicos li::before{ content:''; position:absolute; left:3px; top:.62em; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; }
 .dr-grupo .dr-topicos{ gap:4px; margin-top:6px; }
 .dr-grupo .dr-topicos li{ border:0; margin:0; padding:0 0 0 16px; }
+.dr-tabela{ margin:8px 0 2px; border:1px solid var(--fio); border-radius:10px; overflow:hidden; color:var(--grafite); }
+.dr-tl{ display:grid; grid-template-columns:minmax(56px, .8fr) repeat(calc(var(--cols, 2) - 1), minmax(0, 1fr)); gap:10px; align-items:center;
+  padding:7px 12px; font-size:calc(13.5px * var(--esc)); font-variant-numeric:tabular-nums; }
+.dr-tl + .dr-tl{ border-top:1px solid var(--fio); }
+.dr-tl > span:not(:first-child){ text-align:right; white-space:nowrap; }
+.dr-tc{ background:color-mix(in oklab, var(--fio) 40%, transparent); font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); line-height:1.25; }
+.dr-tc > span:not(:first-child){ white-space:normal; }
+.dr-tl.melhor{ background:color-mix(in oklab, var(--jade) 9%, transparent); color:var(--giz); font-weight:600; }
+.dr-tl.melhor > span:nth-child(3), .dr-tl.melhor > span:nth-child(5){ color:var(--jade); }
+.dr-grupo li .dr-tabela{ margin-left:0; }
+@media (max-width:640px){ .dr-tl{ gap:4px; padding:7px 8px; font-size:calc(12px * var(--esc)); grid-template-columns:44px repeat(calc(var(--cols, 2) - 1), minmax(0, 1fr)); }
+  .dr-tc{ font-size:calc(10.5px * var(--esc)); } .dr-rs{ display:none; } }
+.dr-rs{ font-style:normal; }
 .dr-dc-cab{ display:flex; align-items:flex-start; gap:10px; }
 .dr-dc-cab h3{ flex:1; min-width:0; }
 .dr-dc-rec{ flex-shrink:0; width:30px; height:30px; margin:-4px -6px 0 0; display:grid; place-items:center; padding:0; cursor:pointer;
@@ -583,6 +596,9 @@ p:last-child{ margin-bottom:0; }
 .dr-dc-urg button{ padding:4px 11px; border-radius:99px; border:1px solid var(--fio); background:transparent; color:var(--grafite); font:inherit; font-size:calc(12.5px * var(--esc)); cursor:pointer; }
 .dr-dc-urg button[aria-pressed=true]{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 16%, transparent); color:var(--giz); font-weight:600; }
 .dr-dc-conta{ margin-top:8px; }
+.dr-dica-clube .bt.dr-dc-conta{ display:flex; width:fit-content; margin:10px 0 0 auto; background:color-mix(in oklab, var(--jade) 12%, transparent); border-color:color-mix(in oklab, var(--jade) 40%, transparent); color:var(--jade); }
+.dr-dica-clube .bt.dr-dc-conta svg{ stroke:var(--jade); }
+.dr-dica-clube .bt.dr-dc-conta:hover{ background:color-mix(in oklab, var(--jade) 20%, transparent); border-color:color-mix(in oklab, var(--jade) 60%, transparent); color:var(--jade); }
 .dc-contas{ display:flex; flex-direction:column; gap:12px; }
 .dc-sec{ border:1px solid var(--fio); border-radius:14px; padding:14px 16px; background:var(--sup-1); }
 .dc-sec > header{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
@@ -10473,7 +10489,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 10:55';
+const BUILD = '2026-10-12 11:25';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -18101,7 +18117,25 @@ const GATILHOS_VANTAGEM = [
 /* Tópicos escritos na regra: cada "\n• " abre um item. O que vem antes do
    primeiro item é a frase que os apresenta. Sem tópicos, a quebra de linha
    escrita vira quebra na tela. */
+/* Tabela escrita na regra: cada linha começa com "\n| " e as colunas vêm
+   separadas por "|". A primeira linha é o cabeçalho; linha que termina em "*"
+   é a de destaque. O que vem antes da primeira linha é a frase que a apresenta. */
+function tabelaRegra(html){
+  const partes = String(html).split(/\n\|\s*/);
+  if (partes.length < 3) return null;
+  /* No celular o "R$" de cada célula sai (o cabeçalho já diz que é dinheiro) e
+     a tabela cabe sem rolar de lado. */
+  const limpa = t => t.replace(/<\/?b>/g, '').trim().replace(/R\$\s?/g, '<i class="dr-rs">R$ </i>');
+  const linhas = partes.slice(1).map(l => { const cs = l.split('|').map(limpa); cs[cs.length - 1] = cs[cs.length - 1].replace(/\.$/, ''); return cs; });
+  const cab = linhas[0], corpo = linhas.slice(1);
+  return `${partes[0].replace(/\n/g, '<br>')}<div class="dr-tabela" role="table" style="--cols:${cab.length}">
+    <div class="dr-tl dr-tc" role="row">${cab.map(c => `<span role="columnheader">${c}</span>`).join('')}</div>
+    ${corpo.map(l => { const destaque = /\*$/.test(l[l.length - 1]); if (destaque) l[l.length - 1] = l[l.length - 1].replace(/\s*\*$/, '');
+      return `<div class="dr-tl${destaque ? ' melhor' : ''}" role="row">${l.map(c => `<span role="cell">${c}</span>`).join('')}</div>`; }).join('')}
+  </div>`;
+}
 function topicosRegra(html){
+  const tab = tabelaRegra(html); if (tab) return tab;
   const partes = String(html).split(/\n•\s*/);
   if (partes.length < 2) return String(html).replace(/\n/g, '<br>');
   return `${partes[0].replace(/\n/g, '<br>')}<ul class="dr-topicos">${partes.slice(1).map(t => `<li>${t.replace(/\n/g, '<br>')}</li>`).join('')}</ul>`;
@@ -22403,7 +22437,7 @@ const CAMPANHAS_PUBLICADAS = [
     bonus:0, desconto:67.74, limite:0, fim:'2025-11-24',
     cartaoDesconto:{banco:'itau', termo:'azul', desconto:70.97, nome:'Cartão Azul Itaú'},
     titulo:'Azul Friday: Clube Azul 5.000 anual por 12 × R$ 50,00',
-    regra:'Oferta relâmpago da Black Friday, válida só em 24/11/2025. Desconto no primeiro ano para quem assina o Clube Azul anual, em 12 parcelas; pagando com o Cartão Azul Itaú, mais 10% de desconto. Mensalidade e milheiro de cada plano no anual:\n• Clube 1.000: R$ 21,00 por mês, milheiro R$ 21,00; com o cartão, R$ 18,90 e milheiro R$ 18,90;\n• Clube 2.000: R$ 37,00 por mês, milheiro R$ 18,50; com o cartão, R$ 33,30 e milheiro R$ 16,65;\n• Clube 5.000: R$ 50,00 por mês, milheiro R$ 10,00; com o cartão, R$ 45,00 e milheiro R$ 9,00;\n• Clube 10.000: R$ 172,00 por mês, milheiro R$ 17,20; com o cartão, R$ 154,80 e milheiro R$ 15,48;\n• Clube 20.000: R$ 381,00 por mês, milheiro R$ 19,05; com o cartão, R$ 342,90 e milheiro R$ 17,15. É preciso ter o valor do ano inteiro liberado no limite do cartão. Para assinar: acesse o link, digite o CPF, escolha o plano e pague. O melhor milheiro foi o do Clube 5.000, a metade do Clube 1.000.',
+    regra:'Oferta relâmpago da Black Friday, válida só em 24/11/2025. Desconto no primeiro ano para quem assina o Clube Azul anual, em 12 parcelas; pagando com o Cartão Azul Itaú, mais 10% de desconto. Mensalidade e milheiro de cada plano no anual:\n| Clube | Mensal | Milheiro | Mensal com cartão | Milheiro com cartão\n| 1.000 | R$ 21,00 | R$ 21,00 | R$ 18,90 | R$ 18,90\n| 2.000 | R$ 37,00 | R$ 18,50 | R$ 33,30 | R$ 16,65\n| 5.000 | R$ 50,00 | R$ 10,00 | R$ 45,00 | R$ 9,00 *\n| 10.000 | R$ 172,00 | R$ 17,20 | R$ 154,80 | R$ 15,48\n| 20.000 | R$ 381,00 | R$ 19,05 | R$ 342,90 | R$ 17,15. É preciso ter o valor do ano inteiro liberado no limite do cartão. Para assinar: acesse o link, digite o CPF, escolha o plano e pague. O melhor milheiro foi o do Clube 5.000, a metade do Clube 1.000.',
     link:'https://www.voeazul.com.br/br/pt/ofertas/adesao-clube' },
   { id:'clube-esfera-20251030', tipo:'clube', de:'', para:'esfera',
     bonus:17, desconto:0, limite:0, fim:'2025-10-30',
@@ -22933,6 +22967,8 @@ function carregarVitrinePublicada(){
    cada troca é aplicada no banco — mas só se a frase original ainda estiver lá,
    intacta: se a pessoa editou a regra, a edição dela manda e nada é tocado. */
 const REVISOES_PUBLICADAS = {
+  /* Os planos da Azul Friday saem dos tópicos para uma tabela, coluna por coluna. */
+  'clube-azul-20251124': [['Mensalidade e milheiro de cada plano no anual:\n• Clube 1.000: R$ 21,00 por mês, milheiro R$ 21,00; com o cartão, R$ 18,90 e milheiro R$ 18,90;\n• Clube 2.000: R$ 37,00 por mês, milheiro R$ 18,50; com o cartão, R$ 33,30 e milheiro R$ 16,65;\n• Clube 5.000: R$ 50,00 por mês, milheiro R$ 10,00; com o cartão, R$ 45,00 e milheiro R$ 9,00;\n• Clube 10.000: R$ 172,00 por mês, milheiro R$ 17,20; com o cartão, R$ 154,80 e milheiro R$ 15,48;\n• Clube 20.000: R$ 381,00 por mês, milheiro R$ 19,05; com o cartão, R$ 342,90 e milheiro R$ 17,15.', 'Mensalidade e milheiro de cada plano no anual:\n| Clube | Mensal | Milheiro | Mensal com cartão | Milheiro com cartão\n| 1.000 | R$ 21,00 | R$ 21,00 | R$ 18,90 | R$ 18,90\n| 2.000 | R$ 37,00 | R$ 18,50 | R$ 33,30 | R$ 16,65\n| 5.000 | R$ 50,00 | R$ 10,00 | R$ 45,00 | R$ 9,00 *\n| 10.000 | R$ 172,00 | R$ 17,20 | R$ 154,80 | R$ 15,48\n| 20.000 | R$ 381,00 | R$ 19,05 | R$ 342,90 | R$ 17,15.']],
   /* Os quatro degraus em tópicos, do maior para o menor, com quem cabe em cada um. */
   'pub-bf-magalu-azul-261010': [["Todas as categorias exceto telefonia: 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú, 12 só com o Clube, 9 para os demais com o Cartão Azul Itaú e 6 para os demais.",
     "Todas as categorias exceto telefonia:\n• 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú;\n• 12 só com o Clube (assinantes sem o Cartão Azul Itaú);\n• 9 para os demais com o Cartão Azul Itaú; e\n• 6 para os demais (sem o Cartão Azul Itaú)."]],
