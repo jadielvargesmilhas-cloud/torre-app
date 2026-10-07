@@ -430,6 +430,8 @@ p:last-child{ margin-bottom:0; }
 .dr-grupo li{ padding:2px 0 2px 13px; border-left:2px solid currentColor;
   font-size:calc(14.5px * var(--esc)); line-height:1.55; }
 .dr-grupo li{ color:var(--grafite); }
+/* Endereço longo ou palavra sem espaço quebra dentro da linha em vez de vazar da janela. */
+.dr-grupo li{ overflow-wrap:anywhere; }
 .dr-grupo li b{ color:var(--giz); font-weight:600; font-variant-numeric:tabular-nums; }
 .dr-jade h3{ color:var(--jade); }   .dr-jade li{ border-left-color:color-mix(in oklab, var(--jade) 70%, transparent); }
 .dr-ouro h3{ color:var(--ouro); }   .dr-ouro li{ border-left-color:color-mix(in oklab, var(--ouro) 70%, transparent); }
@@ -8586,9 +8588,9 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-casa"/></svg><span class="sg">Início</span></button>
       <button class="tb" data-area="promocoes" data-vista="fabrica" data-dica="Promoções: onde a milha está barata hoje — compra e transferência bonificada, clubes e lojas, mural" data-dica-lado="direita"><svg><use href="#i-fogo"/></svg><span class="sg"><span class="sg-longo">Promoções</span><span class="sg-curto">Promos</span></span></button>
       <button class="tb" data-area="acumular" data-vista="comprar" data-dica="Acumular: como juntar milhas — comprar, transferir, assinar clubes e comprar produtos" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Acumular</span></button>
-      <button class="tb" data-area="carteira" data-vista="saldo" data-dica="Carteira: o que você tem — saldos, contas, vencimentos e resumo" data-dica-lado="direita"><svg><use href="#i-carteira"/></svg><span class="sg">Carteira</span></button>
+      <button class="tb" data-area="carteira" data-vista="saldo" data-dica="Carteira: o que você tem: contas, controle de CPF, saldos e vencimentos" data-dica-lado="direita"><svg><use href="#i-carteira"/></svg><span class="sg">Carteira</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
-      <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, controle de CPF, orçamento, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
+      <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, orçamento, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
       <button class="tb" data-area="cartoes" data-vista="cartoes" data-dica="Cartões: painel, catálogo, meus cartões e faturas" data-dica-lado="direita"><svg><use href="#i-cartao"/></svg><span class="sg">Cartões</span></button>
       <button class="tb" data-area="ajustes" data-vista="ajustes" data-dica="Ajustes: provedores, programas e dados" data-dica-lado="direita"><svg><use href="#i-ajustes"/></svg><span class="sg">Ajustes</span></button>
       <!-- Celular: cinco botões na barra de baixo; o resto mora em "Mais". -->
@@ -9514,8 +9516,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="olho destaque" style="margin:0;flex:0 0 auto">Controle de emissões</div>
               <div class="seg" id="segCtrVista">
-                <button class="on" data-v="contas">Contas</button>
-                <button data-v="lista">Emissões</button>
+                <button class="on" data-v="contas">Por conta</button>
+                <button data-v="lista">Por emissão</button>
               </div>
               <div class="seg" id="segControle">
                 <button class="on" data-s="">Todas</button>
@@ -10274,7 +10276,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 18:10';
+const BUILD = '2026-10-11 18:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13691,8 +13693,10 @@ const AREAS = [
      Acumular  — como eu junto mais?
      Duas delas dividem o módulo Fábrica (as seções dele se repartem); a área de
      uma tela é decidida pela seção aberta (areaDe). [módulo, seção, nome, ícone, subgrupo] */
-  {k:'carteira',  n:'Carteira',  sub:'O que você tem',            ic:'#i-carteira', vistas:['saldo'],
-    menu:[{g:'Grupo', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios']]},
+  {k:'carteira',  n:'Carteira',  sub:'O que você tem',            ic:'#i-carteira', vistas:['saldo', 'emissoes'],
+    /* Controle de CPF mora logo abaixo de Contas (06/10/2026): a cota de CPF é
+       de cada conta, e é na carteira que se decide de qual conta emitir. */
+    menu:[{g:'Grupo', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios'], ['emissoes', 'em-controle', 'Controle de CPF', '#i-documento']]},
       {g:'Estoque', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]}]},
   {k:'promocoes', n:'Promoções', sub:'Onde a milha está barata',  ic:'#i-fogo',     vistas:['fabrica'],
     menu:[{g:'Campanhas', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube']]},
@@ -13711,9 +13715,9 @@ const AREAS = [
       {g:'Mercado', itens:[['cartoes', 'cr-catalogo', 'Catálogo', '#i-livro']]}]},
   {k:'viagens', n:'Viagens', sub:'Jornadas',  ic:'#i-aviao',   vistas:['rota'],
     menu:[{g:'Planejar', itens:[['rota', 'rt-plano', 'Jornadas', '#i-rota']]}, {g:'Resultados', itens:[['rota', 'rt-viagens', 'Resultados', '#i-grafico']]}]},
-  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'cotacoes', 'emitidos', 'vendas', 'emissoes', 'imposto'],
+  {k:'negocio', n:'Negócio', sub:'Clientes e vendas',    ic:'#i-balcao',  vistas:['clientes', 'cotacoes', 'emitidos', 'vendas', 'imposto'],
     /* na coluna, os módulos de Negócio vêm agrupados pelo que são */
-    grupos:[{n:'Cadastro', vistas:['clientes']}, {n:'Atendimento', vistas:['cotacoes']}, {n:'Resultados', vistas:['vendas', 'emissoes']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
+    grupos:[{n:'Cadastro', vistas:['clientes']}, {n:'Atendimento', vistas:['cotacoes']}, {n:'Resultados', vistas:['vendas']}, {n:'Controle Fiscal', vistas:['imposto']}]}   /* ordem do trabalho: cliente, cotação, emissão, venda, imposto */,
   {k:'ajustes', n:'Ajustes', sub:'Sistema',              ic:'#i-ajustes', vistas:['ajustes'],
     menu:[{g:'Conexões', itens:[['ajustes', 'aj-provedores', 'Provedores', '#i-nuvem']]}, {g:'Mercado', itens:[['ajustes', 'aj-mercado', 'Programas', '#i-alvo']]},
       {g:'Sistema', itens:[['ajustes', 'aj-dados', 'Dados', '#i-caixa'], ['ajustes', 'aj-sobre', 'Sobre', '#i-info']]}]}
@@ -13775,7 +13779,7 @@ function atualizarArea(){
      Carteira), e não o nome técnico do módulo por baixo ("Fábrica de milhas") */
   if (['carteira', 'promocoes', 'acumular'].includes(ar.k)){
     if ($('#topoTit')) $('#topoTit').textContent = ar.n;
-    if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, saldos e vencimentos', promocoes:'Onde a milha está barata hoje', acumular:'Como juntar milhas: clubes, compras, comprar e transferir'}[ar.k];
+    if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, CPF, saldos e vencimentos', promocoes:'Onde a milha está barata hoje', acumular:'Como juntar milhas: clubes, compras, comprar e transferir'}[ar.k];
   }
   /* a pílula do alto diz a área, sempre: a segunda barra (celular) e a coluna
      (computador) dizem o item */
@@ -21037,6 +21041,39 @@ function tabelaEncerradas(mortas){
 const CAMPANHAS_PUBLICADAS = [
 
   /* ── cadastradas em 06/10/2026, a partir dos anúncios enviados pelo Jadiel ── */
+  { id:'pub-tb-livelo-connect-261015', tipo:'transferencia', de:'livelo', para:'connect',
+    bonus:50, desconto:0, limite:0, minimo:3000, carrinho:0, fim:'2026-10-15',
+    titulo:'Livelo para ConnectMiles com 50% de bônus',
+    regra:'50% para todos os clientes, sem exigir clube. Paridade padrão de 3 pontos Livelo para 1 milha ConnectMiles da Copa Airlines. Mínimo de 3.000 pontos Livelo por transferência. Sem limite de bônus nem de transferências; cada transação vai até 800.000 pontos Livelo. Milhas creditadas em até 30 dias após o fim da campanha, válidas por 24 meses. Vale mais para completar uma emissão específica do que para estocar. O regulamento está na página da campanha, na Livelo.',
+    link:'https://www.livelo.com.br/livelo-para-parceiros/copa/CPATransfer' },
+
+  { id:'pub-cp-azul-transf-312-261012', tipo:'compra', de:'', para:'azul',
+    /* Transferência entre contas Azul é compra: paga-se R$ 60 por mil e a conta de
+       destino recebe 312% de bônus. Com o Cartão Azul Itaú, 10% de desconto:
+       60 x 0,9 / 4,12 = R$ 13,11. Sem o cartão: 60 / 4,12 = R$ 14,56. */
+    precoCheio:60, bonus:312, desconto:10, limite:100000, minimo:0, carrinho:0, fim:'2026-10-12',
+    titulo:'Azul: transferência entre contas com 312% de bônus',
+    regra:'Transfira pontos Azul para a conta de outra pessoa: a conta de destino recebe 312% de bônus. Milheiro sem desconto a R$ 60,00. Portadores de qualquer Cartão Azul Itaú têm 10% de desconto pagando com ele: R$ 13,11 o milheiro final; os demais, R$ 14,56. Limite de 100.000 pontos transferidos por CPF durante a campanha; acima disso, sem bônus. Só entre titulares diferentes. Os pontos recebidos não são qualificáveis para categoria. Validade segue a conta de destino; o bônus vale 24 meses, e não expira para assinante dos planos 10.000 ou 20.000 do Clube Azul. Problema no processamento: avisar a Azul em até 10 dias corridos.',
+    link:'https://www.voeazul.com.br/br/pt/ofertas/facilidades' },
+
+  { id:'pub-cp-turbo-livelo-261006', tipo:'compra', de:'', para:'livelo',
+    /* R$ 31,00 por mil no cartão contra a tabela de R$ 70: 55,71% de desconto.
+       No Pix, R$ 30,38 (56,6%). */
+    bonus:0, desconto:55.71, limite:0, minimo:0, carrinho:0, fim:'2026-10-06',
+    titulo:'Turbo Livelo com milheiro a partir de R$ 30,38',
+    regra:'Turbina pontos já recebidos em 3, 6, 9, 12 ou 15 vezes, uma única vez por acúmulo: do cartão de crédito, de compras em parceiros ou de transferências de outros programas. Fica no extrato, no site ou no aplicativo. R$ 31,00 por mil no cartão de crédito e R$ 30,38 no Pix. Transações de 100 a 100.000 pontos. Limite diário de 200.000 pontos para quem não é Clube Livelo e 400.000 para assinantes. Pontos válidos por 2 anos; não expiram para quem assina o Clube Livelo. Confira o milheiro na hora da transação. A função costuma voltar em outras datas.',
+    link:'https://e.livelo.me/4kNUSeX' },
+
+  { id:'pub-bf-magalu-azul-261010', tipo:'bonificada', parceiro:'Magalu', de:'', para:'azul', ptsPorReal:14,
+    bonus:0, desconto:0, limite:0, fim:'2026-10-10',
+    faixas:[{rot:'Clube Azul + Cartão Azul Itaú', v:14, obs:'13 em telefonia'},
+            {rot:'Assinantes do Clube Azul', v:12, obs:'11 em telefonia', clube:true},
+            {rot:'Demais clientes + Cartão Azul Itaú', v:9, obs:'8 em telefonia'},
+            {rot:'Demais clientes', v:6, obs:'6 em telefonia', clube:false}],
+    titulo:'Magalu com até 14 pontos Azul por real',
+    regra:'Todas as categorias exceto telefonia: 14 pontos por real para assinante do Clube Azul pagando com Cartão Azul Itaú, 12 só com o Clube, 9 para os demais com o Cartão Azul Itaú e 6 para os demais. Em telefonia: 13, 11, 8 e 6. Vale só para produtos vendidos e entregues pela Magazine Luiza; itens de marketplace rendem 1 ponto por real. Não pontuam embalagem para presente, frete, pagamentos com cupom, gift card ou vale-compra, juros e serviços como garantia estendida. Pontos creditados em até 30 dias úteis depois da entrega do pedido.',
+    link:'https://clube.magazineluiza.com.br/tudoazul' },
+
   { id:'pub-tb-itau-latampass-261009', tipo:'transferencia', de:'itau', para:'latampass',
     bonus:25, desconto:0, limite:0, minimo:1, carrinho:0, fim:'2026-10-09',
     titulo:'Itaú para LATAM Pass com 25% de bônus',
