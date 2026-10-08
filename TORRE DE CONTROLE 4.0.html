@@ -10993,7 +10993,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 22:30';
+const BUILD = '2026-10-12 23:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -43202,8 +43202,10 @@ function prazoCreditoDias(fonte){
    campanha viva não ficar mudo. */
 function candidatosDesejo(d, vivos){
   const hoje = hojeISO(), prefs = prefsDoDesejo(d), out = [];
+  /* o ponto sai do valor do produto; o frete não pontua, mas entra no que se paga */
+  const pago = (Number(d.valor) || 0) + (Number(d.frete) || 0);
   const conta = (o) => { const pts = d.valor * o.mult, retorno = pts / 1000 * valorMilheiro(o.prog);
-    out.push({...o, pts, retorno, pc:d.valor > 0 ? retorno / d.valor * 100 : 0}); };
+    out.push({...o, pts, retorno, pc:pago > 0 ? retorno / pago * 100 : 0}); };
   DB.lojas.forEach(l => {
     if (d.prog && l.prog !== d.prog) return;
     if (d.lojaId && l.id !== d.lojaId) return;
@@ -43295,7 +43297,7 @@ function renderDesejos(){
       ${fotoDsHTML(d)}
       <div class="ds-corpo">
       <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span></div>
-      <div class="ds-sub">${brl(d.valor)} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>
+      <div class="ds-sub">${brl(d.valor)}${Number(d.frete) ? ' + frete ' + brl(d.frete) : ''} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>
       ${melhor ? `
         <div class="ds-barra"><i style="width:${x.progresso}%"></i></div>
         <div class="ds-linha"><span>Hoje <b>${nBRdec(melhor.mult)}×</b> · ${esc(melhor.loja.n)} → ${esc(prog(melhor.prog).n)}</span>
@@ -43361,7 +43363,7 @@ function renderReceber(){
     const d = diasAte(c.previsto), atras = d != null && d < 0;
     return `<div class="lc-rec${atras ? ' atrasado' : ''}">
       ${discoProg(c.prog)}
-      <div class="lc-rec-c"><div class="lc-rec-t"><b>${esc(c.item || nomeLojaCompra(c))}</b><span class="fraco">${esc(nomeLojaCompra(c))} · ${brl(c.valor)} em ${dataBR(c.data).slice(0, 5)}${c.pedido ? ' · pedido ' + esc(c.pedido) : ''}</span></div>
+      <div class="lc-rec-c"><div class="lc-rec-t"><b>${esc(c.item || nomeLojaCompra(c))}</b><span class="fraco">${esc(nomeLojaCompra(c))} · ${brl(c.valor)}${Number(c.frete) ? ' + frete ' + brl(c.frete) : ''} em ${dataBR(c.data).slice(0, 5)}${c.pedido ? ' · pedido ' + esc(c.pedido) : ''}</span></div>
         <div class="lc-rec-barra"><i style="width:${foi.toFixed(0)}%"></i></div>
         <div class="lc-rec-s">${atras ? `<b class="brasa">Deveria ter caído em ${dataBR(c.previsto)}.</b> Confira no extrato do ${esc(prog(c.prog).n)} e, se não veio, abra reclamação com a loja.` : d === 0 ? 'Previsão de crédito: hoje' : `Previsão de crédito: ${dataBR(c.previsto)} · faltam ${d} dias`}</div></div>
       <div class="lc-rec-v"><b>${nBR(c.pts)}</b><small>${esc(prog(c.prog).n)}</small></div>
@@ -43387,15 +43389,16 @@ function editarCompraPendente(id){ const c = (DB.compras || []).find(y => y.id =
 function formCompraPendente({desejo, compra, cands}){
   const c0 = compra || {};
   const m0 = cands[0];
-  const base = compra ? {loja:c0.lojaNome || nomeLojaCompra(c0), prog:c0.prog, mult:c0.mult, valor:c0.valor, prazo:Math.max(1, Math.round((new Date(c0.previsto + 'T12:00:00') - new Date(c0.data + 'T12:00:00')) / 864e5))}
-    : {loja:m0 ? m0.loja.n : '', prog:m0 ? m0.prog : (desejo.prog || 'livelo'), mult:m0 ? m0.mult : 1, valor:desejo.valor, prazo:m0 ? prazoCreditoDias({regra:m0.regraTxt, prog:m0.prog}) : 30};
+  const base = compra ? {loja:c0.lojaNome || nomeLojaCompra(c0), prog:c0.prog, mult:c0.mult, valor:c0.valor, frete:Number(c0.frete) || 0, prazo:Math.max(1, Math.round((new Date(c0.previsto + 'T12:00:00') - new Date(c0.data + 'T12:00:00')) / 864e5))}
+    : {loja:m0 ? m0.loja.n : '', prog:m0 ? m0.prog : (desejo.prog || 'livelo'), mult:m0 ? m0.mult : 1, valor:desejo.valor, frete:Number(desejo.frete) || 0, prazo:m0 ? prazoCreditoDias({regra:m0.regraTxt, prog:m0.prog}) : 30};
   const progsAc = PROG_IDS.filter(k => PROGRAMAS[k]);
   abrirFolha({titulo: compra ? 'Editar compra' : `Registrar a compra · ${esc(desejo.n)}`, largura:'larga', corpo:`
     ${!compra && cands.length > 1 ? `<div class="lc-escolha">${cands.map((o, i) => `<button type="button" class="lc-op${i === 0 ? ' on' : ''}" data-i="${i}">${discoProg(o.prog, 'p')}<span><b>${esc(o.loja.n)}</b><small>${nBRdec(o.mult)} pts/R$ · ${esc(prog(o.prog).n)}</small></span></button>`).join('')}</div>` : ''}
     <div class="grade lc-grade">
       <div class="campo"><label>Loja</label><input type="text" id="lcLoja" value="${esc(base.loja)}"></div>
       <div class="campo"><label>Programa que recebe</label><select id="lcProg">${progsAc.map(k => `<option value="${k}"${k === base.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
-      <div class="campo"><label>Valor pago (R$)</label><input type="text" inputmode="decimal" data-moeda id="lcValor" value="${moedaTxt(base.valor || 0)}"></div>
+      <div class="campo"><label>Valor do produto (R$)</label><input type="text" inputmode="decimal" data-moeda id="lcValor" value="${moedaTxt(base.valor || 0)}"></div>
+      <div class="campo"><label>Frete (R$) <span class="fraco">não pontua</span></label><input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="lcFrete" value="${base.frete ? moedaTxt(base.frete) : ''}" placeholder="0,00"></div>
       <div class="campo"><label>Pontos por real</label><input type="text" inputmode="decimal" id="lcMult" value="${String(base.mult || 0).replace('.', ',')}"></div>
       <div class="campo"><label>Pontos previstos</label><input type="text" inputmode="numeric" data-milhar id="lcPts" value="${qtdTxt(compra ? c0.pts : Math.round((base.valor || 0) * (base.mult || 0)))}"></div>
       <div class="campo"><label>Data da compra</label><input type="date" id="lcData" value="${esc(c0.data || hojeISO())}"></div>
@@ -43407,17 +43410,18 @@ function formCompraPendente({desejo, compra, cands}){
     <div class="nota" style="margin-top:12px" id="lcPrevia"></div>`,
     pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${compra ? `<button type="button" class="bt vermelho-solido" id="lcExcluir"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}<button type="button" class="bt primario" id="lcSalvar"><svg><use href="#i-ok"/></svg>${compra ? 'Salvar' : 'Registrar: pontos a receber'}</button>`});
   if (typeof prepararCamposData === 'function') prepararCamposData($('#folhaCorpo'));
-  ligarCampoMoeda('#lcValor'); ligarCampoContagem('#lcPts');
+  ligarCampoMoeda('#lcValor'); ligarCampoMoeda('#lcFrete'); ligarCampoContagem('#lcPts');
   let ptsManual = !!compra;
   const num = s => Number(String($(s).value).replace(/\./g, '').replace(',', '.')) || 0;
   const recalc = (origem) => {
     if (origem !== 'pts' && !ptsManual) $('#lcPts').value = qtdTxt(Math.round(moedaNum($('#lcValor').value) * num('#lcMult')));
     if (origem !== 'prev') $('#lcPrev').value = somaDiasISO($('#lcData').value || hojeISO(), Number($('#lcPrazo').value) || 30);
     const pts = qtdNum($('#lcPts').value), pg = $('#lcProg').value, ret = pts / 1000 * valorMilheiro(pg);
-    $('#lcPrevia').innerHTML = `<svg><use href="#i-faisca"/></svg><div><b>${nBR(pts)} pontos ${esc(prog(pg).n)}</b> ficam como <b>pendentes</b> até ${dataBR($('#lcPrev').value)}${ret ? `, valendo ${brl(ret)}` : ''}. Eles aparecem em Saldos como "a receber" e só entram no saldo quando você confirmar que caíram.</div>`;
+    const prod = moedaNum($('#lcValor').value), fr = moedaNum($('#lcFrete').value), tot = prod + fr;
+    $('#lcPrevia').innerHTML = `<svg><use href="#i-faisca"/></svg><div>Total pago: <b>${brl(tot)}</b>${fr ? ` (produto ${brl(prod)} + frete ${brl(fr)}; o frete não pontua)` : ''}${ret && tot ? `. Voltam ${brl(ret)}, ${pct(ret / tot * 100, 1)} do total` : ''}.<br><b>${nBR(pts)} pontos ${esc(prog(pg).n)}</b> ficam como <b>pendentes</b> até ${dataBR($('#lcPrev').value)}${ret ? `, valendo ${brl(ret)}` : ''}. Eles aparecem em Saldos como "a receber" e só entram no saldo quando você confirmar que caíram.</div>`;
   };
   $('#lcPts').addEventListener('input', () => { ptsManual = true; recalc('pts'); });
-  ['#lcValor', '#lcMult', '#lcProg', '#lcData', '#lcPrazo'].forEach(s => { $(s).addEventListener('input', () => recalc(s)); $(s).addEventListener('change', () => recalc(s)); });
+  ['#lcValor', '#lcFrete', '#lcMult', '#lcProg', '#lcData', '#lcPrazo'].forEach(s => { $(s).addEventListener('input', () => recalc(s)); $(s).addEventListener('change', () => recalc(s)); });
   $('#lcPrev').addEventListener('change', () => recalc('prev'));
   $$('#folhaCorpo .lc-op').forEach(b => b.onclick = () => {
     const o = cands[+b.dataset.i]; $$('#folhaCorpo .lc-op').forEach(y => y.classList.toggle('on', y === b));
@@ -43432,11 +43436,11 @@ function formCompraPendente({desejo, compra, cands}){
   }, 'Excluir');
   $('#lcSalvar').onclick = () => {
     const valor = moedaNum($('#lcValor').value), pts = qtdNum($('#lcPts').value);
-    if (!valor) return erroNoCampo($('#lcValor'), 'Informe o valor pago.');
+    if (!valor) return erroNoCampo($('#lcValor'), 'Informe o valor do produto.');
     if (!(pts > 0)) return erroNoCampo($('#lcPts'), 'Informe quantos pontos a compra vai dar.');
     const loja = $('#lcLoja').value.trim() || 'Loja', pg = $('#lcProg').value;
     const lj = DB.lojas.find(l => semAcento(l.n.toLowerCase()) === semAcento(loja.toLowerCase()) && l.prog === pg);
-    const reg = {...c0, id:c0.id || uid(), lojaId:lj ? lj.id : (c0.lojaId || ''), lojaNome:loja, prog:pg, data:$('#lcData').value || hojeISO(), valor,
+    const reg = {...c0, id:c0.id || uid(), lojaId:lj ? lj.id : (c0.lojaId || ''), lojaNome:loja, prog:pg, data:$('#lcData').value || hojeISO(), valor, frete:moedaNum($('#lcFrete').value),
       mult:num('#lcMult'), pts, previsto:$('#lcPrev').value, contaId:$('#lcConta').value, pedido:$('#lcPedido').value.trim(),
       status:c0.status || 'pendente', item:c0.item || (desejo ? desejo.n : ''), desejoId:c0.desejoId || (desejo ? desejo.id : '')};
     DB.compras = DB.compras || [];
@@ -43505,7 +43509,8 @@ function editarDesejo(id){
     corpo:`<datalist id="dsLojasConh">${conhecidas.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
       <div class="campo" style="grid-column:1 / -1"><label>O que você quer comprar</label><input type="text" id="dsN" value="${esc(d.n)}" placeholder="Cama box solteiro"></div>
-      <div class="campo"><label>Preço estimado (R$)</label><input type="text" inputmode="decimal" data-moeda id="dsValor" value="${moedaTxt(d.valor)}"></div>
+      <div class="campo"><label>Preço do produto (R$)</label><input type="text" inputmode="decimal" data-moeda id="dsValor" value="${moedaTxt(d.valor)}"></div>
+      <div class="campo"><label>Frete estimado (R$) <span class="fraco">não pontua</span></label><input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="dsFrete" value="${Number(d.frete) ? moedaTxt(d.frete) : ''}" placeholder="0,00"></div>
       <div class="campo"><label>Categoria</label><select id="dsCat">${CATEGORIAS_LOJA.map(c => `<option value="${c}"${c === d.cat ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
       <div class="campo"><label>Prioridade</label><select id="dsPri">${Object.entries(PRIORIDADES).map(([k, v]) => `<option value="${k}"${Number(k) === d.prioridade ? ' selected' : ''}>${v.n}</option>`).join('')}</select></div>
       <div class="campo"><label>Programa</label><select id="dsProg"><option value="">qualquer um</option>${PROG_IDS.map(p => `<option value="${p}"${p === d.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
@@ -43557,7 +43562,7 @@ function editarDesejo(id){
   rotulo(); previa();
   $('#btSalvarDesejo').onclick = () => {
     const novo = {...d, id:d.id || uid(), n:$('#dsN').value.trim() || 'Item sem nome', cat:$('#dsCat').value, valor:moedaNum($('#dsValor').value),
-      prog:$('#dsProg').value, lojaId:'', lojasPref:$('#dsLojas').value.trim(), link:$('#dsLink').value.trim(),
+      frete:moedaNum($('#dsFrete').value), prog:$('#dsProg').value, lojaId:'', lojasPref:$('#dsLojas').value.trim(), link:$('#dsLink').value.trim(),
       alvoTipo:tipo, alvo:Number($('#dsAlvo').value) || 0, alvos:tipo === 'mult' ? {...alvos} : {}, prioridade:Number($('#dsPri').value) || 1, obs:$('#dsObs').value.trim(),
       feito:d.feito || false, criado:d.criado || hojeISO()};
     if (!novo.valor){ avisar('Informe o preço estimado: sem ele não dá para medir o retorno.', 'alerta'); return; }
