@@ -9485,6 +9485,34 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .vi-mapa-osm-escuro{ filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6); }
 .vi-mapa-nomes{ pointer-events:none; }
 </style>
+<style>
+/* Conferência: o que falta à esquerda, o espaço do print à direita */
+.vem-falta{ margin-top:12px; }
+.vem-falta.com-print{ display:grid; grid-template-columns:minmax(0,1fr) minmax(240px, 340px); gap:14px; align-items:stretch; }
+.vem-falta > .nota{ margin:0; }
+.vem-zona-print{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:18px 16px; border-radius:14px;
+  border:1.5px dashed color-mix(in oklab, var(--anil-claro) 55%, transparent); background:color-mix(in oklab, var(--anil-claro) 7%, transparent);
+  color:var(--giz, inherit); cursor:pointer; transition:background .18s var(--ease), border-color .18s var(--ease), transform .18s var(--ease); min-height:150px; }
+.vem-zona-print:hover, .vem-zona-print:focus-visible, .vem-zona-print.arrastando{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 14%, transparent); outline:none; }
+.vem-zona-print.arrastando{ transform:scale(1.015); }
+.vem-zona-print b{ font:700 calc(14.5px * var(--esc))/1.2 var(--f-b); color:var(--anil-claro); }
+.vem-zona-print small{ font-size:calc(12.5px * var(--esc)); line-height:1.45; max-width:260px; }
+.vem-zp-ico{ width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:color-mix(in oklab, var(--anil-claro) 16%, transparent); color:var(--anil-claro); }
+.vem-zp-ico svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; }
+.vem-zona-print.lendo{ cursor:progress; }
+.vem-zp-giro{ width:30px; height:30px; border-radius:50%; border:3px solid color-mix(in oklab, var(--anil-claro) 25%, transparent); border-top-color:var(--anil-claro); animation:vemGiro .8s linear infinite; }
+@keyframes vemGiro{ to{ transform:rotate(360deg); } }
+.vem-print-msg{ margin-top:10px; padding-top:9px; border-top:1px solid color-mix(in oklab, currentColor 20%, transparent); font-size:calc(13px * var(--esc)); line-height:1.5; }
+.vem-print-msg.ok{ color:var(--jade); }
+#vemConf{ container-type:inline-size; }
+@container (max-width:720px){ .vem-falta.com-print{ grid-template-columns:1fr; } .vem-zona-print{ min-height:0; } }
+@media (max-width:760px){ .vem-falta.com-print{ grid-template-columns:1fr; } .vem-zona-print{ min-height:0; } }
+</style>
+<style>
+.cq-ajuda{ margin-top:10px; padding-top:10px; border-top:1px solid color-mix(in oklab, currentColor 22%, transparent); color:var(--giz); }
+.cq-ajuda ol{ margin:6px 0 10px 20px; padding:0; line-height:1.6; }
+.cq-ajuda .bt{ text-decoration:none; }
+</style>
 </head>
 <body>
 <script>
@@ -11345,7 +11373,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 22:00';
+const BUILD = '2026-10-13 23:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -47449,6 +47477,7 @@ function vemNovaOpcao(){
           bag:{mochila:{estado:'inc', q:1, kg:''}, mala:{estado:'inc', q:1, kg:''}, despachada:{estado:'tarifa', q:1, kg:''}}};
 }
 function vemNovoEstado(){
+  try { vemPrintMsg = null; } catch(e){}
   const cfg = vemCfg();
   return {id:null, nome:null, comum:{cliente:'', adultos:1, criancas:0, bebes:0, cabine:'Econômica', rodape: cfg.rodape}, ops:[vemNovaOpcao()]};
 }
@@ -47725,9 +47754,117 @@ function vemRenderConf(){
       <tbody>${linhas.join('')}</tbody></table></div>
       <p class="fraco vem-legenda">PIX − base: quanto o PIX fica acima (+) ou abaixo (−) da base. Com as regras atuais, ele fica 0,84% abaixo.</p>` : '<p class="fraco">Preencha as milhas e o milheiro para ver as contas.</p>'}
     ${selos}
-    ${r.erros.length ? `<div class="nota brasa" style="margin-top:12px"><svg><use href="#i-alerta"/></svg><div><b>Falta resolver antes de baixar:</b><ul class="vem-lista">${r.erros.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>` : ''}
+    ${r.erros.length ? `<div class="vem-falta${vemFaltaDoPrint(r.erros) ? ' com-print' : ''}"><div class="nota brasa"><svg><use href="#i-alerta"/></svg><div><b>Falta resolver antes de baixar:</b><ul class="vem-lista">${r.erros.map(x => `<li>${esc(x)}</li>`).join('')}</ul>${vemPrintMsg ? `<div class="vem-print-msg ${vemPrintMsg.ok ? 'ok' : ''}">${vemPrintMsg.html}</div>` : ''}</div></div>${vemFaltaDoPrint(r.erros) ? vemZonaPrintHTML() : ''}</div>` : ''}
     ${r.avisos.length ? `<div class="nota ouro" style="margin-top:12px"><svg><use href="#i-info"/></svg><div><b>Para conferir:</b><ul class="vem-lista">${r.avisos.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>` : ''}
-    ${!r.erros.length ? '<div class="nota jade" style="margin-top:12px"><svg><use href="#i-ok"/></svg><div>Tudo preenchido. A página pode ser baixada.</div></div>' : ''}`;
+    ${!r.erros.length ? `<div class="nota jade" style="margin-top:12px"><svg><use href="#i-ok"/></svg><div>Tudo preenchido. A página pode ser baixada.${vemPrintMsg && vemPrintMsg.ok ? `<div class="vem-print-msg ok">${vemPrintMsg.html}</div>` : ''}</div></div>` : ''}`;
+  vemLigarZonaPrint();
+}
+/* ── o que falta, direto do print (08/10/2026) ───────────────────────────────
+   Ao lado da lista do que falta, um espaço para colar (Ctrl+V), arrastar ou
+   anexar o print ou o PDF da emissão. O leitor do próprio navegador (o mesmo
+   da leitura de trechos, sem custo) tira os voos, e só os campos VAZIOS são
+   preenchidos: o que você já digitou nunca é trocado. */
+let vemPrintMsg = null, vemPrintLendo = null;
+const VEM_FALTA_PRINT = /número do voo|companhia|data e a hora|aeroporto de|nenhum voo|faltam as milhas|taxa de embarque/i;
+function vemFaltaDoPrint(erros){ return (erros || []).some(e => VEM_FALTA_PRINT.test(e)); }
+function vemZonaPrintHTML(){
+  if (vemPrintLendo) return `<div class="vem-zona-print lendo" aria-live="polite"><span class="vem-zp-giro"></span><b>Lendo o print</b><small>${esc(vemPrintLendo)}</small><small class="fraco">Tudo acontece no seu navegador, sem custo.</small></div>`;
+  return `<label class="vem-zona-print" id="vemZonaPrint" tabindex="0" data-dica="Cole com Ctrl+V, arraste ou toque para escolher">
+    <input type="file" id="vemPrintArq" accept="image/*,application/pdf" multiple hidden>
+    <span class="vem-zp-ico"><svg><use href="#i-imagem"/></svg></span>
+    <b>Completar pelo print</b>
+    <small>${typeof TOQUE_GROSSO !== 'undefined' && TOQUE_GROSSO.matches ? 'Toque para anexar o print ou o PDF da emissão.' : 'Cole aqui (Ctrl+V), arraste ou clique para anexar o print ou o PDF da emissão.'}</small>
+    <small class="fraco">Só os campos vazios são preenchidos.</small>
+  </label>`;
+}
+function vemLigarZonaPrint(){
+  const z = $('#vemZonaPrint'); if (!z) return;
+  const arq = $('#vemPrintArq');
+  arq.onchange = e => { if (e.target.files.length) vemLerPrintsFalta(e.target.files); e.target.value = ''; };
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('arrastando'); });
+  z.addEventListener('dragleave', () => z.classList.remove('arrastando'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('arrastando'); if (e.dataTransfer.files.length) vemLerPrintsFalta(e.dataTransfer.files); });
+  z.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); arq.click(); } });
+}
+/* colar em qualquer ponto da página do cliente: só quando o que foi copiado é
+   um arquivo (print ou PDF); texto colado num campo continua normal */
+document.addEventListener('paste', e => {
+  if (!$('#vemZonaPrint') || vemPrintLendo) return;
+  const fs = [...((e.clipboardData && e.clipboardData.files) || [])].filter(f => (f.type || '').startsWith('image/') || ehPDF(f));
+  if (!fs.length) return;
+  e.preventDefault(); vemLerPrintsFalta(fs);
+});
+async function vemLerPrintsFalta(lista){
+  const fs = [...lista].filter(f => (f.type || '').startsWith('image/') || ehPDF(f)).slice(0, 8);
+  if (!fs.length){ avisar('Use imagens (PNG, JPG, WEBP) ou PDF.', 'alerta'); return; }
+  vemPrintMsg = null; vemPrintLendo = 'Preparando o leitor'; vemRenderConf();
+  try {
+    const w = await prepararLeitorOCR();
+    const textos = [];
+    for (let k = 0; k < fs.length; k++){ vemPrintLendo = `Arquivo ${k + 1} de ${fs.length}`; vemRenderConf(); textos.push(await textoDoArquivo(fs[k], w)); }
+    const r = cqDoLeitor(segmentosDoTexto(textos, ''));
+    const res = vemCompletarDoLeitor(r);
+    vemPrintLendo = null;
+    if (!res.feitos.length){
+      vemPrintMsg = {ok:false, html:`<b>Não achei no print o que falta.</b> ${res.motivo ? esc(res.motivo) + ' ' : ''}Tente o print da tela de resumo da emissão (com número do voo, datas e horários) ou o PDF do bilhete.`};
+    } else {
+      vemPrintMsg = {ok:true, html:`<b>Preenchido pelo print:</b> ${esc(res.feitos.join('; '))}.${res.avisos.length ? ' ' + esc(res.avisos.join(' ')) : ''} Confira nos campos acima.`};
+      vemGuardarRascunho(); renderVem();
+      avisar('Campos vazios preenchidos pelo print. Confira.', 'ok');
+      return;
+    }
+  } catch (err){
+    vemPrintLendo = null;
+    vemPrintMsg = {ok:false, html:`<b>Não deu para ler aqui.</b> ${esc(err.message || String(err))}`};
+  }
+  vemRenderConf();
+}
+/* Leva os voos lidos para os campos vazios de cada opção: o voo certo é o da
+   mesma rota (De e Para); sem rota preenchida, vale a ordem do print. */
+function vemCompletarDoLeitor(r){
+  const feitos = [], avisos = [];
+  const achados = (r && r.achados) || [];
+  const legsDe = sent => (achados.find(a => a.sentido === sent) || {}).trechos || [];
+  const ida = legsDe('IDA'), volta = legsDe('VOLTA');
+  if (!ida.length && !volta.length) return {feitos, avisos, motivo:(r && r.faltou) ? `Faltou ${r.faltou}.` : 'Nenhum voo reconhecido.'};
+  const vazio = v => !String(v == null ? '' : v).trim();
+  vemEst.ops.forEach((o, oi) => {
+    const N = vemEst.ops.length > 1 ? `Opção ${oi + 1}, ` : '';
+    const blocos = [['ida', ida]].concat(volta.length ? [['volta', volta]] : []);
+    blocos.forEach(([sent, legs]) => {
+      if (sent === 'volta' && !o.temVolta){
+        if (o.volta.some(t => !vazio(t.de) || !vazio(t.numero))) return;
+        o.temVolta = true; o.volta = legs.map(() => vemNovoTrecho()); feitos.push(N + 'voos de volta');
+      }
+      const lista = o[sent];
+      const todosVazios = lista.every(t => vazio(t.de) && vazio(t.para) && vazio(t.numero));
+      if (todosVazios && lista.length !== legs.length){ o[sent] = legs.map(() => vemNovoTrecho()); }
+      const alvo = o[sent];
+      let antes = null;
+      alvo.forEach((t, j) => {
+        const leg = legs.find(l => l.de && l.para && l.de === String(t.de).toUpperCase() && l.para === String(t.para).toUpperCase())
+          || ((vazio(t.de) || vazio(t.para)) && legs.length === alvo.length ? legs[j] : null);
+        if (!leg){ antes = null; return; }
+        const pus = [];
+        const por = (campo, valor, nome) => { if (vazio(t[campo]) && !vazio(valor)){ t[campo] = valor; if (nome && !pus.includes(nome)) pus.push(nome); } };
+        por('cia', leg.cia, 'companhia'); por('numero', leg.numero, 'número do voo');
+        por('de', leg.de, 'aeroporto de saída'); por('para', leg.para, 'aeroporto de chegada');
+        /* voo de conexão sem data no print: mesmo dia do pouso anterior, ou o
+           dia seguinte se sair mais cedo no relógio */
+        let data = leg.data || '';
+        if (!data && antes && antes.cData && leg.sai){ data = leg.sai >= (antes.cHora || '00:00') ? antes.cData : cqSomaDia(antes.cData, 1); avisos.push(`A data do voo ${j + 1} da ${sent} veio da conexão: confira.`); }
+        por('pData', data, 'data e hora da partida'); por('pHora', leg.sai, 'data e hora da partida');
+        let cData = leg.cData || (data && leg.sai && leg.chega ? (leg.chega < leg.sai ? cqSomaDia(data, 1) : data) : '');
+        por('cData', cData, 'data e hora da chegada'); por('cHora', leg.chega, 'data e hora da chegada');
+        if (pus.length) feitos.push(`${N}${sent}, voo ${j + 1}: ${pus.join(', ')}`);
+        antes = t;
+      });
+    });
+    const a0 = achados.find(a => a.sentido === 'IDA') || {};
+    if (vazio(o.milhas) && Number(a0.milhas) > 0){ o.milhas = String(a0.milhas); feitos.push(N + 'milhas'); }
+    if (vazio(o.taxa) && a0.taxas != null && Number(a0.taxas) >= 0 && a0.fonte === 'leitor' && Number(a0.taxas) > 0){ o.taxa = String(a0.taxas).replace('.', ','); feitos.push(N + 'taxa de embarque'); }
+  });
+  return {feitos, avisos:[...new Set(avisos)]};
 }
 function vemAgendarConf(){ clearTimeout(vemConfTimer); vemConfTimer = setTimeout(vemRenderConf, 220); }
 
@@ -48351,7 +48488,35 @@ async function cqGitPut(repo, caminho, b64, msg){
   else if (g.status !== 404) throw new Error(cqExplicarGit(g.status, repo));
   const corpo = {message:msg, content:b64}; if (sha) corpo.sha = sha;
   const r = await fetch(url, {method:'PUT', headers:h, body:JSON.stringify(corpo)});
-  if (!r.ok) throw new Error(cqExplicarGit(r.status, repo));
+  if (!r.ok){
+    const e = new Error(cqExplicarGit(r.status, repo));
+    if (r.status === 403 || r.status === 404 || r.status === 401){ try { e.ajuda = await cqDiagnosticoGit(repo, r.status); if (e.ajuda && e.ajuda.resumo) e.message = e.ajuda.resumo; } catch(_){} }
+    throw e;
+  }
+}
+/* Por que o GitHub recusou (08/10/2026): olha de quem é a chave e de que tipo
+   ela é, e devolve o conserto passo a passo, em vez de só "precisa de permissão". */
+async function cqDiagnosticoGit(repo, status){
+  const tok = String(nuvemCfg().token || '').trim();
+  const [dono, nome] = repo.split('/');
+  const fina = /^github_pat_/.test(tok), classica = /^gh[pousr]_/.test(tok);
+  let login = '', escopos = null;
+  try { const u = await fetch('https://api.github.com/user', {headers:nuvemCabecalho()}); if (u.ok){ login = (await u.json()).login || ''; } const sc = u.headers.get('x-oauth-scopes'); if (sc != null) escopos = sc.split(',').map(x => x.trim()).filter(Boolean); } catch(_){}
+  if (status === 401) return {resumo:'a chave da Nuvem não foi aceita pelo GitHub: ela venceu ou foi apagada.', passos:[
+    'Entre no GitHub com a conta ' + dono + '.', 'Crie uma chave nova (botão abaixo), com acesso ao repositório ' + nome + ' e Contents em Read and write.',
+    'Cole a chave nova em Ajustes → Nuvem, no lugar da antiga.'], link:'https://github.com/settings/personal-access-tokens/new', linkTxt:'Criar chave nova no GitHub'};
+  if (login && login.toLowerCase() !== dono.toLowerCase()) return {resumo:`a chave é da conta ${login}, mas as páginas ficam na conta ${dono}. Uma conta não grava no repositório da outra.`, passos:[
+    'Saia do GitHub e entre com a conta ' + dono + ' (a dona do repositório ' + nome + ').', 'Crie a chave por essa conta (botão abaixo): em "Resource owner" deixe ' + dono + ', em "Repository access" inclua ' + nome + ' e em "Permissions" deixe Contents em Read and write.',
+    'Cole a chave nova em Ajustes → Nuvem.'], link:'https://github.com/settings/personal-access-tokens/new', linkTxt:'Criar chave no GitHub'};
+  if (classica || (escopos && escopos.length)) return {resumo:`a chave (do tipo clássico) não tem permissão para gravar em ${repo}.`, passos:[
+    'Abra a lista de chaves clássicas no GitHub (botão abaixo) e clique na chave que a Torre usa.', 'Marque a caixa "repo" (a primeira da lista).',
+    'Desça até o fim e clique em "Update token". A chave continua a mesma: não precisa colar de novo.', 'Volte aqui e clique em "Publicar e gerar o link".'], link:'https://github.com/settings/tokens', linkTxt:'Abrir as chaves clássicas'};
+  return {resumo:`a chave da Nuvem não tem permissão para gravar no repositório ${nome}. Ela provavelmente foi criada só para o repositório dos dados.`, passos:[
+    'Abra as suas chaves no GitHub (botão abaixo), clique no nome da chave que a Torre usa e depois em "Edit".',
+    `Em "Repository access", deixe "Only select repositories" e inclua também o repositório ${nome} (ou escolha "All repositories").`,
+    'Em "Permissions", ache "Contents" (se não estiver na lista, clique em "Add permissions" e escolha Contents) e deixe em "Read and write".',
+    'Salve no botão do fim da página ("Update" ou "Save"). A chave continua a mesma: não precisa colar de novo.',
+    'Volte aqui e clique em "Publicar e gerar o link".'], link:'https://github.com/settings/personal-access-tokens', linkTxt:'Abrir as minhas chaves no GitHub'};
 }
 const cqBlob64 = blob => new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = () => err(new Error('não deu para preparar a imagem')); fr.readAsDataURL(blob); });
 function cqMarca(txt){ let h = 0; const s = String(txt); for (let i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) | 0; } return (h >>> 0).toString(36) + '.' + s.length; }
@@ -48388,7 +48553,7 @@ async function cqPublicar(){
     cqRender();
     cqVigiar(reg2.id, g.urlP, reg2.publicada.marca);
   } catch (err){
-    cqPub.fase = 'erro'; cqPub.erro = err.message || String(err);
+    cqPub.fase = 'erro'; cqPub.erro = err.message || String(err); cqPub.ajuda = err.ajuda || null;
     cqPub.passos.forEach(p => { if (p.e === 'vai') p.e = 'erro'; });
     cqRender();
   }
@@ -48719,7 +48884,7 @@ function cqRenderP3(){
     </div>`;
   } else {
     lado = `<div class="cq-pub-bloco">
-      ${pub && pub.fase === 'erro' ? `<div class="nota brasa" style="margin-bottom:12px"><svg><use href="#i-alerta"/></svg><div><b>Não deu para publicar:</b> ${esc(pub.erro)}</div></div>${passos}` : ''}
+      ${pub && pub.fase === 'erro' ? `<div class="nota brasa" style="margin-bottom:12px"><svg><use href="#i-alerta"/></svg><div><b>Não deu para publicar:</b> ${esc(pub.erro)}${pub.ajuda ? `<div class="cq-ajuda"><b>Como resolver (uns 2 minutos):</b><ol>${pub.ajuda.passos.map(p => `<li>${esc(p)}</li>`).join('')}</ol><a class="bt p" href="${pub.ajuda.link}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(pub.ajuda.linkTxt)}</a></div>` : ''}</div></div>${passos}` : ''}
       ${pode ? `<button type="button" class="bt primario cq-publicar" data-cq="publicar"><svg><use href="#i-subir"/></svg>Publicar e gerar o link</button>
         <p class="fraco cq-pub-nota">Sobe a página e a imagem da prévia direto em <b>${esc(repo)}</b>, com a chave da Nuvem. Em 1 ou 2 minutos o link abre para o cliente, e a Torre avisa quando estiver no ar.</p>`
       : `<div class="nota ouro"><svg><use href="#i-info"/></svg><div class="pilha compacta"><div><b>Para publicar sozinha, a Torre usa a chave da Nuvem.</b> Ela ainda não está preenchida neste aparelho.</div>
