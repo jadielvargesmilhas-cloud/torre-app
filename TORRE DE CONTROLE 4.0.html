@@ -9366,6 +9366,87 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .pl-vip-bt{ margin-top:2px; }
 .pl-vip-bt svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; }
 </style>
+<style>
+/* ── execução do dia (checklist) ── */
+.pl-exec{ display:flex; align-items:center; gap:12px; padding:12px 18px 4px; }
+.pl-exec-barra{ flex:1; height:8px; border-radius:99px; background:var(--sup-2); overflow:hidden; display:flex; border:1px solid var(--fio-suave); }
+.pl-exec-barra i{ display:block; height:100%; transition:width .4s var(--ease); }
+.pl-exec-barra i.ok{ background:linear-gradient(90deg, color-mix(in oklab, var(--jade) 70%, transparent), var(--jade)); }
+.pl-exec-barra i.nao{ background:var(--brasa); opacity:.8; }
+.pl-exec-txt{ flex:0 0 auto; font-size:calc(12.5px * var(--esc)); color:var(--grafite); display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+.pl-exec-txt b{ color:var(--giz); }
+.pl-exec-txt em{ font-style:normal; font:600 calc(12px * var(--esc))/1 var(--f-m); color:var(--jade); margin-left:4px; }
+.pl-chk{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.pl-chk-b{ display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 11px; border-radius:99px; border:1px solid var(--fio); background:transparent; color:var(--grafite); font:500 calc(12px * var(--esc))/1 var(--f-b); cursor:pointer; transition:.15s var(--ease); }
+.pl-chk-b svg, .pl-chk-st svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.pl-chk-b.ok:hover{ border-color:var(--jade); color:var(--jade); background:var(--lavagem-jade); }
+.pl-chk-b.nao:hover{ border-color:var(--brasa); color:var(--brasa); background:var(--lavagem-brasa); }
+.pl-chk-st{ display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 12px; border-radius:99px; border:1px solid transparent; font:600 calc(12px * var(--esc))/1 var(--f-b); cursor:pointer; }
+.pl-chk-st.ok{ background:var(--lavagem-jade); color:var(--jade); border-color:color-mix(in oklab, var(--jade) 35%, transparent); }
+.pl-chk-st.nao{ background:var(--lavagem-brasa); color:var(--brasa); border-color:color-mix(in oklab, var(--brasa) 35%, transparent); }
+.pl-chk-prox{ font:700 calc(10.5px * var(--esc))/1 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--sobre-ouro); background:var(--ouro); padding:5px 8px; border-radius:99px; }
+.pl-ev.exec-ok .pl-ev-tit{ color:var(--grafite); }
+.pl-ev.exec-ok .pl-hora b{ color:var(--jade); }
+.pl-ev.exec-ok .pl-ev-nota, .pl-ev.exec-ok .pl-vip-bt{ display:none; }
+.pl-ev.exec-ok .pl-marca i, .pl-ev.exec-ok .pl-marca i.pl-marca-voo, .pl-ev.exec-ok .pl-marca i.pl-marca-res{ background:var(--jade) !important; }
+.pl-ev.exec-nao .pl-ev-tit{ color:var(--grafite); text-decoration:line-through; text-decoration-color:color-mix(in oklab, var(--brasa) 70%, transparent); }
+.pl-ev.exec-nao .pl-marca i, .pl-ev.exec-nao .pl-marca i.pl-marca-voo, .pl-ev.exec-nao .pl-marca i.pl-marca-res{ background:var(--brasa) !important; }
+.pl-ev.exec-prox{ background:linear-gradient(90deg, transparent, var(--lavagem-ouro) 25%, transparent); border-radius:var(--r); }
+.pl-ev.exec-prox .pl-marca i{ box-shadow:0 0 0 3px var(--sup-0), 0 0 0 6px color-mix(in oklab, var(--ouro) 40%, transparent); animation:gmPulsa 1.8s ease-in-out infinite; }
+.pl-agora{ display:grid; grid-template-columns:calc(62px * var(--esc)) 1fr; align-items:center; margin:4px 0; }
+.pl-agora span{ grid-column:1 / -1; display:flex; align-items:center; gap:8px; font:600 calc(11px * var(--esc))/1 var(--f-m); letter-spacing:.06em; text-transform:uppercase; color:var(--brasa); }
+.pl-agora span::after{ content:''; flex:1; height:2px; background:linear-gradient(90deg, var(--brasa), transparent); border-radius:2px; }
+.pl-agora i{ width:9px; height:9px; border-radius:99px; background:var(--brasa); box-shadow:0 0 0 4px var(--lavagem-brasa); }
+.pl-dia-exec{ display:inline-block; padding:0 6px; border-radius:99px; background:var(--lavagem-jade); color:var(--jade); font-size:.92em; }
+.pl-dia-exec.fim{ background:var(--jade); color:var(--sup-0); }
+@media (max-width:620px){ .pl-exec{ flex-direction:column; align-items:stretch; gap:7px; } }
+</style>
+<style>
+/* ══ PAINEL ÚNICO (08/10/2026): todo grupo de números no visual do painel com curva ══ */
+.grade.painel-num{
+  --giz:#F3F6FB; --giz-2:#DCE4F0; --grafite:rgba(220,229,243,.62); --grafite-dim:rgba(220,229,243,.42);
+  position:relative; overflow:hidden; border-radius:22px !important; color:var(--giz);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(242,193,78,.16), transparent 46%),
+    radial-gradient(90% 120% at 100% 100%, rgba(111,183,255,.14), transparent 50%),
+    linear-gradient(150deg, #12304D 0%, #0E2238 55%, #0A1828 100%) !important;
+  box-shadow:0 30px 60px -36px rgba(8,20,36,.75), inset 0 1px 0 rgba(255,255,255,.06) !important;
+  border:0 !important; padding:24px 26px !important; gap:10px !important;
+  display:grid !important; grid-template-columns:minmax(0, 1.3fr) repeat(var(--pn-cols, 3), minmax(0, 1fr)) !important; align-items:stretch;
+}
+.grade.painel-num[hidden]{ display:none !important; }
+.grade.painel-num::after{ content:''; position:absolute; inset:0; pointer-events:none; border-radius:inherit; border:1px solid rgba(255,255,255,.07); }
+.grade.painel-num > .metrica{ background:rgba(255,255,255,.05) !important; border:1px solid rgba(255,255,255,.07) !important; border-radius:14px !important;
+  padding:12px 14px !important; box-shadow:none !important; display:flex; flex-direction:column; justify-content:center; min-width:0; text-align:left; }
+.grade.painel-num > .metrica .rot{ color:rgba(220,229,243,.62) !important; }
+.grade.painel-num > .metrica .val{ font-family:var(--f-m) !important; font-size:calc(17px * var(--esc)) !important; color:#F3F6FB !important; font-weight:600; letter-spacing:-.02em; }
+.grade.painel-num > .metrica .pe{ color:rgba(220,229,243,.55) !important; }
+.grade.painel-num > .metrica .pe b{ color:#E6ECF6; }
+.grade.painel-num > .metrica.jade .val{ color:#5FD3A6 !important; } .grade.painel-num > .metrica.brasa .val{ color:#FF8A6B !important; } .grade.painel-num > .metrica.ouro:not(:first-child) .val{ color:#F2C14E !important; }
+.grade.painel-num > .metrica:first-child{ background:transparent !important; border:0 !important; padding:4px 14px 4px 2px !important; grid-row:span var(--pn-rows, 1); }
+.grade.painel-num > .metrica:first-child .rot{ font-size:calc(13.5px * var(--esc)); }
+.grade.painel-num > .metrica:first-child .val{ font-family:var(--f-d) !important; font-weight:700; font-size:clamp(calc(30px * var(--esc)), 3.4vw, calc(44px * var(--esc))) !important; line-height:1.05; color:#F2C14E !important; margin:6px 0 4px; white-space:nowrap; }
+.grade.painel-num > .metrica:first-child.jade .val{ color:#5FD3A6 !important; } .grade.painel-num > .metrica:first-child.brasa .val{ color:#FF8A6B !important; }
+.grade.painel-num > .metrica.clicavel{ cursor:pointer; transition:background .2s, border-color .2s, transform .2s; }
+.grade.painel-num > .metrica.clicavel:hover{ background:rgba(255,255,255,.08) !important; border-color:rgba(242,193,78,.45) !important; transform:translateY(-1px); }
+.folha .grade.painel-num{ margin-bottom:16px; }
+@media (max-width:700px){
+  .grade.painel-num{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; padding:18px !important; }
+  .grade.painel-num > .metrica:first-child{ grid-column:1 / -1; grid-row:auto; padding:2px 2px 6px !important; }
+  .grade.painel-num > .metrica{ border-top:1px solid rgba(255,255,255,.07) !important; border-left:1px solid rgba(255,255,255,.07) !important; }
+  .grade.painel-num > .metrica:first-child{ border:0 !important; }
+}
+.pl-heroi{ margin:16px 0 !important; }
+</style>
+<style>
+.grade.painel-num > .metrica, .grade.painel-num > .metrica .rot, .grade.painel-num > .metrica .val, .grade.painel-num > .metrica .pe{ text-align:left !important; }
+.grade.painel-num > .metrica{ align-items:flex-start !important; }
+.pn-graf{ margin-top:26px; }
+</style>
+<style>
+@media (max-width:600px){ #segModoRoteiro{ display:grid !important; grid-template-columns:repeat(2, minmax(0, 1fr)); width:100%; }
+  #segModoRoteiro button{ white-space:nowrap; justify-content:center; } }
+</style>
 </head>
 <body>
 <script>
@@ -11226,7 +11307,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 17:00';
+const BUILD = '2026-10-13 20:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13984,6 +14065,9 @@ function guardarSalvarSeMudou(titulo){
   }));
 }
 
+function painelNasFolhas(raiz){
+  (raiz || document).querySelectorAll('.grade').forEach(g => { if (!g.closest('.heroi') && g.querySelectorAll(':scope > .metrica').length >= 2){ g.classList.add('painel-num'); g.classList.remove('faixa-num'); arrumarPainelNum(g); } });
+}
 function abrirFolha({titulo, corpo, pe, largura, tipo}){
   $('#folhaTit').innerHTML = titulo;
   $('#folhaCorpo').innerHTML = corpo;
@@ -14004,6 +14088,7 @@ function abrirFolha({titulo, corpo, pe, largura, tipo}){
   f.classList.remove('as-apertada');
   ordenarSelects($('#folhaCorpo'));
   prepararCamposData($('#folhaCorpo'));
+  painelNasFolhas($('#folhaCorpo'));
   guardarSalvarSeMudou(titulo);
 
   /* ── saída da folha ─────────────────────────────────────────────────────────
@@ -15694,7 +15779,7 @@ function avisos(){
       /* Duas frases, duas linhas: a primeira constata, a segunda explica o que
          está travado. Emendadas, a constatação se perdia dentro da explicação. */
       s:'Nenhuma conta cadastrada.\n' +
-        'Saldo, lote, clube e emissão precisam de um titular onde pousar — e cada campanha conta seu limite de bônus por CPF.',
+        'Saldo, lote, clube e emissão precisam de um titular onde pousar, e cada campanha conta seu limite de bônus por CPF.',
       ir:['saldo','sl-contas'] });
   }
 
@@ -15998,7 +16083,7 @@ function montarHeroi(alvo, o){
         ${o.ult ? `<div class="heroi-ult"><b>${o.ult.b}</b><span>${esc(o.ult.sp)}</span></div>` : ''}
       </div>
       ${o.dirHtml ? (o.dirBt ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="dir">${esc(o.dirBt)}<svg><use href="#i-seta-d"/></svg></button>` : '')
-        : o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">Ver mês a mês<svg><use href="#i-seta-d"/></svg></button>` : ''}
+        : o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? `<button type="button" class="heroi-mais heroi-mais-dir" data-abre="serie">${esc(o.serieBt || 'Ver mês a mês')}<svg><use href="#i-seta-d"/></svg></button>` : ''}
       <div class="heroi-curva" id="${idc}">${o.dirHtml ? o.dirHtml : o.serie && o.serie.length >= 2 && o.serie.some(p => p.v) ? '' : `<p class="heroi-sub" style="padding:24px 0">${esc(o.semSerie || 'A curva aparece a partir do segundo mês com movimento.')}</p>`}</div>
     </div>`;
   if (!o.dirHtml && o.serie && o.serie.length >= 2 && o.serie.some(p => p.v)) document.getElementById(idc).innerHTML = grLinha(o.serie, {altura:170, fmt:o.fmtSerie || (v => nBR(v)), cor:'#F2C14E', alvo:'#' + idc});
@@ -16110,6 +16195,11 @@ function emitirOrcamento(id){
   $$('#folhaCorpo .emo-op').forEach(b => b.onclick = () => abre(ops[+b.dataset.i]));
 }
 
+function arrumarPainelNum(g){
+  const n = g.querySelectorAll(':scope > .metrica').length, resto = Math.max(1, n - 1), linhas = resto > 3 ? 2 : 1;
+  g.style.setProperty('--pn-cols', linhas === 2 ? Math.ceil(resto / 2) : resto);
+  g.style.setProperty('--pn-rows', linhas);
+}
 function padronizarSecao(){
   const vista = document.getElementById('v-' + vistaAtual); if (!vista) return;
   const raiz = vista.querySelector(':scope > .painel-aba.on') || vista;
@@ -16165,10 +16255,17 @@ function padronizarSecao(){
     const proprio = [...raiz.querySelectorAll('.heroi')].find(e => e.id !== 'heroiArea' && vis(e) && e.offsetParent !== null);
     if (proprio) painel = proprio;
   }
-  const grades = [...raiz.querySelectorAll('.grade.g4, .grade.g5')].filter(g => !g.hidden && g.children.length >= 3 && g.offsetParent !== null);
+  /* PADRÃO ÚNICO DE PAINEL (08/10/2026, pedido do Jadiel): nenhum grupo de
+     cartões soltos. Todo grupo de números vira o painel escuro, no visual do
+     painel com curva: o primeiro número em destaque e os outros em cartões
+     dentro do próprio painel. */
+  const grades = [...raiz.querySelectorAll('.grade')].filter(g => !g.hidden && g.offsetParent !== null && !g.closest('.heroi') && !g.matches('.ct-cards, [data-sem-painel]') && g.querySelectorAll(':scope > .metrica').length >= 2);
   if (!painel && grades.length){ painel = grades[0]; }
-  grades.forEach(g => { g.classList.toggle('painel-num', g === painel); g.classList.toggle('faixa-num', g !== painel); });
-  if (painel && painel !== heroi && painel.classList.contains('painel-num') && painel.parentElement !== caixa && cab.parentElement === caixa){
+  grades.forEach(g => { g.classList.add('painel-num'); g.classList.remove('faixa-num'); arrumarPainelNum(g); });
+  /* só sobe para baixo do título o grupo que tem casa fixa (id próprio): um
+     grupo desenhado de novo a cada render deixava a cópia antiga, com números
+     velhos, no alto da tela */
+  if (painel && painel !== heroi && painel.classList.contains('painel-num') && painel.id && painel.parentElement !== caixa && cab.parentElement === caixa){
     const casa = painel.parentElement; if (!casa.id) casa.id = 'casa-' + Math.random().toString(36).slice(2, 8);
     painel.dataset.veioDe = casa.id;
     caixa.insertBefore(painel, cab.nextElementSibling);
@@ -18224,11 +18321,11 @@ function abrirPanorama(tipo){
     <div class="pn-parte on" data-parte="1">
     <p class="pn-intro">Tudo abaixo sai das <b>${p.total} campanhas</b> de ${esc(nome)} que estão
     cadastradas com encerramento nos últimos doze meses. O quadro não diz se uma oferta é boa:
-    diz com que frequência ela costuma aparecer e quanto costuma pagar — que é o que permite
+    diz com que frequência ela costuma aparecer e quanto costuma pagar, que é o que permite
     decidir entre <b>aceitar agora</b> ou <b>esperar a próxima</b>.${(() => {
       const aprox = p.linhas.reduce((t, l) => t + l.cs.filter(c => c.mesApenas).length, 0);
       return aprox ? ` <b>${aprox}</b> delas vieram de consolidado mensal e trazem o teto do mês
-        com a data no último dia — bastam para comparar programas e enxergar as janelas do ano,
+        com a data no último dia. Bastam para comparar programas e enxergar as janelas do ano,
         mas ficam de fora do cálculo de intervalo.` : '';
     })()}</p>
 
@@ -31779,6 +31876,7 @@ function renderJornadaRota(p){
       <div class="esticar"></div>
       <button class="bt p fantasma" onclick="editarPlanoViagem('${p.id}')"><svg><use href="#i-lapis"/></svg>Viagem</button>
     </div>
+    <section class="heroi pl-heroi" id="plHeroi"></section>
     ${modoRoteiro === 'jornada' ? `
     ${pr.pct === 100 ? `<div class="rt-embarque">
         <div class="rt-emb-esq">
@@ -31856,6 +31954,8 @@ function renderPlano(){
   });
   if (modoRoteiro === 'dias') renderPlanoDias(); else if (modoRoteiro === 'trechos') renderTrechos(p); else if (modoRoteiro === 'viagem' && typeof renderViagemInteira === 'function') renderViagemInteira(p); else if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
   if ($('#rtRoteirosSalvos')) $('#rtRoteirosSalvos').innerHTML = '';
+  /* o mesmo painel em todas as abas da jornada aberta */
+  try { renderHeroiPlano(p, diasDoPlano(p)); } catch(e){ console.error(e); }
 }
 
 function renderPlanoDias(){
@@ -31898,7 +31998,7 @@ function renderPlanoDias(){
       </div>
     </div>
 
-    <div class="grade g4 g4-par" style="margin:16px 0">
+    <div class="grade g4 g4-par" style="margin:16px 0" hidden data-antigo>
       ${metrica('Custo do roteiro', brl(total), `${(p.paradas || []).length} paradas lançadas`, total ? 'ouro' : '')}
       ${metrica('Por viajante', brl(total / Math.max(1, p.pax || 1)), `${p.pax || 1} ${(p.pax || 1) === 1 ? 'pessoa' : 'pessoas'}`, '')}
       ${(() => { const m = milhasDoPlano(p);
@@ -31920,7 +32020,7 @@ function renderPlanoDias(){
             <div class="pl-dia-n"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${SEM3P[d.getDay()]}</span></div>
             <div class="pl-dia-c">
               <div class="pl-dia-t"><b class="pl-dia-num">Dia ${i + 1}</b>${(c2 => c2 ? `<span class="pl-dia-cid">${c2}</span>` : '')(rotuloCidadesDia(p, iso, true) || esc(cidadeDoDia(p, iso) || ''))}</div>
-              <div class="pl-dia-s">${marcosDoDia(p, iso).filter(m => m.k !== 'aero' && (m.k !== 'res' || m.r.cat === 'hospedagem')).sort((a, b) => hm2min(a.inicio || '23:59') - hm2min(b.inicio || '23:59')).map(m => m.k === 'prazo' ? `<span class="pl-dia-voo pl-dia-prazo">prazo</span> ` : m.k === 'res' ? `<span class="pl-dia-voo pl-dia-hotel">${m.fase === 'ini' ? 'check-in' : 'check-out'} ${m.inicio || '?'}</span> ` : `<span class="pl-dia-voo">${m.k === 'des' ? 'pousa' : 'decola'} ${m.inicio || '?'}</span> `).join('')}<span class="pl-dia-n2">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</span></div>
+              <div class="pl-dia-s">${marcosDoDia(p, iso).filter(m => m.k !== 'aero' && (m.k !== 'res' || m.r.cat === 'hospedagem')).sort((a, b) => hm2min(a.inicio || '23:59') - hm2min(b.inicio || '23:59')).map(m => m.k === 'prazo' ? `<span class="pl-dia-voo pl-dia-prazo">prazo</span> ` : m.k === 'res' ? `<span class="pl-dia-voo pl-dia-hotel">${m.fase === 'ini' ? 'check-in' : 'check-out'} ${m.inicio || '?'}</span> ` : `<span class="pl-dia-voo">${m.k === 'des' ? 'pousa' : 'decola'} ${m.inicio || '?'}</span> `).join('')}<span class="pl-dia-n2">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</span>${(rx => rx.total && (rx.ok || rx.nao) ? ` <span class="pl-dia-exec${rx.pend === 0 ? ' fim' : ''}">${rx.ok}/${rx.total} feitas</span>` : '')(resumoExecDia(p, iso))}</div>
             </div>
             <i class="pl-pulso ${r.z}" style="height:${Math.max(4, r.p * 100)}%" data-dica="${r.rot}: ${min2dur(r.ocup)} ocupados"></i>
           </button>`;
@@ -31939,11 +32039,50 @@ function renderPlanoDias(){
           ${typeof novaReservaViagem === 'function' ? `<button class="bt p fantasma" onclick="novaReservaViagem()" data-dica="Hotel, carro, traslado, ingresso: entra sozinho nos dias certos"><svg><use href="#i-hotel"/></svg>Reserva</button>` : ''}
           <button class="bt p primario" onclick="editarParada()"><svg><use href="#i-mais"/></svg>Parada</button>
         </div>
+        ${execResumoHTML(p, planoDia)}
         ${fioDoTempo(p, planoDia)}
       </div>
     </div>`;
 
   ordenarSelects(host);
+}
+
+/* Painel da jornada aberta: o custo da viagem inteira (voos, reservas e
+   paradas), por viajante, as milhas, os prazos e a execução; à direita, o custo
+   de cada dia da viagem. */
+function renderHeroiPlano(p, ds){
+  const alvo = $('#plHeroi'); if (!alvo) return;
+  /* voo pago com milhas sem custo apurado: as milhas entram pelo valor-alvo do
+     programa, mais as taxas (sem isso o voo contava zero) */
+  const cv = t => { const c = custoTrechoReais(t); if (c != null) return c; const m = milheiroDaBase('alvo', t.prog);
+    return (Number(t.pago) || 0) + (Number(t.taxas) || 0) + (m != null ? (Number(t.milhas) || 0) / 1000 * m : 0); };
+  const voos = soma(trechosDe(p).map(t => cv(t) + (t.upgrade && typeof custoUpgradeReais === 'function' ? custoUpgradeReais(t) || 0 : 0)));
+  const rs = (typeof rvLista === 'function' ? rvLista(p) : []).filter(r => r.situacao !== 'cancelado');
+  const rv = r => typeof rvValor === 'function' ? rvValor(r) || 0 : 0;
+  const paradas = custoPlano(p), total = voos + soma(rs.map(rv)) + paradas;
+  const pax = Math.max(1, Number(p.pax) || 1);
+  const milhas = soma(trechosDe(p).map(t => t.forma === 'dinheiro' ? 0 : Number(t.milhas) || 0));
+  const z = (p.prazos || []).filter(x => !x.feito && x.quando), pior = z.map(x => diasAte(x.quando)).filter(d => d !== null).sort((a, b) => a - b)[0];
+  const ex = ds.reduce((a, iso) => { const r = resumoExecDia(p, iso); a.t += r.total; a.ok += r.ok; a.nao += r.nao; return a; }, {t:0, ok:0, nao:0});
+  const porCat = {Voos:voos, Paradas:paradas};
+  rs.forEach(r => { const n = (RV_CATS[r.cat] || RV_CATS.outro).n; porCat[n] = (porCat[n] || 0) + rv(r); });
+  const serie = ds.map((iso, i) => ({r:'Dia ' + (i + 1), v:custoDia(p, iso) + soma(rs.filter(r => r.ini === iso).map(rv)) + soma(trechosDe(p).filter(t => t.data === iso).map(cv))}));
+  const iSel = Math.max(0, ds.indexOf(planoDia));
+  const vi = modoRoteiro === 'viagem' ? window._viStats : null;
+  const faltam = diasAte(p.inicio), andamento = (diasAte(p.fim || p.inicio) ?? -1) >= 0;
+  if (!total && !milhas && !trechosDe(p).length && !rs.length && !(p.paradas || []).length){
+    montarHeroi(alvo, {rot:'Custo da viagem', vazioUnid:'reais', vazio:'Nada lançado nesta jornada ainda. Lance os trechos, as reservas (hotel, traslado, ingressos) e as paradas: a Torre soma tudo aqui e mostra o custo de cada dia.'}); return; }
+  montarHeroi(alvo, {
+    rot:'Custo da viagem',
+    valor:brl(total),
+    linha:`<span><b>${ds.length} ${ds.length === 1 ? 'dia' : 'dias'}</b> · ${pax} ${pax === 1 ? 'viajante' : 'viajantes'}${vi ? ` · ${vi.cidades} ${vi.cidades === 1 ? 'cidade' : 'cidades'}${vi.paises ? ` em ${vi.paises} ${vi.paises === 1 ? 'país' : 'países'}` : ''}` : ''}</span>${faltam != null && faltam > 0 ? `<span class="heroi-chip">faltam ${faltam} dias</span>` : faltam === 0 ? '<span class="heroi-chip sobe">é hoje</span>' : andamento ? '<span class="heroi-chip sobe">em andamento</span>' : ''}${ex.t && (ex.ok || ex.nao) ? `<span class="heroi-chip sobe">${Math.round(ex.ok / ex.t * 100)}% executado</span>` : ''}`,
+    numeros: vi ? [[nBR(vi.diasCasa), 'dias, de casa a casa'], [nBR(vi.km), 'km voados'], [vi.noAr ? rvDur(vi.noAr) : 'n/d', 'no ar']]
+      : [[brl(total / pax), 'por viajante'], [nBR(milhas), milhas === 1 ? 'milha nos voos' : 'milhas nos voos'], [String(z.length), z.length ? (pior <= 0 ? 'prazo vence hoje' : `prazos, o 1º em ${pior} dias`) : 'prazos abertos']],
+    fatias:fatiasHeroi(Object.keys(porCat).map(n => ({n, v:porCat[n]})), x => x.n), fmtFatia:v => brl(v), compRot:'Custo por tipo',
+    dirRot:'Custo de cada dia', dirSub:'Paradas e reservas do dia, e os voos no dia em que voam.',
+    ult:serie.length ? {b:brl(serie[iSel].v), sp:serie[iSel].r} : null,
+    serie, serieBt:'Ver dia a dia', fmtSerie:v => 'R$ ' + milCurto(v), semSerie:'A curva aparece quando houver custo lançado em dias diferentes.'
+  });
 }
 
 /* Datas sem depender do fuso: a mesma conta que o resto do sistema faz. */
@@ -32101,6 +32240,43 @@ function rotuloCidadesDia(p, iso, html){
 }
 const desembarqueDoDia = (p, iso) => marcosDoDia(p, iso).find(m => m.k === 'des' && m.inicio) || null;
 
+/* ── execução do dia: o roteiro vira checklist (08/10/2026) ───────────────────
+   Cada etapa do dia (voo, sala VIP, hotel, traslado, parada) pode ser marcada
+   como Feito ou Não cumprido, com a hora em que foi marcada. No dia de hoje, uma
+   linha "agora" corta o fio no horário atual e a próxima etapa pendente brilha.
+   Fica guardado na jornada (p.execucao), por etapa. */
+const execDe = (p, id) => ((p && p.execucao) || {})[id] || null;
+const etapasDoDia = (p, iso) => eventosDoDia(p, iso).filter(x => x.k !== 'prazo');
+function resumoExecDia(p, iso){
+  const ets = etapasDoDia(p, iso), ok = ets.filter(x => (execDe(p, x.id) || {}).st === 'ok').length, nao = ets.filter(x => (execDe(p, x.id) || {}).st === 'nao').length;
+  return {total:ets.length, ok, nao, pend:ets.length - ok - nao};
+}
+function marcarEtapaDia(id, st){
+  const p = P(); if (!p) return;
+  p.execucao = p.execucao || {};
+  const atual = p.execucao[id];
+  if (atual && atual.st === st) delete p.execucao[id];
+  else { const d = new Date(); p.execucao[id] = {st, em:d.getTime(), dia:hojeISO(), hora:`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`}; }
+  salvar(); renderPlano();
+  const r = resumoExecDia(p, planoDia);
+  if (st === 'ok' && !(atual && atual.st === st) && r.total && r.pend === 0) avisar(r.nao ? `Dia encerrado: ${r.ok} de ${r.total} etapas feitas.` : 'Dia completo: todas as etapas feitas.', 'ok', 4000);
+}
+function execResumoHTML(p, iso){
+  const r = resumoExecDia(p, iso); if (!r.total) return '';
+  const pc = Math.round(r.ok / r.total * 100);
+  return `<div class="pl-exec" role="group" aria-label="Execução do dia">
+    <div class="pl-exec-barra"><i class="ok" style="width:${r.ok / r.total * 100}%"></i><i class="nao" style="width:${r.nao / r.total * 100}%"></i></div>
+    <div class="pl-exec-txt"><b>${r.ok} de ${r.total}</b> etapas feitas${r.nao ? ` · <span class="brasa">${r.nao} não ${r.nao === 1 ? 'cumprida' : 'cumpridas'}</span>` : ''}${r.pend ? ` · ${r.pend} ${r.pend === 1 ? 'pendente' : 'pendentes'}` : ''}<em>${pc}%</em></div></div>`;
+}
+function chkHTML(p, it, proximaId){
+  const e = execDe(p, it.id), ehHoje = planoDia === hojeISO();
+  const quando = e ? (e.dia === planoDia || ehHoje ? `às ${e.hora}` : `em ${dataBR(e.dia).slice(0, 5)}`) : '';
+  return `<div class="pl-chk" onclick="event.stopPropagation()">${e
+    ? `<button type="button" class="pl-chk-st ${e.st}" onclick="marcarEtapaDia('${it.id}','${e.st}')" data-dica="Toque para desmarcar">${e.st === 'ok' ? `<svg><use href="#i-ok"/></svg>Feito ${quando}` : `<svg><use href="#i-x"/></svg>Não cumprido`}</button>`
+    : `${it.id === proximaId ? '<span class="pl-chk-prox">próximo</span>' : ''}<button type="button" class="pl-chk-b ok" onclick="marcarEtapaDia('${it.id}','ok')"><svg><use href="#i-ok"/></svg>Feito</button><button type="button" class="pl-chk-b nao" onclick="marcarEtapaDia('${it.id}','nao')"><svg><use href="#i-x"/></svg>Não cumpri</button>`}</div>`;
+}
+const chkCls = (p, it, proximaId) => { if (it.k === 'prazo') return ''; const e = execDe(p, it.id); return e ? ' exec-' + e.st : it.id === proximaId ? ' exec-prox' : ''; };
+
 /* ── o fio do tempo ───────────────────────────────────────────────────────────
    Coluna vertical: hora à esquerda, marca no fio, parada à direita. O vão entre
    duas paradas não fica em branco — ele diz quanto tempo é, e se há deslocamento
@@ -32112,17 +32288,24 @@ function fioDoTempo(p, iso){
     <svg><use href="#i-relogio"/></svg>
     <div><b>Dia ainda vazio.</b> Lance a primeira parada (um check-in, um passeio, um restaurante) e o fio do tempo começa a se desenhar.</div></div>`;
   const des = desembarqueDoDia(p, iso);
+  const ehHoje = iso === hojeISO(), agoraMin = ehHoje ? new Date().getHours() * 60 + new Date().getMinutes() : null;
+  const proxima = ehHoje ? its.find(x => x.k !== 'prazo' && !execDe(p, x.id) && (!x.inicio || hm2min(x.inicio) + (Number(x.dur) || 0) >= agoraMin)) : null;
+  const proximaId = proxima ? proxima.id : '';
+  let agoraPosto = false;
+  const linhaAgora = () => `<div class="pl-agora"><span><i></i>agora · ${min2hm(agoraMin)}</span></div>`;
 
   let html = '<div class="pl-fio">';
   its.forEach((it, i) => {
+    if (ehHoje && !agoraPosto && it.inicio && hm2min(it.inicio) > agoraMin){ html += linhaAgora(); agoraPosto = true; }
     if (it.marco && it.k === 'aero'){
       const t = it.t, temVip = its.some(x => x.k === 'res' && x.r.cat === 'salavip');
-      html += `<div class="pl-ev pl-voo pl-aero" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
+      html += `<div class="pl-ev pl-voo pl-aero${chkCls(p, it, proximaId)}" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
         <div class="pl-hora"><b>${esc(it.inicio)}</b><span>sugerido</span></div>
         <div class="pl-marca"><i class="pl-marca-voo"><svg><use href="#i-mapa"/></svg></i></div>
         <div class="pl-ev-corpo"><div class="pl-ev-tit">${esc(it.titulo)}</div>
           <div class="pl-ev-loc">Check-in, despacho de bagagem e raio-x. ${escopoPlano(p) === 'int' ? '3 horas antes em voo internacional.' : '2 horas antes em voo nacional.'}</div>
           ${temVip ? '' : `<div class="pl-ev-nota"><button type="button" class="bt p fantasma pl-vip-bt" onclick="event.stopPropagation();novaSalaVip('${t.id}')"><svg><use href="#i-poltrona"/></svg>Incluir sala VIP</button></div>`}
+          ${chkHTML(p, it, proximaId)}
         </div><div class="pl-ev-num"></div><div class="pl-ev-acoes"></div></div>`;
       const prox = its[i + 1];
       if (prox && prox.inicio){ const vao = hm2min(prox.inicio) - hm2min(it.inicio);
@@ -32145,7 +32328,7 @@ function fioDoTempo(p, iso){
     }
     if (it.marco && it.k === 'res'){
       const r = it.r, C = it.C;
-      html += `<div class="pl-ev pl-res" data-id="${it.id}" style="--rc:${C.c}" onclick="editarReservaViagem('${r.id}')">
+      html += `<div class="pl-ev pl-res${chkCls(p, it, proximaId)}" data-id="${it.id}" style="--rc:${C.c}" onclick="editarReservaViagem('${r.id}')">
         <div class="pl-hora"><b>${it.inicio ? esc(it.inicio) : '--:--'}</b>${it.padrao ? '<span>padrão</span>' : it.previsto ? '<span>previsto</span>' : it.dur ? `<span>${min2dur(it.dur)}</span>` : ''}</div>
         <div class="pl-marca"><i class="pl-marca-res"><svg><use href="#i-${C.i}"/></svg></i></div>
         <div class="pl-ev-corpo">
@@ -32153,6 +32336,7 @@ function fioDoTempo(p, iso){
           ${it.sub ? `<div class="pl-ev-loc">${esc(it.sub)}</div>` : ''}
           ${it.avisoVip ? `<div class="pl-ev-nota brasa">${esc(it.avisoVip)}</div>` : ''}
           ${it.antesPouso ? `<div class="pl-ev-nota brasa">Este horário está antes do pouso (${esc((its.find(x => x.k === 'des') || {}).inicio || '')}). Confira a reserva.</div>` : it.previsto ? `<div class="pl-ev-nota">Chegada prevista ao hotel, depois do ${its.some(x => x.k === 'res' && x.r.cat === 'traslado') ? 'traslado' : 'desembarque'}. Se o horário for outro, toque para informar na reserva.</div>` : it.padrao ? `<div class="pl-ev-nota">Horário padrão de hotel. Se o seu for outro, toque para informar na reserva.</div>` : !it.inicio ? `<div class="pl-ev-nota">Sem horário: toque para informar na reserva.</div>` : ''}
+          ${chkHTML(p, it, proximaId)}
         </div>
         <div class="pl-ev-num">${it.fase === 'ini' && typeof rvValor === 'function' && rvValor(r) ? `<b>${brl(rvValor(r))}</b>` : ''}</div>
         <div class="pl-ev-acoes" onclick="event.stopPropagation()"><button class="bt p fantasma icone" onclick="editarReservaViagem('${r.id}')" data-dica="Editar a reserva"><svg><use href="#i-lapis"/></svg></button></div>
@@ -32168,7 +32352,7 @@ function fioDoTempo(p, iso){
     }
     if (it.marco){
       const t = it.t, ehDes = it.k === 'des';
-      html += `<div class="pl-ev pl-voo ${ehDes ? 'des' : 'emb'}" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
+      html += `<div class="pl-ev pl-voo ${ehDes ? 'des' : 'emb'}${chkCls(p, it, proximaId)}" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
         <div class="pl-hora"><b>${it.inicio ? esc(it.inicio) : '--:--'}</b>${ehDes ? '<span>pouso</span>' : '<span>decola</span>'}</div>
         <div class="pl-marca"><i class="pl-marca-voo"><svg><use href="#i-aviao"/></svg></i></div>
         <div class="pl-ev-corpo">
@@ -32177,6 +32361,7 @@ function fioDoTempo(p, iso){
           ${!ehDes && it.inicio ? `<div class="pl-ev-nota">Esteja no aeroporto até <b>${min2hm(hm2min(it.inicio) - it.antes)}</b> (${it.antes / 60} horas antes, ${it.antes === 180 ? 'voo internacional' : 'voo nacional'}).</div>` : ''}
           ${!ehDes && !it.inicio && !its.some(x => x.k === 'res' && x.r.cat === 'salavip') ? `<div class="pl-ev-nota"><button type="button" class="bt p fantasma pl-vip-bt" onclick="event.stopPropagation();novaSalaVip('${t.id}')"><svg><use href="#i-poltrona"/></svg>Incluir sala VIP</button></div>` : ''}
           ${ehDes && it.inicio ? `<div class="pl-ev-nota">Bagagem e saída do aeroporto: conte uns 45 minutos antes da primeira parada.</div>` : ''}
+          ${chkHTML(p, it, proximaId)}
         </div>
         <div class="pl-ev-num"></div>
         <div class="pl-ev-acoes" onclick="event.stopPropagation()"><button class="bt p fantasma icone" onclick="editarTrechoDoDia('${t.id}')" data-dica="Editar o trecho (horários do voo)"><svg><use href="#i-lapis"/></svg></button></div>
@@ -32195,7 +32380,7 @@ function fioDoTempo(p, iso){
     const v = vereditoResgate(it);
     const custoR = emReal(p, it.custo, it.moeda);
 
-    html += `<div class="pl-ev" data-id="${it.id}" onclick="editarParada('${it.id}')">
+    html += `<div class="pl-ev${chkCls(p, it, proximaId)}" data-id="${it.id}" onclick="editarParada('${it.id}')">
       <div class="pl-hora"><b>${esc(it.inicio)}</b>${it.dur ? `<span>${min2dur(it.dur)}</span>` : ''}</div>
       <div class="pl-marca"><i style="background:${t.c}"></i></div>
       <div class="pl-ev-corpo">
@@ -32205,6 +32390,7 @@ function fioDoTempo(p, iso){
           ${v && v.rot ? `<span class="etq ${v.z}" data-dica="${v.custo ? `Rendeu ${brl2(v.cpm)} por milheiro contra ${brl2(v.custo)} que custou para fabricar` : 'Sem custo apurado neste programa'}">${esc(v.rot)}</span>` : ''}</div>
         ${(it.local || it.cidade) ? `<div class="pl-ev-loc">${esc([it.local, it.cidade].filter(Boolean).join(' · '))} · ${esc(it.inicio)}–${esc(fim)}</div>` : ''}
         ${it.nota ? `<div class="pl-ev-nota">${esc(it.nota)}</div>` : ''}
+        ${chkHTML(p, it, proximaId)}
       </div>
       <div class="pl-ev-num">${custoR || it.custo ? `<b>${fmtMoeda(it.custo, it.moeda)}</b>${it.moeda && it.moeda !== 'BRL' ? `<small>${brl(custoR)}</small>` : ''}` : ''}</div>
       <div class="pl-ev-acoes" onclick="event.stopPropagation()">
@@ -32230,6 +32416,7 @@ function fioDoTempo(p, iso){
       else if (livre < 0) html += `<div class="pl-elo choque"><span><svg><use href="#i-alerta"/></svg>as duas se sobrepõem em ${min2dur(-livre)}</span></div>`;
     }
   });
+  if (ehHoje && !agoraPosto) html += linhaAgora();
   return html + '</div>';
 }
 
@@ -49052,6 +49239,7 @@ function renderViagemInteira(p){
   const tot = custoVoosPlano(p) + soma(rvLista(p).map(rvValor));
   const ini = ev.find(e => !e.semHora) || ev[0], fim = ev[ev.length - 1];
   const faltam = diasAte(p.inicio);
+  window._viStats = ev.length ? {km, noAr, cidades:cidades.length, paises:paises.length, diasCasa:Math.round((new Date((ev[ev.length - 1]).iso + 'T12:00:00') - new Date((ev.find(e => !e.semHora) || ev[0]).iso + 'T12:00:00')) / 864e5) + 1} : null;
   if (!ev.length){
     host.innerHTML = `<div class="vazio" style="padding:34px"><svg><use href="#i-mapa"/></svg><h4>A viagem ainda não tem movimento</h4>
       <p>Lance os voos em Trechos e as reservas (hotel, traslado, trem, ingressos...). A Torre desenha o mapa e a linha do tempo, de casa até casa.</p>
@@ -49093,20 +49281,6 @@ function renderViagemInteira(p){
     </section>`;
   }).join('');
   host.innerHTML = `
-    <div class="vi-heroi">
-      <div class="vi-heroi-esq">
-        <span class="vi-olho">${faltam != null && faltam > 0 ? `faltam ${faltam} dias` : faltam === 0 ? 'é hoje' : (diasAte(p.fim) ?? -1) >= 0 ? 'em andamento' : 'viagem feita'}</span>
-        <h2>${esc(p.nome)}</h2>
-        <p>${dataLongaPlano(ini.iso)} até ${dataLongaPlano(fim.iso)}</p>
-      </div>
-      <div class="vi-nums">
-        <div><b>${nBR(Math.round((new Date(fim.iso + 'T12:00:00') - new Date(ini.iso + 'T12:00:00')) / 864e5) + 1)}</b><span>dias, de casa a casa</span></div>
-        <div><b>${nBR(km)}</b><span>km voados</span></div>
-        <div><b>${noAr ? rvDur(noAr) : 'n/d'}</b><span>no ar</span></div>
-        <div><b>${cidades.length}</b><span>${cidades.length === 1 ? 'cidade' : 'cidades'} · ${paises.length} ${paises.length === 1 ? 'país' : 'países'}</span></div>
-        <div class="ouro"><b>${brl(tot)}</b><span>a viagem toda</span></div>
-      </div>
-    </div>
     <div class="vi-corpo">
       <div class="vi-mapa-col"><div class="vi-mapa-caixa">
         <div id="viMapa" class="vi-mapa"></div>
@@ -49331,11 +49505,11 @@ function renderMapaOfertas(){
     melhorRot:'Último que chegou', melhor:ult ? esc(ult.titulo).slice(0, 90) : '', melhorSub:ult && ult.pontuacao ? esc(ult.pontuacao) : '',
     nada:muralVivos ? 'Tudo lido. Bom trabalho.' : 'Nada colado ainda. Use "Colar anúncios" no mural.'};
   cx.innerHTML = `<div class="mp">
+    <section class="heroi" id="mpHeroiOf"></section>
     ${mpCaminhoHTML('promocoes')}
     <div class="mp-intro">
       <div><h2>Tudo o que o mercado oferece hoje</h2>
         <p>Cada tipo de oferta tem a sua página. Aqui você <b>olha e decide</b>; para executar, use <button type="button" class="mp-link" data-mp-area="acumular">Acumular</button>.</p></div>
-      <div class="mp-total"><b>${total}</b><span>${total === 1 ? 'oferta no ar' : 'ofertas no ar'}</span></div>
     </div>
     ${fila.length ? `<section class="mp-fila" aria-label="Fecham primeiro"><div class="mp-fila-tit"><svg><use href="#i-relogio"/></svg>Fecham primeiro</div>
       <div class="mp-fila-rolo">${fila.map(x => { const d = diasAte(x.c.fim); return `<button type="button" class="mp-fila-it mp-${COR[x.k]}" data-mp-ir="fabrica|fb-campanhas|${x.k}">
@@ -49354,6 +49528,25 @@ function renderMapaOfertas(){
     </section>
   </div>`;
   mpLigar(cx);
+  /* o painel padrão no alto: quantas ofertas, a melhor de cada lado e, à
+     direita, quantas campanhas o mercado abriu mês a mês */
+  const hoje = hojeISO(), fechamHoje = fila.filter(x => x.c.fim === hoje).length;
+  const porMes = {}; (DB.campanhas || []).forEach(c => { const k = String(c.inicio || c.fim || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + 1; });
+  const meses = Object.keys(porMes).sort().filter(k => k <= hoje.slice(0, 7)).slice(-12), serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  const tipos = [['Transferência', D.tr.length], ['Compra com desconto', D.co.length], ['Clubes', D.cl.length], ['Lojas parceiras', D.lj.length], ['Compra bonificada', D.bo.length]];
+  /* um quadro depois: a curva mede a largura da sua caixa, que só existe depois do layout */
+  requestAnimationFrame(() => {
+  if (!total) montarHeroi($('#mpHeroiOf'), {rot:'Ofertas no ar agora', vazioUnid:'ofertas', vazio:'Nenhuma oferta no ar agora. Cadastre as campanhas que chegarem, ou cole os anúncios no Mural: elas aparecem aqui, separadas por tipo.'});
+  else montarHeroi($('#mpHeroiOf'), {
+    rot:'Ofertas no ar agora', valor:`${nBR(total)}<small> ${total === 1 ? 'oferta' : 'ofertas'}</small>`,
+    linha:`<span>${fila.length ? `a próxima fecha <b>${(d => d === 0 ? 'hoje' : d === 1 ? 'amanhã' : 'em ' + d + ' dias')(diasAte(fila[0].c.fim))}</b>` : 'nenhuma com prazo marcado'}</span>${fechamHoje ? `<span class="heroi-chip desce">${fechamHoje} ${fechamHoje === 1 ? 'fecha' : 'fecham'} hoje</span>` : ''}`,
+    numeros:[[bt ? pct(bt.v, 0) : 'n/d', 'maior bônus de transferência'], [bl ? nBRdec(bl.v) + ' por real' : bb ? nBRdec(bb.v) + ' por real' : 'n/d', 'melhor loja ou campanha'], [String(naoLidas), naoLidas === 1 ? 'anúncio para ler' : 'anúncios para ler']],
+    fatias:fatiasHeroi(tipos.map(([n, v]) => ({n, v})), x => x.n), fmtFatia:v => nBR(v) + (v === 1 ? ' oferta' : ' ofertas'), compRot:'Ofertas por tipo',
+    dirRot:'Campanhas abertas, mês a mês', dirSub:'Quantas ofertas o mercado abriu em cada mês, pelo arquivo da Torre.',
+    ult:serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:v => nBR(v), semSerie:'A curva aparece a partir do segundo mês com campanha cadastrada.'
+  });
+  });
 }
 function renderMapaAcumulo(){
   const cx = $('#mpAcumulo'); if (!cx) return;
@@ -49390,11 +49583,11 @@ function renderMapaAcumulo(){
      liga:D.tr.length ? {ir:'fabrica|fb-campanhas|tra', txt:`${D.tr.length} ${D.tr.length === 1 ? 'transferência' : 'transferências'} no ar`} : null}
   ];
   cx.innerHTML = `<div class="mp">
+    <section class="heroi" id="mpHeroiAc"></section>
     ${mpCaminhoHTML('acumular')}
     <div class="mp-intro">
       <div><h2>Os quatro jeitos de juntar milhas</h2>
         <p>Aqui ficam as <b>suas ações</b>. As ofertas que pedem cada uma moram em <button type="button" class="mp-link" data-mp-area="promocoes">Promoções</button>; o resultado aparece na <button type="button" class="mp-link" data-mp-area="carteira">Carteira</button>.</p></div>
-      <div class="mp-total"><b>${nBR(ptsMes + ptsPend)}</b><span>pontos chegando<br>(clubes no mês + a receber)</span></div>
     </div>
     <div class="mp-grade mp-grade-2">${blocos.map(mpBloco).join('')}</div>
     <details class="mp-dic"><summary><svg><use href="#i-livro"/></svg>Palavras que aparecem por aqui</summary>
@@ -49406,6 +49599,27 @@ function renderMapaAcumulo(){
       </dl></details>
   </div>`;
   mpLigar(cx);
+  /* o painel padrão: o que está chegando e, à direita, o que entrou mês a mês */
+  const ENTRA = {clube:1, bonus:1, bonificada:1, compra:1, km:1, cartao:1, premmia:1, organico:1};
+  const lc = (DB.lancamentos || []).filter(l => ENTRA[(typeof TIPOS_LANC_ANTIGOS !== 'undefined' && TIPOS_LANC_ANTIGOS[l.tipo]) || l.tipo] && Number(l.qtd) > 0);
+  const porTipo = {}, porMes = {};
+  lc.forEach(l => { const t = (TIPOS_LANC_ANTIGOS[l.tipo] || l.tipo), n = t === 'organico' ? 'Compras e lojas' : (TIPOS_LANC[t] || t); porTipo[n] = (porTipo[n] || 0) + Number(l.qtd);
+    const k = String(l.data || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + Number(l.qtd); });
+  const meses = Object.keys(porMes).sort().slice(-12), serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
+  const chegando = ptsMes + ptsPend;
+  /* um quadro depois: a curva mede a largura da sua caixa, que só existe depois do layout */
+  requestAnimationFrame(() => {
+  if (!chegando && !lc.length && !av.length) montarHeroi($('#mpHeroiAc'), {rot:'Pontos chegando', vazioUnid:'pontos', vazio:'Nada chegando ainda. Assine um clube, registre uma compra pela Lista de desejos ou lance uma compra de pontos: a Torre soma aqui o que está a caminho.'});
+  else montarHeroi($('#mpHeroiAc'), {
+    rot:'Pontos chegando', valor:`${nBR(chegando)}<small> pontos</small>`,
+    linha:`<span>clubes no mês e compras a receber</span>${prontos ? `<span class="heroi-chip sobe">${prontos} ${prontos === 1 ? 'item na hora de comprar' : 'itens na hora de comprar'}</span>` : ''}`,
+    numeros:[[nBR(ptsMes), 'por mês dos clubes'], [nBR(ptsPend), 'a receber de compras'], [String(av.length), av.length === 1 ? 'item na mira' : 'itens na mira']],
+    fatias:fatiasHeroi(Object.keys(porTipo).map(n => ({n, v:porTipo[n]})), x => x.n), fmtFatia:v => nBR(v) + ' pontos', compRot:'De onde vieram os pontos',
+    dirRot:'Pontos que entraram, mês a mês', dirSub:'Clubes, compras, cartão e bônus lançados na Torre.',
+    ult:serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
+    serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com pontos lançados.'
+  });
+  });
 }
 
 /* o mural explica a si mesmo: é a porta de entrada, não o lugar das ofertas */
