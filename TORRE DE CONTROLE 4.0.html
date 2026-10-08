@@ -9142,10 +9142,178 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .sl-pend{ display:block; font-family:var(--f-b); font-size:calc(11.5px * var(--esc)); color:var(--lilas); font-weight:500; }
 @media (max-width:900px){ .lc-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:640px){
-  .lc-jornada{ margin:0 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:8px; } .lc-fio{ display:none; } .lc-passo{ padding:6px; } .lc-receber{ margin:0 14px 16px; }
+  .lc-jornada{ margin:0 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:8px; } .lc-fio{ display:none; } .lc-passo{ padding:6px; } .lc-passo{ min-width:0; flex:initial; } .lc-passo-t{ min-width:0; } .lc-passo-t b{ white-space:normal; font-size:calc(12.5px * var(--esc)); } .lc-passo-t small{ white-space:normal; } .lc-passo-n{ min-width:30px; height:30px; } .lc-receber{ margin:0 14px 16px; }
   .lc-rec{ grid-template-columns:auto minmax(0, 1fr) auto; } .lc-rec .acoes-cel{ grid-column:1 / -1; justify-content:flex-end; }
   .lc-grade{ grid-template-columns:1fr; }
 }
+</style>
+<style>
+/* ══ MAPAS DE PROMOÇÕES E ACUMULAR (08/10/2026) ══ */
+.mp{ display:flex; flex-direction:column; gap:calc(22px * var(--esc)); }
+.mp-aco{ --c:var(--aco); } .mp-ouro{ --c:var(--ouro); } .mp-lilas{ --c:var(--lilas); } .mp-jade{ --c:var(--jade); } .mp-brasa{ --c:var(--brasa); } .mp-giz{ --c:var(--grafite); }
+/* o caminho: 1 → 2 → 3 */
+.mp-caminho{ display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:stretch; gap:8px; }
+.mp-seta{ width:18px; height:18px; align-self:center; stroke:var(--grafite-dim); fill:none; stroke-width:2; }
+.mp-etapa{ position:relative; display:flex; align-items:center; gap:12px; text-align:left; padding:14px 16px; border-radius:var(--r-lg); border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); cursor:pointer; transition:border-color .2s, transform .2s var(--ease), background .2s; min-width:0; }
+.mp-etapa:hover{ border-color:var(--fio-forte); transform:translateY(-1px); }
+.mp-etapa.aqui{ cursor:default; border-color:color-mix(in oklab, var(--ouro) 55%, transparent); background:linear-gradient(135deg, var(--lavagem-ouro), transparent 70%), var(--sup-1); box-shadow:0 0 0 3px color-mix(in oklab, var(--ouro) 12%, transparent); transform:none; }
+.mp-etapa-n{ flex:0 0 auto; width:32px; height:32px; border-radius:99px; display:grid; place-items:center; font:600 calc(14px * var(--esc))/1 var(--f-m); border:1.5px solid var(--fio-forte); color:var(--grafite); }
+.mp-etapa.aqui .mp-etapa-n{ background:var(--ouro); border-color:var(--ouro); color:var(--sobre-ouro); }
+.mp-etapa-t{ display:flex; flex-direction:column; min-width:0; line-height:1.25; }
+.mp-etapa-t small{ font:600 calc(10.5px * var(--esc))/1.2 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
+.mp-etapa-t b{ font:600 calc(15px * var(--esc))/1.25 var(--f-d); margin:2px 0; }
+.mp-etapa-t span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.mp-etapa em{ position:absolute; top:-9px; right:12px; font:600 calc(10px * var(--esc))/1 var(--f-b); letter-spacing:.06em; text-transform:uppercase; font-style:normal; padding:4px 8px; border-radius:99px; background:var(--ouro); color:var(--sobre-ouro); }
+/* abertura */
+.mp-intro{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+.mp-intro h2{ margin:0 0 6px; font:600 calc(24px * var(--esc))/1.15 var(--f-d); letter-spacing:-.01em; }
+.mp-intro p{ margin:0; color:var(--grafite); font-size:calc(14px * var(--esc)); line-height:1.55; max-width:62ch; }
+.mp-intro p b{ color:var(--giz); font-weight:600; }
+.mp-link{ border:0; background:none; padding:0; font:inherit; color:var(--ouro); font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-color:color-mix(in oklab, var(--ouro) 45%, transparent); }
+.mp-total{ display:flex; align-items:baseline; gap:8px; }
+.mp-total b{ font:600 calc(34px * var(--esc))/1 var(--f-d); color:var(--ouro); }
+.mp-total span{ font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.3; }
+/* fecham primeiro */
+.mp-fila{ border:1px solid var(--fio); border-radius:var(--r-lg); background:var(--sup-1); padding:12px 12px 12px 16px; display:flex; align-items:center; gap:14px; min-width:0; }
+.mp-fila-tit{ flex:0 0 auto; display:flex; align-items:center; gap:7px; font:600 calc(11px * var(--esc))/1 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--brasa); }
+.mp-fila-tit svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; }
+.mp-fila-rolo{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; min-width:0; flex:1; mask-image:linear-gradient(90deg, #000 calc(100% - 40px), transparent); -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 40px), transparent); padding-right:30px; }
+.mp-fila-rolo::-webkit-scrollbar{ display:none; }
+.mp-fila-it{ flex:0 0 auto; display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:var(--r); border:1px solid var(--fio); background:var(--sup-2); color:var(--giz); cursor:pointer; text-align:left; transition:border-color .2s; }
+.mp-fila-it:hover{ border-color:color-mix(in oklab, var(--c) 60%, transparent); }
+.mp-fila-ponto{ width:8px; height:8px; border-radius:99px; background:var(--c); flex:0 0 auto; }
+.mp-fila-it span{ display:flex; flex-direction:column; line-height:1.25; }
+.mp-fila-it b{ font-size:calc(12.5px * var(--esc)); font-weight:600; white-space:nowrap; }
+.mp-fila-it small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.mp-fila-it em{ font:600 calc(11px * var(--esc))/1 var(--f-m); font-style:normal; color:var(--grafite); padding-left:4px; }
+.mp-fila-it em.logo{ color:var(--ouro); } .mp-fila-it em.hoje{ color:var(--brasa); }
+/* grupos e blocos */
+.mp-grupo{ display:flex; flex-direction:column; gap:12px; }
+.mp-grupo-cab{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.mp-grupo-cab h3{ margin:0; font:600 calc(12px * var(--esc))/1 var(--f-b); letter-spacing:.09em; text-transform:uppercase; color:var(--giz); }
+.mp-grupo-cab p{ margin:0; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.mp-grade{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; }
+.mp-grade-2{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.mp-grade-1{ grid-template-columns:minmax(0, 1fr); }
+.mp-bloco{ position:relative; overflow:hidden; display:flex; flex-direction:column; gap:12px; padding:18px; border-radius:var(--r-xl); border:1px solid var(--fio); background:var(--sup-1); transition:border-color .25s, transform .25s var(--ease), box-shadow .25s;
+  animation:mpSobe .5s var(--ease) both; animation-delay:calc(var(--i, 0) * 60ms); }
+.mp-bloco::before{ content:''; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg, var(--c), transparent); opacity:.85; }
+.mp-bloco::after{ content:''; position:absolute; width:220px; height:220px; right:-90px; top:-110px; border-radius:50%; background:radial-gradient(closest-side, color-mix(in oklab, var(--c) 22%, transparent), transparent); pointer-events:none; }
+.mp-bloco:hover{ border-color:color-mix(in oklab, var(--c) 45%, transparent); transform:translateY(-2px); box-shadow:var(--sombra-p); }
+.mp-bloco.zero::after{ opacity:.35; }
+@keyframes mpSobe{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){ .mp-bloco{ animation:none; } }
+.mp-bloco header{ display:flex; align-items:flex-start; gap:12px; position:relative; z-index:1; }
+.mp-ic{ flex:0 0 auto; width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:color-mix(in oklab, var(--c) 16%, transparent); border:1px solid color-mix(in oklab, var(--c) 30%, transparent); }
+.mp-ic svg{ width:20px; height:20px; stroke:var(--c); fill:none; stroke-width:1.8; }
+.mp-bloco-tit{ flex:1; min-width:0; }
+.mp-bloco-tit h4{ margin:0; font:600 calc(16px * var(--esc))/1.25 var(--f-d); }
+.mp-bloco-tit small{ display:block; margin-top:3px; font:600 calc(10.5px * var(--esc))/1 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--c); }
+.mp-num{ flex:0 0 auto; text-align:right; display:flex; flex-direction:column; align-items:flex-end; }
+.mp-num b{ font:600 calc(26px * var(--esc))/1 var(--f-d); color:var(--c); }
+.mp-bloco.zero .mp-num b{ color:var(--grafite-dim); }
+.mp-num small{ font-size:calc(11px * var(--esc)); color:var(--grafite); margin-top:3px; white-space:nowrap; }
+.mp-oque{ margin:0; font-size:calc(13.5px * var(--esc)); line-height:1.55; color:var(--grafite); position:relative; z-index:1; }
+.mp-oque b{ color:var(--giz); font-weight:600; }
+.mp-melhor{ position:relative; z-index:1; display:flex; flex-direction:column; gap:2px; padding:11px 13px; border-radius:var(--r); background:var(--sup-2); border:1px solid var(--fio-suave); min-height:58px; justify-content:center; }
+.mp-melhor small{ font:600 calc(10.5px * var(--esc))/1.2 var(--f-b); letter-spacing:.07em; text-transform:uppercase; color:var(--grafite); }
+.mp-melhor b{ font:600 calc(15px * var(--esc))/1.3 var(--f-b); color:var(--giz); overflow-wrap:anywhere; }
+.mp-melhor span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.mp-nada{ font-size:calc(12.5px * var(--esc)) !important; line-height:1.45; }
+.mp-bloco footer{ margin-top:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; position:relative; z-index:1; }
+.mp-prazo{ font-size:calc(12px * var(--esc)); color:var(--grafite); display:inline-flex; align-items:center; gap:6px; }
+.mp-prazo.logo{ color:var(--ouro); } .mp-prazo.hoje{ color:var(--brasa); font-weight:600; }
+.mp-liga{ border:1px dashed color-mix(in oklab, var(--c) 45%, transparent); background:none; color:var(--giz); border-radius:99px; padding:5px 10px; font-size:calc(12px * var(--esc)); cursor:pointer; }
+.mp-liga:hover{ background:color-mix(in oklab, var(--c) 12%, transparent); }
+.mp-ir{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; border:1px solid color-mix(in oklab, var(--c) 45%, transparent); background:color-mix(in oklab, var(--c) 12%, transparent); color:var(--giz); border-radius:99px; padding:7px 13px; font:600 calc(12.5px * var(--esc))/1 var(--f-b); cursor:pointer; transition:background .2s; white-space:nowrap; }
+.mp-ir:hover{ background:color-mix(in oklab, var(--c) 24%, transparent); }
+.mp-ir svg{ width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; }
+.mp-chip{ display:inline-flex; align-items:center; gap:6px; margin:4px 4px 0 0; border:1px solid var(--fio); background:var(--sup-2); color:var(--giz); border-radius:99px; padding:3px 9px; font-size:calc(12px * var(--esc)); cursor:pointer; }
+.mp-dic{ border:1px solid var(--fio); border-radius:var(--r-lg); background:var(--sup-1); padding:0 16px; }
+.mp-dic summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; padding:13px 0; font-weight:600; font-size:calc(13.5px * var(--esc)); }
+.mp-dic summary::-webkit-details-marker{ display:none; }
+.mp-dic summary svg{ width:16px; height:16px; stroke:var(--ouro); fill:none; stroke-width:1.8; }
+.mp-dic dl{ margin:0 0 14px; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px 22px; }
+.mp-dic dt{ font-weight:600; font-size:calc(13px * var(--esc)); }
+.mp-dic dd{ margin:2px 0 0; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.5; }
+/* os quatro caminhos de uma compra: a mesma cor em toda a Torre */
+.cam-pontos{ --cam:var(--aco); } .cam-milhas{ --cam:var(--jade); } .cam-cia{ --cam:var(--ouro); } .cam-desc{ --cam:var(--lilas); } .cam-todos{ --cam:var(--grafite); }
+.cam-ponto{ display:inline-block; width:8px; height:8px; border-radius:99px; background:var(--cam, var(--grafite)); flex:0 0 auto; }
+.cam-desc-c{ --cam:var(--lilas); }
+.lc-caminhos{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin:0 20px 14px; }
+.lc-caminho{ position:relative; display:grid; grid-template-columns:auto 1fr; grid-template-areas:'ic n' 't t' 'ir ir'; gap:8px 10px; align-items:center; text-align:left; padding:12px; border-radius:var(--r-lg); border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); cursor:pointer; overflow:hidden; transition:border-color .2s, transform .2s var(--ease); }
+.lc-caminho::before{ content:''; position:absolute; inset:0 auto 0 0; width:3px; background:var(--cam); }
+.lc-caminho:hover{ border-color:color-mix(in oklab, var(--cam) 50%, transparent); transform:translateY(-1px); }
+.lc-caminho-ic{ grid-area:ic; width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:color-mix(in oklab, var(--cam) 15%, transparent); }
+.lc-caminho-ic svg{ width:17px; height:17px; stroke:var(--cam); fill:none; stroke-width:1.8; }
+.lc-caminho-t{ grid-area:t; display:flex; flex-direction:column; min-width:0; line-height:1.25; }
+.lc-caminho-t b{ font-size:calc(13px * var(--esc)); font-weight:600; }
+.lc-caminho-t small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.lc-caminho-n{ grid-area:n; display:flex; align-items:baseline; justify-content:flex-end; gap:5px; line-height:1.1; }
+.lc-caminho-n b{ font:600 calc(20px * var(--esc))/1 var(--f-d); color:var(--cam); }
+.lc-caminho-n small{ font-size:calc(10.5px * var(--esc)); color:var(--grafite); }
+.lc-caminho-ir{ grid-area:ir; display:flex; align-items:center; gap:4px; font-size:calc(11.5px * var(--esc)); color:var(--grafite); border-top:1px solid var(--fio-suave); padding-top:7px; }
+.lc-caminho-ir svg{ width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:2; }
+.lc-cams{ display:flex; flex-direction:column; gap:3px; margin:10px 0 4px; padding:8px 10px; border-radius:var(--r); background:var(--sup-1); border:1px solid var(--fio-suave); }
+.lc-cam{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto; grid-template-areas:'p n v' '. t t'; align-items:center; column-gap:8px; row-gap:1px; font-size:calc(12.5px * var(--esc)); padding:4px 0; }
+.lc-cam + .lc-cam{ border-top:1px solid var(--fio-suave); }
+.lc-cam .cam-ponto{ grid-area:p; }
+.lc-cam-n{ grid-area:n; color:var(--grafite); font:600 calc(10.5px * var(--esc))/1.3 var(--f-b); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lc-cam-t{ grid-area:t; min-width:0; overflow-wrap:anywhere; line-height:1.4; }
+.lc-cam em{ grid-area:v; }
+.cam-curto{ display:none; }
+@media (max-width:760px){ .cam-longo{ display:none; } .cam-curto{ display:inline; } }
+.lc-cam-t small{ color:var(--ouro); font-size:calc(11px * var(--esc)); }
+.lc-cam em{ font-style:normal; font:600 calc(12px * var(--esc))/1 var(--f-m); color:var(--jade); white-space:nowrap; }
+.lc-cam.cam-off .lc-cam-t{ color:var(--grafite-dim); font-style:italic; }
+.lc-cam.cam-off{ grid-template-areas:'p n t'; grid-template-columns:auto minmax(0,1fr) auto; }
+.lc-cam.cam-off .lc-cam-t{ text-align:right; white-space:nowrap; }
+.lc-cam.cam-off .cam-ponto{ opacity:.35; }
+.lc-cam.top{ background:color-mix(in oklab, var(--cam) 12%, transparent); border-radius:8px; margin:2px -6px; padding:6px; border-top-color:transparent; }
+.lc-cam.top + .lc-cam{ border-top-color:transparent; }
+.lc-cam.top .lc-cam-n{ color:var(--giz); font-weight:600; }
+.lj-seg-tipo{ margin-bottom:10px; }
+.lj-seg-tipo button{ display:inline-flex; align-items:center; gap:7px; }
+.ds-ofs{ display:flex; flex-direction:column; gap:8px; }
+.ds-of{ display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr) 90px minmax(0, 1.1fr) auto; gap:8px; align-items:center; }
+.ds-of input, .ds-of select{ width:100%; min-width:0; }
+.ds-of-pct{ position:relative; display:block; }
+.ds-of-pct span{ position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--grafite); font-size:13px; pointer-events:none; }
+/* o mural explica a si mesmo */
+.mr-como{ display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:8px; align-items:stretch; }
+.mr-como-p{ display:flex; gap:11px; align-items:flex-start; padding:12px 14px; border-radius:var(--r-lg); background:var(--sup-1); border:1px solid var(--fio); }
+.mr-como-p > span{ flex:0 0 auto; width:26px; height:26px; border-radius:99px; display:grid; place-items:center; font:600 calc(12.5px * var(--esc))/1 var(--f-m); background:var(--lavagem-ouro); color:var(--ouro); }
+.mr-como-p b{ display:block; font-size:calc(13.5px * var(--esc)); margin-bottom:2px; }
+.mr-como-p small{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.mr-como-p small b{ display:inline; font-size:inherit; color:var(--giz); }
+.mr-como-s{ width:16px; height:16px; align-self:center; stroke:var(--grafite-dim); fill:none; stroke-width:2; }
+@media (max-width:1100px){ .mp-grade{ grid-template-columns:repeat(2, minmax(0,1fr)); } .lc-caminhos{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media (max-width:760px){
+  .mp-caminho{ grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr); gap:3px; }
+  .mp-seta{ width:12px; height:12px; }
+  .mp-etapa{ flex-direction:column; align-items:center; text-align:center; gap:6px; padding:10px 6px; }
+  .mp-etapa-n{ width:26px; height:26px; font-size:12px; }
+  .mp-etapa-t{ align-items:center; } .mp-etapa-t span{ display:none; }
+  .mp-etapa-t b{ font-size:calc(12.5px * var(--esc)); }
+  .mp-etapa-t small{ font-size:calc(9.5px * var(--esc)); }
+  .mp-etapa em{ display:none; }
+  .mp-grade, .mp-grade-2{ grid-template-columns:minmax(0,1fr); }
+  .mp-intro h2{ font-size:calc(20px * var(--esc)); }
+  .mp-fila{ flex-direction:column; align-items:stretch; gap:10px; padding:12px; }
+  .mp-dic dl{ grid-template-columns:minmax(0,1fr); }
+  .mp-ir{ margin-left:0; }
+  .mp-bloco footer{ justify-content:space-between; }
+  .lc-caminhos{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); margin:0 12px 12px; gap:8px; }
+  .lc-caminho-ir{ display:none; }
+  .ds-of{ grid-template-columns:minmax(0,1fr) 90px; }
+  .ds-of-loja{ grid-column:1 / -1; } .ds-of-fim{ grid-column:1; }
+  .mr-como{ grid-template-columns:minmax(0,1fr); }
+  .mr-como-s{ transform:rotate(90deg); justify-self:center; }
+}
+</style>
+<style>
+.tr-horas{ display:block; margin-top:3px; font:500 calc(11.5px * var(--esc))/1.2 var(--f-m); color:var(--grafite); white-space:nowrap; }
+.tr-horas sup{ color:var(--ouro); font-size:.8em; margin-left:1px; }
 </style>
 </head>
 <body>
@@ -9273,8 +9441,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
            com nome por extenso; os módulos de cada área aparecem na coluna ao lado
            (no computador) ou na barra logo acima desta (no celular). -->
       <button class="tb on" data-area="inicio" data-vista="mesa" data-dica="Início: painel de bordo, prateleira e lançamentos" data-dica-lado="direita"><svg><use href="#i-casa"/></svg><span class="sg">Início</span></button>
-      <button class="tb" data-area="promocoes" data-vista="fabrica" data-dica="Promoções: onde a milha está barata hoje — compra e transferência bonificada, clubes e lojas, mural" data-dica-lado="direita"><svg><use href="#i-fogo"/></svg><span class="sg"><span class="sg-longo">Promoções</span><span class="sg-curto">Promos</span></span></button>
-      <button class="tb" data-area="acumular" data-vista="comprar" data-dica="Acumular: como juntar milhas — comprar, transferir, assinar clubes e comprar produtos" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Acumular</span></button>
+      <button class="tb" data-area="promocoes" data-vista="fabrica" data-dica="Promoções: o que o mercado oferece agora. Transferência bonificada, compra com desconto, clubes, lojas parceiras, compra bonificada e mural" data-dica-lado="direita"><svg><use href="#i-fogo"/></svg><span class="sg"><span class="sg-longo">Promoções</span><span class="sg-curto">Promos</span></span></button>
+      <button class="tb" data-area="acumular" data-vista="comprar" data-dica="Acumular: o que você faz para juntar. Meus clubes, lista de desejos, comprar milhas e transferir pontos" data-dica-lado="direita"><svg><use href="#i-dinheiro"/></svg><span class="sg">Acumular</span></button>
       <button class="tb" data-area="carteira" data-vista="saldo" data-dica="Carteira: o que você tem: contas, controle de CPF, saldos e vencimentos" data-dica-lado="direita"><svg><use href="#i-carteira"/></svg><span class="sg">Carteira</span></button>
       <button class="tb" data-area="viagens" data-vista="rota" data-dica="Viagens: jornadas" data-dica-lado="direita"><svg><use href="#i-aviao"/></svg><span class="sg">Viagens</span></button>
       <button class="tb" data-area="negocio" data-vista="clientes" data-dica="Negócio: clientes, orçamento, emitidos, vendas e imposto de renda" data-dica-lado="direita"><svg><use href="#i-balcao"/></svg><span class="sg">Negócio</span></button>
@@ -9710,19 +9878,37 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                assinatura não. Ler o que fecha esta semana precede decidir sobre o
                que já está contratado. A ordem alfabética valia enquanto nenhuma
                das duas mandava na outra. -->
+          <button class="aba" data-aba="fb-ofertas">Mapa das ofertas</button>
+          <button class="aba" data-aba="fb-acumular">Mapa do acúmulo</button>
           <button class="aba on" data-aba="fb-campanhas">Campanhas <span class="cont" id="contCampTotal">0</span></button>
           <button class="aba" data-aba="fb-clubes">Meus Clubes <span class="cont" id="contClubes">0</span></button>
-          <button class="aba" data-aba="fb-compras">Compras Inteligentes</button>
+          <button class="aba" data-aba="fb-compras">Lista de desejos</button>
           <button class="aba" data-aba="fb-mural">Mural</button>
         </div>
 
+
+        <!-- MAPAS (08/10/2026): a primeira tela de Promoções e de Acumular.
+             Uma pergunta por área: Promoções mostra o que o mercado oferece
+             agora; Acumular, o que você faz para juntar. -->
+        <div class="painel-aba" id="p-fb-ofertas">
+          <div class="pilha" style="gap:18px">
+            <div class="linha sec-cab"></div>
+            <div id="mpOfertas"></div>
+          </div>
+        </div>
+        <div class="painel-aba" id="p-fb-acumular">
+          <div class="pilha" style="gap:18px">
+            <div class="linha sec-cab"></div>
+            <div id="mpAcumulo"></div>
+          </div>
+        </div>
 
         <div class="painel-aba" id="p-fb-campanhas">
           <!-- CAMPANHAS NUM LUGAR SÓ (06/10/2026, pedido do Jadiel). As de compra e
                transferência moravam em Comprar e transferir, e as de clube aqui: duas
                telas chamadas "Campanhas". Agora as duas famílias ficam juntas, cada uma
                com o seu seletor, e o resto do código continua o mesmo. -->
-          <div class="linha" style="flex-wrap:wrap;gap:11px;margin-bottom:16px">
+          <div class="linha" style="flex-wrap:wrap;gap:11px;margin-bottom:16px" hidden>
             <div class="seg" id="segCampGrupo">
               <button class="on" data-g="ct">Compra e transferência <span class="cont-disco" id="cnGrupoCT">0</span></button>
               <button data-g="clube">Clubes e lojas <span class="cont-disco" id="cnGrupoClube">0</span></button>
@@ -9824,7 +10010,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div id="clCampHeroiSlot"></div>
             <section class="heroi" id="ljHeroi" hidden></section>
 
-            <div class="linha" style="flex-wrap:wrap;gap:11px">
+            <div class="linha" style="flex-wrap:wrap;gap:11px" hidden>
               <div class="seg" id="segCampClube">
                 <button class="on" data-t="clube">Clube (Pontos/Milhas) <span class="cont-disco" id="cnClu">0</span></button>
                 <button data-t="loja">Lojas Parceiras <span class="cont-disco" id="cnLoj">0</span></button>
@@ -9901,6 +10087,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                       <select id="ljOrdem" data-ordem="natural"><option value="volta">Maior volta</option><option value="prazo">Fecha antes</option><option value="mult">Maior multiplicador</option></select></label>
                     <label class="lj-melhor"><input type="checkbox" id="ljSoMelhor"> Só o melhor programa de cada loja</label>
                   </div>
+                  <div class="seg lj-seg-tipo" id="ljSegTipo"></div>
                   <div class="lj-filtros">
                     <div class="seg" id="ljSegCat"></div>
                     <div class="seg" id="ljSegProg"></div>
@@ -9908,44 +10095,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                   <div id="ljVitrine"></div>
                 </div>
                 <div id="ljEncerradas"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
-
-        <div class="painel-aba" id="p-fb-compras">
-          <div class="pilha" style="gap:18px">
-            <div id="fcGuia"></div>
-            <section class="heroi" id="ciHeroi"></section>
-            <div class="grade g4" id="fbComprasResumo" hidden></div>
-
-            <div class="cartao" style="padding:0;overflow:hidden">
-              <div class="cartao-cab" style="padding:20px 20px 0;margin-bottom:14px">
-                <h3 style="color:var(--anil-claro)">Lista de compras
-                  <div class="sub">Do produto na mira até os pontos na conta. A Torre vigia o shopping de pontos (Livelo, Esfera...) e as campanhas com as companhias (Magalu → Azul, Smiles...), avisa quando bate o seu alvo e acompanha os pontos até caírem.</div></h3>
-                <div class="linha" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="bt p fantasma" onclick="ativarAvisosDesejos()" data-dica="O celular ou o computador avisa quando um item chegar na hora de comprar"><svg><use href="#i-sino"/></svg>Avisar no aparelho</button>
-                <button class="bt p primario" id="btNovoDesejo"><svg><use href="#i-mais"/></svg>Item</button></div>
-              </div>
-              <div id="lcJornada"></div>
-              <div class="ds-grade" id="fbDesejos"></div>
-              <div id="lcReceber"></div>
-            </div>
-
-            <div class="cartao">
-              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Radar de multiplicadores<div class="sub">Lojas parceiras com promoção viva. Ordenado por quanto o multiplicador promocional supera o de sempre.</div></h3>
-                <button class="bt p fantasma" id="btNovaLoja"><svg><use href="#i-mais"/></svg>Loja</button>
-              </div>
-              <div class="rolo" id="fbLojas"></div>
-            </div>
-
-            <div class="cartao">
-              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Compras registradas<div class="sub">Cada compra vira pontos com custo zero, é o acúmulo orgânico que puxa o seu milheiro médio para baixo.</div></h3>
-                <button class="bt p primario" id="btNovaCompra"><svg><use href="#i-mais"/></svg>Registrar Compra</button>
-              </div>
-              <div class="rolo" id="fbCompras"></div>
-            </div>
-
             <div class="cartao">
               <div class="cartao-cab">
                 <h3 style="color:var(--anil-claro)">Atualizar vitrine
@@ -9973,6 +10122,38 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                 <label class="ck" style="height:34px;flex:0 0 auto"><input type="checkbox" id="vtAuto"> Lembrar nos horários do vigia</label>
               </div>
               <div id="vtSaida" style="margin-top:14px"></div>
+            </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <div class="painel-aba" id="p-fb-compras">
+          <div class="pilha" style="gap:18px">
+            <div id="fcGuia"></div>
+            <section class="heroi" id="ciHeroi"></section>
+            <div class="grade g4" id="fbComprasResumo" hidden></div>
+
+            <div class="cartao" style="padding:0;overflow:hidden">
+              <div class="cartao-cab" style="padding:20px 20px 0;margin-bottom:14px">
+                <h3 style="color:var(--anil-claro)">Seus itens
+                  <div class="sub">Cadastre o que você vai comprar de qualquer jeito. A Torre procura pelos quatro caminhos abaixo, avisa quando a oferta bate o seu alvo e acompanha os pontos até caírem na conta.</div></h3>
+                <div class="linha" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="bt p fantasma" onclick="ativarAvisosDesejos()" data-dica="O celular ou o computador avisa quando um item chegar na hora de comprar"><svg><use href="#i-sino"/></svg>Avisar no aparelho</button>
+                <button class="bt p primario" id="btNovoDesejo"><svg><use href="#i-mais"/></svg>Item</button></div>
+              </div>
+              <div id="lcCaminhos"></div>
+              <div id="lcJornada"></div>
+              <div class="ds-grade" id="fbDesejos"></div>
+              <div id="lcReceber"></div>
+            </div>
+
+            <div class="cartao">
+              <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Compras registradas<div class="sub">Cada compra vira pontos com custo zero, é o acúmulo orgânico que puxa o seu milheiro médio para baixo.</div></h3>
+                <button class="bt p primario" id="btNovaCompra"><svg><use href="#i-mais"/></svg>Registrar Compra</button>
+              </div>
+              <div class="rolo" id="fbCompras"></div>
             </div>
 
           </div>
@@ -10099,6 +10280,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="linha sec-cab"></div>
             <section class="heroi" id="mrHeroi"></section>
             <div id="mrGuia"></div>
+            <div id="mrComo"></div>
             <div class="linha" style="flex-wrap:wrap;gap:11px">
               <div class="seg" id="segMural"></div>
               <div class="esticar"></div>
@@ -10993,7 +11175,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 23:00';
+const BUILD = '2026-10-13 09:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14415,16 +14597,24 @@ const AREAS = [
        de cada conta, e é na carteira que se decide de qual conta emitir. */
     menu:[{g:'Grupo', itens:[['saldo', 'sl-contas', 'Contas', '#i-usuarios'], ['emissoes', 'em-controle', 'Controle de CPF', '#i-documento']]},
       {g:'Estoque', itens:[['saldo', 'sl-carteira', 'Saldos', '#i-caixa'], ['saldo', 'sl-validade', 'Vencimentos', '#i-relogio']]}]},
-  {k:'promocoes', n:'Promoções', sub:'Onde a milha está barata',  ic:'#i-fogo',     vistas:['fabrica'],
-    menu:[{g:'Campanhas', itens:[['fabrica', 'fb-campanhas', 'Compra e transferência', '#i-troca', 'ct'], ['fabrica', 'fb-campanhas', 'Clubes e lojas', '#i-etiqueta', 'clube']]},
-      {g:'Anúncios', itens:[['fabrica', 'fb-mural', 'Mural', '#i-livro']]}]},
-  {k:'acumular',  n:'Acumular',  sub:'Como juntar milhas',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
-    /* Compras Inteligentes junta duas guias (10/10/2026): "Compra em lojas
-       parceiras" (a seção de compras) e "Compra em programas aéreos" (as
-       campanhas de compra bonificada). O 6º campo é a segunda casa do item. */
-    menu:[{g:'Com dinheiro', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar'], ['fabrica', 'fb-compras', 'Compras Inteligentes', '#i-sacola', '', ['fabrica', 'fb-campanhas', 'Compra Bonificada', '#i-brilho', 'bonificada']],
-      ['comprar', 'ct-comprar', 'Comprar Milhas', '#i-carrinho']]},
-      {g:'Com pontos', itens:[['comprar', 'ct-transferir', 'Transferir Pontos', '#i-subir']]}]},
+  /* PROMOÇÕES x ACUMULAR (08/10/2026, pedido do Jadiel: "está tudo misturado").
+     Uma regra só decide onde cada coisa mora:
+       Promoções = o que o MERCADO oferece agora (tudo que tem prazo e vem de fora);
+       Acumular  = o que VOCÊ faz para juntar (suas assinaturas, sua lista, suas contas).
+     Cada tipo de oferta tem a sua página, e cada área abre num mapa que explica
+     o caminho. A lista de lojas, que aparecia em dois lugares, ficou só em
+     Lojas parceiras; a Compra Bonificada, que era oferta morando em Acumular,
+     voltou para Promoções. */
+  {k:'promocoes', n:'Promoções', sub:'O que o mercado oferece agora',  ic:'#i-fogo',     vistas:['fabrica'],
+    menu:[{g:'', itens:[['fabrica', 'fb-ofertas', 'Mapa das ofertas', '#i-radar']]},
+      {g:'Pontos e milhas em oferta', itens:[['fabrica', 'fb-campanhas', 'Transferência bonificada', '#i-troca', 'tra'], ['fabrica', 'fb-campanhas', 'Compra com desconto', '#i-carrinho', 'com'], ['fabrica', 'fb-campanhas', 'Clubes em promoção', '#i-atualizar', 'clube']]},
+      {g:'Comprar e ganhar pontos', itens:[['fabrica', 'fb-campanhas', 'Lojas parceiras', '#i-sacola', 'loja'], ['fabrica', 'fb-campanhas', 'Compra bonificada', '#i-brilho', 'bonificada']]},
+      {g:'Caixa de entrada', itens:[['fabrica', 'fb-mural', 'Mural de anúncios', '#i-livro']]}]},
+  {k:'acumular',  n:'Acumular',  sub:'O que você faz para juntar',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
+    menu:[{g:'', itens:[['fabrica', 'fb-acumular', 'Mapa do acúmulo', '#i-rota']]},
+      {g:'Todo mês', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar']]},
+      {g:'Nas compras', itens:[['fabrica', 'fb-compras', 'Lista de desejos', '#i-alvo']]},
+      {g:'Na hora certa', itens:[['comprar', 'ct-comprar', 'Comprar milhas', '#i-carrinho'], ['comprar', 'ct-transferir', 'Transferir pontos', '#i-subir']]}]},
   /* Cartões saiu de Milhas em 07/10/2026: cartão de crédito é assunto próprio
      (anuidade, fatura, catálogo), e misturado deixava o menu de Milhas com 14 itens. */
   {k:'cartoes', n:'Cartões', sub:'Crédito e faturas',    ic:'#i-cartao',   vistas:['cartoes'],
@@ -14459,8 +14649,22 @@ const areaDe = v => {
 /* item do menu que está aberto agora (módulo, seção e, em Campanhas, o lado) */
 /* subgrupos de Campanhas: o lado (compra e transferência ou clubes e lojas) e,
    desde 10/10/2026, a Compra Bonificada, que mora em Acumular */
+/* cada tipo de oferta é um item do menu: [família, tipo] dentro das campanhas */
+const SUB_CAMP = {tra:['ct', 'transferencia'], com:['ct', 'compra'], bonificada:['ct', 'bonificada'], clube:['clube', 'clube'], loja:['clube', 'loja']};
+const SELO_SUB = {tra:'cnTra', com:'cnCom', bonificada:'cnBon', clube:'cnClu', loja:'cnLoj'};
+/* o número ao lado de cada item é o que está NO AR agora (o mesmo do mapa) */
+function seloSub(sub){
+  try {
+    const T = {tra:'transferencia', com:'compra', bonificada:'bonificada', clube:'clube'};
+    if (T[sub]) return String(campanhasVivas(T[sub]).length);
+    if (sub === 'loja') return String(lojasVivas().length);
+  } catch(e){}
+  return '';
+}
 function subAtivo(sub){
   const g = typeof campGrupo !== 'undefined' ? campGrupo : 'ct', t = typeof abaCampanha !== 'undefined' ? abaCampanha : 'transferencia';
+  const f = typeof abaCampFab !== 'undefined' ? abaCampFab : 'clube';
+  if (SUB_CAMP[sub]){ const [gg, tt] = SUB_CAMP[sub]; return g === gg && (gg === 'ct' ? t === tt : f === tt); }
   if (sub === 'bonificada') return g === 'ct' && t === 'bonificada';
   if (sub === 'ct') return g === 'ct' && t !== 'bonificada';
   return g === sub;
@@ -14486,17 +14690,15 @@ function atualizarArea(){
   /* a pílula vai para a barra de cima no celular em toda troca, inclusive na
      primeira tela (no Início ela ficava numa faixa própria e empurrava tudo) */
   if (typeof lugarDaPilula === 'function') lugarDaPilula();
-  if ($('#segCampanha')){
-    const bon = $('#segCampanha button[data-t="bonificada"]'); if (bon) bon.hidden = ar.k === 'promocoes';
-    const linha = $('#segCampanha').parentElement; if (linha) linha.hidden = ar.k === 'acumular';
-  }
+  /* o menu leva direto a cada tipo de oferta: o seletor da página saiu de vista */
+  if ($('#segCampanha')){ const linha = $('#segCampanha').parentElement; if (linha) linha.hidden = true; }
   pintarBarraModulos(vistaAtual);
   _marcaColuna = ''; montarColunaMenu();
   /* nas áreas que nasceram de Milhas, o topo diz a área (Promoções, Acumular,
      Carteira), e não o nome técnico do módulo por baixo ("Fábrica de milhas") */
   if (['carteira', 'promocoes', 'acumular'].includes(ar.k)){
     if ($('#topoTit')) $('#topoTit').textContent = ar.n;
-    if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, CPF, saldos e vencimentos', promocoes:'Onde a milha está barata hoje', acumular:'Como juntar milhas: clubes, compras, comprar e transferir'}[ar.k];
+    if ($('#topoSub')) $('#topoSub').textContent = {carteira:'O que você tem: contas, CPF, saldos e vencimentos', promocoes:'O que o mercado oferece agora, com prazo para acabar', acumular:'O que você faz para juntar: clubes, lista de desejos, comprar e transferir'}[ar.k];
   }
   /* a pílula do alto diz a área, sempre: a segunda barra (celular) e a coluna
      (computador) dizem o item */
@@ -14626,6 +14828,8 @@ function irParaAba(grupo, aba){
    }
   if (grupo === 'vendas' && aba === 'vd-resultado') setTimeout(renderResultado, 0);
   if (grupo === 'cotacoes' && aba === 'ct-vem') setTimeout(renderVemAba, 0);
+  if (grupo === 'fabrica' && aba === 'fb-ofertas') setTimeout(() => typeof renderMapaOfertas === 'function' && renderMapaOfertas(), 0);
+  if (grupo === 'fabrica' && aba === 'fb-acumular') setTimeout(() => typeof renderMapaAcumulo === 'function' && renderMapaAcumulo(), 0);
   if (grupo === 'fabrica' && aba === 'fb-campanhas'){
     /* Entrar na aba com campanha de clube aberta abre no clube, mesmo que a
        última visita tenha terminado em Lojas Parceiras. É a oferta que tem prazo
@@ -15781,6 +15985,9 @@ function nomeDaSecao(){
 /* Guias de Compras Inteligentes: aparecem logo abaixo do título nas duas telas
    que o item reúne, sempre na mesma ordem. */
 function guiasComprasInteligentes(raiz, cab){
+  /* as duas guias saíram (08/10/2026): a Lista de desejos e a Compra bonificada
+     moram cada uma na sua área, e o menu leva a cada uma */
+  const v0 = document.getElementById('segComprasInt'); if (v0) v0.remove(); return;
   const velha = document.getElementById('segComprasInt');
   const naLoja = vistaAtual === 'fabrica' && raiz.id === 'p-fb-compras';
   const noAereo = vistaAtual === 'fabrica' && raiz.id === 'p-fb-campanhas' && subAtivo('bonificada') && areaDe('fabrica').k === 'acumular';
@@ -16961,7 +17168,7 @@ function renderMesa(){
   }).join('')
   : `<div class="nota"><svg><use href="#i-info"/></svg><div class="pilha compacta">
       <div>Nenhum item marcado como prioridade.</div>
-      <div>Em <b>Acumular → Compras Inteligentes</b>, defina a prioridade de um item da lista para que ele apareça aqui pronto para registrar.</div>
+      <div>Em <b>Acumular › Lista de desejos</b>, defina a prioridade de um item da lista para que ele apareça aqui pronto para registrar.</div>
     </div></div>`;
 
   renderFiltroConta();
@@ -21766,7 +21973,7 @@ function retornoLoja(l){
    no multiplicador do seu degrau de clube: a vitrine mostra tudo o que rende
    ponto ao comprar, num lugar só.
    ══════════════════════════════════════════════════════════════════════════════ */
-let progLojaV = '', buscaLojaV = '', ordemLojaV = 'volta', gastoLojaV = 0, soMelhorLojaV = false, arquivoLojaTudo = false;
+let tipoShopV = '', progLojaV = '', buscaLojaV = '', ordemLojaV = 'volta', gastoLojaV = 0, soMelhorLojaV = false, arquivoLojaTudo = false;
 const normLoja = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const matizLoja = t => { let h = 0; for (const ch of normLoja(t)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
 const siglaLoja = t => { const p = String(t || '?').replace(/[^A-Za-zÀ-ú0-9 ]/g, ' ').trim().split(/\s+/); return ((p[0] || '?')[0] + ((p[1] || p[0] || '')[p[1] ? 0 : 1] || '')).toUpperCase(); };
@@ -21875,7 +22082,11 @@ function renderLojasParceiras(){
      lista vazia é oferecer um beco. */
   const cats = [...new Set(vivas.map(l => l.cat))].sort();
   if (catLoja && !cats.includes(catLoja)) catLoja = '';
-  const progs = [...new Set(vivas.map(l => l.prog))];
+  const segT = $('#ljSegTipo');
+  if (segT){ const n = k => vivas.filter(l => !k || caminhoDe(l) === k).length;
+    segT.innerHTML = [['', 'Todos os caminhos'], ['pontos', 'Shopping de pontos'], ['milhas', 'Shopping de milhas'], ['cia', 'Campanha com a companhia']]
+      .map(([k, nm]) => `<button class="${k === tipoShopV ? 'on' : ''} cam-${k || 'todos'}" data-t="${k}">${k ? '<i class="cam-ponto"></i>' : ''}${esc(nm)} <span class="cont-disco">${n(k)}</span></button>`).join(''); }
+  const progs = [...new Set(vivas.filter(l => !tipoShopV || caminhoDe(l) === tipoShopV).map(l => l.prog))];
   if (progLojaV && !progs.includes(progLojaV)) progLojaV = '';
   const seg = $('#ljSegCat');
   if (seg) seg.innerHTML = [['', 'Todas as categorias']].concat(cats.map(c => [c, c[0].toUpperCase() + c.slice(1)]))
@@ -21886,7 +22097,7 @@ function renderLojasParceiras(){
   if (segP) segP.hidden = progs.length < 2;
 
   const busca = normLoja(buscaLojaV);
-  let lista = vivas.filter(l => (!catLoja || l.cat === catLoja) && (!progLojaV || l.prog === progLojaV) && (!busca || normLoja(l.n).includes(busca)));
+  let lista = vivas.filter(l => (!tipoShopV || caminhoDe(l) === tipoShopV) && (!catLoja || l.cat === catLoja) && (!progLojaV || l.prog === progLojaV) && (!busca || normLoja(l.n).includes(busca)));
   /* Só o melhor programa de cada loja: das ofertas da mesma loja, fica a que
      dá mais volta com o valor do SEU ponto em cada programa. */
   if (soMelhorLojaV){
@@ -22168,13 +22379,14 @@ function htmlGuia(g){
 
 /* ── guia da aba Compras Inteligentes ─────────────────────────────────────── */
 const GUIA_COMPRAS = {
-  t:'Como ler a aba de compras inteligentes',
+  t:'Como ler a lista de desejos',
   blocos:[
     {i:'i-sacola', n:'O que é',
-     p:['É o planejamento das compras que você já faria, para que elas rendam pontos: a lista do que você quer comprar e por qual retorno, o radar das lojas parceiras em promoção e o registro das compras feitas.',
+     p:['É a lista do que você vai comprar de qualquer jeito, esperando a melhor oferta. Para cada item, a Torre procura em quatro caminhos: shopping de pontos (Livelo, Esfera), shopping de milhas (Smiles, Azul, LATAM), campanha com a companhia (Magalu → Azul) e o desconto ou cashback que você achou.',
+        'Quando um caminho bate o seu alvo, o item vai para "Hora de comprar" e o aparelho avisa. Comprou: registre, e os pontos ficam "a receber" até caírem na conta.',
         'Cada compra registrada vira pontos a custo zero — é o acúmulo que puxa o seu milheiro médio para baixo.']},
     {i:'i-grafico', n:'Como se lê o número',
-     p:['O número de cada loja é o multiplicador: pontos por real gasto. O radar ordena as lojas por quanto o multiplicador de hoje supera o de sempre — 12× numa loja que costuma pagar 4× é três vezes o normal.',
+     p:['O número de cada loja é o multiplicador: pontos por real gasto. A vitrine de Lojas parceiras (em Promoções) mostra quanto o multiplicador de hoje supera o de sempre — 12× numa loja que costuma pagar 4× é três vezes o normal.',
         'Em dinheiro, a volta é o multiplicador vezes o valor do seu milheiro: 12 pontos por real, com o milheiro a R$ 20, voltam R$ 0,24 a cada real — 24%.']},
     {i:'i-alerta', n:'O erro que anula tudo',
      p:['Comprar fora do caminho do programa. Os pontos só contam se a compra começa pelo link do shopping do programa; entrar direto na loja, mesmo com o mesmo cartão, não pontua, e cupom de outro site costuma anular os pontos.',
@@ -25575,7 +25787,9 @@ function renderCompras(){
       viva ? (ordemLojas.desc ? '▼' : '▲') : '▼'}</span></th>`;
   };
 
-  $('#fbLojas').innerHTML = !DB.lojas.length
+  /* o radar de multiplicadores saiu da Lista de desejos (08/10/2026): a vitrine
+     de Lojas parceiras, em Promoções, é a casa das lojas */
+  if ($('#fbLojas')) $('#fbLojas').innerHTML = !DB.lojas.length
     ? `<div class="vazio" style="padding:26px"><p>Nenhuma loja cadastrada ainda.</p></div>`
     : `<div class="linha lj-barra">
         <span class="fraco">${deL + 1}–${deL + naPagina.length} de ${ordenadas.length}</span>
@@ -29708,7 +29922,7 @@ function renderTrechos(p){
       <thead><tr><th class="c">Data</th><th>Trecho</th><th>Pagamento</th><th class="c">Situação</th><th class="n">Economia</th><th></th></tr></thead>
       <tbody>${ts.map(t => { const e = economiaTrecho(t); const sit = t.situacao || 'planejado';
         return `<tr>
-        <td class="c" data-r="Data">${t.data ? dataBR(t.data) : 'n/d'}</td>
+        <td class="c" data-r="Data">${t.data ? dataBR(t.data) : 'n/d'}${(h => h ? `<small class="tr-horas">${esc(h.saida)} → ${esc(h.chegada)}${h.mais ? `<sup>+${h.mais}</sup>` : ''}</small>` : '')(horasDoTrecho(t))}</td>
         <td data-r="Trecho"><div class="tr-linha"><b>${esc(rotuloTrecho(t))}</b>${(() => {
           /* companhia vira logo; o texto inteiro (voos, escala) vai para o "i" */
           const nomeCia = String(t.cia || '').split(' · ')[0].trim();
@@ -30264,7 +30478,30 @@ function alternarVooReserva(id){ vooAberto.has(id) ? vooAberto.delete(id) : vooA
    trecho de ida mostra só a ida. */
 const vooTrechoAberto = new Set();
 function alternarVooTrecho(id){ vooTrechoAberto.has(id) ? vooTrechoAberto.delete(id) : vooTrechoAberto.add(id); renderPlano(); }
+/* Horários do trecho (08/10/2026): os campos Saída e Chegada do formulário
+   mandam. Sem itinerário lido, eles bastam para montar o cartão do voo; com
+   itinerário, corrigem a primeira saída e a última chegada. */
+const ciaSiglaDe = nome => { const n = semAcento(String(nome || '').split(' · ')[0].toLowerCase()).trim(); if (!n) return '';
+  const k = Object.keys(CIAS).find(c => { const v = semAcento(String(CIAS[c]).toLowerCase()); return v === n || v.startsWith(n + ' ') || n.startsWith(v); }); return k || ''; };
 function vooDoTrecho(t){
+  const lido = vooDoTrechoLido(t);
+  if (!t.saida && !t.chegada) return lido;
+  if (lido && lido.length){
+    const legs = lido.map(x => ({...x}));
+    if (t.saida) legs[0].saida = t.saida;
+    if (t.chegada){ legs[legs.length - 1].chegada = t.chegada; if (legs.length === 1) legs[0].mais = Number(t.chegaMais) || 0; }
+    return legs;
+  }
+  if (!t.saida || !t.chegada || !t.data || !t.origem || !t.destino) return null;
+  const voo = (String(t.cia || '').match(/voos?\s+(\d{1,4})/i) || [])[1] || '';
+  return [{cia:ciaSiglaDe(t.cia), voo, data:t.data, de:String(t.origem).toUpperCase(), para:String(t.destino).toUpperCase(), saida:t.saida, chegada:t.chegada, mais:Number(t.chegaMais) || 0}];
+}
+/* saída, chegada e dias a mais do trecho, para a tabela e o formulário */
+function horasDoTrecho(t){
+  const v = vooDoTrecho(t); if (!v || !v.length) return null;
+  try { const c = contasItinerario(v); return c.saida || c.chegada ? {saida:c.saida, chegada:c.chegada, mais:c.maisDias || 0} : null; } catch(e){ return null; }
+}
+function vooDoTrechoLido(t){
   const rs = DB.reservas || [];
   const r = rs.find(x => x.id === t.reservaId) || (t.loc ? rs.find(x => String(x.loc || locDaDescricao(x.desc) || '').toUpperCase() === String(t.loc).toUpperCase()) : null);
   const fonte = r && r.itin ? {itin:r.itin, ano:anoDe(r.data)} : t.itin ? {itin:t.itin, ano:anoDe(t.data)} : null;
@@ -30365,8 +30602,12 @@ function editarTrecho(id){
     <div class="grade tr-grade">
       <div class="campo"><label>Origem (IATA)</label><input type="text" id="trOri" maxlength="3" style="text-transform:uppercase" value="${esc(t.origem || '')}" placeholder="SSA"></div>
       <div class="campo"><label>Destino (IATA)</label><input type="text" id="trDes" maxlength="3" style="text-transform:uppercase" value="${esc(t.destino || '')}" placeholder="OPO"></div>
-      <div class="campo"><label>Data do voo</label><input type="date" id="trData" value="${t.data || ''}"></div>
       <div class="campo"><label>Companhia</label><input type="text" id="trCia" value="${esc(t.cia || '')}" placeholder="TAP"></div>
+      <div class="campo"><label>Data do voo</label><input type="date" id="trData" value="${t.data || ''}"></div>
+      ${(() => { const h0 = id ? horasDoTrecho(t) : null; const sai = t.saida || (h0 && h0.saida) || '', che = t.chegada || (h0 && h0.chegada) || '', mais = t.chegada ? (Number(t.chegaMais) || 0) : (h0 ? h0.mais : 0);
+        return `<div class="campo"><label>Horário de saída</label><input type="time" id="trSai" value="${esc(sai)}"></div>
+      <div class="campo"><label>Horário de chegada</label><input type="time" id="trChe" value="${esc(che)}"></div>
+      <div class="campo"><label>Chega no dia</label><select id="trMais" data-ordem="natural">${[[0, 'Mesmo dia do voo'], [1, 'Dia seguinte (+1)'], [2, 'Dois dias depois (+2)']].map(([k, n]) => `<option value="${k}"${k === mais ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`; })()}
       <div class="campo"><label>Como foi pago</label><select id="trForma" data-ordem="natural">${Object.entries(FORMAS_TRECHO).map(([k, v]) => `<option value="${k}"${k === t.forma ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo tr-mi"><label>Programa</label><select id="trProg">${opP(t.prog)}</select></div>
       <div class="campo tr-mi"><label>Milhas (total)</label><input type="number" id="trMilhas" step="1000" value="${t.milhas || ''}"></div>
@@ -30395,6 +30636,8 @@ function editarTrecho(id){
   });
   ['#trTaxas', '#trPago', '#trVista', '#trAltTaxas'].forEach(sel => ligarCampoMoeda(sel));
   ligarCampoContagem('#trMilhas'); ligarCampoContagem('#trAltMilhas');
+  const virada = () => { const a = $('#trSai').value, b = $('#trChe').value; if (a && b && b < a && $('#trMais').value === '0') $('#trMais').value = '1'; };
+  $('#trSai').addEventListener('change', virada); $('#trChe').addEventListener('change', virada);
   /* Prints: escolher, arrastar ou colar (Ctrl+V) com o formulário aberto. */
   $('#trPrints').onchange = e => { if (e.target.files.length) lerPrintsTrecho(e.target.files); e.target.value = ''; };
   const zona = $('#trLeitor');
@@ -30463,6 +30706,7 @@ function editarTrecho(id){
     const f = $('#trForma').value;
     const novo = {...t, id:t.id || uid(), origem:$('#trOri').value.toUpperCase().trim(), destino:$('#trDes').value.toUpperCase().trim(),
       data:$('#trData').value, cia:$('#trCia').value.trim(), forma:f, loc:$('#trLoc').value.toUpperCase().trim(), situacao:$('#trSit').value,
+      saida:$('#trSai').value || '', chegada:$('#trChe').value || '', chegaMais:$('#trChe').value ? (Number($('#trMais').value) || 0) : 0,
       itin:($('#trItin') || {}).value || t.itin || '',
       prog:$('#trProg').value, milhas:f === 'dinheiro' ? 0 : rgNum($('#trMilhas').value), taxas:f === 'dinheiro' ? 0 : moedaNum($('#trTaxas').value),
       pago:f === 'milhas' ? 0 : moedaNum($('#trPago').value), vista:f === 'dinheiro' ? 0 : moedaNum($('#trVista').value),
@@ -30476,6 +30720,7 @@ function editarTrecho(id){
       altTaxas:f === 'dinheiro' && !$('#trSemAlt').checked ? moedaNum($('#trAltTaxas').value) : 0};
     if (!novo.origem){ erroNoCampo('#trOri', 'Informe a origem do trecho.'); return; }
     if (!novo.destino){ erroNoCampo('#trDes', 'Informe o destino do trecho.'); return; }
+    if (novo.saida && novo.chegada && !novo.chegaMais && novo.chegada <= novo.saida){ erroNoCampo('#trMais', 'A chegada está antes da saída: escolha "Dia seguinte" em Chega no dia.'); return; }
     if (novo.cartaoId && !novo.dataCompra){ erroNoCampo('#trDataCompra', 'Informe a data da compra: é dela que a Torre conta as parcelas na fatura do cartão.'); return; }
     if (novo.cortesiaQtd && (Number(p.pax) || 1) <= novo.cortesiaQtd){ erroNoCampo('#trCortQtd', `A jornada tem ${Number(p.pax) || 1} ${(Number(p.pax) || 1) === 1 ? 'viajante' : 'viajantes'}: alguém precisa ter pago. Confira o número de cortesias ou os viajantes da jornada.`); return; }
     if (novo.baseMilheiro === 'outro'){
@@ -31310,6 +31555,7 @@ function aplicarLeituraPrints(){
   const base = _leitura.base || 'custo', outro = _leitura.outro || 0;
   const pgLido = (_leitura.dados || {}).pagamento || null;
   const taxasDinLidas = (((_leitura.dados || {}).dinheiro) || {}).taxas || 0;
+  const vooLidos = ((_leitura.dados || {}).voos) || [];
   const pai = _leitura.pai, textosLidos = _leitura.textos || []; _leitura = null;
   devolverFolhaGuardada(pai);
   const set = (sel, val) => { const e = $(sel); if (e && val !== undefined && val !== null) e.value = val; };
@@ -31336,6 +31582,17 @@ function aplicarLeituraPrints(){
   try{
     const seg = segmentosDoTexto(textosLidos, v.data || '');
     if (seg.linhas && seg.linhas.length && $('#trItin')) $('#trItin').value = seg.linhas.join('\n');
+  }catch(e){}
+  /* horários: dos voos que a leitura achou (primeira saída, última chegada) */
+  try{
+    let legs = ($('#trItin') && $('#trItin').value) ? lerItinerario($('#trItin').value, anoDe(v.data)) : [];
+    if (!legs.length && vooLidos.length) legs = vooLidos.filter(x => x.saida || x.chegada).map(x => ({data:x.data || v.data, de:x.origem, para:x.destino, saida:x.saida || '', chegada:x.chegada || '', mais:0}));
+    if (legs.length){
+      const c = contasItinerario(legs);
+      if (c.saida && $('#trSai')) $('#trSai').value = c.saida;
+      if (c.chegada && $('#trChe')) $('#trChe').value = c.chegada;
+      if ($('#trMais')) $('#trMais').value = String(Math.min(2, c.maisDias || ((c.saida && c.chegada && c.chegada < c.saida) ? 1 : 0)));
+    }
   }catch(e){}
   $('#folhaCorpo').dispatchEvent(new Event('input', {bubbles:true}));
   avisar('Formulário preenchido pelos prints. Confira e toque em Salvar.', 'ok', 6000);
@@ -37601,6 +37858,9 @@ let ctTravados = new Set();
    quando o painel mudou de vista foi preciso caçar os seis. Campanha de clube
    tem outro endereço, e por isso desvia. */
 function abrirCampanhasEm(tipo){
+  /* cada tipo é um item do menu desde 08/10/2026: vai direto a ele */
+  const SUB = {transferencia:'tra', compra:'com', bonificada:'bonificada', clube:'clube', loja:'loja'};
+  if (typeof irItemMenu === 'function' && SUB[tipo || 'transferencia']) return irItemMenu('fabrica', 'fb-campanhas', SUB[tipo || 'transferencia']);
   if (tipo === 'clube'){
     irPara('fabrica'); irParaAba('fabrica', 'fb-campanhas'); mostrarGrupoCamp('clube');
     renderCampanhasClube();
@@ -38196,7 +38456,8 @@ function irItemMenu(vv, a, sub){
   const grupo = (document.querySelector(`#v-${vv} .abas`) || {dataset:{}}).dataset.grupo || vv;
   const tipo = t => { const b = document.querySelector(`#segCampanha button[data-t="${t}"]`); if (b && abaCampanha !== t) b.click(); };
   const depois = () => {
-    if (sub === 'bonificada'){ mostrarGrupoCamp('ct'); tipo('bonificada'); }
+    if (SUB_CAMP[sub]){ const [gg, tt] = SUB_CAMP[sub]; mostrarGrupoCamp(gg); if (gg === 'ct') tipo(tt); else trocarAbaCampFab(tt); }
+    else if (sub === 'bonificada'){ mostrarGrupoCamp('ct'); tipo('bonificada'); }
     else if (sub === 'ct'){ mostrarGrupoCamp('ct'); if (abaCampanha === 'bonificada') tipo('transferencia'); }
     else if (sub && typeof mostrarGrupoCamp === 'function') mostrarGrupoCamp(sub);
     marcarColunaMenu(); setTimeout(atualizarArea, 0);
@@ -38263,7 +38524,7 @@ function montarColunaMenu(raiz, vistaMedida){
         const it = g.itens.find(x => x[0] === vv && x[1] === a && (x[4] || '') === (sub || '')) || [vv, a, nome, ic, sub];
         const aberta = itemAberto(it);
         const selo = it[4] ? null : aba.querySelector('.selo, .aba-selo, .badge, .cont');
-        const sv = selo ? selo.textContent.trim() : (it[4] ? (it[4] === 'ct' ? ($('#cnGrupoCT') || {}).textContent : ($('#cnGrupoClube') || {}).textContent) || '' : '');
+        const sv = selo ? selo.textContent.trim() : (it[4] ? (SELO_SUB[it[4]] ? seloSub(it[4]) : it[4] === 'ct' ? ($('#cnGrupoCT') || {}).textContent : ($('#cnGrupoClube') || {}).textContent) || '' : '');
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'cm-item cm-modulo' + (aberta ? ' on' : '');
@@ -38336,6 +38597,9 @@ function montarColunaMenu(raiz, vistaMedida){
    Área de um módulo só não precisa dela. */
 /* nome curto de cada item na segunda barra do celular, onde cabe pouco */
 const CURTO_ITEM = {'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
+  'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Mapa das ofertas':'Mapa', 'Mapa do acúmulo':'Mapa', 'Transferência bonificada':'Transferir',
+  'Compra com desconto':'Desconto', 'Clubes em promoção':'Clubes', 'Lojas parceiras':'Lojas', 'Compra bonificada':'Bônus', 'Mural de anúncios':'Mural',
+  'Lista de desejos':'Desejos',
   'Compra e transferência':'Transferência', 'Clubes e lojas':'Clubes e lojas', 'Meus cartões':'Meus cartões', 'Lançamentos':'Lançamentos'};
 function pintarBarraModulos(v){
   const bm = $('#barraModulos'); if (!bm) return;
@@ -40815,7 +41079,7 @@ const NOME_COLECAO = {
   lancamentos:'Lançamentos', campanhas:'Campanhas', contas:'Contas', saldos:'Saldos',
   assinaturas:'Assinaturas de clube', metas:'Metas de viagem', reservas:'Emissões',
   cartoes:'Cartões', lotes:'Lotes de validade', lojas:'Lojas parceiras',
-  compras:'Compras Inteligentes', roteiros:'Roteiros', pendentes:'Pendências',
+  compras:'Compras registradas', roteiros:'Roteiros', pendentes:'Pendências',
   cpfs:'Política de CPF', pagamentos:'Pagamentos', mural:'Mural',
   cotacoes:'Cotações', monitores:'Monitores de voo', buscas:'Buscas guardadas',
   simulacoes:'Simulações', vitrines:'Vitrines', desejos:'Lista de desejos',
@@ -41564,7 +41828,7 @@ function ligarEventos(){
   $('#btNovaAssinatura').onclick = () => editarAssinatura();
   $('#btCatalogoClubes').onclick = () => { irParaAba('fabrica', 'fb-clubes'); $('#cmpPrograma').scrollIntoView({behavior:'smooth', block:'center'}); };
   ['#cmpPrograma','#cmpModalidade'].forEach(s => $(s).onchange = renderComparador);
-  $('#btNovaLoja').onclick = () => editarLoja();
+  if ($('#btNovaLoja')) $('#btNovaLoja').onclick = () => editarLoja();
   $('#btNovaCompra').onclick = novaCompra;
   $('#btNovoLancamento').onclick = () => editarLancamento();
 
@@ -42672,7 +42936,7 @@ async function varrerPromocoes(silencioso){
      Jadiel tocar em Varrer agora (de graça, pela assinatura). */
   if (silencioso){
     if (alvo) alvo.innerHTML = `<div class="nota ouro"><svg><use href="#i-relogio"/></svg><div class="pilha compacta"><div><b>Hora da varredura de promoções.</b></div><div>Toque em <b>Varrer agora</b>: o Claude pesquisa de graça, pela sua assinatura.</div></div></div>`;
-    avisar('Hora da varredura de promoções. Em <b>Promoções → Compra e transferência</b>, toque em <b>Varrer agora</b>.', 'info', 8000);
+    avisar('Hora da varredura de promoções. Em <b>Promoções › Transferência bonificada</b>, toque em <b>Varrer agora</b>.', 'info', 8000);
     return;
   }
   if (!silencioso) alvo.innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Varrendo fontes públicas…</div></div>`;
@@ -43194,6 +43458,105 @@ function prazoCreditoDias(fonte){
   return PRAZO_CREDITO[fonte.prog] || 30;
 }
 
+/* ── os quatro caminhos de uma compra (08/10/2026) ───────────────────────────
+   O mesmo produto pode render por quatro portas diferentes, e cada uma mora num
+   lugar diferente do mercado. A Torre separa e mostra as quatro lado a lado:
+     pontos  · shopping de banco ou de varejo (Livelo, Esfera, Átomos...)
+     milhas  · shopping da companhia (Smiles, Azul, LATAM Pass)
+     cia     · campanha de compra bonificada com a companhia (Magalu → Azul)
+     desc    · desconto ou cashback que você mesmo achou (cupom, Méliuz) */
+const CAMINHOS_COMPRA = {
+  pontos:{n:'Shopping de pontos', c:'Pontos', ex:'Livelo, Esfera e bancos', ic:'#i-sacola'},
+  milhas:{n:'Shopping de milhas', c:'Milhas', ex:'Smiles, Azul, LATAM Pass', ic:'#i-aviao'},
+  cia:{n:'Campanha com a companhia', c:'Companhia', ex:'Magalu → Azul, Casas Bahia → Smiles', ic:'#i-brilho'},
+  desc:{n:'Desconto ou cashback', c:'Desconto', ex:'Cupom, Méliuz, cartão', ic:'#i-etiqueta'}
+};
+function caminhoDe(o){
+  if (!o) return 'pontos';
+  if (o.fonte === 'campanha' || o.origem === 'bonificada') return 'cia';
+  const p = PROGRAMAS[o.prog];
+  return p && p.tipo === 'milhas' ? 'milhas' : 'pontos';
+}
+function ofertaDoDesejo(d){
+  const h = hojeISO();
+  return (d.ofertas || []).filter(o => o && o.loja && Number(o.pct) > 0 && (!o.fim || o.fim >= h))
+    .sort((a, b) => Number(b.pct) - Number(a.pct))[0] || null;
+}
+const razaoDesejo = (d, o) => { const a = alvoDoProg(d, o.prog); return d.alvoTipo === 'mult' ? (a > 0 ? o.mult / a : 0) : (d.alvo > 0 ? o.pc / d.alvo : 0); };
+/* as quatro linhas de um item: o melhor de cada caminho, ou "nada agora" */
+function caminhosItemHTML(x){
+  const d = x.d, por = {};
+  (x.todas || []).forEach(o => { const k = caminhoDe(o); if (!por[k] || razaoDesejo(d, o) > razaoDesejo(d, por[k])) por[k] = o; });
+  const linha = (k, txt, val, fim, top) => {
+    const dd = fim ? diasAte(fim) : null;
+    return `<div class="lc-cam cam-${k}${txt ? '' : ' cam-off'}${top ? ' top' : ''}">
+      <i class="cam-ponto"></i><span class="lc-cam-n"><span class="cam-longo">${esc(CAMINHOS_COMPRA[k].n)}</span><span class="cam-curto">${esc(CAMINHOS_COMPRA[k].c)}</span></span>
+      <span class="lc-cam-t">${txt || 'nada agora'}${txt && dd !== null && dd >= 0 && dd <= 7 ? ` <small>${dd === 0 ? 'último dia' : 'fecha ' + prazoTexto(dd)}</small>` : ''}</span>
+      ${txt ? `<em>${val}</em>` : ''}</div>`;
+  };
+  const of = x.oferta, pago = (Number(d.valor) || 0);
+  const top = x.viaOferta ? 'desc' : x.melhor ? caminhoDe(x.melhor) : '';
+  return `<div class="lc-cams" aria-label="Ofertas por caminho">${['pontos', 'milhas', 'cia', 'desc'].map(k => {
+    if (k === 'desc') return of ? linha(k, `<b>${esc(of.loja)}</b> ${pct(of.pct, 0)} de ${of.tipo === 'cashback' ? 'cashback' : 'desconto'}`, brl(pago * of.pct / 100), of.fim, top === k) : linha(k);
+    const o = por[k];
+    return o ? linha(k, `<b>${esc(o.loja.n)}</b>${k === 'cia' ? ' → ' + esc(prog(o.prog).n) : ''} · ${nBRdec(o.mult)} por real${k !== 'cia' ? ' na ' + esc(prog(o.prog).n) : ''}`, brl(o.retorno), o.fim, top === k && o === x.melhor) : linha(k);
+  }).join('')}</div>`;
+}
+/* item que bateu o alvo por desconto ou cashback (não por pontos) */
+function cartaoProntoOferta(x){
+  const {d, oferta:of} = x, p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
+  const dias = of.fim ? diasAte(of.fim) : null, hoje = dias !== null && dias <= 0;
+  const volta = (Number(d.valor) || 0) * of.pct / 100;
+  return `<div class="ds-item pronto${hoje ? ' urgente' : ''}" data-id="${d.id}">
+    ${fotoDsHTML(d)}
+    <div class="ds-corpo">
+    <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span>
+      ${dias !== null ? `<span class="etq ${hoje ? 'brasa' : dias <= 2 ? 'ouro' : ''}">${hoje ? '<i class="ponto pulsa"></i>último dia' : 'fecha ' + prazoTexto(dias)}</span>` : ''}</div>
+    <div class="ds-sub lc-fonte"><i class="cam-ponto cam-desc-c"></i><span>${of.tipo === 'cashback' ? 'Cashback' : 'Desconto'} em ${esc(of.loja)}</span></div>
+    <div class="ds-conta">
+      <div><span>${of.tipo === 'cashback' ? 'Cashback' : 'Desconto'}</span><b>${pct(of.pct, 0)}</b></div>
+      <div><span>${of.tipo === 'cashback' ? 'Volta' : 'Economia'}</span><b class="jade">${brl(volta)}</b></div>
+      <div><span>Do total pago</span><b class="jade">${pct(x.pcOferta, 1)}</b></div>
+      <div><span>Seu alvo</span><b>${pct(d.alvo, 0)}</b></div>
+    </div>
+    ${caminhosItemHTML(x)}
+    <div class="ds-acoes">
+      <button class="bt p primario" onclick="comprarComOferta('${d.id}')"><svg><use href="#i-ok"/></svg>Comprei</button>
+      <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+    </div></div></div>`;
+}
+function comprarComOferta(id){
+  const d = (DB.desejos || []).find(x => x.id === id); if (!d) return;
+  const of = ofertaDoDesejo(d); if (!of) return;
+  const volta = (Number(d.valor) || 0) * of.pct / 100;
+  confirmar(`Marcar "${d.n}" como comprado?`, `${of.tipo === 'cashback' ? 'O cashback' : 'O desconto'} de ${brl(volta)} em ${of.loja} fica guardado no item. ${of.tipo === 'cashback' ? 'O cashback cai na conta da loja ou do app, fora da Torre.' : ''}`, () => {
+    Object.assign(d, {feito:true, compradoEm:hojeISO(), viaOferta:{...of, volta}});
+    salvar(); renderCompras(); if (typeof renderFita === 'function') renderFita();
+    avisar(`Comprado. ${of.tipo === 'cashback' ? 'Cashback' : 'Economia'} de ${brl(volta)}.`, 'ok', 5000);
+  }, 'Comprei');
+}
+/* a faixa dos quatro caminhos, no alto da lista: onde a Torre procura */
+function renderCaminhosLista(av){
+  const cx = $('#lcCaminhos'); if (!cx) return;
+  const vit = typeof ofertasVitrine === 'function' ? ofertasVitrine().filter(l => l.origem === 'bonificada' || tetoLoja(l).promo > 0) : [];
+  const n = {pontos:vit.filter(l => caminhoDe(l) === 'pontos').length, milhas:vit.filter(l => caminhoDe(l) === 'milhas').length,
+    cia:vit.filter(l => caminhoDe(l) === 'cia').length, desc:(av || []).filter(x => x.oferta).length};
+  const onde = {pontos:'Ver em Lojas parceiras', milhas:'Ver em Lojas parceiras', cia:'Ver em Compra bonificada', desc:'Cadastre no item'};
+  cx.innerHTML = `<div class="lc-caminhos">${Object.entries(CAMINHOS_COMPRA).map(([k, c]) => `
+    <button type="button" class="lc-caminho cam-${k}" data-cam="${k}">
+      <span class="lc-caminho-ic"><svg><use href="${c.ic}"/></svg></span>
+      <span class="lc-caminho-t"><b>${esc(c.n)}</b><small>${esc(c.ex)}</small></span>
+      <span class="lc-caminho-n"><b>${n[k]}</b><small>${k === 'desc' ? (n[k] === 1 ? 'item' : 'itens') : 'no ar'}</small></span>
+      <span class="lc-caminho-ir">${esc(onde[k])}${k !== 'desc' ? '<svg><use href="#i-seta-d"/></svg>' : ''}</span>
+    </button>`).join('')}</div>`;
+  $$('#lcCaminhos [data-cam]').forEach(b => b.onclick = () => {
+    const k = b.dataset.cam;
+    if (k === 'desc'){ avisar('Abra um item (lápis) e use "Desconto ou cashback" para registrar o cupom ou o % de volta que você achou.', 'info', 6000); return; }
+    if (k === 'cia') return irItemMenu('fabrica', 'fb-campanhas', 'bonificada');
+    tipoShopV = k; irItemMenu('fabrica', 'fb-campanhas', 'loja');
+  });
+}
+
 /* ── avaliação de um desejo contra a vitrine de hoje ──────────────────────────
    Junta as duas vitrines: as lojas do shopping de pontos (radar) e as campanhas
    de compra bonificada com a companhia (no seu degrau de clube e cartão). Quem
@@ -43246,16 +43609,24 @@ function avaliarDesejo(d){
   const cands = candidatosDesejo(d, true);
   const razao = o => { const a = alvoDoProg(d, o.prog); return d.alvoTipo === 'mult' ? (a > 0 ? o.mult / a : 0) : (d.alvo > 0 ? o.pc / d.alvo : 0); };
   const ord = (a, b) => (razao(b) - razao(a)) || (b.retorno - a.retorno);
+  /* desconto ou cashback que você mesmo achou: conta como "hora de comprar"
+     quando o alvo é retorno em reais e ele devolve mais que os pontos */
+  const oferta = ofertaDoDesejo(d);
+  const pagoD = (Number(d.valor) || 0) + (Number(d.frete) || 0);
+  const pcOf = oferta && pagoD > 0 ? (Number(d.valor) || 0) * oferta.pct / 100 / pagoD * 100 : 0;
+  const viaOf = m0 => !!oferta && d.alvoTipo === 'retorno' && d.alvo > 0 && pcOf >= d.alvo && (!m0 || pcOf > m0.pc);
   if (!cands.length){
     const ult = candidatosDesejo(d, false).sort((a, b) => String(b.fim).localeCompare(String(a.fim)) || ord(a, b))[0] || null;
-    return {d, melhor:null, atingiu:false, falta:null, ultima:ult, outras:[]};
+    if (viaOf(null)) return {d, melhor:null, atingiu:true, viaOferta:true, oferta, pcOferta:pcOf, falta:0, ultima:ult, outras:[], todas:[]};
+    return {d, melhor:null, atingiu:false, falta:null, ultima:ult, outras:[], todas:[], oferta, pcOferta:pcOf};
   }
   cands.sort(ord);
   const m = cands[0];
+  if (viaOf(m)) return {d, melhor:m, atingiu:true, viaOferta:true, oferta, pcOferta:pcOf, falta:0, outras:cands.slice(1, 4), todas:cands, progresso:100, alvoM:alvoDoProg(d, m.prog)};
   const alvoM = alvoDoProg(d, m.prog);
   const atingiu = d.alvoTipo === 'mult' ? m.mult >= alvoM : m.pc >= d.alvo;
   const atual = d.alvoTipo === 'mult' ? m.mult : m.pc;
-  return {d, melhor:m, outras:cands.slice(1, 4), atingiu, atual, alvoM,
+  return {d, melhor:m, outras:cands.slice(1, 4), todas:cands, oferta, pcOferta:pcOf, atingiu, atual, alvoM,
           progresso: clamp(razao(m) * 100, 0, 100),
           falta: Math.max(0, (d.alvoTipo === 'mult' ? alvoM : d.alvo) - atual),
           alvoEmReais: d.alvoTipo === 'mult' ? d.valor * alvoM / 1000 * valorMilheiro(m.prog) : d.valor * d.alvo / 100};
@@ -43269,7 +43640,8 @@ const nomeLojaCompra = c => c.lojaNome || ((DB.lojas.find(x => x.id === c.lojaId
 function renderDesejos(){
   const host = $('#fbDesejos'); if (!host) return;
   const av = avaliarDesejos();
-  const prontos = av.filter(x => x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || (b.melhor.retorno - a.melhor.retorno));
+  const retX = x => x.viaOferta ? (Number(x.d.valor) || 0) * x.oferta.pct / 100 : (x.melhor ? x.melhor.retorno : 0);
+  const prontos = av.filter(x => x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || (retX(b) - retX(a)));
   const mira = av.filter(x => !x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || ((b.progresso || 0) - (a.progresso || 0)));
   const pend = comprasPendentes(), feitas = (DB.compras || []).filter(c => c.status === 'creditado');
   const alvoTexto = d => d.alvoTipo === 'mult' ? (d.alvos && Object.keys(d.alvos).some(k => Number(d.alvos[k]) > 0) ? 'alvo por programa' : nBRdec(d.alvo) + ' pts/R$') : pct(d.alvo, 0) + ' de volta';
@@ -43298,13 +43670,14 @@ function renderDesejos(){
       <div class="ds-corpo">
       <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span></div>
       <div class="ds-sub">${brl(d.valor)}${Number(d.frete) ? ' + frete ' + brl(d.frete) : ''} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>
+      ${caminhosItemHTML(x)}
       ${melhor ? `
         <div class="ds-barra"><i style="width:${x.progresso}%"></i></div>
-        <div class="ds-linha"><span>Hoje <b>${nBRdec(melhor.mult)}×</b> · ${esc(melhor.loja.n)} → ${esc(prog(melhor.prog).n)}</span>
+        <div class="ds-linha"><span>Melhor hoje <b>${nBRdec(melhor.mult)}×</b> · ${esc(melhor.loja.n)} → ${esc(prog(melhor.prog).n)}</span>
           <em>${d.alvoTipo === 'mult' ? `alvo ${nBRdec(x.alvoM)}× · faltam ${nBRdec(Math.round(x.falta * 10) / 10)}` : `faltam ${pct(x.falta, 1)}`}</em></div>
         <div class="ds-linha fraco"><span>Voltam ${brl(melhor.retorno)} (${pct(melhor.pc, 1)})</span><em>no alvo ${brl(x.alvoEmReais)}</em></div>`
       : `<div class="lc-sem">
-          <b>Sem campanha viva para ${esc(d.cat)}${d.prog ? ' na ' + esc(prog(d.prog).n) : ''} agora.</b>
+          <b>Nenhum caminho com pontos para ${esc(d.cat)}${d.prog ? ' na ' + esc(prog(d.prog).n) : ''} agora.</b>
           ${ultima ? `<span>A última: <b>${nBRdec(ultima.mult)}×</b> em ${fonteTxt(ultima)}${ultima.fim ? `, até ${dataBR(ultima.fim)}` : ''}.</span>` : ''}
           <span>A Torre avisa quando ${sug.slice(0, 4).join(', ')} ou outra loja que venda ${esc(d.cat)} abrir campanha${prefsDoDesejo(d).length ? ' (só nas lojas que você escolheu)' : ''}.</span></div>`}
       <div class="ds-acoes">
@@ -43314,6 +43687,7 @@ function renderDesejos(){
       </div></div></div>`;
   };
   const cartaoPronto = x => {
+    if (x.viaOferta) return cartaoProntoOferta(x);
     const {d, melhor} = x, p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
     const dias = melhor.fim ? diasAte(melhor.fim) : null, hoje = dias !== null && dias <= 0;
     return `<div class="ds-item pronto${hoje ? ' urgente' : ''}" data-id="${d.id}">
@@ -43329,7 +43703,7 @@ function renderDesejos(){
         <div><span>Do preço</span><b class="jade">${pct(melhor.pc, 1)}</b></div>
       </div>
       ${melhor.topo && melhor.topo > melhor.mult ? `<div class="lc-dica">Com ${esc(((melhor.camp.faixas || []).find(f => Number(f.v) === melhor.topo) || {}).rot || 'o degrau máximo')}, seriam ${nBRdec(melhor.topo)} por real: ${nBR(d.valor * melhor.topo)} pontos.</div>` : ''}
-      ${x.outras.length ? `<div class="lc-outras">Também: ${x.outras.map(o => `${esc(o.loja.n)} ${nBRdec(o.mult)}× ${esc(prog(o.prog).n)}`).join(' · ')}</div>` : ''}
+      ${caminhosItemHTML(x)}
       <div class="ds-acoes">
         <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg>Registrar a compra</button>
         ${melhor.link ? `<a class="bt p fantasma" href="${esc(melhor.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a loja</a>` : ''}
@@ -43340,7 +43714,7 @@ function renderDesejos(){
     <div class="ds-coluna" id="lcProntos">
       <div class="ds-topo"><div class="olho destaque" style="margin:0">Hora de comprar</div><span class="ds-cont${prontos.length ? ' vivo' : ''}">${prontos.length}</span></div>
       <div class="ds-pilha">${prontos.length ? prontos.map(cartaoPronto).join('')
-        : `<div class="ds-nada"><svg><use href="#i-alvo"/></svg><div><b>Nada no alvo agora.</b> Quando uma loja do shopping de pontos ou uma campanha com a companhia bater o retorno que você pediu, o item atravessa para cá e você é avisado.</div></div>`}</div>
+        : `<div class="ds-nada"><svg><use href="#i-alvo"/></svg><div><b>Nada no alvo agora.</b> Quando um dos quatro caminhos bater o alvo que você pediu, o item atravessa para cá e você é avisado.</div></div>`}</div>
     </div>
     <div class="ds-coluna" id="lcMira">
       <div class="ds-topo"><div class="olho anil" style="margin:0">Na mira</div><span class="ds-cont">${mira.length}</span></div>
@@ -43348,6 +43722,7 @@ function renderDesejos(){
         : `<div class="ds-nada"><svg><use href="#i-sacola"/></svg><div><b>Lista vazia.</b> Cadastre o que você pretende comprar e o retorno que espera; a Torre vigia as vitrines por você.</div></div>`}</div>
     </div>`;
   renderReceber();
+  renderCaminhosLista(av);
   avisarDesejosNovos(prontos);
 }
 
@@ -43486,11 +43861,11 @@ function renderSaldoSeAberto(){ try{ if (typeof renderSaldo === 'function' && $(
    celular ou do computador. Cada oferta avisa uma vez só. */
 function avisarDesejosNovos(prontos){
   DB.cfg.desejosAvisados = DB.cfg.desejosAvisados || {};
-  const novos = prontos.filter(x => { const k = x.melhor.loja.id + '|' + x.melhor.mult + '|' + (x.melhor.fim || ''); if (DB.cfg.desejosAvisados[x.d.id] === k) return false; DB.cfg.desejosAvisados[x.d.id] = k; return true; });
+  const novos = prontos.filter(x => { const k = x.viaOferta ? 'of|' + x.oferta.id + '|' + x.oferta.pct : x.melhor.loja.id + '|' + x.melhor.mult + '|' + (x.melhor.fim || ''); if (DB.cfg.desejosAvisados[x.d.id] === k) return false; DB.cfg.desejosAvisados[x.d.id] = k; return true; });
   if (!novos.length) return;
   salvar();
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  novos.forEach(x => { try{ new Notification(`Hora de comprar: ${x.d.n}`, {body:`${nBRdec(x.melhor.mult)} pontos por real em ${x.melhor.loja.n} (${prog(x.melhor.prog).n}). Voltam ${brl(x.melhor.retorno)}.`, tag:'desejo-' + x.d.id}); }catch(e){} });
+  novos.forEach(x => { try{ new Notification(`Hora de comprar: ${x.d.n}`, {body:x.viaOferta ? `${pct(x.oferta.pct, 0)} de ${x.oferta.tipo === 'cashback' ? 'cashback' : 'desconto'} em ${x.oferta.loja}. Voltam ${brl((Number(x.d.valor) || 0) * x.oferta.pct / 100)}.` : `${nBRdec(x.melhor.mult)} pontos por real em ${x.melhor.loja.n} (${prog(x.melhor.prog).n}). Voltam ${brl(x.melhor.retorno)}.`, tag:'desejo-' + x.d.id}); }catch(e){} });
 }
 async function ativarAvisosDesejos(){
   if (!('Notification' in window)){ avisar('Este navegador não mostra avisos do sistema. Os avisos continuam no sino da Torre.', 'info', 6000); return; }
@@ -43527,6 +43902,10 @@ function editarDesejo(id){
       <div class="campo" style="flex:0 0 auto;width:calc(140px * var(--esc))"><label id="dsAlvoRot">Alvo</label><input type="number" id="dsAlvo" value="${d.alvo}" step="0.5"></div>
     </div>
     <div id="dsPrevia" style="margin-top:14px"></div>
+    <div class="olho" style="margin:19px 0 6px;color:var(--lilas)">Desconto ou cashback que você achou</div>
+    <p class="fraco" style="margin:0 0 10px;font-size:calc(12.5px * var(--esc));line-height:1.5">Cupom da loja, % de volta no Méliuz ou no cartão. A Torre mostra junto dos pontos e avisa quando o prazo acaba. Com o alvo em <b>retorno em reais</b>, ele também pode levar o item para "Hora de comprar".</p>
+    <div class="ds-ofs" id="dsOfertas"></div>
+    <button type="button" class="bt p fantasma" id="dsMaisOferta" style="margin-top:8px"><svg><use href="#i-mais"/></svg>Desconto ou cashback</button>
     <div class="campo" style="margin-top:13px"><label>Nota</label><input type="text" id="dsObs" value="${esc(d.obs || '')}" placeholder="Modelo 2024, só na cor inox"></div>`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarDesejo">Salvar</button>`
   });
@@ -43560,17 +43939,28 @@ function editarDesejo(id){
   });
   ['#dsValor', '#dsAlvo'].forEach(sel => $(sel).oninput = previa);
   rotulo(); previa();
+  const linhaOf = o => `<div class="ds-of" data-id="${esc(o.id || uid())}">
+      <input type="text" class="ds-of-loja" value="${esc(o.loja || '')}" placeholder="Loja ou app (Amazon, Méliuz)" aria-label="Loja">
+      <select class="ds-of-tipo" aria-label="Tipo"><option value="desconto"${o.tipo !== 'cashback' ? ' selected' : ''}>Desconto</option><option value="cashback"${o.tipo === 'cashback' ? ' selected' : ''}>Cashback</option></select>
+      <label class="ds-of-pct"><input type="text" inputmode="decimal" class="ds-of-v" value="${o.pct ? String(o.pct).replace('.', ',') : ''}" placeholder="10" aria-label="Percentual"><span>%</span></label>
+      <input type="date" class="ds-of-fim" value="${esc(o.fim || '')}" aria-label="Válido até">
+      <button type="button" class="bt p fantasma icone" data-dica="Tirar" onclick="this.closest('.ds-of').remove(); document.querySelector('#folha') && document.querySelector('#folha').dispatchEvent(new Event('input', {bubbles:true}))"><svg><use href="#i-lixo"/></svg></button></div>`;
+  $('#dsOfertas').innerHTML = (d.ofertas || []).map(linhaOf).join('');
+  $('#dsMaisOferta').onclick = () => { $('#dsOfertas').insertAdjacentHTML('beforeend', linhaOf({})); const n = $('#dsOfertas').lastElementChild; if (typeof prepararCamposData === 'function') prepararCamposData(n); n.querySelector('.ds-of-loja').focus(); };
+  if (typeof prepararCamposData === 'function') prepararCamposData($('#dsOfertas'));
   $('#btSalvarDesejo').onclick = () => {
     const novo = {...d, id:d.id || uid(), n:$('#dsN').value.trim() || 'Item sem nome', cat:$('#dsCat').value, valor:moedaNum($('#dsValor').value),
       frete:moedaNum($('#dsFrete').value), prog:$('#dsProg').value, lojaId:'', lojasPref:$('#dsLojas').value.trim(), link:$('#dsLink').value.trim(),
       alvoTipo:tipo, alvo:Number($('#dsAlvo').value) || 0, alvos:tipo === 'mult' ? {...alvos} : {}, prioridade:Number($('#dsPri').value) || 1, obs:$('#dsObs').value.trim(),
+      ofertas:$$('#dsOfertas .ds-of').map(r => ({id:r.dataset.id, loja:r.querySelector('.ds-of-loja').value.trim(), tipo:r.querySelector('.ds-of-tipo').value,
+        pct:Number(String(r.querySelector('.ds-of-v').value).replace(',', '.')) || 0, fim:r.querySelector('.ds-of-fim').value || ''})).filter(o => o.loja && o.pct > 0),
       feito:d.feito || false, criado:d.criado || hojeISO()};
     if (!novo.valor){ avisar('Informe o preço estimado: sem ele não dá para medir o retorno.', 'alerta'); return; }
     DB.desejos = DB.desejos || [];
     if (!conferirAntesDeSalvar('desejos', novo, 'um item igual na lista')) return;
     if (id) DB.desejos[DB.desejos.findIndex(x => x.id === id)] = novo; else DB.desejos.push(novo);
     salvar(); fecharFolha(); renderCompras(); renderFita();
-    avisar('Item na lista. A Torre vigia o shopping de pontos e as campanhas com as companhias por ele.', 'ok');
+    avisar('Item na lista. A Torre vigia os quatro caminhos por ele: shopping de pontos, shopping de milhas, campanha com a companhia e o seu desconto ou cashback.', 'ok', 5000);
   };
 }
 
@@ -44324,6 +44714,7 @@ function capturarEstadoTela(){
   const tocados = [...document.querySelectorAll('[id^="ct_"][data-tocado]')].map(e => e.id.slice(3));
   return {v:1, em:Date.now(), vista:vistaAtual, abas,
     abaCampanha, janelaRadar, janelaRadarClube,
+    subCamp:(typeof SUB_CAMP !== 'undefined' ? Object.keys(SUB_CAMP).find(k => subAtivo(k)) : '') || '',
     ct:{tipo:ctTipo, modo:ctModo, vals:ctVals, tocados},
     regras: dr && dr.open && dr._id ? {id:dr._id, aba:ultimaAbaRegras, sim:dr._sim || null} : null,
     guia: gm && gm.open ? {aba:gm._aba || 'instalar'} : null,
@@ -44383,6 +44774,8 @@ function restaurarEstadoTela(){
        certo é a escolha que se tinha — aplicada aqui, DEPOIS da regra de entrada,
        que roda durante a troca de tela e desfazia a restauração. */
     if (e.abaCampanha) clicar('#segCampanha button', bt => bt.dataset.t === e.abaCampanha);
+    /* o tipo de oferta aberto (Lojas parceiras, Clubes...) volta junto no F5 */
+    if (e.vista === 'fabrica' && aba === 'fb-campanhas' && e.subCamp && typeof irItemMenu === 'function') irItemMenu('fabrica', 'fb-campanhas', e.subCamp);
     if (e.janelaRadar) clicar('#segRadar button', bt => Number(bt.dataset.d) === Number(e.janelaRadar));
     if (e.janelaRadarClube) clicar('#clSegRadar button', bt => Number(bt.dataset.d) === Number(e.janelaRadarClube));
     if (e.vista === 'comprar'){
@@ -48528,6 +48921,208 @@ function rvPercorrer(){
   };
   rvAnim = {m, raf:requestAnimationFrame(passo)};
 }
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   MAPAS DE PROMOÇÕES E DE ACUMULAR (08/10/2026)
+   ──────────────────────────────────────────────────────────────────────────────
+   A primeira tela de cada área. Para quem abre pela primeira vez, ela responde
+   três perguntas antes de qualquer número: onde estou, o que mora aqui e para
+   onde vou depois. O caminho no alto é o mesmo nas duas áreas:
+     1 Promoções: o mercado oferece  →  2 Acumular: você age  →  3 Carteira: os pontos chegam
+   Cada tipo de oferta (ou de ação) é um bloco com a explicação em uma frase,
+   quantas existem agora, a melhor delas e o botão que leva até lá.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const CAMINHO_AREAS = [
+  {k:'promocoes', n:'Promoções', v:'O mercado oferece', s:'Bônus, descontos e lojas, com prazo para acabar', ic:'#i-fogo'},
+  {k:'acumular', n:'Acumular', v:'Você age', s:'Assina, compra, transfere', ic:'#i-dinheiro'},
+  {k:'carteira', n:'Carteira', v:'Os pontos chegam', s:'Saldo, custo e validade', ic:'#i-carteira'}
+];
+function mpIrArea(k){
+  const b = document.querySelector(`.tb[data-area="${k}"]`);
+  if (b) b.click(); else if (typeof irAreaMais === 'function') irAreaMais(k);
+}
+function mpCaminhoHTML(aqui){
+  return `<nav class="mp-caminho" aria-label="O caminho das milhas">${CAMINHO_AREAS.map((a, i) => `${i ? '<svg class="mp-seta" aria-hidden="true"><use href="#i-seta-d"/></svg>' : ''}
+    <button type="button" class="mp-etapa${a.k === aqui ? ' aqui' : ''}" data-mp-area="${a.k}"${a.k === aqui ? ' aria-current="page"' : ''}>
+      <span class="mp-etapa-n">${i + 1}</span>
+      <span class="mp-etapa-t"><small>${esc(a.n)}</small><b>${esc(a.v)}</b><span>${esc(a.s)}</span></span>
+      ${a.k === aqui ? '<em>você está aqui</em>' : ''}
+    </button>`).join('')}</nav>`;
+}
+const mpMax = (lista, f) => lista.reduce((m, x) => { const v = Number(f(x)) || 0; return v > 0 && (!m || v > m.v) ? {v, x} : m; }, null);
+const mpPrazo = lista => { const ds = lista.map(x => x.fim ? diasAte(x.fim) : null).filter(d => d !== null && d >= 0); return ds.length ? Math.min(...ds) : null; };
+function mpPrazoHTML(d){
+  if (d === null) return '';
+  return `<span class="mp-prazo${d === 0 ? ' hoje' : d <= 3 ? ' logo' : ''}">${d === 0 ? '<i class="ponto pulsa"></i>fecha hoje' : 'a próxima fecha ' + prazoTexto(d)}</span>`;
+}
+/* um bloco: cor, ícone, título, o que é, quantas, a melhor e o botão */
+function mpBloco(o, i){
+  return `<article class="mp-bloco mp-${o.cor}${o.n ? '' : ' zero'}" style="--i:${i}">
+    <header>
+      <span class="mp-ic"><svg><use href="${o.ic}"/></svg></span>
+      <div class="mp-bloco-tit"><h4>${esc(o.t)}</h4>${o.passo ? `<small>${esc(o.passo)}</small>` : ''}</div>
+      <div class="mp-num"><b>${o.nTxt != null ? o.nTxt : o.n}</b><small>${esc(o.nRot)}</small></div>
+    </header>
+    <p class="mp-oque">${o.oque}</p>
+    <div class="mp-melhor">${o.melhor ? `<small>${esc(o.melhorRot || 'Melhor agora')}</small><b>${o.melhor}</b>${o.melhorSub ? `<span>${o.melhorSub}</span>` : ''}` : `<span class="mp-nada">${o.nada || 'Nenhuma no ar agora. Quando chegar, aparece aqui.'}</span>`}</div>
+    <footer>
+      ${o.prazo || ''}
+      ${o.liga ? `<button type="button" class="mp-liga" data-mp-ir="${o.liga.ir}">${o.liga.txt}</button>` : ''}
+      <button type="button" class="mp-ir" data-mp-ir="${o.ir}">${esc(o.irTxt || 'Abrir')}<svg><use href="#i-seta-d"/></svg></button>
+    </footer>
+  </article>`;
+}
+function mpLigar(raiz){
+  raiz.querySelectorAll('[data-mp-ir]').forEach(b => b.onclick = () => { const [v, a, sub, extra] = b.dataset.mpIr.split('|'); if (extra) tipoShopV = extra; irItemMenu(v, a, sub || undefined); });
+  raiz.querySelectorAll('[data-mp-area]').forEach(b => b.onclick = () => { if (!b.classList.contains('aqui')) mpIrArea(b.dataset.mpArea); });
+}
+function mpDadosOfertas(){
+  const tr = campanhasVivas('transferencia'), co = campanhasVivas('compra'), cl = campanhasVivas('clube'), bo = campanhasVivas('bonificada');
+  const lj = typeof lojasVivas === 'function' ? lojasVivas() : [];
+  return {tr, co, cl, bo, lj, ljP:lj.filter(l => caminhoDe(l) === 'pontos'), ljM:lj.filter(l => caminhoDe(l) === 'milhas')};
+}
+function renderMapaOfertas(){
+  const cx = $('#mpOfertas'); if (!cx) return;
+  const D = mpDadosOfertas();
+  const topoB = c => Math.max(Number(c.ptsPorReal) || 0, ...(c.faixas || []).map(f => Number(f.v) || 0));
+  const bt = mpMax(D.tr, c => c.bonus), bc = mpMax(D.co, c => c.desconto || c.bonus), bcl = mpMax(D.cl, c => c.bonus);
+  const bl = mpMax(D.lj, l => tetoLoja(l).promo), bb = mpMax(D.bo, topoB);
+  const naoLidas = soma(Object.keys(CATEGORIAS_MURAL).map(muralNaoLidas));
+  const muralVivos = (DB.mural || []).filter(m => !m.fim || diasAte(m.fim) >= 0).length;
+  const ult = (DB.mural || []).filter(m => !m.lida && (!m.fim || diasAte(m.fim) >= 0)).slice(-1)[0];
+  const total = D.tr.length + D.co.length + D.cl.length + D.lj.length + D.bo.length;
+  /* fecham primeiro: o que não pode esperar, de todos os tipos */
+  const fila = [].concat(D.tr.map(c => ({c, k:'tra', t:`${prog(c.de).n} → ${prog(c.para).n}`, v:c.bonus ? pct(c.bonus, 0) + ' de bônus' : 'bônus'})),
+    D.co.map(c => ({c, k:'com', t:prog(c.para).n, v:(c.desconto || c.bonus) ? pct(c.desconto || c.bonus, 0) + (c.desconto ? ' de desconto' : ' de bônus') : 'oferta'})),
+    D.cl.map(c => ({c, k:'clube', t:'Clube ' + prog(c.para).n, v:c.bonus ? pct(c.bonus, 0) + ' extra' : 'promoção'})),
+    D.bo.map(c => ({c, k:'bonificada', t:`${c.parceiro || ''} → ${prog(c.para).n}`, v:nBRdec(topoB(c)) + ' por real'})),
+    D.lj.map(l => ({c:l, k:'loja', t:`${l.n} · ${prog(l.prog).n}`, v:nBRdec(tetoLoja(l).promo) + ' por real'})))
+    .filter(x => x.c.fim && diasAte(x.c.fim) >= 0).sort((a, b) => a.c.fim.localeCompare(b.c.fim)).slice(0, 8);
+  const COR = {tra:'aco', com:'ouro', clube:'lilas', loja:'jade', bonificada:'brasa'};
+  const blocosA = [
+    {cor:'aco', ic:'#i-troca', t:'Transferência bonificada', n:D.tr.length, nRot:D.tr.length === 1 ? 'no ar' : 'no ar', ir:'fabrica|fb-campanhas|tra', irTxt:'Ver transferências',
+     oque:'Você leva os pontos do banco (Livelo, Esfera) para a companhia e ganha um <b>bônus</b> em cima: 10.000 pontos viram 18.000 milhas com 80%.',
+     melhor:bt ? `até ${pct(bt.v, 0)} de bônus` : '', melhorSub:bt ? esc(`${prog(bt.x.de).n} → ${prog(bt.x.para).n}`) : '', prazo:mpPrazoHTML(mpPrazo(D.tr))},
+    {cor:'ouro', ic:'#i-carrinho', t:'Compra com desconto', n:D.co.length, nRot:'no ar', ir:'fabrica|fb-campanhas|com', irTxt:'Ver ofertas de compra',
+     oque:'O próprio programa vende pontos ou milhas mais baratos por poucos dias. Bom para completar o que falta para uma emissão.',
+     melhor:bc ? `até ${pct(bc.v, 0)} ${bc.x.desconto ? 'de desconto' : 'de bônus'}` : '', melhorSub:bc ? esc(prog(bc.x.para).n) : '', prazo:mpPrazoHTML(mpPrazo(D.co))},
+    {cor:'lilas', ic:'#i-atualizar', t:'Clubes em promoção', n:D.cl.length, nRot:'no ar', ir:'fabrica|fb-campanhas|clube', irTxt:'Ver clubes',
+     oque:'Assinatura mensal de pontos com bônus de adesão ou preço menor. A assinatura em si fica em Acumular › Meus Clubes.',
+     melhor:bcl ? `até ${pct(bcl.v, 0)} extra` : '', melhorSub:bcl ? esc('Clube ' + prog(bcl.x.para).n) : '', prazo:mpPrazoHTML(mpPrazo(D.cl))}
+  ];
+  const blocosB = [
+    {cor:'jade', ic:'#i-sacola', t:'Lojas parceiras', n:D.lj.length, nRot:'em promoção', ir:'fabrica|fb-campanhas|loja', irTxt:'Ver vitrine',
+     oque:`Você compra na loja <b>entrando pelo site do programa</b> e ganha pontos por real gasto. Hoje: <button type="button" class="mp-chip cam-pontos" data-mp-ir="fabrica|fb-campanhas|loja|pontos"><i class="cam-ponto"></i>${D.ljP.length} no shopping de pontos</button> <button type="button" class="mp-chip cam-milhas" data-mp-ir="fabrica|fb-campanhas|loja|milhas"><i class="cam-ponto"></i>${D.ljM.length} no shopping de milhas</button>`,
+     melhor:bl ? `${nBRdec(bl.v)} pontos por real` : '', melhorSub:bl ? esc(`${bl.x.n} · ${prog(bl.x.prog).n}`) : '', prazo:mpPrazoHTML(mpPrazo(D.lj))},
+    {cor:'brasa', ic:'#i-brilho', t:'Compra bonificada', n:D.bo.length, nRot:'no ar', ir:'fabrica|fb-campanhas|bonificada', irTxt:'Ver campanhas',
+     oque:'A loja faz parceria direta com a companhia: compre na Magalu ou na Casas Bahia e as milhas caem na Azul ou na Smiles, conforme o seu clube e cartão.',
+     melhor:bb ? `até ${nBRdec(bb.v)} por real` : '', melhorSub:bb ? esc(`${bb.x.parceiro || ''} → ${prog(bb.x.para).n}`) : '', prazo:mpPrazoHTML(mpPrazo(D.bo))}
+  ];
+  const blocoMural = {cor:'giz', ic:'#i-livro', t:'Mural de anúncios', n:naoLidas, nRot:naoLidas === 1 ? 'para ler' : 'para ler', ir:'fabrica|fb-mural', irTxt:'Abrir o mural',
+    oque:'A caixa de entrada dos grupos e canais. Cole a mensagem, a Torre separa título, prazo e link. Depois você decide: <b>vira campanha</b> ou fica como lembrete.',
+    melhorRot:'Último que chegou', melhor:ult ? esc(ult.titulo).slice(0, 90) : '', melhorSub:ult && ult.pontuacao ? esc(ult.pontuacao) : '',
+    nada:muralVivos ? 'Tudo lido. Bom trabalho.' : 'Nada colado ainda. Use "Colar anúncios" no mural.'};
+  cx.innerHTML = `<div class="mp">
+    ${mpCaminhoHTML('promocoes')}
+    <div class="mp-intro">
+      <div><h2>Tudo o que o mercado oferece hoje</h2>
+        <p>Cada tipo de oferta tem a sua página. Aqui você <b>olha e decide</b>; para executar, use <button type="button" class="mp-link" data-mp-area="acumular">Acumular</button>.</p></div>
+      <div class="mp-total"><b>${total}</b><span>${total === 1 ? 'oferta no ar' : 'ofertas no ar'}</span></div>
+    </div>
+    ${fila.length ? `<section class="mp-fila" aria-label="Fecham primeiro"><div class="mp-fila-tit"><svg><use href="#i-relogio"/></svg>Fecham primeiro</div>
+      <div class="mp-fila-rolo">${fila.map(x => { const d = diasAte(x.c.fim); return `<button type="button" class="mp-fila-it mp-${COR[x.k]}" data-mp-ir="fabrica|fb-campanhas|${x.k}">
+        <i class="mp-fila-ponto"></i><span><b>${esc(x.t)}</b><small>${esc(x.v)}</small></span><em class="${d === 0 ? 'hoje' : d <= 3 ? 'logo' : ''}">${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : d + ' dias'}</em></button>`; }).join('')}</div></section>` : ''}
+    <section class="mp-grupo">
+      <div class="mp-grupo-cab"><h3>Pontos e milhas em oferta</h3><p>Você paga pelos pontos, ou leva os que já tem, com vantagem.</p></div>
+      <div class="mp-grade">${blocosA.map(mpBloco).join('')}</div>
+    </section>
+    <section class="mp-grupo">
+      <div class="mp-grupo-cab"><h3>Comprar e ganhar pontos</h3><p>Você compra um produto e os pontos vêm junto, de brinde.</p></div>
+      <div class="mp-grade mp-grade-2">${blocosB.map((b, i) => mpBloco(b, i + 3)).join('')}</div>
+    </section>
+    <section class="mp-grupo">
+      <div class="mp-grupo-cab"><h3>Caixa de entrada</h3><p>O que chega pelos grupos, antes de virar oferta cadastrada.</p></div>
+      <div class="mp-grade mp-grade-1">${mpBloco(blocoMural, 5)}</div>
+    </section>
+  </div>`;
+  mpLigar(cx);
+}
+function renderMapaAcumulo(){
+  const cx = $('#mpAcumulo'); if (!cx) return;
+  const D = mpDadosOfertas();
+  const ativas = (DB.assinaturas || []).filter(a => a.status === 'ativa');
+  const ptsMes = soma(ativas.map(a => { const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(p => p.id === a.planoId); return pl ? pl.qtd : 0; }));
+  const mensal = soma(ativas.map(a => typeof valorMensalAssin === 'function' ? valorMensalAssin(a) : 0));
+  const av = typeof avaliarDesejos === 'function' ? avaliarDesejos() : [];
+  const prontos = av.filter(x => x.atingiu).length, pend = typeof comprasPendentes === 'function' ? comprasPendentes() : [];
+  const ptsPend = soma(pend.map(c => Number(c.pts) || 0));
+  const bancos = typeof saldoTotal === 'function' ? saldoTotal('pontos') : 0;
+  const bt = mpMax(D.tr, c => c.bonus);
+  const blocos = [
+    {cor:'lilas', ic:'#i-atualizar', t:'Meus Clubes', passo:'Todo mês', n:ativas.length, nRot:ativas.length === 1 ? 'assinatura' : 'assinaturas', ir:'fabrica|fb-clubes', irTxt:'Abrir Meus Clubes',
+     oque:'A assinatura que deposita pontos sozinha, todo mês. É a base: rende sem você fazer nada.',
+     melhorRot:'Rende por mês', melhor:ativas.length ? `${nBR(ptsMes)} pontos` : '', melhorSub:ativas.length ? esc(`por ${brl(mensal)} de mensalidade`) : '',
+     nada:'Nenhuma assinatura cadastrada. Comece pelo catálogo de planos.',
+     liga:D.cl.length ? {ir:'fabrica|fb-campanhas|clube', txt:`${D.cl.length} ${D.cl.length === 1 ? 'clube em promoção' : 'clubes em promoção'}`} : null},
+    {cor:'jade', ic:'#i-alvo', t:'Lista de desejos', passo:'Nas compras', n:av.length, nRot:av.length === 1 ? 'item na mira' : 'itens na mira', ir:'fabrica|fb-compras', irTxt:'Abrir a lista',
+     oque:'O que você vai comprar de qualquer jeito. A Torre procura em quatro caminhos e avisa quando a oferta bate o seu alvo.',
+     melhorRot:prontos ? 'Hora de comprar' : ptsPend ? 'A receber' : 'Na mira', melhor:prontos ? `${prontos} ${prontos === 1 ? 'item pronto' : 'itens prontos'}` : ptsPend ? `${nBR(ptsPend)} pontos` : '',
+     melhorSub:prontos ? 'a oferta chegou no seu alvo' : ptsPend ? 'de compras feitas, esperando cair' : '',
+     nada:av.length ? 'Nenhum item no alvo ainda. A Torre segue vigiando.' : 'Lista vazia. Cadastre o primeiro item.',
+     liga:D.lj.length + D.bo.length ? {ir:'fabrica|fb-campanhas|loja', txt:`${D.lj.length + D.bo.length} ${D.lj.length + D.bo.length === 1 ? 'loja ou campanha no ar' : 'lojas e campanhas no ar'}`} : null},
+    {cor:'ouro', ic:'#i-carrinho', t:'Comprar milhas', passo:'Na hora certa', n:D.co.length, nRot:D.co.length === 1 ? 'oferta no ar' : 'ofertas no ar', ir:'comprar|ct-comprar', irTxt:'Simular uma compra',
+     oque:'Antes de pagar, a Torre diz quanto sai o milheiro e se vale a pena. Só compre com desconto ou bônus no ar.',
+     melhorRot:'Oferta de compra', melhor:D.co.length ? `${D.co.length} no ar agora` : '', melhorSub:'',
+     nada:'Nenhuma oferta de compra no ar. Sem desconto, comprar costuma sair caro.',
+     liga:D.co.length ? {ir:'fabrica|fb-campanhas|com', txt:'Ver as ofertas'} : null},
+    {cor:'aco', ic:'#i-subir', t:'Transferir pontos', passo:'Na hora certa', nTxt:bancos ? nBR(bancos) : '0', n:bancos, nRot:'pontos de banco', ir:'comprar|ct-transferir', irTxt:'Simular uma transferência',
+     oque:'Leve os pontos do banco para a companhia <b>só quando houver bônus</b>. Transferir sem bônus é deixar dinheiro na mesa.',
+     melhorRot:'Melhor bônus agora', melhor:bt ? `${pct(bt.v, 0)} de bônus` : '', melhorSub:bt ? esc(`${prog(bt.x.de).n} → ${prog(bt.x.para).n}`) : '',
+     nada:'Nenhum bônus de transferência no ar. Espere: eles voltam todo mês.',
+     liga:D.tr.length ? {ir:'fabrica|fb-campanhas|tra', txt:`${D.tr.length} ${D.tr.length === 1 ? 'transferência' : 'transferências'} no ar`} : null}
+  ];
+  cx.innerHTML = `<div class="mp">
+    ${mpCaminhoHTML('acumular')}
+    <div class="mp-intro">
+      <div><h2>Os quatro jeitos de juntar milhas</h2>
+        <p>Aqui ficam as <b>suas ações</b>. As ofertas que pedem cada uma moram em <button type="button" class="mp-link" data-mp-area="promocoes">Promoções</button>; o resultado aparece na <button type="button" class="mp-link" data-mp-area="carteira">Carteira</button>.</p></div>
+      <div class="mp-total"><b>${nBR(ptsMes + ptsPend)}</b><span>pontos chegando<br>(clubes no mês + a receber)</span></div>
+    </div>
+    <div class="mp-grade mp-grade-2">${blocos.map(mpBloco).join('')}</div>
+    <details class="mp-dic"><summary><svg><use href="#i-livro"/></svg>Palavras que aparecem por aqui</summary>
+      <dl>
+        <div><dt>Milheiro</dt><dd>Quanto custam 1.000 milhas. Quanto menor, melhor. É a régua de tudo.</dd></div>
+        <div><dt>Bônus</dt><dd>O extra que o programa dá. 10.000 pontos com 80% de bônus viram 18.000 milhas.</dd></div>
+        <div><dt>Pontos por real</dt><dd>Quantos pontos cada real gasto na loja rende. 10 por real numa compra de R$ 500 dão 5.000 pontos.</dd></div>
+        <div><dt>Pontos de banco x milhas</dt><dd>Livelo e Esfera são pontos de banco: não emitem passagem sozinhos, precisam ser transferidos para uma companhia.</dd></div>
+      </dl></details>
+  </div>`;
+  mpLigar(cx);
+}
+
+/* o mural explica a si mesmo: é a porta de entrada, não o lugar das ofertas */
+function renderMuralComo(){
+  const cx = $('#mrComo'); if (!cx || cx.dataset.ok) return;
+  cx.dataset.ok = '1';
+  cx.innerHTML = `<div class="mr-como">
+    <div class="mr-como-p"><span>1</span><div><b>Chega pelo grupo</b><small>Mensagem do WhatsApp, Telegram ou canal de promoções.</small></div></div>
+    <svg class="mr-como-s" aria-hidden="true"><use href="#i-seta-d"/></svg>
+    <div class="mr-como-p"><span>2</span><div><b>Você cola aqui</b><small>Em "Colar anúncios". A Torre separa título, prazo, link e condições.</small></div></div>
+    <svg class="mr-como-s" aria-hidden="true"><use href="#i-seta-d"/></svg>
+    <div class="mr-como-p"><span>3</span><div><b>Você decide</b><small><b>Vira campanha</b> e entra em Promoções com o milheiro calculado, ou fica aqui como lembrete até o prazo.</small></div></div>
+  </div>`;
+}
+(function ligarMapas(){
+  const pronto = () => {
+    if (typeof renderMural === 'function'){ const _rm = renderMural; renderMural = function(){ const r = _rm.apply(this, arguments); try{ renderMuralComo(); }catch(e){} return r; }; }
+    if (typeof renderFabrica === 'function'){ const _rf = renderFabrica; renderFabrica = function(){ const r = _rf.apply(this, arguments);
+      try{ if ($('#p-fb-ofertas.on')) renderMapaOfertas(); if ($('#p-fb-acumular.on')) renderMapaAcumulo(); }catch(e){ console.error(e); } return r; }; }
+    const st = $('#ljSegTipo');
+    if (st) st.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; tipoShopV = b.dataset.t || ''; renderLojasParceiras(); });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pronto); else pronto();
+})();
 </script>
 </body>
 </html>
