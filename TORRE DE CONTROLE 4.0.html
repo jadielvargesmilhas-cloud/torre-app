@@ -9325,6 +9325,15 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .pl-dia-n2{ white-space:nowrap; }
 .pl-dia-voo{ display:inline-block; margin-right:6px; padding:0 6px; border-radius:99px; background:color-mix(in oklab, var(--anil) 14%, transparent); color:var(--anil-claro); font-size:.92em; }
 </style>
+<style>
+.pl-res .pl-marca i.pl-marca-res{ width:22px; height:22px; margin-top:-5px; display:grid; place-items:center; background:var(--rc); box-shadow:0 0 0 3px var(--sup-0); }
+.pl-res .pl-marca i.pl-marca-res svg{ width:12px; height:12px; fill:none; stroke:#fff; stroke-width:2; }
+.pl-res{ background:linear-gradient(90deg, transparent, color-mix(in oklab, var(--rc) 7%, transparent) 30%, transparent); border-radius:var(--r); }
+.pl-ev-nota.brasa{ color:var(--brasa); border-left-color:var(--brasa); }
+.pl-dia-prazo{ background:color-mix(in oklab, var(--brasa) 16%, transparent); color:var(--brasa); }
+.pl-dia-hotel{ background:color-mix(in oklab, #5B8DEF 16%, transparent); color:#7FA6F2; }
+:root[data-theme="papel"] .pl-dia-hotel{ color:#3B66C4; }
+</style>
 </head>
 <body>
 <script>
@@ -11185,7 +11194,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 10:20';
+const BUILD = '2026-10-13 11:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31879,7 +31888,7 @@ function renderPlanoDias(){
             <div class="pl-dia-n"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${SEM3P[d.getDay()]}</span></div>
             <div class="pl-dia-c">
               <div class="pl-dia-t">${esc(cidadeDoDia(p, iso) || cidadeDoVoo(p, iso) || 'Dia ' + (i + 1))}</div>
-              <div class="pl-dia-s">${marcosDoDia(p, iso).map(m => `<span class="pl-dia-voo">${m.k === 'des' ? 'pousa' : 'decola'} ${m.inicio || '?'}</span> `).join('')}<span class="pl-dia-n2">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</span></div>
+              <div class="pl-dia-s">${marcosDoDia(p, iso).filter(m => m.k !== 'res' || m.r.cat === 'hospedagem').sort((a, b) => hm2min(a.inicio || '23:59') - hm2min(b.inicio || '23:59')).map(m => m.k === 'prazo' ? `<span class="pl-dia-voo pl-dia-prazo">prazo</span> ` : m.k === 'res' ? `<span class="pl-dia-voo pl-dia-hotel">${m.fase === 'ini' ? 'check-in' : 'check-out'} ${m.inicio || '?'}</span> ` : `<span class="pl-dia-voo">${m.k === 'des' ? 'pousa' : 'decola'} ${m.inicio || '?'}</span> `).join('')}<span class="pl-dia-n2">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</span></div>
             </div>
             <i class="pl-pulso ${r.z}" style="height:${Math.max(4, r.p * 100)}%" data-dica="${r.rot}: ${min2dur(r.ocup)} ocupados"></i>
           </button>`;
@@ -31894,6 +31903,7 @@ function renderPlanoDias(){
           </div>
           <div class="esticar"></div>
           <button class="bt p fantasma" onclick="encadearDia()" data-dica="Recalcula os horários em sequência, somando duração e deslocamento"><svg><use href="#i-relogio"/></svg>Encadear</button>
+          ${typeof novaReservaViagem === 'function' ? `<button class="bt p fantasma" onclick="novaReservaViagem()" data-dica="Hotel, carro, traslado, ingresso: entra sozinho nos dias certos"><svg><use href="#i-hotel"/></svg>Reserva</button>` : ''}
           <button class="bt p primario" onclick="editarParada()"><svg><use href="#i-mais"/></svg>Parada</button>
         </div>
         ${fioDoTempo(p, planoDia)}
@@ -31934,25 +31944,77 @@ function marcosDoDia(p, iso){
     const mais = h ? h.mais : (Number(t.chegaMais) || 0);
     const dataCheg = t.data ? (mais ? somaDiasISO(t.data, mais) : t.data) : '';
     const volta = n > 1 && i === n - 1;
-    if (i > 0 && t.data === iso) out.push({marco:true, k:'emb', id:'emb-' + t.id, t, inicio:sai, dur:0, antes:intl ? 180 : 120,
-      titulo:`Embarque ${volta ? 'de volta' : ''} ${String(t.origem || '').toUpperCase()} → ${String(t.destino || '').toUpperCase()}`.replace(/\s+/g, ' ')});
+    /* o primeiro voo entra pelo embarque só quando pousa em outro dia (voo
+       noturno): o dia da partida não fica vazio, e o roteiro segue no pouso */
+    const noturnoIda = i === 0 && dataCheg && t.data && dataCheg !== t.data;
+    if ((i > 0 || noturnoIda) && t.data === iso) out.push({marco:true, k:'emb', id:'emb-' + t.id, t, inicio:sai, dur:0, antes:intl ? 180 : 120,
+      titulo:`Embarque ${volta ? 'de volta' : i === 0 ? 'da ida' : ''} ${String(t.origem || '').toUpperCase()} → ${String(t.destino || '').toUpperCase()}`.replace(/\s+/g, ' ')});
     if (!volta && dataCheg === iso) out.push({marco:true, k:'des', id:'des-' + t.id, t, inicio:che, dur:0,
       titulo:`Desembarque em ${cidadeIATA(t.destino) || String(t.destino || '').toUpperCase()}`});
   });
+  /* as reservas da viagem também entram sozinhas (08/10/2026): check-in e
+     check-out de cada hotel, retirada e devolução do carro, traslados, trens,
+     ingressos, shows e restaurantes. Hotel sem horário usa o padrão (check-in
+     15:00, check-out 11:00) e avisa que é padrão. */
+  if (typeof rvLista === 'function' && typeof RV_CATS !== 'undefined') rvLista(p).filter(r => r.situacao !== 'cancelado').forEach(r => {
+    const C = RV_CATS[r.cat] || RV_CATS.outro; if (C.m === 'cobertura') return;
+    const hotel = r.cat === 'hospedagem';
+    const add = (fase, data, hora, padrao, titulo, sub, dur) => { if (data !== iso) return;
+      out.push({marco:true, k:'res', fase, id:'res-' + r.id + '-' + fase, r, C, inicio:hora || padrao || '', padrao:!hora && !!padrao, dur:dur || 0, titulo, sub}); };
+    const noites = hotel && typeof rvNoites === 'function' ? rvNoites(r) : 0;
+    if (C.m === 'periodo'){
+      add('ini', r.ini, r.iniH, hotel ? '15:00' : '', `${C.ini} · ${r.titulo || C.n}`, [r.cidade, noites ? `${noites} ${noites === 1 ? 'noite' : 'noites'}` : '', r.extra, r.codigo ? 'reserva ' + r.codigo : ''].filter(Boolean).join(' · '));
+      add('fim', r.fim, r.fimH, hotel ? '11:00' : '', `${C.fim} · ${r.titulo || C.n}`, [C.dois ? (r.para || r.cidade) : r.cidade, r.codigo ? 'reserva ' + r.codigo : ''].filter(Boolean).join(' · '));
+    } else if (C.m === 'movimento'){
+      add('ini', r.ini, r.iniH, '', r.titulo || C.n, [r.de && r.para ? `${r.de} → ${r.para}` : '', r.fimH ? 'chega ' + r.fimH : '', r.extra, r.codigo].filter(Boolean).join(' · '),
+        r.iniH && r.fimH ? ((hm2min(r.fimH) - hm2min(r.iniH)) + 1440) % 1440 : 0);
+    } else {
+      const h = Number(String(r.dur || '').replace(',', '.')) || 0;
+      add('ini', r.ini, r.iniH, '', r.titulo || C.n, [r.local || r.cidade, r.extra, r.qtd > 1 ? `${r.qtd} pessoas` : '', r.codigo].filter(Boolean).join(' · '), Math.round(h * 60));
+    }
+  });
+  /* prazos da viagem que caem num dia dela (visto, check-in online,
+     cancelamento grátis): aparecem no alto do dia, até serem resolvidos */
+  (p.prazos || []).filter(z => !z.feito && z.quando === iso).forEach((z, k) => out.push({marco:true, k:'prazo', id:'prazo-' + k + '-' + iso, z, inicio:'', dur:0,
+    titulo:(typeof PRAZOS_VIAGEM !== 'undefined' && PRAZOS_VIAGEM[z.o]) || 'Prazo da viagem'}));
+  /* no dia do pouso, nada no destino acontece antes do desembarque. O check-in
+     sem horário informado vai para depois da chegada (fim do traslado, ou uma
+     hora depois do pouso); o que foi informado antes do pouso ganha aviso. */
+  const des = out.find(m => m.k === 'des' && m.inicio);
+  if (des){
+    const pouso = hm2min(des.inicio);
+    out.filter(m => m.k === 'res' && m.inicio && hm2min(m.inicio) < pouso).forEach(m => {
+      if (m.padrao){
+        const tr = out.filter(x => x.k === 'res' && x.r.cat === 'traslado' && x.inicio && hm2min(x.inicio) >= pouso).sort((a, b) => hm2min(a.inicio) - hm2min(b.inicio))[0];
+        const fimTr = tr ? (tr.r.fimH ? hm2min(tr.r.fimH) : hm2min(tr.inicio) + (tr.dur || 45)) : pouso + 60;
+        m.inicio = min2hm(Math.ceil(fimTr / 5) * 5); m.padrao = false; m.previsto = true;
+      } else m.antesPouso = true;
+    });
+  }
   return out;
 }
 /* paradas e voos do dia, na ordem do relógio (voo sem horário: desembarque no
    começo do dia, embarque no fim) */
 function eventosDoDia(p, iso){
   const ms = marcosDoDia(p, iso), its = paradasDo(p, iso);
-  const chave = x => x.inicio ? hm2min(x.inicio) : (x.k === 'des' ? -1 : 1e4);
-  return ms.concat(its).sort((a, b) => chave(a) - chave(b) || (a.marco ? -1 : 0) - (b.marco ? -1 : 0));
+  const chave = x => x.inicio ? hm2min(x.inicio) : (x.k === 'prazo' ? -2 : x.k === 'des' ? -1 : 1e4);
+  const peso = x => x.k === 'des' ? 0 : x.k === 'res' && x.fase === 'fim' ? 1 : x.marco ? 2 : 3;
+  return ms.concat(its).sort((a, b) => chave(a) - chave(b) || peso(a) - peso(b));
 }
 /* a cidade do dia sem parada: a do último pouso até aquele dia */
 function cidadeDoVoo(p, iso){
-  let c = '';
-  ordenarTrechos(trechosDe(p)).forEach((t, i, a) => { if (a.length > 1 && i === a.length - 1) return; if (t.data && t.data <= iso && t.destino) c = cidadeIATA(t.destino); });
-  return c;
+  /* onde a pessoa está naquele dia: o último pouso, trem, ônibus ou hotel até ele */
+  const pontos = [];
+  ordenarTrechos(trechosDe(p)).forEach((t, i, a) => { if (a.length > 1 && i === a.length - 1) return;
+    const h = typeof horasDoTrecho === 'function' ? horasDoTrecho(t) : null, d = t.data ? (h && h.mais ? somaDiasISO(t.data, h.mais) : t.data) : '';
+    if (d && t.destino) pontos.push([d + ' ' + ((h && h.chegada) || '12:00'), cidadeIATA(t.destino)]); });
+  if (typeof rvLista === 'function' && typeof RV_CATS !== 'undefined') rvLista(p).filter(r => r.situacao !== 'cancelado' && r.ini).forEach(r => {
+    const C = RV_CATS[r.cat] || {};
+    if (C.m === 'movimento' && r.cat !== 'traslado' && r.para) pontos.push([r.ini + ' ' + (r.fimH || r.iniH || '12:00'), r.para]);
+    if (r.cat === 'hospedagem' && r.cidade) pontos.push([r.ini + ' ' + (r.iniH || '15:00'), r.cidade]);
+  });
+  const ate = pontos.filter(x => x[0] <= iso + ' 23:59').sort((a, b) => a[0].localeCompare(b[0])).pop();
+  return ate ? ate[1] : '';
 }
 const desembarqueDoDia = (p, iso) => marcosDoDia(p, iso).find(m => m.k === 'des' && m.inicio) || null;
 
@@ -31970,6 +32032,36 @@ function fioDoTempo(p, iso){
 
   let html = '<div class="pl-fio">';
   its.forEach((it, i) => {
+    if (it.marco && it.k === 'prazo'){
+      html += `<div class="pl-ev pl-prazo" data-id="${it.id}" onclick="editarPlanoViagem('${p.id}')">
+        <div class="pl-hora"><b>hoje</b><span>prazo</span></div>
+        <div class="pl-marca"><i style="background:var(--brasa)"></i></div>
+        <div class="pl-ev-corpo"><div class="pl-ev-tit">${esc(it.titulo)}<span class="etq brasa">vence hoje</span></div>
+          <div class="pl-ev-loc">Prazo da viagem. Marque como resolvido em Viagem › Prazos que não perdoam.</div></div>
+        <div class="pl-ev-num"></div><div class="pl-ev-acoes"></div></div>`;
+      return;
+    }
+    if (it.marco && it.k === 'res'){
+      const r = it.r, C = it.C;
+      html += `<div class="pl-ev pl-res" data-id="${it.id}" style="--rc:${C.c}" onclick="editarReservaViagem('${r.id}')">
+        <div class="pl-hora"><b>${it.inicio ? esc(it.inicio) : '--:--'}</b>${it.padrao ? '<span>padrão</span>' : it.previsto ? '<span>previsto</span>' : it.dur ? `<span>${min2dur(it.dur)}</span>` : ''}</div>
+        <div class="pl-marca"><i class="pl-marca-res"><svg><use href="#i-${C.i}"/></svg></i></div>
+        <div class="pl-ev-corpo">
+          <div class="pl-ev-tit">${esc(it.titulo)}<span class="etq" style="color:${C.c};border-color:color-mix(in oklab, ${C.c} 35%, transparent)">${esc(C.n)}</span></div>
+          ${it.sub ? `<div class="pl-ev-loc">${esc(it.sub)}</div>` : ''}
+          ${it.antesPouso ? `<div class="pl-ev-nota brasa">Este horário está antes do pouso (${esc((its.find(x => x.k === 'des') || {}).inicio || '')}). Confira a reserva.</div>` : it.previsto ? `<div class="pl-ev-nota">Chegada prevista ao hotel, depois do ${its.some(x => x.k === 'res' && x.r.cat === 'traslado') ? 'traslado' : 'desembarque'}. Se o horário for outro, toque para informar na reserva.</div>` : it.padrao ? `<div class="pl-ev-nota">Horário padrão de hotel. Se o seu for outro, toque para informar na reserva.</div>` : !it.inicio ? `<div class="pl-ev-nota">Sem horário: toque para informar na reserva.</div>` : ''}
+        </div>
+        <div class="pl-ev-num">${it.fase === 'ini' && typeof rvValor === 'function' && rvValor(r) ? `<b>${brl(rvValor(r))}</b>` : ''}</div>
+        <div class="pl-ev-acoes" onclick="event.stopPropagation()"><button class="bt p fantasma icone" onclick="editarReservaViagem('${r.id}')" data-dica="Editar a reserva"><svg><use href="#i-lapis"/></svg></button></div>
+      </div>`;
+      const prox = its[i + 1];
+      if (prox && it.inicio && prox.inicio){
+        const vao = hm2min(prox.inicio) - (hm2min(it.inicio) + (it.dur || 0)) - (Number(prox.desloc) || 0);
+        if (vao >= 20) html += `<div class="pl-elo folga"><span>${min2dur(vao)} livres</span></div>`;
+        else if (vao < 0 && !(it.fase === 'fim' && prox.fase === 'ini')) html += `<div class="pl-elo choque"><span><svg><use href="#i-alerta"/></svg>sobrepõe a próxima em ${min2dur(-vao)}</span></div>`;
+      }
+      return;
+    }
     if (it.marco){
       const t = it.t, ehDes = it.k === 'des';
       html += `<div class="pl-ev pl-voo ${ehDes ? 'des' : 'emb'}" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
