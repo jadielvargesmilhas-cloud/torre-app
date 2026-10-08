@@ -9091,6 +9091,12 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 </style>
 <style>
 /* ══ LISTA DE COMPRAS: da mira até os pontos na conta (08/10/2026) ═══════════ */
+.ds-alvos > div{ display:grid !important; grid-template-columns:minmax(0, 1fr) calc(100px * var(--esc)) calc(150px * var(--esc)); align-items:center; gap:12px; }
+@media (max-width:520px){ .ds-alvos > div{ grid-template-columns:minmax(0, 1fr) calc(80px * var(--esc)); gap:4px 10px; } .ds-alvos > div > em{ grid-column:1 / -1; text-align:left; font-size:calc(12px * var(--esc)); } .ds-alvos .ds-alvos-cab span:last-child{ display:none; } .ds-alvos span{ white-space:normal; } }
+.ds-alvos .ds-alvos-cab span{ font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); text-transform:uppercase; letter-spacing:.08em; }
+.ds-alvos .ds-alvos-cab span:last-child{ text-align:right; }
+.ds-alvo-in{ width:100%; text-align:right; font-family:var(--f-m); padding:6px 10px; }
+.ds-alvos em{ text-align:right; }
 .lc-jornada{ display:flex; align-items:center; gap:0; margin:0 20px 18px; padding:12px; border-radius:var(--r-lg); background:var(--sup-1); border:1px solid var(--fio); overflow-x:auto; scrollbar-width:none; }
 .lc-jornada::-webkit-scrollbar{ display:none; }
 .lc-passo{ flex:1 0 auto; display:flex; align-items:center; gap:10px; padding:6px 10px; border:0; background:none; color:var(--giz); text-align:left; border-radius:var(--r); transition:background .2s; }
@@ -10987,7 +10993,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 22:00';
+const BUILD = '2026-10-12 22:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -43230,21 +43236,27 @@ function candidatosDesejo(d, vivos){
   out.forEach(o => { const k = semAcento(o.loja.n.toLowerCase()) + '|' + o.prog; if (!melhorPorChave[k] || melhorPorChave[k].mult < o.mult) melhorPorChave[k] = o; });
   return Object.values(melhorPorChave);
 }
+/* Pontos por real não é régua comum: 12 pontos Livelo valem bem menos que 12
+   milhas Smiles. No alvo por multiplicador, cada programa tem o seu (alvos), e
+   o programa sem alvo próprio usa o padrão. */
+const alvoDoProg = (d, pg) => d.alvoTipo === 'mult' && d.alvos && Number(d.alvos[pg]) > 0 ? Number(d.alvos[pg]) : d.alvo;
 function avaliarDesejo(d){
   const cands = candidatosDesejo(d, true);
-  const ord = (a, b) => d.alvoTipo === 'mult' ? b.mult - a.mult : b.retorno - a.retorno;
+  const razao = o => { const a = alvoDoProg(d, o.prog); return d.alvoTipo === 'mult' ? (a > 0 ? o.mult / a : 0) : (d.alvo > 0 ? o.pc / d.alvo : 0); };
+  const ord = (a, b) => (razao(b) - razao(a)) || (b.retorno - a.retorno);
   if (!cands.length){
     const ult = candidatosDesejo(d, false).sort((a, b) => String(b.fim).localeCompare(String(a.fim)) || ord(a, b))[0] || null;
     return {d, melhor:null, atingiu:false, falta:null, ultima:ult, outras:[]};
   }
   cands.sort(ord);
   const m = cands[0];
-  const atingiu = d.alvoTipo === 'mult' ? m.mult >= d.alvo : m.pc >= d.alvo;
+  const alvoM = alvoDoProg(d, m.prog);
+  const atingiu = d.alvoTipo === 'mult' ? m.mult >= alvoM : m.pc >= d.alvo;
   const atual = d.alvoTipo === 'mult' ? m.mult : m.pc;
-  return {d, melhor:m, outras:cands.slice(1, 4), atingiu, atual,
-          progresso: d.alvo > 0 ? clamp(atual / d.alvo * 100, 0, 100) : 0,
-          falta: Math.max(0, d.alvo - atual),
-          alvoEmReais: d.alvoTipo === 'mult' ? d.valor * d.alvo / 1000 * valorMilheiro(m.prog) : d.valor * d.alvo / 100};
+  return {d, melhor:m, outras:cands.slice(1, 4), atingiu, atual, alvoM,
+          progresso: clamp(razao(m) * 100, 0, 100),
+          falta: Math.max(0, (d.alvoTipo === 'mult' ? alvoM : d.alvo) - atual),
+          alvoEmReais: d.alvoTipo === 'mult' ? d.valor * alvoM / 1000 * valorMilheiro(m.prog) : d.valor * d.alvo / 100};
 }
 const avaliarDesejos = () => (DB.desejos || []).filter(d => !d.feito).map(avaliarDesejo);
 const comprasPendentes = () => (DB.compras || []).filter(c => c.status === 'pendente');
@@ -43258,7 +43270,7 @@ function renderDesejos(){
   const prontos = av.filter(x => x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || (b.melhor.retorno - a.melhor.retorno));
   const mira = av.filter(x => !x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || ((b.progresso || 0) - (a.progresso || 0)));
   const pend = comprasPendentes(), feitas = (DB.compras || []).filter(c => c.status === 'creditado');
-  const alvoTexto = d => d.alvoTipo === 'mult' ? nBRdec(d.alvo) + ' pts/R$' : pct(d.alvo, 0) + ' de volta';
+  const alvoTexto = d => d.alvoTipo === 'mult' ? (d.alvos && Object.keys(d.alvos).some(k => Number(d.alvos[k]) > 0) ? 'alvo por programa' : nBRdec(d.alvo) + ' pts/R$') : pct(d.alvo, 0) + ' de volta';
   const fonteTxt = m => m.fonte === 'campanha' ? `Campanha ${esc(m.loja.n)} → ${esc(prog(m.prog).n)}` : `Shopping ${esc(prog(m.prog).n)} · ${esc(m.loja.n)}`;
 
   const jornada = $('#lcJornada');
@@ -43287,7 +43299,7 @@ function renderDesejos(){
       ${melhor ? `
         <div class="ds-barra"><i style="width:${x.progresso}%"></i></div>
         <div class="ds-linha"><span>Hoje <b>${nBRdec(melhor.mult)}×</b> · ${esc(melhor.loja.n)} → ${esc(prog(melhor.prog).n)}</span>
-          <em>${d.alvoTipo === 'mult' ? `faltam ${nBRdec(Math.round(x.falta * 10) / 10)}×` : `faltam ${pct(x.falta, 1)}`}</em></div>
+          <em>${d.alvoTipo === 'mult' ? `alvo ${nBRdec(x.alvoM)}× · faltam ${nBRdec(Math.round(x.falta * 10) / 10)}` : `faltam ${pct(x.falta, 1)}`}</em></div>
         <div class="ds-linha fraco"><span>Voltam ${brl(melhor.retorno)} (${pct(melhor.pc, 1)})</span><em>no alvo ${brl(x.alvoEmReais)}</em></div>`
       : `<div class="lc-sem">
           <b>Sem campanha viva para ${esc(d.cat)}${d.prog ? ' na ' + esc(prog(d.prog).n) : ''} agora.</b>
@@ -43514,12 +43526,22 @@ function editarDesejo(id){
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarDesejo">Salvar</button>`
   });
   let tipo = d.alvoTipo;
-  const rotulo = () => { $('#dsAlvoRot').textContent = tipo === 'mult' ? 'Pontos por real' : '% do preço de volta'; $('#dsAlvo').step = tipo === 'mult' ? '0.5' : '1'; };
+  const alvos = {...(d.alvos || {})};
+  const rotulo = () => { $('#dsAlvoRot').textContent = tipo === 'mult' ? 'Alvo padrão (pts/R$)' : '% do preço de volta'; $('#dsAlvo').step = tipo === 'mult' ? '0.5' : '1'; };
   const previa = () => {
     const v = moedaNum($('#dsValor').value), a = Number($('#dsAlvo').value) || 0;
     if (!v || !a){ $('#dsPrevia').innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Preencha o preço e o alvo para ver o que isso significa em cada programa.</div></div>`; return; }
+    if (tipo === 'mult'){
+      const lin = PROG_VITRINE.map(p => { const a2 = Number(alvos[p]) > 0 ? Number(alvos[p]) : a, vm = valorMilheiro(p), ret = v * a2 / 1000 * vm; return {p, a2, ret, pc:ret / v * 100, proprio:Number(alvos[p]) > 0}; });
+      $('#dsPrevia').innerHTML = `<div class="ds-previa ds-alvos">
+        <div class="ds-alvos-cab"><span>Programa</span><span>Alvo (pts/R$)</span><span>Voltaria</span></div>
+        ${lin.map(l => `<div><span>${esc(prog(l.p).n)}</span><input type="text" inputmode="decimal" class="ds-alvo-in" data-p="${l.p}" value="${l.proprio ? String(l.a2).replace('.', ',') : ''}" placeholder="${String(a).replace('.', ',')}"><em>${brl(l.ret)} · ${pct(l.pc, 1)}</em></div>`).join('')}
+        <p>Cada programa tem a sua régua: o milheiro de cada um vale diferente. Deixe em branco para usar o padrão (<b>${String(a).replace('.', ',')}</b>). Para devolver o mesmo dinheiro, a Livelo precisaria de ${(() => { const ref = lin.find(l => l.p === 'smiles'), li = lin.find(l => l.p === 'livelo'); return ref && li && valorMilheiro('livelo') ? nBRdec(Math.round(ref.ret / v * 1000 / valorMilheiro('livelo') * 10) / 10) : 'n/d'; })()} pontos por real contra ${nBRdec(Number(alvos.smiles) > 0 ? Number(alvos.smiles) : a)} na Smiles.</p></div>`;
+      $$('#dsPrevia .ds-alvo-in').forEach(inp => inp.oninput = () => { const n = Number(String(inp.value).replace(',', '.')); if (n > 0) alvos[inp.dataset.p] = n; else delete alvos[inp.dataset.p];
+        const row = inp.parentElement, a2 = n > 0 ? n : a, ret = v * a2 / 1000 * valorMilheiro(inp.dataset.p); row.querySelector('em').textContent = `${brl(ret)} · ${pct(ret / v * 100, 1)}`; });
+      return;
+    }
     const linhas = PROG_VITRINE.map(p => { const vm = valorMilheiro(p);
-      if (tipo === 'mult'){ const pts = v * a, ret = pts / 1000 * vm; return {p, pts, ret, pc:ret / v * 100, precisa:a}; }
       const precisa = vm > 0 ? (a / 100) * 1000 / vm : 0; return {p, pts:v * precisa, ret:v * a / 100, pc:a, precisa};
     }).sort((x, y) => tipo === 'mult' ? y.ret - x.ret : x.precisa - y.precisa);
     $('#dsPrevia').innerHTML = `<div class="ds-previa">${linhas.map(l => `<div><span>${esc(prog(l.p).n)}</span><b>${l.precisa.toFixed(1)}×</b><em>${brl(l.ret)} · ${pct(l.pc, 1)}</em></div>`).join('')}
@@ -43536,7 +43558,7 @@ function editarDesejo(id){
   $('#btSalvarDesejo').onclick = () => {
     const novo = {...d, id:d.id || uid(), n:$('#dsN').value.trim() || 'Item sem nome', cat:$('#dsCat').value, valor:moedaNum($('#dsValor').value),
       prog:$('#dsProg').value, lojaId:'', lojasPref:$('#dsLojas').value.trim(), link:$('#dsLink').value.trim(),
-      alvoTipo:tipo, alvo:Number($('#dsAlvo').value) || 0, prioridade:Number($('#dsPri').value) || 1, obs:$('#dsObs').value.trim(),
+      alvoTipo:tipo, alvo:Number($('#dsAlvo').value) || 0, alvos:tipo === 'mult' ? {...alvos} : {}, prioridade:Number($('#dsPri').value) || 1, obs:$('#dsObs').value.trim(),
       feito:d.feito || false, criado:d.criado || hojeISO()};
     if (!novo.valor){ avisar('Informe o preço estimado: sem ele não dá para medir o retorno.', 'alerta'); return; }
     DB.desejos = DB.desejos || [];
