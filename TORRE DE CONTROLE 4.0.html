@@ -10517,7 +10517,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 12:50';
+const BUILD = '2026-10-12 13:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -29618,7 +29618,8 @@ async function lerDocumentosEmissao(arquivos){
     const d = seg.d;
     const tudo = textos.join('\n');
     const emissao = (() => {
-      const n = tudo.match(/Data\s+de(?=[\s\S]{0,160}emiss)[\s\S]{0,160}?(\d{2})\/(\d{2})\/(\d{2,4})\b/i) || tudo.match(/emiss[aã]o[^\n\d]{0,40}(\d{2})\/(\d{2})\/(\d{2,4})\b/i);
+      const n = tudo.match(/Data\s+de(?=[\s\S]{0,160}emiss)[\s\S]{0,160}?(\d{2})\/(\d{2})\/(\d{2,4})\b/i) || tudo.match(/emiss[aã]o[^\n\d]{0,40}(\d{2})\/(\d{2})\/(\d{2,4})\b/i)
+        || tudo.match(/Pagamento (?:efetuado|aprovado|confirmado)[^\n]{0,40}?(\d{2})\/(\d{2})\/(\d{4})\b/i);
       if (n) return `${n[3].length === 2 ? '20' + n[3] : n[3]}-${n[2]}-${n[1]}`;
       const m = tudo.match(/(?:Data|Date)\s*[\/:]?\s*(?:Date:?)?\s*(\d{2})([A-Za-z]{3})(\d{4})/) || tudo.match(/Data de emiss[aã]o:?\s*(\d{1,2})\s([A-Za-zç]{3,9})\s(\d{4})/i);
       if (!m) return ''; const mes = MESES_LEITURA[semAcento(m[2])]; return mes ? `${m[3]}-${String(mes).padStart(2, '0')}-${String(+m[1]).padStart(2, '0')}` : ''; })();
@@ -29628,7 +29629,7 @@ async function lerDocumentosEmissao(arquivos){
     const escalas = d.volta ? [...new Set((d.voos || []).map(v => v.destino).filter(c => c !== d.origem && c !== d.destino))] : (d.voos || []).slice(0, -1).map(v => v.destino);
     const desc = [d.origem && d.destino ? `${d.origem} → ${d.destino}${d.volta ? ' (ida e volta)' : ''}` : '', d.cia || '', voos.length ? 'Voo' + (voos.length > 1 ? 's ' : ' ') + voos.join(' e ') : '', escalas.length ? 'via ' + escalas.join(', ') : ''].filter(Boolean).join(' · ');
     const pg = d.pagamento || {}, mi = d.milhas || {};
-    const pre = {criada:emissao, data:d.data || '', hora, desc, prog:(mi.programa || '') || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : ''),
+    const pre = {criada:emissao, data:d.data || '', hora, desc, prog:(mi.programa || d.programa || '') || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : ''),
       milhas:pg.pontos || mi.pontos || atual.milhas || 0, taxas:pg.dinheiro != null ? pg.dinheiro : (mi.taxas || atual.taxas || 0), vista:(d.dinheiro && d.dinheiro.total) || 0, itin:seg.linhas.join('\n'), volta:d.volta || null, loc:d.localizador || ''};
     _leituraEm.pre = pre;
     const campo = (id, rot, v, tipo, obrig) => { const vazio = !v || v === '0' || v === 0;
@@ -29984,7 +29985,7 @@ async function prepararLeitorOCR(aoProgresso){
   return _ocrWorker;
 }
 const CIAS_PROG = [[/\bazul\b/i, 'Azul', 'azul'], [/\bgol\b|smiles/i, 'GOL', 'smiles'], [/latam/i, 'LATAM', 'latampass'], [/\btap\b|miles&go/i, 'TAP', 'tap'],
-  [/iberia/i, 'Iberia', 'iberia'], [/\bcopa\b|connectmiles/i, 'Copa', 'connect'], [/air france|klm|flying blue/i, 'Air France-KLM', 'flyingblue'], [/avianca|lifemiles/i, 'Avianca', 'lifemiles']];
+  [/iberia/i, 'Iberia', 'iberia'], [/\bcopa\b|connectmiles/i, 'Copa', 'connect'], [/air ?france|klm|flying blue/i, 'Air France-KLM', 'flyingblue'], [/avianca|lifemiles/i, 'Avianca', 'lifemiles']];
 /* Lê o texto de todas as telas e devolve os mesmos campos que a revisão usa. */
 /* ── INTERPRETADOR DE PRINTS E PDFs ────────────────────────────────────────────
    Lê o texto das telas de compra (Azul, TAP, Air Europa e outras) e dos recibos
@@ -30003,7 +30004,7 @@ function dataDoTexto(t, ref){
   const pad = n => String(n).padStart(2, '0');
   const ok = (a, m, d) => a && m >= 1 && m <= 12 && d >= 1 && d <= 31 ? `${a}-${pad(m)}-${pad(d)}` : null;
   /* linhas de emissão e de compra não são a data do voo */
-  const linhas = String(t).split('\n').filter(l => !/(Date:|Data \/|emiss[aã]o|Issue|Data de compra)/i.test(l));
+  const linhas = String(t).split('\n').filter(l => !/(Date:|Data \/|emiss[aã]o|Issue|Data de compra|pagamento|efetuado|Pedido)/i.test(l));
   const u = linhas.join('\n');
   let m = u.match(/\b(\d{2})\/(\d{2})\/(20\d{2})\b/); if (m) return ok(m[3], +m[2], +m[1]);
   m = u.match(/\b(\d{2})\/(\d{2})\/(\d{2})\b/); if (m) return ok('20' + m[3], +m[2], +m[1]);
@@ -30046,7 +30047,13 @@ function interpretarTextosPrints(textos, ref){
     .replace(/\b(\d{1,3})(\d{3}),(\d{2})\b/g, '$1.$2,$3')
     .replace(/\b(\d{1,3})(\d{3})(\d{3}),(\d{2})\b/g, '$1.$2.$3,$4')
     /* letra O lida no lugar de zero ao lado de um número ("SEG O5 JULHO") */
-    .replace(/\b[Oo](\d)\b/g, '0$1').replace(/\b(\d)[Oo]\b/g, '$10'));
+    .replace(/\b[Oo](\d)\b/g, '0$1').replace(/\b(\d)[Oo]\b/g, '$10')
+    /* Smiles e outras escrevem a hora como "10h55". A duração do voo fica entre
+       a saída e a chegada ("24/11/26 10h55 7h35 24/11/26 18h30") ou termina em
+       "m" ("11h35m"): sai, para não virar horário. O resto vira "10:55". */
+    .replace(/\b\d{1,2}h\d{2}m\b/g, '')
+    .replace(/(\d{2}\/\d{2}\/\d{2,4}[ \t]+\d{1,2}h\d{2})[ \t]+\d{1,2}h\d{2}(?=[ \t]+\d{2}\/\d{2})/g, '$1')
+    .replace(/\b([01]?\d|2[0-3])h([0-5]\d)\b/g, '$1:$2'));
   const tudo = textos.join('\n');
   const d = {voos:[], avisos:[]};
   const ehAero = c => !!AEROPORTOS[c];
@@ -30086,6 +30093,21 @@ function interpretarTextosPrints(textos, ref){
       }
     }
   }
+  /* O leitor às vezes devolve um código com letra minúscula ("cDG"): numa
+     linha com dois códigos de aeroporto (dias da semana fora), o par mais
+     repetido entre as telas é a rota. */
+  if (!rota && !cvPriOk){
+    const DIAS = /^(SEG|TER|QUA|QUI|SEX|SAB|SÁB|DOM|MON|TUE|WED|THU|FRI|SAT|SUN|NOV|DEZ|JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT)$/;
+    const cont = {};
+    tudo.split('\n').forEach(l => {
+      /* "cDG" vira CDG; "CcDG" (uma letra minúscula a mais no meio) também */
+      const cods = (l.match(/\b[A-Za-z]{3,4}\b/g) || []).map(x => x.length === 4 ? ((x.match(/[a-z]/g) || []).length === 1 ? x.replace(/[a-z]/, '') : '') : x)
+        .filter(x => x && (x.match(/[A-Z]/g) || []).length >= 2 && !DIAS.test(x.toUpperCase()) && ehAero(x.toUpperCase())).map(x => x.toUpperCase());
+      for (let i = 0; i + 1 < cods.length; i++) if (cods[i] !== cods[i + 1]){ const k = cods[i] + '>' + cods[i + 1]; cont[k] = (cont[k] || 0) + 1; }
+    });
+    const top = Object.keys(cont).sort((a, b) => cont[b] - cont[a])[0];
+    if (top && (cont[top] >= 2 || Object.keys(cont).length === 1)) rota = top.split('>');
+  }
   let cvRota = cvPriOk ? cvPri : null;
   if (!rota){
     const cv = cartoesDeVoo(textos);
@@ -30111,10 +30133,38 @@ function interpretarTextosPrints(textos, ref){
   if (tabOk){ numeros.length = 0; tab.forEach(x => numeros.push(x.voo)); }
   const porPrefixo = numeros.map(n => (PREFIXO_CIA[n.split(' ')[0]] || [])).filter(x => x.length);
   const contagem = CIAS_PROG.map(([re, nome, pg]) => ({nome, pg, n:(tudo.match(new RegExp(re.source, 'gi')) || []).length})).sort((a, b) => b.n - a.n);
-  const cia = porPrefixo.length ? {nome:porPrefixo[0][0], pg:porPrefixo[0][1]} : (contagem[0] && contagem[0].n ? contagem[0] : null);
+  let cia = porPrefixo.length ? {nome:porPrefixo[0][0], pg:porPrefixo[0][1]} : (contagem[0] && contagem[0].n ? contagem[0] : null);
+  /* "Operado pela AIR FRANCE": quem voa é essa, mesmo emitindo pela Smiles. */
+  const operado = tudo.match(/operad[oa] (?:pela|pelo|por)\s+([A-Za-zÀ-ú][A-Za-zÀ-ú .&-]{1,30}?)\s*(?:\n|$|[.,;(])/i);
+  if (operado){
+    const n = semAcento(operado[1]).replace(/\s+/g, ' ').trim();
+    const nome = Object.values(CIAS).filter(Boolean).find(c => semAcento(c) === n || semAcento(c).startsWith(n) || n.startsWith(semAcento(c)));
+    const cod = nome ? Object.keys(CIAS).find(k => CIAS[k] === nome) : '';
+    const nomeCurto = cod && PREFIXO_CIA[cod] ? PREFIXO_CIA[cod][0] : (nome || operado[1].trim().replace(/\b\w/g, x => x.toUpperCase()).replace(/\B\w+/g, x => x.toLowerCase()));
+    cia = {nome:nomeCurto, pg:cod && PREFIXO_CIA[cod] ? PREFIXO_CIA[cod][1] : (cia && cia.pg) || ''};
+  }
   if (cia) d.cia = cia.nome;
+  /* Programa por onde a passagem foi emitida, quando a tela diz: a Smiles só
+     vende passagem com milhas, então tela da Smiles é resgate. */
+  const PROG_DOC = [[/smiles/i, 'smiles'], [/latam ?pass/i, 'latampass'], [/azul fidelidade|tudoazul/i, 'azul'], [/miles ?& ?go/i, 'tap'],
+    [/iberia plus/i, 'iberia'], [/flying ?blue/i, 'flyingblue'], [/connectmiles/i, 'connect'], [/lifemiles/i, 'lifemiles']];
+  const progDoc = (PROG_DOC.find(([re]) => re.test(tudo)) || [])[1] || '';
+  d.programa = progDoc || '';
   if (tabOk) tab.forEach(x => d.voos.push({origem:x.de, destino:x.para, voo:x.voo, cia:d.cia || '', data:x.dataS, saida:x.dep, chegada:x.arr}));
-  else if (rota) for (let i = 0; i < rota.length - 1; i++) d.voos.push({origem:rota[i], destino:rota[i + 1], voo:numeros[i] || '', cia:d.cia || ''});
+  else if (rota){
+    const codCia = Object.keys(PREFIXO_CIA).find(k => PREFIXO_CIA[k][0] === d.cia) || '';
+    /* horários do voo: os que vêm logo depois de uma data ("24/11/26 10:55"),
+       fora das linhas de pagamento */
+    const hs = [];
+    tudo.split('\n').filter(l => !/pagamento|efetuado|pedido/i.test(l)).forEach(l => { for (const m of l.matchAll(/\d{2}\/\d{2}\/\d{2,4}[ \t]+(\d{1,2}:\d{2})/g)) hs.push(m[1].padStart(5, '0')); });
+    for (let i = 0; i < rota.length - 1; i++){
+      const n = numeros[i] || '';
+      const voo = /^\d+$/.test(n) && codCia ? codCia + ' ' + n : n;
+      const v = {origem:rota[i], destino:rota[i + 1], voo, cia:d.cia || ''};
+      if (rota.length === 2 && hs.length >= 2){ v.saida = hs[0]; v.chegada = hs[1]; }
+      d.voos.push(v);
+    }
+  }
   /* ── localizador e passageiros ── */
   /* localizador: o que mais se repete entre os documentos (o PDF e as telas
      costumam trazer o mesmo; um erro de leitura num print perde na contagem) */
@@ -30132,11 +30182,24 @@ function interpretarTextosPrints(textos, ref){
   if (melhorLoc && parecidos.length) d.avisos.push(`O localizador apareceu como ${[melhorLoc].concat(parecidos).join(' e ')} em documentos diferentes. Confira qual é o certo.`);
   const bilhetes = [...new Set([...tudo.matchAll(/(?:Ticket number|bilhete electr[óo]nico|bilhete eletr[ôo]nico)[^0-9]{0,20}(\d{3}[\s-]?\d{10})/gi)].map(m => m[1].replace(/\D/g, '')))];
   const nomesPax = [...new Set([...tudo.matchAll(/^([A-ZÀ-Ú][A-ZÀ-Ú' ]{4,}?)\s+(?:Adulto|Crian[çc]a|Beb[êe]|Infante|Adult|Child|Infant)\b/gm)].map(m => m[1].trim()))];
-  if (nomesPax.length) d.nomesPax = nomesPax;
+  /* Smiles: os nomes vêm em maiúsculas, um por linha, depois do título
+     "Passageiros" (o ícone de pessoa vira uma ou duas letras soltas na frente). */
+  if (!nomesPax.length) textos.forEach(t => {
+    const L = t.split('\n'); const i = L.findIndex(l => /^\s*Passageiros\s*$/i.test(l)); if (i < 0) return;
+    for (let k = i + 1; k < Math.min(L.length, i + 14); k++){
+      const l = L[k].trim(); if (!l) continue;
+      const m = l.replace(/^[A-Za-z0-9]{1,3}\s+(?=[A-ZÀ-Ú]{3,}\s+[A-ZÀ-Ú])/, '').match(/^([A-ZÀ-Ú]{2,}(?:\s+[A-ZÀ-Ú]{1,}){1,6})$/);
+      if (m && m[1].split(/\s+/).length >= 2) nomesPax.push(m[1]); else if (nomesPax.length) break;
+    }
+  });
+  if (nomesPax.length) d.nomesPax = [...new Set(nomesPax)];
   const pax = tudo.match(/(\d+)\s*passageiros?/i);
-  d.passageiros = Math.max(pax ? Number(pax[1]) : 0, bilhetes.length, nomesPax.length) || undefined;
+  d.passageiros = Math.max(pax ? Number(pax[1]) : 0, bilhetes.length, (d.nomesPax || nomesPax).length) || undefined;
   /* ── cada documento ── */
-  const resgate = /AWARD|REDEMPTION|\bFFR\b|\bFFS\b|MILES AND GO/i.test(tudo);
+  /* Tela de pedido da própria Smiles ("Localizador Smiles: 29MERN"): a Smiles só
+     emite com milhas. Uma tela da GOL que só cita Smiles (acúmulo) não conta. */
+  const telaSmiles = /Smiles:\s*[A-Z0-9]{6}\b|Localizador[^\n]{0,20}Smiles/i.test(tudo);
+  const resgate = /AWARD|REDEMPTION|\bFFR\b|\bFFS\b|MILES AND GO/i.test(tudo) || telaSmiles;
   let taxasBilhetes = 0; const vistos = new Set();
   textos.forEach(t => {
     const valores = valoresReais(t);
@@ -30155,7 +30218,7 @@ function interpretarTextosPrints(textos, ref){
       return;
     }
     const ehCartao = /pagamento|parcelamento|finalizar/i.test(t) && /(VISA|MASTER|\bELO\b|AMEX|\*{3,}|X{6,}\d{4}|Venc\.)/i.test(t);
-    const ehConfirmacao = /pagamento feito|pagamento (confirmado|aprovado)|payment (successful|confirmed)/i.test(t);
+    const ehConfirmacao = /pagamento feito|pagamento (confirmado|aprovado|efetuado)|pedido conclu[íi]do|payment (successful|confirmed)/i.test(t);
     if (ehCartao || ehConfirmacao){
       const pg = d.pagamento || {};
       const totalPts = t.match(/Total[^\n]*?\n?[^\n]*?(\d{1,3}(?:\.\d{3})+)\s*pontos/i) || t.match(/(\d{1,3}(?:\.\d{3})+)\s*pontos/i)
@@ -30166,8 +30229,13 @@ function interpretarTextosPrints(textos, ref){
          nunca as parcelas das taxas ("(2)BR: BRL 137,22"), que vêm depois */
       const din = t.match(/(?:BRL|R\$)\s*([\d.]+,\d{2})[ \t]*\n[ \t]*Total pago/i) || t.match(/Total pago[ \t]*:?[ \t]*(?:BRL|R\$)\s*([\d.]+,\d{2})/i)
         || t.match(/Total pago[ \t]*\n[ \t]*(?:BRL|R\$)\s*([\d.]+,\d{2})/i) || t.match(/pontos[^\n]*\n?[^\n]*?\+\s*R\$\s*([\d.]+,\d{2})/i) || t.match(/\+\s*R\$\s*([\d.]+,\d{2})/) || t.match(/Valor:?\s*R?\$?\s*([\d.]+,\d{2})\s*(?:R\$|BRL)?/i);
-      if (din) pg.dinheiro = numBR(din[1]);
-      const cart = t.match(/(?:VISA|MASTERCARD|\bELO|AMEX|\*{3,}|X{6,})\s*(\d{4})\b/i); if (cart) pg.cartao_final = cart[1];
+      const vista = t.match(/(\d{1,3}(?:\.\d{3})*,\d{2})\s*[àa]\s*vista/i);
+      if (din) pg.dinheiro = numBR(din[1]); else if (vista) pg.dinheiro = numBR(vista[1]);
+      /* o final do cartão vem depois dos asteriscos ("4901 06** **** 0213" é 0213, não 4901) */
+      const finais = [...t.matchAll(/\*{2,}[\s*+]*(\d{4})\b/g)];
+      const cart = finais.length ? finais[finais.length - 1] : t.match(/(?:VISA|MASTERCARD|\bELO|AMEX|X{6,})\s*(\d{4})\b/i);
+      if (cart) pg.cartao_final = cart[1];
+      if (progDoc) pg.programa = progDoc;
       const parc = t.match(/R\$\s*[\d.]+,\d{2}\s*\+\s*(\d{1,2})\s*[xX]/); const parc2 = t.match(/(\d{1,2})\s*[xX]\s*(?:de\s*)?R\$/);
       if (parc) pg.parcelas = Number(parc[1]) + 1; else if (parc2) pg.parcelas = Number(parc2[1]);
       const desc = t.match(/desconto de\s*(\d+)\s*%/i); if (desc) pg.obs = `desconto de ${desc[1]}%`;
@@ -30206,7 +30274,7 @@ function interpretarTextosPrints(textos, ref){
       d.pagamento.forma = 'milhas';
       if (d.pagamento.dinheiro == null && taxasBilhetes > 0) d.pagamento.dinheiro = Math.round(taxasBilhetes * 100) / 100;
       d.avisos.push(`Bilhete emitido com milhas (resgate)${bilhetes.length ? `: ${bilhetes.length} ${bilhetes.length === 1 ? 'bilhete' : 'bilhetes'}` : ''}. As taxas somadas dos bilhetes dão ${brl(taxasBilhetes)}.`);
-      if (!d.milhas){ d.milhas = {programa:cia ? cia.pg : ''}; }
+      if (!d.milhas){ d.milhas = {programa:progDoc || (cia ? cia.pg : '')}; }
       if (!d.milhas.taxas && taxasBilhetes) d.milhas.taxas = Math.round(taxasBilhetes * 100) / 100;
     }
   } else if (d.pagamento && !d.pagamento.forma){
@@ -30221,6 +30289,13 @@ function interpretarTextosPrints(textos, ref){
     }
   }
   if (d.pagamento && d.pagamento.pontos == null && resgate && d.milhas && d.milhas.pontos) d.pagamento.pontos = d.milhas.pontos;
+  /* Resgate sem a quantidade de milhas na tela (a Smiles mostra só o valor
+     pago em reais): o valor pago são as taxas, e as milhas ficam para informar. */
+  if (resgate && d.pagamento && !d.pagamento.pontos && !(d.milhas && d.milhas.pontos)){
+    d.milhas = d.milhas || {}; d.milhas.programa = d.milhas.programa || progDoc || (cia ? cia.pg : '');
+    if (!d.milhas.taxas && d.pagamento.dinheiro) d.milhas.taxas = d.pagamento.dinheiro;
+    d.avisos.push(`Emissão com milhas${progDoc ? ' pela ' + prog(progDoc).n : ''}: o valor pago (${brl(d.pagamento.dinheiro || 0)}) são as taxas. A quantidade de milhas não aparece nas telas: informe no campo Milhas.`);
+  }
   if (/cortesia/i.test(tudo)){
     d.cortesia = {qtd:1, valor:(d.dinheiro && d.dinheiro.tarifa) || 0};
     d.avisos.push('Uma das passagens é cortesia: o preço mostrado vale para os pagantes.');
@@ -30229,7 +30304,7 @@ function interpretarTextosPrints(textos, ref){
   }
   if (d.pagamento && d.milhas && d.pagamento.pontos && d.milhas.pontos && Math.abs(d.pagamento.pontos - d.milhas.pontos) > d.milhas.pontos * 0.02)
     d.avisos.push(`A tela de pagamento mostra ${nBR(d.pagamento.pontos)} pontos${d.pagamento.dinheiro ? ' + ' + brl(d.pagamento.dinheiro) : ''}, diferente da busca (${nBR(d.milhas.pontos)} pontos). Confira se a compra incluiu outro trecho.`);
-  if (d.milhas && !d.milhas.pontos && resgate) d.avisos.push('A quantidade de milhas não aparece nos documentos: informe no campo Milhas.');
+  if (d.milhas && !d.milhas.pontos && resgate && !d.avisos.some(a => /quantidade de milhas não aparece/.test(a))) d.avisos.push('A quantidade de milhas não aparece nos documentos: informe no campo Milhas.');
   d.avisos.push('Leitura feita no seu navegador, sem custo. Confira os números antes de preencher.');
   return d;
 }
@@ -30407,7 +30482,7 @@ function desenharRevisaoPrints(){
   const d = _leitura.dados || {};
   const din = d.dinheiro || {}, mi = d.milhas || {}, pg = d.pagamento || null;
   /* sem programa escrito no documento, vale o da companhia (LATAM → LATAM Pass) */
-  const progId = programaPorNome(mi.programa || (pg && pg.programa)) || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : '');
+  const progId = programaPorNome(mi.programa || (pg && pg.programa) || d.programa) || (d.cia ? (Object.values(PREFIXO_CIA).find(x => x[0] === d.cia) || [])[1] || '' : '');
   const pax = Number(d.passageiros) || 0;
   const totalDin = Number(din.total) || ((Number(din.tarifa) || 0) + (Number(din.taxas) || 0)) || 0;
   const pts = Number(mi.pontos) || 0, txM = Number(mi.taxas) || 0, extraM = Number(mi.dinheiro) || 0;
@@ -39171,6 +39246,8 @@ function segmentosDoTexto(textos, ref){
   const n = rota.length - 1;
   const HORA = /\b([01]?\d|2[0-3]):([0-5]\d)\b/g;
   let horas = cvOk ? cv.flatMap(x => [x.dep, x.arr]) : [];
+  /* horários que a leitura já achou nos voos ("24/11/26 10h55" da Smiles) */
+  if (!horas.length && d.voos.length === rota.length - 1 && d.voos.every(v => v.saida && v.chegada)) horas = d.voos.flatMap(v => [v.saida, v.chegada]);
   /* bilhete eletrônico: os dois horários que vêm depois de cada número de voo */
   textos.forEach(t => {
     if (horas.length || !/RECIBO DE BILHETE|ELECTRONIC TICKET/i.test(t)) return;
