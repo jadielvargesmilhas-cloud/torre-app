@@ -9315,6 +9315,16 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .tr-horas{ display:block; margin-top:3px; font:500 calc(11.5px * var(--esc))/1.2 var(--f-m); color:var(--grafite); white-space:nowrap; }
 .tr-horas sup{ color:var(--ouro); font-size:.8em; margin-left:1px; }
 </style>
+<style>
+.pl-voo .pl-marca i.pl-marca-voo{ width:22px; height:22px; margin-top:-5px; display:grid; place-items:center; background:var(--anil); box-shadow:0 0 0 3px var(--sup-0); }
+.pl-voo .pl-marca i.pl-marca-voo svg{ width:12px; height:12px; fill:#fff; stroke:none; }
+.pl-voo.des .pl-marca i.pl-marca-voo svg{ transform:rotate(30deg); }
+.pl-voo .pl-ev-tit{ color:var(--anil-claro); }
+.pl-voo{ background:linear-gradient(90deg, transparent, color-mix(in oklab, var(--anil) 7%, transparent) 30%, transparent); border-radius:var(--r); }
+.pl-dia-s{ white-space:normal !important; overflow:visible !important; text-overflow:clip !important; line-height:1.7; }
+.pl-dia-n2{ white-space:nowrap; }
+.pl-dia-voo{ display:inline-block; margin-right:6px; padding:0 6px; border-radius:99px; background:color-mix(in oklab, var(--anil) 14%, transparent); color:var(--anil-claro); font-size:.92em; }
+</style>
 </head>
 <body>
 <script>
@@ -11175,7 +11185,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 09:40';
+const BUILD = '2026-10-13 10:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31868,8 +31878,8 @@ function renderPlanoDias(){
           return `<button class="pl-dia${iso === planoDia ? ' on' : ''}" onclick="planoDia='${iso}';renderPlano()">
             <div class="pl-dia-n"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${SEM3P[d.getDay()]}</span></div>
             <div class="pl-dia-c">
-              <div class="pl-dia-t">${esc(cidadeDoDia(p, iso) || 'Dia ' + (i + 1))}</div>
-              <div class="pl-dia-s">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</div>
+              <div class="pl-dia-t">${esc(cidadeDoDia(p, iso) || cidadeDoVoo(p, iso) || 'Dia ' + (i + 1))}</div>
+              <div class="pl-dia-s">${marcosDoDia(p, iso).map(m => `<span class="pl-dia-voo">${m.k === 'des' ? 'pousa' : 'decola'} ${m.inicio || '?'}</span> `).join('')}<span class="pl-dia-n2">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</span></div>
             </div>
             <i class="pl-pulso ${r.z}" style="height:${Math.max(4, r.p * 100)}%" data-dica="${r.rot}: ${min2dur(r.ocup)} ocupados"></i>
           </button>`;
@@ -31910,19 +31920,78 @@ function milhasDoPlano(p){
   return {milhas, n};
 }
 
+/* ── os voos dentro do dia a dia (08/10/2026) ─────────────────────────────────
+   O roteiro do dia 1 começa no desembarque: antes dele não há o que fazer no
+   destino. Os horários vêm dos trechos (formulário ou prints), sem cadastrar
+   nada de novo. O primeiro voo entra só pelo desembarque; o último, que leva de
+   volta para casa, só pelo embarque; voos internos entram pelos dois. */
+function marcosDoDia(p, iso){
+  const ts = ordenarTrechos(trechosDe(p)); if (!ts.length) return [];
+  const out = [], n = ts.length, intl = escopoPlano(p) === 'int';
+  ts.forEach((t, i) => {
+    const h = typeof horasDoTrecho === 'function' ? horasDoTrecho(t) : null;
+    const sai = (h && h.saida) || t.saida || '', che = (h && h.chegada) || t.chegada || '';
+    const mais = h ? h.mais : (Number(t.chegaMais) || 0);
+    const dataCheg = t.data ? (mais ? somaDiasISO(t.data, mais) : t.data) : '';
+    const volta = n > 1 && i === n - 1;
+    if (i > 0 && t.data === iso) out.push({marco:true, k:'emb', id:'emb-' + t.id, t, inicio:sai, dur:0, antes:intl ? 180 : 120,
+      titulo:`Embarque ${volta ? 'de volta' : ''} ${String(t.origem || '').toUpperCase()} → ${String(t.destino || '').toUpperCase()}`.replace(/\s+/g, ' ')});
+    if (!volta && dataCheg === iso) out.push({marco:true, k:'des', id:'des-' + t.id, t, inicio:che, dur:0,
+      titulo:`Desembarque em ${cidadeIATA(t.destino) || String(t.destino || '').toUpperCase()}`});
+  });
+  return out;
+}
+/* paradas e voos do dia, na ordem do relógio (voo sem horário: desembarque no
+   começo do dia, embarque no fim) */
+function eventosDoDia(p, iso){
+  const ms = marcosDoDia(p, iso), its = paradasDo(p, iso);
+  const chave = x => x.inicio ? hm2min(x.inicio) : (x.k === 'des' ? -1 : 1e4);
+  return ms.concat(its).sort((a, b) => chave(a) - chave(b) || (a.marco ? -1 : 0) - (b.marco ? -1 : 0));
+}
+/* a cidade do dia sem parada: a do último pouso até aquele dia */
+function cidadeDoVoo(p, iso){
+  let c = '';
+  ordenarTrechos(trechosDe(p)).forEach((t, i, a) => { if (a.length > 1 && i === a.length - 1) return; if (t.data && t.data <= iso && t.destino) c = cidadeIATA(t.destino); });
+  return c;
+}
+const desembarqueDoDia = (p, iso) => marcosDoDia(p, iso).find(m => m.k === 'des' && m.inicio) || null;
+
 /* ── o fio do tempo ───────────────────────────────────────────────────────────
    Coluna vertical: hora à esquerda, marca no fio, parada à direita. O vão entre
    duas paradas não fica em branco — ele diz quanto tempo é, e se há deslocamento
    declarado, diz por onde. Um roteiro se lê pelos buracos tanto quanto pelo que
    está marcado. */
 function fioDoTempo(p, iso){
-  const its = paradasDo(p, iso);
+  const its = eventosDoDia(p, iso);
   if (!its.length) return `<div class="pl-nada">
     <svg><use href="#i-relogio"/></svg>
-    <div><b>Dia ainda vazio.</b> Lance a primeira parada — um voo, um check-in, um passeio — e o fio do tempo começa a se desenhar.</div></div>`;
+    <div><b>Dia ainda vazio.</b> Lance a primeira parada (um check-in, um passeio, um restaurante) e o fio do tempo começa a se desenhar.</div></div>`;
+  const des = desembarqueDoDia(p, iso);
 
   let html = '<div class="pl-fio">';
   its.forEach((it, i) => {
+    if (it.marco){
+      const t = it.t, ehDes = it.k === 'des';
+      html += `<div class="pl-ev pl-voo ${ehDes ? 'des' : 'emb'}" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
+        <div class="pl-hora"><b>${it.inicio ? esc(it.inicio) : '--:--'}</b>${ehDes ? '<span>pouso</span>' : '<span>decola</span>'}</div>
+        <div class="pl-marca"><i class="pl-marca-voo"><svg><use href="#i-aviao"/></svg></i></div>
+        <div class="pl-ev-corpo">
+          <div class="pl-ev-tit">${esc(it.titulo)}<span class="etq anil">${ehDes ? 'começo do roteiro' : 'voo'}</span></div>
+          <div class="pl-ev-loc">${esc([String(t.cia || '').split(' · ')[0], t.loc ? 'localizador ' + String(t.loc).toUpperCase() : ''].filter(Boolean).join(' · ') || 'Trecho da jornada')}${!it.inicio ? ' · <b class="brasa">sem horário: toque para informar no trecho</b>' : ''}</div>
+          ${!ehDes && it.inicio ? `<div class="pl-ev-nota">Esteja no aeroporto até <b>${min2hm(hm2min(it.inicio) - it.antes)}</b> (${it.antes / 60} horas antes, ${it.antes === 180 ? 'voo internacional' : 'voo nacional'}).</div>` : ''}
+          ${ehDes && it.inicio ? `<div class="pl-ev-nota">Bagagem e saída do aeroporto: conte uns 45 minutos antes da primeira parada.</div>` : ''}
+        </div>
+        <div class="pl-ev-num"></div>
+        <div class="pl-ev-acoes" onclick="event.stopPropagation()"><button class="bt p fantasma icone" onclick="editarTrechoDoDia('${t.id}')" data-dica="Editar o trecho (horários do voo)"><svg><use href="#i-lapis"/></svg></button></div>
+      </div>`;
+      const prox = its[i + 1];
+      if (prox && it.inicio && prox.inicio){
+        const vao = hm2min(prox.inicio) - hm2min(it.inicio) - (Number(prox.desloc) || 0);
+        if (vao >= 20) html += `<div class="pl-elo folga"><span>${min2dur(vao)} livres</span></div>`;
+        else if (vao < 0) html += `<div class="pl-elo choque"><span><svg><use href="#i-alerta"/></svg>${ehDes ? 'a próxima parada está antes do pouso' : 'sobrepõe o voo'} em ${min2dur(-vao)}</span></div>`;
+      }
+      return;
+    }
     const t = TIPOS_PARADA[it.tipo] || TIPOS_PARADA.passeio;
     const fim = min2hm(hm2min(it.inicio) + (Number(it.dur) || 0));
     const r = reservaDa(it);
@@ -31949,7 +32018,13 @@ function fioDoTempo(p, iso){
     </div>`;
 
     const prox = its[i + 1];
-    if (prox){
+    if (prox && prox.marco){
+      if (prox.inicio){ const vao = hm2min(prox.inicio) - (hm2min(it.inicio) + (Number(it.dur) || 0));
+        if (prox.k === 'des') html += `<div class="pl-elo choque"><span><svg><use href="#i-alerta"/></svg>esta parada está antes do pouso (${esc(prox.inicio)}): o roteiro do dia começa no desembarque</span></div>`;
+        else if (prox.k === 'emb' && vao < prox.antes) html += `<div class="pl-elo choque"><span><svg><use href="#i-alerta"/></svg>${vao < 0 ? 'passa do horário do voo' : 'pouco tempo até o embarque: só ' + min2dur(vao)}</span></div>`;
+        else if (vao >= 20) html += `<div class="pl-elo folga"><span>${min2dur(vao)} livres</span></div>`;
+        }
+    } else if (prox){
       const vao = hm2min(prox.inicio) - (hm2min(it.inicio) + (Number(it.dur) || 0));
       const desl = Number(prox.desloc) || 0;
       if (desl > 0) html += `<div class="pl-elo"><span><svg><use href="#i-seta-d"/></svg>${esc(MODOS_DESLOC[prox.modo] || 'deslocamento')} ${min2dur(desl)}</span></div>`;
@@ -32076,7 +32151,11 @@ function apagarPlano(id){
 function editarParada(id){
   const p = P(); if (!p) return;
   const it = id ? (p.paradas || []).find(x => x.id === id) : null;
-  const base = {tipo:'passeio', titulo:'', dia:planoDia, inicio:'09:00', dur:90, custo:'', moeda:p.moeda || 'BRL',
+  const inicioSug = (() => { const its0 = paradasDo(p, planoDia), des0 = desembarqueDoDia(p, planoDia);
+    const fim0 = its0.length ? hm2min(its0[its0.length - 1].inicio) + (Number(its0[its0.length - 1].dur) || 0) + 30 : 0;
+    const pos = des0 ? hm2min(des0.inicio) + 60 : 0;
+    const v = Math.max(fim0, pos); return v ? min2hm(Math.ceil(v / 15) * 15) : '09:00'; })();
+  const base = {tipo:'passeio', titulo:'', dia:planoDia, inicio:inicioSug, dur:90, custo:'', moeda:p.moeda || 'BRL',
                 local:'', cidade:cidadeDoDia(p, planoDia), modo:'', desloc:0, reservaId:'', refDinheiro:'', nota:'', ...(it || {})};
   const ds = diasDoPlano(p);
   /* reservas ainda não realizadas, para amarrar a parada ao que já existe */
@@ -32191,11 +32270,22 @@ function duplicarParada(id){
 /* Encadear: reescreve os horários do dia em sequência, somando duração e
    deslocamento. Guarda a primeira hora e empurra o resto — é o gesto que
    conserta um dia inteiro depois que uma parada muda de lugar. */
+function editarTrechoDoDia(id){
+  editarTrecho(id);
+  const bt = $('#btSalvarTrecho'); if (!bt) return;
+  const salvarOrig = bt.onclick;
+  bt.onclick = function(){ const antes = (P() || {}).trechos; salvarOrig.apply(this, arguments);
+    if ((P() || {}).trechos !== antes){ modoRoteiro = 'dias'; renderPlano(); } };
+}
 function encadearDia(){
   const p = P(); if (!p) return;
   const its = paradasDo(p, planoDia);
-  if (its.length < 2){ avisar('Precisa de pelo menos duas paradas no dia.', 'alerta'); return; }
+  const des = desembarqueDoDia(p, planoDia);
+  if (its.length < (des ? 1 : 2)){ avisar(des ? 'Lance a primeira parada do dia.' : 'Precisa de pelo menos duas paradas no dia.', 'alerta'); return; }
   let t = hm2min(its[0].inicio);
+  /* o dia do pouso começa no desembarque: bagagem e saída do aeroporto (45 min)
+     mais o deslocamento até a primeira parada */
+  if (des){ const minimo = hm2min(des.inicio) + 45 + (Number(its[0].desloc) || 0); if (t < minimo) t = minimo; }
   its.forEach((it, i) => {
     if (i) t += Number(it.desloc) || 15;
     it.inicio = min2hm(t);
