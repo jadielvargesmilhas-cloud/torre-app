@@ -3741,7 +3741,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
   font-size:calc(13.5px * var(--esc)); color:var(--anil-claro); font-weight:600; }
 .rt-voltar svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
 .rt-cab{ display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; }
-.rt-nome{ font-family:var(--f-d); font-size:calc(22px * var(--esc)); font-weight:700; color:var(--giz); }
+.rt-nome{ font-family:var(--f-d); font-size:calc(20px * var(--esc)); font-weight:700; color:var(--giz); }
 .rt-sub{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-size:calc(13.5px * var(--esc)); color:var(--grafite); margin-top:3px; }
 .rt-geral{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 16px; border-radius:14px; background:var(--sup-1); border:1px solid var(--fio-suave); margin-bottom:14px; }
 .rt-geral-num{ font-family:var(--f-d); font-size:calc(26px * var(--esc)); font-weight:800; color:var(--ouro); }
@@ -3787,7 +3787,7 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .ga-cab p{ margin:6px 0 0; font-size:calc(13px * var(--esc)); max-width:640px; }
 .ga-total{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; text-align:right; }
 .ga-total span{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
-.ga-total b{ font-family:var(--f-m); font-size:calc(26px * var(--esc)); color:var(--giz); letter-spacing:-.02em; }
+.ga-total b{ font-family:var(--f-m); font-size:calc(20px * var(--esc)); font-weight:600; color:var(--giz); letter-spacing:-.02em; }
 .ga-total em{ font-style:normal; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 .ga-barra{ display:flex; height:14px; margin:16px 0 14px; border-radius:99px; overflow:hidden; background:var(--sup-1); box-shadow:inset 0 0 0 1px var(--fio-suave); }
 .ga-barra i{ display:block; width:var(--w); background:var(--c); transform-origin:left; animation:gaEnche .8s cubic-bezier(.2,.8,.2,1) both; animation-delay:calc(var(--i) * .12s); }
@@ -8952,6 +8952,136 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
   .cq-funil-tit{ width:100%; }
 }
 </style>
+<style>
+/* ══ VIAGEM INTEIRA e RESERVAS (08/10/2026) ═══════════════════════════════════ */
+@keyframes viEntra{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+@keyframes viTraco{ to{ stroke-dashoffset:-16; } }
+.rv-cats{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+.rv-cat{ display:flex; flex-direction:column; align-items:flex-start; gap:12px; padding:16px 14px; border-radius:var(--r-lg); border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); text-align:left;
+  transition:transform .2s var(--ease), border-color .2s, box-shadow .2s; }
+.rv-cat:hover{ transform:translateY(-2px); border-color:color-mix(in oklab, var(--rv-c) 60%, var(--fio)); box-shadow:0 10px 26px -16px var(--rv-c); }
+.rv-cat b{ font-size:calc(14px * var(--esc)); font-weight:600; line-height:1.25; }
+.rv-cat-ic{ width:38px; height:38px; border-radius:12px; display:grid; place-items:center; flex:0 0 auto;
+  background:color-mix(in oklab, var(--rv-c) 16%, transparent); color:var(--rv-c); }
+.rv-cat-ic svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.rv-form-cab{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-lg); background:color-mix(in oklab, var(--rv-c) 8%, var(--sup-1)); border:1px solid color-mix(in oklab, var(--rv-c) 30%, var(--fio)); margin-bottom:16px; }
+.rv-form-cab > div{ display:flex; flex-direction:column; flex:1; min-width:0; }
+.rv-form-cab b{ font-size:calc(15px * var(--esc)); }
+.rv-form-cab span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.rv-grade{ grid-template-columns:repeat(4, minmax(0, 1fr)); align-items:end; }
+.rv-grade .rv-largo{ grid-column:span 2; }
+.rv-noites{ grid-column:1 / -1; font-size:calc(13px * var(--esc)); color:var(--anil-claro); font-weight:600; min-height:1px; }
+.rv-cambio{ display:flex; gap:6px; } .rv-cambio input{ flex:1; min-width:0; }
+.rv-conta{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:12px; font-size:calc(13.5px * var(--esc)); }
+.rv-conta:empty{ display:none; }
+.rv-conta span{ color:var(--grafite); } .rv-conta b{ font-family:var(--f-m); font-size:calc(16px * var(--esc)); color:var(--ouro); } .rv-conta em{ color:var(--grafite); font-style:normal; font-size:calc(12.5px * var(--esc)); }
+@media (max-width:900px){ .rv-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:520px){ .rv-grade{ grid-template-columns:1fr; } .rv-grade .rv-largo{ grid-column:auto; } }
+
+.rv-lista{ display:flex; flex-direction:column; }
+.rv-item{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid var(--fio-suave); animation:viEntra .3s var(--ease) both; }
+.rv-item.cancelado{ opacity:.55; } .rv-item.cancelado .rv-item-t b{ text-decoration:line-through; }
+.rv-item-c{ min-width:0; display:flex; flex-direction:column; gap:3px; }
+.rv-item-t{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.rv-item-t b{ font-size:calc(14.5px * var(--esc)); font-weight:600; }
+.rv-tipo{ font-size:calc(11.5px * var(--esc)); color:var(--rv-c); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+.rv-item-s{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.rv-cod{ font-family:var(--f-m); color:var(--giz-2); }
+.rv-canc{ font-size:calc(12px * var(--esc)); color:var(--jade); } .rv-canc.perto{ color:var(--ouro); font-weight:600; }
+.rv-item-v{ display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
+.rv-item-v b{ font-family:var(--f-m); font-size:calc(14.5px * var(--esc)); font-weight:500; } .rv-item-v small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.rv-pe b.ouro{ color:var(--ouro); }
+@media (max-width:640px){ .rv-item{ grid-template-columns:auto minmax(0, 1fr) auto; padding:12px 14px; } .rv-item .acoes-cel{ grid-column:2 / -1; justify-content:flex-start; } }
+
+/* ── herói da viagem ── */
+.vi-heroi{ position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:flex-end; gap:20px 28px; flex-wrap:wrap;
+  padding:26px 26px 22px; border-radius:var(--r-xl); margin:6px 0 18px; color:#fff; isolation:isolate;
+  background:radial-gradient(70% 120% at 100% 0%, rgba(61,130,214,.55), transparent 60%), radial-gradient(60% 90% at 0% 100%, rgba(232,180,79,.22), transparent 60%), linear-gradient(160deg, #10233A, #0A1828); }
+.vi-heroi::after{ content:''; position:absolute; inset:0; z-index:-1; opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.55) 1px, transparent 1.4px); background-size:26px 26px; mask-image:linear-gradient(90deg, transparent, #000 70%); }
+.vi-olho{ display:inline-block; font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.14em; color:#F2C14E; font-weight:600; margin-bottom:6px; }
+.vi-heroi h2{ font-family:var(--f-b); font-size:calc(22px * var(--esc)); font-weight:700; letter-spacing:-.01em; margin:0 0 4px; }
+.vi-heroi p{ margin:0; color:rgba(226,233,245,.72); font-size:calc(13.5px * var(--esc)); }
+.vi-nums{ display:flex; gap:10px 26px; flex-wrap:wrap; }
+.vi-nums > div{ display:flex; flex-direction:column; }
+.vi-nums b{ font-family:var(--f-m); font-size:calc(19px * var(--esc)); font-weight:500; letter-spacing:-.03em; }
+.vi-nums span{ font-size:calc(12px * var(--esc)); color:rgba(226,233,245,.66); }
+.vi-nums .ouro b{ color:#F2C14E; }
+
+.vi-corpo{ display:grid; grid-template-columns:minmax(0, 1.05fr) minmax(0, 1fr); gap:18px; align-items:start; }
+.vi-mapa-col{ position:sticky; top:calc(var(--topo-h) + 14px); display:flex; flex-direction:column; gap:10px; }
+.vi-mapa-caixa{ position:relative; border-radius:var(--r-xl); overflow:hidden; border:1px solid var(--fio); background:var(--sup-0); box-shadow:var(--sombra-p); }
+.vi-mapa{ height:min(560px, 68vh); width:100%; color:var(--giz-2); background:var(--sup-1); }
+.vi-mapa-bts{ position:absolute; left:12px; bottom:12px; z-index:500; }
+.vi-mapa-bts .bt{ box-shadow:var(--sombra); }
+.vi-mapa-vazio, .vi-mapa-nota{ padding:18px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.vi-mapa-nota{ position:absolute; top:0; right:0; padding:8px 12px; font-size:calc(11.5px * var(--esc)); }
+.vi-svg{ width:100%; height:100%; display:block; }
+.vi-rota.voo{ animation:viTraco 1.2s linear infinite; }
+.vi-pino{ background:none; border:0; }
+.vi-pino span{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:#E8B44F; color:#191204; font:700 12px/1 var(--f-m); box-shadow:0 0 0 4px rgba(232,180,79,.25), 0 6px 14px -4px rgba(0,0,0,.6); }
+.vi-pino b{ position:absolute; left:32px; top:4px; white-space:nowrap; font:600 12px/1.2 var(--f-b); color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.9); }
+:root[data-theme="papel"] .vi-pino b{ color:#191B20; text-shadow:0 1px 2px #fff, 0 0 3px #fff; }
+.vi-aviao{ background:none; border:0; }
+.vi-legenda{ display:flex; flex-wrap:wrap; gap:6px; }
+.vi-legenda button{ display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 5px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz-2); font-size:calc(12.5px * var(--esc)); }
+.vi-legenda button:hover{ border-color:var(--ouro); color:var(--giz); }
+.vi-legenda span{ width:20px; height:20px; border-radius:50%; display:grid; place-items:center; background:#E8B44F; color:#191204; font:700 11px/1 var(--f-m); }
+.leaflet-tooltip.vi-dica{ background:var(--sup-2); color:var(--giz); border:1px solid var(--fio-forte); border-radius:8px; font:600 12px var(--f-b); box-shadow:var(--sombra-p); }
+.leaflet-tooltip.vi-dica::before{ display:none; }
+.vi-aviao svg{ width:28px; height:28px; fill:#fff; stroke:#3D82D6; stroke-width:1; filter:drop-shadow(0 3px 6px rgba(0,0,0,.6)); transition:transform .2s; }
+.leaflet-container{ font-family:var(--f-b); background:var(--sup-1); }
+
+/* ── linha do tempo vertical ── */
+.vi-linha{ border:1px solid var(--fio); border-radius:var(--r-xl); background:var(--sup-1); padding:16px 18px 22px; min-width:0; }
+.vi-linha-cab{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+.vi-linha-cab > div{ display:flex; flex-direction:column; } .vi-linha-cab b{ font-size:calc(15px * var(--esc)); } .vi-linha-cab .fraco{ font-size:calc(12.5px * var(--esc)); }
+.vi-dia{ position:relative; }
+.vi-dia-cab{ position:sticky; top:calc(var(--topo-h) + 4px); z-index:3; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:12px 0 8px; margin-top:6px;
+  background:linear-gradient(var(--sup-1) 80%, transparent); font-size:calc(13.5px * var(--esc)); }
+.vi-dia-n{ font-family:var(--f-m); font-size:calc(11.5px * var(--esc)); padding:2px 8px; border-radius:99px; background:var(--lavagem-ouro); color:var(--ouro); font-weight:600; }
+.vi-dia-cab b{ font-weight:600; } .vi-dia-cab .fraco{ font-size:calc(12.5px * var(--esc)); }
+.vi-ev{ display:grid; grid-template-columns:58px 30px minmax(0, 1fr); align-items:stretch; position:relative; animation:viEntra .35s var(--ease) both; }
+.vi-hora{ text-align:right; padding:11px 8px 0 0; font-family:var(--f-m); font-size:calc(13px * var(--esc)); color:var(--giz); line-height:1.25; display:flex; flex-direction:column; align-items:flex-end; }
+.vi-hora small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); } .vi-hora sup{ color:var(--ouro); }
+.vi-sem{ font-family:var(--f-b); font-size:calc(11px * var(--esc)); color:var(--grafite-dim); }
+.vi-no{ position:relative; display:flex; justify-content:center; }
+.vi-no::before{ content:''; position:absolute; top:0; bottom:0; left:50%; width:2px; margin-left:-1px; background:linear-gradient(var(--fio-forte), var(--fio-forte)); }
+.vi-no span{ position:relative; z-index:1; margin-top:7px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--sup-1);
+  border:2px solid var(--vi-c); color:var(--vi-c); transition:transform .25s var(--ease), box-shadow .25s; }
+.vi-no svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.vi-ev.casa .vi-no span{ background:var(--vi-c); color:#191204; }
+.vi-ev.estimada .vi-no span{ border-style:dashed; }
+.vi-card{ margin:4px 0 6px 8px; text-align:left; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:2px 12px; padding:9px 12px; border-radius:var(--r); border:1px solid var(--fio); background:var(--sup-0); color:var(--giz);
+  transition:border-color .2s, transform .2s var(--ease), box-shadow .2s; min-width:0; }
+.vi-card:hover{ border-color:color-mix(in oklab, var(--vi-c) 55%, var(--fio)); transform:translateX(2px); }
+.vi-tit{ font-weight:600; font-size:calc(14px * var(--esc)); grid-column:1; overflow-wrap:anywhere; }
+.vi-sub{ grid-column:1; font-size:calc(12.5px * var(--esc)); color:var(--grafite); overflow-wrap:anywhere; }
+.vi-valor{ grid-column:2; grid-row:1 / span 2; align-self:center; font-family:var(--f-m); font-size:calc(13px * var(--esc)); color:var(--giz-2); white-space:nowrap; }
+.vi-ev.casa .vi-card{ background:var(--lavagem-ouro); border-color:color-mix(in oklab, var(--ouro) 35%, var(--fio)); }
+.vi-ev.estimada .vi-card{ border-style:dashed; }
+.vi-ev.cobertura .vi-card{ opacity:.85; }
+.vi-ev.foco .vi-no span{ transform:scale(1.18); box-shadow:0 0 0 6px color-mix(in oklab, var(--vi-c) 22%, transparent); }
+.vi-ev.foco .vi-card{ border-color:var(--vi-c); box-shadow:0 8px 22px -14px var(--vi-c); }
+.vi-livre{ display:grid; grid-template-columns:58px 30px 1fr; }
+.vi-livre span{ grid-column:3; margin:0 0 2px 8px; font-size:calc(11.5px * var(--esc)); color:var(--grafite-dim); font-style:italic; }
+.vi-livre::before{ content:''; grid-column:2; justify-self:center; width:2px; background:repeating-linear-gradient(var(--fio-forte) 0 3px, transparent 3px 7px); }
+.vi-alerta{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:4px 0 6px 96px; padding:9px 12px; border-radius:var(--r); font-size:calc(13px * var(--esc));
+  background:var(--lavagem-ouro); color:var(--giz); border:1px dashed color-mix(in oklab, var(--ouro) 55%, transparent); }
+.vi-alerta svg{ width:16px; height:16px; fill:none; stroke:var(--ouro); stroke-width:2; flex:0 0 auto; }
+.vi-alerta span{ flex:1 1 200px; }
+.vi-alerta.cancel{ margin:0; background:var(--sup-0); border-style:solid; border-color:var(--fio); }
+.vi-alerta.cancel svg{ stroke:var(--jade); }
+@media (max-width:1100px){ .vi-corpo{ grid-template-columns:1fr; } .vi-mapa-col{ position:relative; top:0; } .vi-mapa{ height:380px; } }
+@media (max-width:640px){
+  .vi-heroi{ padding:20px 18px 18px; } .vi-heroi h2{ font-size:calc(19px * var(--esc)); }
+  .vi-nums{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; width:100%; } .vi-nums b{ font-size:calc(16px * var(--esc)); }
+  .vi-mapa{ height:300px; } .vi-linha{ padding:12px 10px 16px; }
+  .vi-ev, .vi-livre{ grid-template-columns:52px 26px minmax(0, 1fr); } .vi-alerta{ margin-left:78px; }
+  .vi-hora{ font-size:calc(11.5px * var(--esc)); padding-right:5px; }
+}
+@media (prefers-reduced-motion:reduce){ .vi-rota.voo, .vi-ev, .rv-item{ animation:none; } }
+</style>
 </head>
 <body>
 <script>
@@ -9002,6 +9132,14 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 <symbol id="i-dinheiro" viewBox="0 0 24 24"><path d="M12 2v20M16.5 6.5C15.5 5.2 14 4.5 12 4.5c-2.5 0-4 1.3-4 3s1.5 2.8 4 3.3 4 1.6 4 3.4-1.6 3.3-4 3.3c-2 0-3.6-.8-4.5-2"/></symbol>
 <symbol id="i-bilhete" viewBox="0 0 24 24"><path d="M3 8.5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2.5 2.5 0 0 0 0 5v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2.5 2.5 0 0 0 0-5z"/><path d="M13 6.5v11"/></symbol>
 <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8.5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2.5 2.5 0 0 0 0 5v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2.5 2.5 0 0 0 0-5v-1zM14 6.5v11"/></symbol>
+<symbol id="i-trem" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14M9 20l-2 2M15 20l2 2M8.5 13h.01M15.5 13h.01M8 16l-1 4M16 16l1 4"/></symbol>
+<symbol id="i-onibus" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="15" rx="2.5"/><path d="M4 11h16M8 18v2.5M16 18v2.5M7.5 14.5h.01M16.5 14.5h.01M9 6.5h6"/></symbol>
+<symbol id="i-musica" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+<symbol id="i-trofeu" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9.5 18h5"/></symbol>
+<symbol id="i-estrela" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+<symbol id="i-garfo" viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1.5-3 4-3 7h3v11"/></symbol>
+<symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+<symbol id="i-chip" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><rect x="9" y="11" width="6" height="6" rx="1"/></symbol>
 <symbol id="i-hotel" viewBox="0 0 24 24"><path d="M3 20V6a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v14M14 20V11h6a1 1 0 0 1 1 1v8M3 20h18M6.5 8.5h1M10 8.5h1M6.5 12h1M10 12h1M6.5 15.5h1M10 15.5h1M17 15h1"/></symbol>
 <symbol id="i-aviao" viewBox="0 0 24 24"><path d="M21 15.5l-9-3.5V5.2a1.7 1.7 0 0 0-3.4 0V12l-6 2.3v2l6-1.6v3.5l-2 1.3v1.3l3.7-1 3.7 1v-1.3l-2-1.3V15l9 2.4z"/></symbol>
 <symbol id="i-carro" viewBox="0 0 24 24"><path d="M4 16v2.5h3V16M17 16v2.5h3V16"/><path d="M3 16v-4l2-5h14l2 5v4z"/><path d="M6.5 12.5h.01M17.5 12.5h.01"/></symbol>
@@ -10787,7 +10925,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 18:00';
+const BUILD = '2026-10-12 19:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -29535,7 +29673,7 @@ function renderTrechos(p){
       </div>
       ${gastoAteAgoraHTML(p, ts)}`
     : `<div class="vazio" style="border:0;padding:26px"><p>Nenhum trecho ainda. Lance cada voo: a ida, os internos e a volta, cada um com o que vai ser usado para pagar.</p></div>`}
-  </div>`;
+  </div>${typeof reservasViagemHTML === 'function' ? reservasViagemHTML(p) : ''}`;
 }
 /* Registrar o upgrade: em cima, o antes e o depois lado a lado, recalculados a
    cada número digitado; embaixo, os dados do upgrade. */
@@ -31251,7 +31389,7 @@ function renderJornadaRota(p){
     <div class="rt-topo">
       <button type="button" class="rt-voltar" onclick="voltarListaRoteiros()"><svg><use href="#i-seta-e"/></svg>${filtroRoteiro === 'nac' ? 'Jornadas nacionais' : filtroRoteiro === 'int' ? 'Jornadas internacionais' : 'Todas as jornadas'}</button>
       <div class="esticar"></div>
-      <div class="seg" id="segModoRoteiro"><button class="${modoRoteiro === 'jornada' ? 'on' : ''}" onclick="modoRoteiro='jornada';renderPlano()">Jornada ROTA</button><button class="${modoRoteiro === 'trechos' ? 'on' : ''}" onclick="modoRoteiro='trechos';renderPlano()">Trechos${trechosDe(p).length ? ` <span class="cont-disco">${trechosDe(p).length}</span>` : ''}</button><button class="${modoRoteiro === 'dias' ? 'on' : ''}" onclick="modoRoteiro='dias';renderPlano()">Dia a dia</button></div>
+      <div class="seg" id="segModoRoteiro"><button class="${modoRoteiro === 'jornada' ? 'on' : ''}" onclick="modoRoteiro='jornada';renderPlano()">Jornada ROTA</button><button class="${modoRoteiro === 'trechos' ? 'on' : ''}" onclick="modoRoteiro='trechos';renderPlano()">Trechos${trechosDe(p).length ? ` <span class="cont-disco">${trechosDe(p).length}</span>` : ''}</button><button class="${modoRoteiro === 'dias' ? 'on' : ''}" onclick="modoRoteiro='dias';renderPlano()">Dia a dia</button><button class="${modoRoteiro === 'viagem' ? 'on' : ''}" onclick="modoRoteiro='viagem';renderPlano()">Viagem inteira</button></div>
     </div>
     <div class="rt-cab">
       <div style="min-width:0"><div class="rt-nome">${esc(p.nome)}</div>
@@ -31335,7 +31473,7 @@ function renderPlano(){
     const a = tr.getBoundingClientRect(), b = on.getBoundingClientRect();
     tr.scrollLeft += (b.left - a.left) - (a.width - b.width) / 2;
   });
-  if (modoRoteiro === 'dias') renderPlanoDias(); else if (modoRoteiro === 'trechos') renderTrechos(p); else if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
+  if (modoRoteiro === 'dias') renderPlanoDias(); else if (modoRoteiro === 'trechos') renderTrechos(p); else if (modoRoteiro === 'viagem' && typeof renderViagemInteira === 'function') renderViagemInteira(p); else if ($('#rtPlano')) $('#rtPlano').innerHTML = '';
   if ($('#rtRoteirosSalvos')) $('#rtRoteirosSalvos').innerHTML = '';
 }
 
@@ -47580,6 +47718,514 @@ function cqLigar(){
     e.preventDefault(); cqReceberTexto(t);
   });
   addEventListener('resize', () => { if (cqPasso === 3) cqAjustarFone(); });
+}
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   VIAGEM INTEIRA (08/10/2026, pedido do Jadiel)
+   Tudo o que não é voo, no mesmo lugar dos voos: hospedagem, traslado, carro,
+   trem, ônibus e barco, ingressos, shows, esporte, experiências, restaurantes,
+   seguro e chip. Cada reserva tem o seu formulário (só o que faz sentido para
+   ela), o valor em qualquer moeda convertido para reais, a forma de pagamento
+   e o prazo de cancelamento grátis.
+   A aba "Viagem inteira" junta voos e reservas numa linha do tempo vertical, de
+   casa até casa, com o mapa de todo o percurso, os números da viagem e os
+   buracos que a Torre enxerga (noite sem hotel, chegada sem traslado).
+   ══════════════════════════════════════════════════════════════════════════════ */
+const RV_CATS = {
+  hospedagem: {n:'Hospedagem', i:'hotel', c:'#5B8DEF', m:'periodo', ini:'Check-in', fim:'Check-out', ex:'Quarto e regime', ph:'Hotel Mundial', exPh:'Quarto duplo, café da manhã'},
+  traslado:   {n:'Traslado', i:'carro', c:'#2FB5A3', m:'movimento', ex:'Empresa e motorista', ph:'Traslado aeroporto → hotel', exPh:'Welcome Pickups, placa com o nome'},
+  carro:      {n:'Aluguel de carro', i:'carro', c:'#3FA7D6', m:'periodo', ini:'Retirada', fim:'Devolução', ex:'Carro e seguro', ph:'Localiza, Hertz...', exPh:'SUV automático, seguro total', dois:true},
+  trem:       {n:'Trem', i:'trem', c:'#E07A5F', m:'movimento', ex:'Classe e assento', ph:'Comboio Alfa Pendular', exPh:'1ª classe, carro 3, lugar 42'},
+  onibus:     {n:'Ônibus ou barco', i:'onibus', c:'#C9A227', m:'movimento', ex:'Empresa e assento', ph:'FlixBus, ferry...', exPh:'Assento 12'},
+  ingresso:   {n:'Ingresso e atração', i:'ticket', c:'#9B7BEA', m:'momento', ex:'Tipo de ingresso', ph:'Torre Eiffel, topo', exPh:'Acesso ao topo, horário marcado'},
+  show:       {n:'Show e evento', i:'musica', c:'#E85D9A', m:'momento', ex:'Setor e lugar', ph:'Coldplay no Estádio da Luz', exPh:'Pista premium'},
+  esporte:    {n:'Esporte', i:'trofeu', c:'#E8B44F', m:'momento', ex:'Setor e arquibancada', ph:'GP de Mônaco de Fórmula 1', exPh:'Arquibancada K'},
+  experiencia:{n:'Experiência e passeio', i:'estrela', c:'#4CC08E', m:'momento', ex:'O que inclui', ph:'Passeio de barco no Douro', exPh:'Degustação, 3 horas'},
+  restaurante:{n:'Restaurante', i:'garfo', c:'#D9822B', m:'momento', ex:'Mesa e observação', ph:'Le Jules Verne', exPh:'Mesa para 2, janela'},
+  seguro:     {n:'Seguro-viagem', i:'escudo', c:'#7A8CA8', m:'cobertura', ini:'Início', fim:'Fim', ex:'Plano e cobertura', ph:'Assist Card', exPh:'EUR 60 mil, Europa'},
+  chip:       {n:'Chip ou eSIM', i:'chip', c:'#8A93A6', m:'cobertura', ini:'Ativa em', fim:'Até', ex:'Plano de dados', ph:'Airalo Europa', exPh:'20 GB'},
+  outro:      {n:'Outro', i:'etiqueta', c:'#A0A6B3', m:'momento', ex:'Detalhes', ph:'O que é', exPh:''}
+};
+const RV_MOEDAS = {BRL:'Real', EUR:'Euro', USD:'Dólar', GBP:'Libra', CHF:'Franco suíço', ARS:'Peso argentino', CLP:'Peso chileno', MXN:'Peso mexicano', JPY:'Iene', CAD:'Dólar canadense'};
+const RV_PAGTO = {cartao:'Cartão de crédito', pix:'PIX ou débito', pontos:'Pontos ou milhas', local:'Pagar no local', dinheiro:'Dinheiro em espécie'};
+const RV_SIT = {reservado:'Reservado', pago:'Pago', apagar:'A pagar', cancelado:'Cancelado'};
+const rvLista = p => (p && p.reservas) || [];
+const rvValor = r => r.situacao === 'cancelado' ? 0 : r.pagamento === 'pontos' ? (rvValorPontos(r) || 0) : (Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1);
+function rvValorPontos(r){
+  if (!(Number(r.pontos) > 0) || !r.prog) return 0;
+  const cpm = (cpmPorPrograma() || {})[r.prog] ?? (PROGRAMAS[r.prog] ? faixasDe(r.prog).alvo : null);
+  return cpm ? Number(r.pontos) / 1000 * cpm + (Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1) : 0;
+}
+const rvNoites = r => r.ini && r.fim ? Math.max(0, Math.round((new Date(r.fim + 'T12:00:00') - new Date(r.ini + 'T12:00:00')) / 864e5)) : 0;
+const rvFmtMoeda = (v, m) => (Number(v) || 0).toLocaleString('pt-BR', {style:'currency', currency:m || 'BRL'});
+
+/* Cidade → coordenadas, pela tabela de aeroportos (e pelo próprio código). */
+function rvLugar(nome){
+  const s = String(nome || '').trim(); if (!s) return null;
+  const up = s.toUpperCase();
+  if (/^[A-Z]{3}$/.test(up) && AEROPORTOS[up]) return {cod:up, c:AEROPORTOS[up].c, lat:AEROPORTOS[up].lat, lon:AEROPORTOS[up].lon, p:AEROPORTOS[up].p};
+  const n = semAcento(s.toLowerCase()).split(',')[0].trim();
+  const k = Object.keys(AEROPORTOS).find(c => semAcento(String(AEROPORTOS[c].c).toLowerCase()) === n)
+    || Object.keys(AEROPORTOS).find(c => n.startsWith(semAcento(String(AEROPORTOS[c].c).toLowerCase())) && String(AEROPORTOS[c].c).length > 3);
+  return k ? {cod:k, c:AEROPORTOS[k].c, lat:AEROPORTOS[k].lat, lon:AEROPORTOS[k].lon, p:AEROPORTOS[k].p} : null;
+}
+const rvCidades = () => [...new Set(Object.values(AEROPORTOS).map(a => a.c))].sort((a, b) => a.localeCompare(b, 'pt'));
+
+/* ══ FORMULÁRIO ════════════════════════════════════════════════════════════════ */
+function novaReservaViagem(){
+  const p = P(); if (!p) return;
+  abrirFolha({titulo:'Nova reserva', largura:'larga', corpo:`
+    <p class="fraco" style="margin:0 0 14px">O que você reservou? Cada tipo pede só o que faz sentido para ele.</p>
+    <div class="rv-cats">${Object.entries(RV_CATS).map(([k, c]) => `<button type="button" class="rv-cat" data-cat="${k}" style="--rv-c:${c.c}">
+      <span class="rv-cat-ic"><svg><use href="#i-${c.i}"/></svg></span><b>${c.n}</b></button>`).join('')}</div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+  $$('#folhaCorpo .rv-cat').forEach(b => b.onclick = () => editarReservaViagem(null, b.dataset.cat));
+}
+function editarReservaViagem(id, cat){
+  const p = P(); if (!p) return;
+  const r0 = id ? rvLista(p).find(x => x.id === id) : null;
+  const k = (r0 && r0.cat) || cat || 'outro', C = RV_CATS[k] || RV_CATS.outro;
+  const r = r0 || {cat:k, moeda:p && escopoPlano(p) === 'int' ? 'EUR' : 'BRL', pagamento:'cartao', situacao:'reservado', qtd:p.pax || 1, ini:p.inicio || '', fim:C.m === 'periodo' || C.m === 'cobertura' ? (p.fim || '') : ''};
+  const campo = (rot, html, cls = '') => `<div class="campo${cls ? ' ' + cls : ''}"><label>${rot}</label>${html}</div>`;
+  const dt = (idc, v) => `<input type="date" id="${idc}" value="${esc(v || '')}">`;
+  const hr = (idc, v) => `<input type="time" id="${idc}" value="${esc(v || '')}">`;
+  const tx = (idc, v, ph, extra = '') => `<input type="text" id="${idc}" value="${esc(v || '')}" placeholder="${esc(ph || '')}"${extra}>`;
+  let quando = '';
+  if (C.m === 'periodo') quando = `
+    ${campo(C.ini, dt('rvIni', r.ini))}${campo('Hora', hr('rvIniH', r.iniH))}
+    ${campo(C.fim, dt('rvFim', r.fim))}${campo('Hora', hr('rvFimH', r.fimH))}
+    ${C.dois ? campo('Local da retirada', tx('rvDe', r.de, 'Aeroporto de Lisboa', ' list="rvCid"'), 'rv-largo') + campo('Local da devolução', tx('rvPara', r.para, 'Porto', ' list="rvCid"'), 'rv-largo') : ''}
+    <div class="rv-noites" id="rvNoites"></div>`;
+  else if (C.m === 'movimento') quando = `
+    ${campo('De', tx('rvDe', r.de, 'Aeroporto de Paris (CDG)', ' list="rvCid"'), 'rv-largo')}${campo('Para', tx('rvPara', r.para, 'Hotel, estação, cidade', ' list="rvCid"'), 'rv-largo')}
+    ${campo('Data', dt('rvIni', r.ini))}${campo('Saída', hr('rvIniH', r.iniH))}${campo('Chegada', hr('rvFimH', r.fimH))}${campo('Chega em outro dia?', dt('rvFim', r.fim), 'rv-op')}`;
+  else if (C.m === 'momento') quando = `
+    ${campo('Data', dt('rvIni', r.ini))}${campo('Hora', hr('rvIniH', r.iniH))}${campo('Duração (horas)', tx('rvDur', r.dur, '2', ' inputmode="decimal"'))}${campo('Quantidade', `<input type="number" id="rvQtd" min="1" max="30" value="${esc(r.qtd || 1)}">`)}`;
+  else quando = `${campo(C.ini, dt('rvIni', r.ini))}${campo(C.fim, dt('rvFim', r.fim))}`;
+  const cartoes = (DB.cartoes || []).filter(c => c.ativo !== false);
+  const progs = PROG_IDS || Object.keys(PROGRAMAS);
+  abrirFolha({titulo:`${id ? 'Editar' : 'Nova'} reserva · ${C.n}`, largura:'larga', corpo:`
+    <datalist id="rvCid">${rvCidades().map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <div class="rv-form-cab" style="--rv-c:${C.c}"><span class="rv-cat-ic"><svg><use href="#i-${C.i}"/></svg></span><div><b>${C.n}</b><span>${p ? esc(p.nome) : ''}</span></div>
+      ${id ? '' : `<button type="button" class="bt p fantasma" onclick="novaReservaViagem()">Trocar o tipo</button>`}</div>
+    <div class="grade rv-grade">
+      ${campo('Nome', tx('rvTit', r.titulo, C.ph), 'rv-largo')}
+      ${C.m !== 'movimento' ? campo('Cidade', tx('rvCidade', r.cidade, 'Paris', ' list="rvCid"')) : ''}
+      ${C.m !== 'movimento' && C.m !== 'cobertura' ? campo('Endereço ou local', tx('rvLocal', r.local, 'Champ de Mars, 5 Av. Anatole France')) : ''}
+      ${quando}
+      ${campo(C.ex, tx('rvExtra', r.extra, C.exPh), 'rv-largo')}
+    </div>
+    <div class="olho anil" style="margin:18px 0 10px">Pagamento</div>
+    <div class="grade rv-grade">
+      ${campo('Forma', `<select id="rvPg" data-ordem="natural">${Object.entries(RV_PAGTO).map(([v, n]) => `<option value="${v}"${v === r.pagamento ? ' selected' : ''}>${n}</option>`).join('')}</select>`)}
+      ${campo('Valor', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvValor" value="${r.valor ? moedaTxt(r.valor) : ''}" placeholder="0,00">`, 'rv-vl')}
+      ${campo('Moeda', `<select id="rvMoeda" data-ordem="natural">${Object.entries(RV_MOEDAS).map(([v, n]) => `<option value="${v}"${v === r.moeda ? ' selected' : ''}>${v} · ${n}</option>`).join('')}</select>`, 'rv-vl')}
+      ${campo('Câmbio (R$ por 1)', `<div class="rv-cambio"><input type="text" inputmode="decimal" id="rvCambio" value="${r.cambio ? String(r.cambio).replace('.', ',') : ''}" placeholder="6,20"><button type="button" class="bt p fantasma" id="rvCotar" data-dica="Busca a cotação comercial de agora">Hoje</button></div>`, 'rv-cb')}
+      ${campo('Cartão', `<select id="rvCartao"><option value="">escolha</option>${cartoes.map(c => `<option value="${c.id}"${c.id === r.cartaoId ? ' selected' : ''}>${esc(nomeCartao(c.id))}</option>`).join('')}</select>`, 'rv-ct')}
+      ${campoParcelas('rvParcelas', r.parcelas).replace('class="campo', 'class="campo rv-ct')}
+      ${campo('Programa', `<select id="rvProg"><option value="">escolha</option>${progs.filter(k2 => PROGRAMAS[k2]).map(k2 => `<option value="${k2}"${k2 === r.prog ? ' selected' : ''}>${esc(prog(k2).n)}</option>`).join('')}</select>`, 'rv-pt')}
+      ${campo('Pontos ou milhas usados', `<input type="text" inputmode="numeric" data-milhar id="rvPontos" value="${r.pontos ? qtdTxt(r.pontos) : ''}">`, 'rv-pt')}
+    </div>
+    <div class="rv-conta" id="rvConta"></div>
+    <div class="olho anil" style="margin:18px 0 10px">A reserva</div>
+    <div class="grade rv-grade">
+      ${campo('Código ou localizador', tx('rvCod', r.codigo, 'HX7K2P', ' style="text-transform:uppercase;font-family:var(--f-m)"'))}
+      ${campo('Comprado em', tx('rvForn', r.fornecedor, 'Booking, Airbnb, GetYourGuide...'))}
+      ${campo('Cancelamento grátis até', dt('rvCancel', r.cancelAte))}
+      ${campo('Situação', `<select id="rvSit" data-ordem="natural">${Object.entries(RV_SIT).map(([v, n]) => `<option value="${v}"${v === r.situacao ? ' selected' : ''}>${n}</option>`).join('')}</select>`)}
+      ${campo('Link do voucher', tx('rvLink', r.link, 'https://...'), 'rv-largo')}
+      ${campo('Observação', tx('rvObs', r.obs, ''), 'rv-largo')}
+    </div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${id ? `<button type="button" class="bt vermelho-solido" id="rvApagar"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}<button type="button" class="bt primario" id="rvSalvar"><svg><use href="#i-ok"/></svg>Salvar reserva</button>`});
+  if (typeof prepararCamposData === 'function') prepararCamposData($('#folhaCorpo'));
+  ligarCampoMoeda('#rvValor'); ligarCampoContagem('#rvPontos');
+  if (typeof ordenarSelects === 'function') ordenarSelects($('#folhaCorpo'));
+  const conta = () => {
+    const pg = $('#rvPg').value, moeda = $('#rvMoeda').value;
+    $$('#folhaCorpo .rv-ct').forEach(e => e.style.display = pg === 'cartao' ? '' : 'none');
+    $$('#folhaCorpo .rv-pt').forEach(e => e.style.display = pg === 'pontos' ? '' : 'none');
+    $$('#folhaCorpo .rv-cb').forEach(e => e.style.display = moeda === 'BRL' ? 'none' : '');
+    const x = lerFormReserva(); const v = rvValor(x);
+    const partes = [];
+    if (x.moeda !== 'BRL' && x.valor) partes.push(`${rvFmtMoeda(x.valor, x.moeda)} × ${x.cambio ? String(x.cambio).replace('.', ',') : '?'}`);
+    if (pg === 'pontos' && x.pontos) partes.push(`${nBR(x.pontos)} ${x.prog ? 'de ' + esc(prog(x.prog).n) : 'pontos'} ao seu milheiro`);
+    $('#rvConta').innerHTML = v ? `<span>Na conta da viagem</span><b>${brl(v)}</b>${partes.length ? `<em>${partes.join(' + ')}</em>` : ''}` : (x.moeda !== 'BRL' && x.valor && !x.cambio ? '<em class="n-ouro">Informe o câmbio (ou toque em Hoje) para converter para reais.</em>' : '');
+    const n = $('#rvNoites'); if (n){ const q = rvNoites(x); n.textContent = q ? `${q} ${q === 1 ? 'noite' : 'noites'}` : ''; }
+  };
+  $('#folhaCorpo').addEventListener('input', conta); $('#folhaCorpo').addEventListener('change', conta); conta();
+  $('#rvCotar').onclick = async () => {
+    const m = $('#rvMoeda').value; if (m === 'BRL') return;
+    $('#rvCotar').disabled = true;
+    try{
+      const r2 = await fetch(`https://economia.awesomeapi.com.br/json/last/${m}-BRL`, {cache:'no-store'});
+      const j = await r2.json(); const v = Number((j[m + 'BRL'] || {}).bid);
+      if (!(v > 0)) throw new Error('sem cotação');
+      $('#rvCambio').value = v.toFixed(4).replace('.', ','); conta();
+      avisar(`Cotação de agora: 1 ${m} = R$ ${v.toFixed(4).replace('.', ',')}.`, 'ok');
+    }catch(e){ avisar('Não deu para buscar a cotação agora. Digite o câmbio da sua compra (o da fatura é o mais exato).', 'alerta', 6000); }
+    finally{ $('#rvCotar').disabled = false; }
+  };
+  if ($('#rvApagar')) $('#rvApagar').onclick = () => confirmar('Excluir esta reserva?', `${esc(r.titulo || C.n)} sai da viagem e da conta.`, () => { p.reservas = rvLista(p).filter(x => x.id !== id); salvar(); fecharFolha(); renderPlano(); avisar('Reserva excluída.', 'ok'); }, 'Excluir');
+  $('#rvSalvar').onclick = () => {
+    const x = lerFormReserva();
+    const faltam = [];
+    if (!x.titulo) faltam.push({sel:'#rvTit', msg:'Dê um nome à reserva.'});
+    if (!x.ini) faltam.push({sel:'#rvIni', msg:'Informe a data.'});
+    if ((C.m === 'periodo' || C.m === 'cobertura') && !x.fim) faltam.push({sel:'#rvFim', msg:`Informe ${C.fim.toLowerCase()}.`});
+    if (x.fim && x.ini && x.fim < x.ini) faltam.push({sel:'#rvFim', msg:`${C.fim || 'A chegada'} não pode ser antes de ${(C.ini || 'a data').toLowerCase()}.`});
+    if (C.m === 'movimento' && !x.de) faltam.push({sel:'#rvDe', msg:'De onde sai?'});
+    if (C.m === 'movimento' && !x.para) faltam.push({sel:'#rvPara', msg:'Para onde vai?'});
+    if (x.moeda !== 'BRL' && x.valor && !(x.cambio > 0) && x.pagamento !== 'pontos') faltam.push({sel:'#rvCambio', msg:'Informe o câmbio, ou toque em Hoje.'});
+    if (x.pagamento === 'pontos' && !(x.pontos > 0)) faltam.push({sel:'#rvPontos', msg:'Quantos pontos ou milhas foram usados?'});
+    if (faltam.length){ errosNosCampos(faltam); return; }
+    p.reservas = rvLista(p);
+    const novo = {...(r0 || {}), ...x, id:(r0 && r0.id) || uid(), cat:k, criada:(r0 && r0.criada) || hojeISO()};
+    if (r0) p.reservas[p.reservas.findIndex(y => y.id === r0.id)] = novo; else p.reservas.push(novo);
+    salvar(); fecharFolha(); renderPlano();
+    avisar(`${C.n} salva${rvValor(novo) ? ': ' + brl(rvValor(novo)) + ' na conta da viagem' : ''}.`, 'ok');
+  };
+}
+function lerFormReserva(){
+  const v = s => ($(s) || {}).value || '';
+  const num = s => Number(String(v(s)).replace(/\./g, '').replace(',', '.')) || 0;
+  return {titulo:v('#rvTit').trim(), cidade:v('#rvCidade').trim(), local:v('#rvLocal').trim(), de:v('#rvDe').trim(), para:v('#rvPara').trim(),
+    ini:v('#rvIni'), iniH:v('#rvIniH'), fim:v('#rvFim'), fimH:v('#rvFimH'), dur:v('#rvDur').trim(), qtd:Number(v('#rvQtd')) || undefined, extra:v('#rvExtra').trim(),
+    pagamento:v('#rvPg'), valor:moedaNum(v('#rvValor')), moeda:v('#rvMoeda') || 'BRL', cambio:v('#rvMoeda') === 'BRL' ? 0 : num('#rvCambio'),
+    cartaoId:v('#rvPg') === 'cartao' ? v('#rvCartao') : '', parcelas:v('#rvPg') === 'cartao' ? (Number(v('#rvParcelas')) || 1) : 1,
+    prog:v('#rvPg') === 'pontos' ? v('#rvProg') : '', pontos:v('#rvPg') === 'pontos' ? qtdNum(v('#rvPontos')) : 0,
+    codigo:v('#rvCod').trim().toUpperCase(), fornecedor:v('#rvForn').trim(), cancelAte:v('#rvCancel'), situacao:v('#rvSit') || 'reservado', link:v('#rvLink').trim(), obs:v('#rvObs').trim()};
+}
+
+/* ══ LISTA (aba Trechos) ═══════════════════════════════════════════════════════ */
+function rvQuando(r){
+  const C = RV_CATS[r.cat] || RV_CATS.outro, d = x => x ? dataBR(x).slice(0, 5) : '';
+  if (C.m === 'periodo'){ const n = rvNoites(r); return `${d(r.ini)}${r.iniH ? ' ' + r.iniH : ''} → ${d(r.fim)}${r.fimH ? ' ' + r.fimH : ''}${r.cat === 'hospedagem' && n ? ` · ${n} ${n === 1 ? 'noite' : 'noites'}` : ''}`; }
+  if (C.m === 'movimento') return `${d(r.ini)}${r.iniH ? ' · ' + r.iniH : ''}${r.fimH ? ' → ' + r.fimH : ''}`;
+  if (C.m === 'cobertura') return `${d(r.ini)} → ${d(r.fim)}`;
+  return `${d(r.ini)}${r.iniH ? ' · ' + r.iniH : ''}`;
+}
+function custoVoosPlano(p){ return soma(trechosDe(p).map(t => (custoTrechoReais(t) || 0) + (t.upgrade ? custoUpgradeReais(t) || 0 : 0))); }
+function reservasViagemHTML(p){
+  const rs = rvLista(p).slice().sort((a, b) => (a.ini + (a.iniH || '')).localeCompare(b.ini + (b.iniH || '')));
+  const tot = soma(rs.map(rvValor)), voos = custoVoosPlano(p);
+  const porCat = {}; rs.forEach(r => { const v = rvValor(r); if (v) porCat[r.cat] = (porCat[r.cat] || 0) + v; });
+  return `<div class="cartao rv-cartao" style="padding:0;overflow:hidden;margin-top:18px">
+    <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
+      <h3 style="color:var(--anil-claro)">Reservas da viagem<div class="sub">Hospedagem, traslados, carro, trem, ingressos, shows, experiências: tudo o que não é voo.<br>Cada uma entra na conta da viagem e na linha do tempo de Viagem inteira.</div></h3>
+      <button class="bt primario" onclick="novaReservaViagem()"><svg><use href="#i-mais"/></svg>Nova reserva</button>
+    </div>
+    ${rs.length ? `<div class="rv-lista">${rs.map(r => { const C = RV_CATS[r.cat] || RV_CATS.outro, v = rvValor(r);
+      const canc = r.cancelAte && r.situacao !== 'cancelado' ? diasAte(r.cancelAte) : null;
+      const onde = C.m === 'movimento' ? `${r.de} → ${r.para}` : [r.cidade, r.local].filter(Boolean).join(' · ');
+      return `<div class="rv-item${r.situacao === 'cancelado' ? ' cancelado' : ''}" style="--rv-c:${C.c}">
+        <span class="rv-cat-ic"><svg><use href="#i-${C.i}"/></svg></span>
+        <div class="rv-item-c"><div class="rv-item-t"><b>${esc(r.titulo)}</b><span class="rv-tipo">${C.n}</span>${r.situacao !== 'reservado' ? `<span class="etq ${r.situacao === 'pago' ? 'jade' : r.situacao === 'cancelado' ? 'brasa' : 'ouro'}">${RV_SIT[r.situacao]}</span>` : ''}</div>
+          <div class="rv-item-s">${esc(rvQuando(r))}${onde ? ' · ' + esc(onde) : ''}${r.codigo ? ` · <span class="rv-cod">${esc(r.codigo)}</span>` : ''}</div>
+          ${canc != null && canc >= 0 ? `<div class="rv-canc ${canc <= 3 ? 'perto' : ''}">cancela grátis até ${dataBR(r.cancelAte)}${canc === 0 ? ' (hoje)' : canc <= 3 ? ` (faltam ${canc} dias)` : ''}</div>` : ''}</div>
+        <div class="rv-item-v"><b>${v ? brl(v) : '<span class="fraco">sem valor</span>'}</b>${r.pagamento === 'pontos' && r.pontos ? `<small>${nBR(r.pontos)} ${r.prog ? esc(prog(r.prog).n) : 'pontos'}</small>` : r.moeda !== 'BRL' && r.valor ? `<small>${rvFmtMoeda(r.valor, r.moeda)}</small>` : `<small>${esc(RV_PAGTO[r.pagamento] || '')}</small>`}</div>
+        <div class="acoes-cel">${r.link ? `<a class="bt p fantasma icone" href="${esc(r.link)}" target="_blank" rel="noopener" data-dica="Abrir o voucher"><svg><use href="#i-link"/></svg></a>` : ''}
+          <button class="bt p fantasma icone" onclick="editarReservaViagem('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button></div>
+      </div>`; }).join('')}</div>
+      <div class="rt-trechos-pe rv-pe">${Object.keys(porCat).map(k => `<span><b>${brl(porCat[k])}</b> ${esc(RV_CATS[k].n.toLowerCase())}</span>`).join('')}<span class="esticar"></span>
+        <span>Voos <b>${brl(voos)}</b> + reservas <b>${brl(tot)}</b> = viagem <b class="ouro">${brl(voos + tot)}</b></span></div>`
+    : `<div class="vazio" style="border:0;padding:26px"><p>Nenhuma reserva ainda. Toque em <b>Nova reserva</b> e escolha o tipo: hotel, traslado, carro, trem, ingresso, show, experiência...</p></div>`}
+  </div>`;
+}
+
+/* ══ LINHA DO TEMPO: de casa até casa ══════════════════════════════════════════ */
+const rvMs = (iso, hh) => { if (!iso) return null; const [a, m, d] = iso.split('-').map(Number); const [h, mi] = String(hh || '12:00').split(':').map(Number); return new Date(a, m - 1, d, h || 0, mi || 0).getTime(); };
+const rvHH = ms => { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const rvISO = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const rvDur = min => min == null ? '' : min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? String(min % 60).padStart(2, '0') : ''}` : `${min} min`;
+function rvKm(a, b){ const R = 6371, r = x => x * Math.PI / 180; const dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+
+function eventosViagem(p){
+  const ev = [];
+  const ts = ordenarTrechos(trechosDe(p));
+  const pernas = [];
+  ts.forEach(t => {
+    const legs = (typeof vooDoTrecho === 'function' && vooDoTrecho(t)) || null;
+    if (legs && legs.length){ const c = contasItinerario(legs); c.trechos.forEach(l => pernas.push({t, l})); }
+    else pernas.push({t, l:{de:t.origem, para:t.destino, data:t.data, saida:'', chegada:'', cia:'', voo:'', min:null, dataChegada:t.data}});
+  });
+  pernas.forEach(({t, l}, i) => {
+    const a = rvLugar(l.de), b = rvLugar(l.para);
+    const sai = rvMs(l.data, l.saida || '12:00'), chega = l.chegada ? rvMs(l.dataChegada || l.data, l.chegada) : null;
+    const nomeCia = String(t.cia || '').split(' · ')[0].trim();
+    ev.push({tipo:'voo', ms:sai, iso:l.data, hora:l.saida || '', semHora:!l.saida, fimMs:chega, fimHora:l.chegada || '', mais:l.mais || 0,
+      titulo:`${l.de} → ${l.para}`, sub:[nomeCia || (l.cia ? (PREFIXO_CIA[l.cia] || [])[0] || l.cia : ''), l.voo ? `voo ${l.cia || ''}${l.voo}` : '', l.min ? rvDur(l.min) + ' de voo' : '', t.loc].filter(Boolean).join(' · '),
+      de:a, para:b, km:a && b ? rvKm(a, b) : 0, min:l.min, ref:{k:'trecho', id:t.id}, cor:'var(--aco)', ic:'aviao',
+      valor:i === pernas.findIndex(x => x.t === t) ? ((custoTrechoReais(t) || 0) + (t.upgrade ? custoUpgradeReais(t) || 0 : 0)) : 0});
+  });
+  rvLista(p).filter(r => r.situacao !== 'cancelado').forEach(r => {
+    const C = RV_CATS[r.cat] || RV_CATS.outro, base = {ref:{k:'reserva', id:r.id}, cor:C.c, ic:C.i, cat:r.cat};
+    const lugar = rvLugar(r.cidade) || rvLugar(r.de) || rvLugar(r.para);
+    if (C.m === 'periodo'){
+      ev.push({...base, tipo:r.cat, fase:'ini', ms:rvMs(r.ini, r.iniH || (r.cat === 'hospedagem' ? '15:00' : '10:00')), iso:r.ini, hora:r.iniH || '', semHora:!r.iniH,
+        titulo:`${C.ini} · ${r.titulo}`, sub:[r.cidade, r.cat === 'hospedagem' && rvNoites(r) ? `${rvNoites(r)} ${rvNoites(r) === 1 ? 'noite' : 'noites'}` : '', r.extra, r.codigo].filter(Boolean).join(' · '), de:rvLugar(r.de) || lugar, valor:rvValor(r), r});
+      ev.push({...base, tipo:r.cat, fase:'fim', ms:rvMs(r.fim, r.fimH || (r.cat === 'hospedagem' ? '11:00' : '10:00')), iso:r.fim, hora:r.fimH || '', semHora:!r.fimH,
+        titulo:`${C.fim} · ${r.titulo}`, sub:[C.dois ? r.para || r.cidade : r.cidade].filter(Boolean).join(' · '), de:rvLugar(r.para) || lugar, valor:0, r});
+    } else if (C.m === 'movimento'){
+      const a = rvLugar(r.de), b = rvLugar(r.para);
+      ev.push({...base, tipo:r.cat, ms:rvMs(r.ini, r.iniH || '12:00'), iso:r.ini, hora:r.iniH || '', semHora:!r.iniH, fimHora:r.fimH || '',
+        titulo:`${r.titulo}`, sub:[`${r.de} → ${r.para}`, r.extra, r.codigo].filter(Boolean).join(' · '), de:a, para:b, valor:rvValor(r), r});
+    } else if (C.m === 'momento'){
+      ev.push({...base, tipo:r.cat, ms:rvMs(r.ini, r.iniH || '12:00'), iso:r.ini, hora:r.iniH || '', semHora:!r.iniH, dur:Number(String(r.dur || '').replace(',', '.')) || 0,
+        titulo:r.titulo, sub:[r.local || r.cidade, r.extra, r.qtd > 1 ? `${r.qtd} pessoas` : '', r.codigo].filter(Boolean).join(' · '), de:lugar, valor:rvValor(r), r});
+    } else {
+      ev.push({...base, tipo:r.cat, ms:rvMs(r.ini, '00:01'), iso:r.ini, hora:'', semHora:true, cobertura:true,
+        titulo:r.titulo, sub:[`${C.n} de ${dataBR(r.ini).slice(0, 5)} a ${dataBR(r.fim).slice(0, 5)}`, r.extra].filter(Boolean).join(' · '), de:null, valor:rvValor(r), r});
+    }
+  });
+  ev.sort((a, b) => a.ms - b.ms || (a.tipo === 'voo' ? 1 : -1));
+  /* casa: o primeiro movimento e o último */
+  const voos = ev.filter(e => e.tipo === 'voo');
+  if (voos.length){
+    const casaLugar = rvLugar(p.casa) || voos[0].de;
+    const int = escopoPlano(p) === 'int';
+    const v0 = voos[0], vU = voos[voos.length - 1];
+    const antes = ev.filter(e => e.ms < v0.ms && ['traslado', 'onibus', 'trem', 'carro'].includes(e.tipo)).slice(-1)[0];
+    const saidaMs = antes ? antes.ms - 15 * 6e4 : v0.semHora ? null : v0.ms - ((int ? 180 : 120) + 45) * 6e4;
+    ev.unshift({tipo:'casa', fase:'saida', ms:saidaMs || v0.ms - 1, iso:saidaMs ? rvISO(saidaMs) : v0.iso, hora:saidaMs ? rvHH(saidaMs) : '', semHora:!saidaMs, estimada:!antes,
+      titulo:'Saída de casa', sub:antes ? `${RV_CATS[antes.tipo].n.toLowerCase()} às ${antes.hora || 'n/d'}` : saidaMs ? `sugestão: ${int ? '3 horas' : '2 horas'} antes do voo, mais 45 min até o aeroporto` : 'informe a hora do primeiro voo para a Torre sugerir',
+      de:casaLugar, cor:'var(--ouro)', ic:'casa'});
+    const depois = ev.filter(e => e.ms > vU.ms && ['traslado', 'onibus', 'trem', 'carro'].includes(e.tipo))[0];
+    const fimVoo = vU.fimMs || (vU.semHora ? null : vU.ms + (vU.min || 120) * 6e4);
+    const chegaMs = depois ? (depois.fimHora ? rvMs(depois.iso, depois.fimHora) : depois.ms + 60 * 6e4) : fimVoo ? fimVoo + (60 + 45) * 6e4 : null;
+    ev.push({tipo:'casa', fase:'chegada', ms:chegaMs || (vU.ms + 1), iso:chegaMs ? rvISO(chegaMs) : vU.iso, hora:chegaMs ? rvHH(chegaMs) : '', semHora:!chegaMs, estimada:!depois,
+      titulo:'Chegada em casa', sub:depois ? `depois do ${RV_CATS[depois.tipo].n.toLowerCase()}` : chegaMs ? 'estimativa: 1 hora de desembarque e bagagem, mais 45 min até em casa' : '',
+      de:rvLugar(p.casa) || vU.para, cor:'var(--ouro)', ic:'casa'});
+  }
+  return ev;
+}
+
+/* O que a Torre enxerga nos buracos: noite sem hotel, chegada sem traslado,
+   espera longa entre check-out e voo, cancelamento grátis vencendo. */
+function alertasViagem(p, ev){
+  const al = [];
+  const voos = ev.filter(e => e.tipo === 'voo');
+  if (voos.length >= 2){
+    const hosp = rvLista(p).filter(r => r.cat === 'hospedagem' && r.situacao !== 'cancelado');
+    const primeiraChegada = voos[0].fimMs ? rvISO(voos[0].fimMs) : voos[0].iso;
+    const ultimoVoo = voos[voos.length - 1].iso;
+    for (let d = primeiraChegada; d < ultimoVoo; d = somaDiasISO(d, 1)){
+      const dorme = hosp.some(h => h.ini <= d && d < h.fim);
+      const noAr = voos.some(v => v.iso === d && v.fimMs && rvISO(v.fimMs) > d);
+      if (!dorme && !noAr){
+        const ondeEv = ev.filter(e => e.iso <= d && (e.para || e.de)).slice(-1)[0];
+        const onde = ondeEv ? ((ondeEv.para || ondeEv.de) || {}).c : '';
+        al.push({iso:d, ms:rvMs(d, '23:58'), tipo:'noite', txt:`Noite de ${dataBR(d).slice(0, 5)} sem hospedagem${onde ? ' em ' + onde : ''}`, acao:'hospedagem'});
+      }
+    }
+    voos.slice(0, -1).forEach(v => {
+      if (!v.fimMs) return;
+      const prox = ev.find(e => e.ms > v.fimMs && e.tipo !== 'voo' && !e.cobertura);
+      if (prox && prox.tipo === 'hospedagem' && prox.fase === 'ini' && rvISO(prox.ms) === rvISO(v.fimMs)){
+        const tem = ev.some(e => e.ms >= v.fimMs - 6e5 && e.ms <= prox.ms && ['traslado', 'carro', 'trem', 'onibus'].includes(e.tipo));
+        if (!tem) al.push({iso:rvISO(v.fimMs), ms:v.fimMs + 6e4, tipo:'traslado', txt:`Do aeroporto ${v.para ? 'de ' + v.para.c : ''} até ${prox.r ? prox.r.titulo : 'a hospedagem'}: ainda sem traslado`, acao:'traslado'});
+      }
+    });
+    ev.filter(e => e.tipo === 'hospedagem' && e.fase === 'fim').forEach(co => {
+      const v = voos.find(x => x.ms > co.ms && x.iso === co.iso);
+      if (v && !v.semHora && (v.ms - co.ms) / 36e5 >= 4) al.push({iso:co.iso, ms:co.ms + 6e4, tipo:'mala', txt:`${rvDur(Math.round((v.ms - co.ms) / 6e4))} entre o check-out e o voo: peça para guardar a mala no hotel`});
+    });
+  }
+  rvLista(p).filter(r => r.cancelAte && r.situacao !== 'cancelado').forEach(r => { const d = diasAte(r.cancelAte); if (d != null && d >= 0 && d <= 7) al.push({iso:null, tipo:'cancel', txt:`${r.titulo}: cancelamento grátis até ${dataBR(r.cancelAte)}${d === 0 ? ', hoje' : `, faltam ${d} dias`}`}); });
+  return al;
+}
+
+/* ══ A ABA "VIAGEM INTEIRA" ════════════════════════════════════════════════════ */
+let rvMapa = null, rvAnim = null;
+function renderViagemInteira(p){
+  const host = $('#rtPlano'); if (!host) return;
+  const ev = eventosViagem(p), al = alertasViagem(p, ev);
+  const voos = ev.filter(e => e.tipo === 'voo');
+  const km = Math.round(soma(voos.map(v => v.km || 0)));
+  const noAr = soma(voos.map(v => v.min || 0));
+  const lugares = ev.map(e => e.para || e.de).filter(Boolean);
+  const casaP = (ev[0] && ev[0].de && ev[0].de.p) || 'BR';
+  const paises = [...new Set(lugares.map(l => l.p).filter(x => x && x !== casaP))];
+  const cidades = [...new Set(lugares.map(l => l.c))].filter(c => c !== (ev[0] && ev[0].de && ev[0].de.c));
+  const tot = custoVoosPlano(p) + soma(rvLista(p).map(rvValor));
+  const ini = ev.find(e => !e.semHora) || ev[0], fim = ev[ev.length - 1];
+  const faltam = diasAte(p.inicio);
+  if (!ev.length){
+    host.innerHTML = `<div class="vazio" style="padding:34px"><svg><use href="#i-mapa"/></svg><h4>A viagem ainda não tem movimento</h4>
+      <p>Lance os voos em Trechos e as reservas (hotel, traslado, trem, ingressos...). A Torre desenha o mapa e a linha do tempo, de casa até casa.</p>
+      <div class="linha" style="justify-content:center;gap:9px"><button class="bt primario" onclick="modoRoteiro='trechos';renderPlano()">Ir para Trechos</button><button class="bt fantasma" onclick="novaReservaViagem()"><svg><use href="#i-mais"/></svg>Nova reserva</button></div></div>`;
+    return;
+  }
+  /* dias */
+  const todos = ev.concat(al.filter(a => a.iso)).sort((a, b) => a.ms - b.ms);
+  const dias = []; todos.forEach(e => { const k = e.iso; let d = dias.find(x => x.iso === k); if (!d){ d = {iso:k, itens:[]}; dias.push(d); } d.itens.push(e); });
+  const d0 = dias[0] ? dias[0].iso : p.inicio;
+  const nDia = iso => Math.round((new Date(iso + 'T12:00:00') - new Date(d0 + 'T12:00:00')) / 864e5) + 1;
+  let idx = 0;
+  const linha = e => {
+    if (e.txt) return `<div class="vi-alerta ${e.tipo}"><svg><use href="#i-alerta"/></svg><span>${esc(e.txt)}</span>${e.acao ? `<button type="button" class="bt p fantasma" onclick="editarReservaViagem(null,'${e.acao}')"><svg><use href="#i-mais"/></svg>${e.acao === 'hospedagem' ? 'Hospedagem' : 'Traslado'}</button>` : ''}</div>`;
+    const i = idx++;
+    const hora = e.semHora ? '<span class="vi-sem">sem hora</span>' : `${e.estimada ? '~' : ''}${e.hora}`;
+    const fimH = e.fimHora ? `<small>→ ${e.fimHora}${e.mais ? `<sup>+${e.mais}</sup>` : ''}</small>` : '';
+    const acao = e.ref ? (e.ref.k === 'reserva' ? `onclick="editarReservaViagem('${e.ref.id}')"` : `onclick="modoRoteiro='trechos';renderPlano();setTimeout(()=>editarTrecho('${e.ref.id}'),80)"`) : '';
+    return `<div class="vi-ev${e.tipo === 'casa' ? ' casa' : ''}${e.estimada ? ' estimada' : ''}${e.cobertura ? ' cobertura' : ''}" data-vi="${i}" style="--vi-c:${e.cor}">
+      <div class="vi-hora">${hora}${fimH}</div>
+      <div class="vi-no"><span><svg><use href="#i-${e.ic}"/></svg></span></div>
+      <button type="button" class="vi-card" ${acao} data-foco="${i}">
+        <span class="vi-tit">${esc(e.titulo)}</span>${e.sub ? `<span class="vi-sub">${esc(e.sub)}</span>` : ''}
+        ${e.valor ? `<span class="vi-valor">${brl(e.valor)}</span>` : ''}</button>
+    </div>`;
+  };
+  const vazio = (a, b) => {
+    if (!a || !b || a.txt || b.txt || a.semHora || b.semHora || a.iso !== b.iso) return '';
+    const fa = a.fimHora ? rvMs(a.iso, a.fimHora) : a.dur ? a.ms + a.dur * 36e5 : a.ms;
+    const min = Math.round((b.ms - fa) / 6e4);
+    return min >= 90 ? `<div class="vi-livre"><span>${rvDur(min)} livres</span></div>` : '';
+  };
+  const corpoDias = dias.map(d => {
+    const dt = dISOplano(d.iso);
+    const cid = [...new Set(d.itens.map(e => (e.para || e.de || {}).c).filter(Boolean))];
+    return `<section class="vi-dia">
+      <header class="vi-dia-cab"><span class="vi-dia-n">Dia ${nDia(d.iso)}</span><b>${(w => w[0].toUpperCase() + w.slice(1))(SEMP[dt.getDay()].split('-')[0])}, ${dt.getDate()} de ${MESP[dt.getMonth()]}</b><span class="fraco">${esc(cid.join(' → '))}</span></header>
+      ${d.itens.map((e, k) => vazio(d.itens[k - 1], e) + linha(e)).join('')}
+    </section>`;
+  }).join('');
+  host.innerHTML = `
+    <div class="vi-heroi">
+      <div class="vi-heroi-esq">
+        <span class="vi-olho">${faltam != null && faltam > 0 ? `faltam ${faltam} dias` : faltam === 0 ? 'é hoje' : (diasAte(p.fim) ?? -1) >= 0 ? 'em andamento' : 'viagem feita'}</span>
+        <h2>${esc(p.nome)}</h2>
+        <p>${dataLongaPlano(ini.iso)} até ${dataLongaPlano(fim.iso)}</p>
+      </div>
+      <div class="vi-nums">
+        <div><b>${nBR(Math.round((new Date(fim.iso + 'T12:00:00') - new Date(ini.iso + 'T12:00:00')) / 864e5) + 1)}</b><span>dias, de casa a casa</span></div>
+        <div><b>${nBR(km)}</b><span>km voados</span></div>
+        <div><b>${noAr ? rvDur(noAr) : 'n/d'}</b><span>no ar</span></div>
+        <div><b>${cidades.length}</b><span>${cidades.length === 1 ? 'cidade' : 'cidades'} · ${paises.length} ${paises.length === 1 ? 'país' : 'países'}</span></div>
+        <div class="ouro"><b>${brl(tot)}</b><span>a viagem toda</span></div>
+      </div>
+    </div>
+    <div class="vi-corpo">
+      <div class="vi-mapa-col"><div class="vi-mapa-caixa">
+        <div id="viMapa" class="vi-mapa"></div>
+        <div class="vi-mapa-bts"><button type="button" class="bt p primario" id="viPlay"><svg><use href="#i-tocar"/></svg>Percorrer a viagem</button></div>
+      </div>
+      <div class="vi-legenda" id="viLegenda"></div>
+      ${al.filter(a => !a.iso).map(a => `<div class="vi-alerta cancel"><svg><use href="#i-relogio"/></svg><span>${esc(a.txt)}</span></div>`).join('')}
+      </div>
+      <div class="vi-linha">
+        <div class="vi-linha-cab"><div><b>Linha do tempo</b><span class="fraco">${ev.length} momentos${al.filter(a => a.iso).length ? ` · <span class="n-ouro">${al.filter(a => a.iso).length} ${al.filter(a => a.iso).length === 1 ? 'ponto' : 'pontos'} de atenção</span>` : ''}</span></div>
+          <button class="bt p primario" onclick="novaReservaViagem()"><svg><use href="#i-mais"/></svg>Reserva</button></div>
+        ${corpoDias}
+      </div>
+    </div>`;
+  rvEventosDaTela = ev;
+  desenharMapaViagem(ev);
+  $$('#rtPlano .vi-card').forEach(b => b.addEventListener('mouseenter', () => rvFocar(+b.dataset.foco, false)));
+  $('#viPlay').onclick = () => rvPercorrer();
+}
+let rvEventosDaTela = [];
+
+/* ── mapa: Leaflet com o mapa da CARTO, e um desenho próprio se a internet falhar ── */
+const RV_LEAF_JS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+const RV_LEAF_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+let rvLeafPromessa = null;
+function carregarLeaflet(){
+  if (window.L && window.L.map) return Promise.resolve(window.L);
+  if (rvLeafPromessa) return rvLeafPromessa;
+  rvLeafPromessa = new Promise((ok, erro) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = RV_LEAF_CSS; document.head.appendChild(css);
+    const s = document.createElement('script'); s.src = RV_LEAF_JS; s.onload = () => ok(window.L); s.onerror = () => { rvLeafPromessa = null; erro(new Error('sem mapa')); };
+    document.head.appendChild(s);
+    setTimeout(() => { if (!(window.L && window.L.map)){ rvLeafPromessa = null; erro(new Error('tempo')); } }, 8000);
+  });
+  return rvLeafPromessa;
+}
+/* Arco suave entre dois pontos: o voo desenhado como se vê numa revista de bordo. */
+function rvArco(a, b, n = 48){
+  const pts = []; const dx = b.lon - a.lon, dy = b.lat - a.lat, dist = Math.hypot(dx, dy);
+  const cx = (a.lon + b.lon) / 2 - dy * .18, cy = (a.lat + b.lat) / 2 + dx * .18;
+  for (let i = 0; i <= n; i++){ const t = i / n; pts.push([(1 - t) ** 2 * a.lat + 2 * (1 - t) * t * cy + t * t * b.lat, (1 - t) ** 2 * a.lon + 2 * (1 - t) * t * cx + t * t * b.lon]); }
+  return dist < .01 ? [[a.lat, a.lon], [b.lat, b.lon]] : pts;
+}
+function rvPercurso(ev){
+  const seg = []; let ult = null;
+  ev.forEach((e, i) => {
+    const a = e.de, b = e.para;
+    if (a && ult && (Math.abs(a.lat - ult.lat) > .01 || Math.abs(a.lon - ult.lon) > .01)) seg.push({tipo:'terra', pts:[[ult.lat, ult.lon], [a.lat, a.lon]], i});
+    if (a && b){ seg.push({tipo:e.tipo === 'voo' ? 'voo' : 'terra', pts:e.tipo === 'voo' ? rvArco(a, b) : [[a.lat, a.lon], [b.lat, b.lon]], i}); ult = b; }
+    else if (a) ult = a;
+  });
+  return seg;
+}
+async function desenharMapaViagem(ev){
+  const cx = $('#viMapa'); if (!cx) return;
+  const pontos = []; ev.forEach((e, i) => [e.de, e.para].forEach(l => { if (l && !pontos.some(x => x.cod === l.cod)) pontos.push({...l, i}); }));
+  const seg = rvPercurso(ev);
+  if (!pontos.length){ cx.innerHTML = '<div class="vi-mapa-vazio">Os lugares aparecem quando os voos e as reservas tiverem cidade.</div>'; return; }
+  const leg = $('#viLegenda');
+  if (leg){ leg.innerHTML = pontos.map((pt, k) => `<button type="button" data-lat="${pt.lat}" data-lon="${pt.lon}"><span>${k + 1}</span>${esc(pt.c)}</button>`).join('');
+    $$('#viLegenda button').forEach(b => b.onclick = () => { if (rvMapa) rvMapa.flyTo([+b.dataset.lat, +b.dataset.lon], 9, {duration:.9}); }); }
+  try{
+    const L = await carregarLeaflet();
+    if (!$('#viMapa')) return;
+    if (rvMapa){ try{ rvMapa.remove(); }catch(e){} rvMapa = null; }
+    const escuro = document.documentElement.dataset.theme !== 'papel';
+    rvMapa = L.map(cx, {zoomControl:true, attributionControl:true, scrollWheelZoom:false, worldCopyJump:true});
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${escuro ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`, {subdomains:'abcd', maxZoom:18,
+      attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(rvMapa);
+    seg.forEach(s => L.polyline(s.pts, {color:s.tipo === 'voo' ? '#3D82D6' : '#E8B44F', weight:s.tipo === 'voo' ? 2.6 : 2.2, opacity:.95, dashArray:s.tipo === 'voo' ? '1 7' : '6 6', lineCap:'round', className:'vi-rota ' + s.tipo}).addTo(rvMapa));
+    pontos.forEach((pt, k) => L.marker([pt.lat, pt.lon], {icon:L.divIcon({className:'vi-pino', html:`<span>${k + 1}</span>`, iconSize:[26, 26], iconAnchor:[13, 13]})})
+      .bindTooltip(`${k + 1}. ${esc(pt.c)}`, {direction:'top', offset:[0, -12], className:'vi-dica'}).addTo(rvMapa));
+    rvMapa.fitBounds(L.latLngBounds(pontos.map(pt => [pt.lat, pt.lon])).pad(.25), {maxZoom:7});
+    rvMapa._rvSeg = seg;
+  }catch(e){
+    rvMapa = null;
+    cx.innerHTML = rvMapaSVG(pontos, seg);
+  }
+}
+function rvMapaSVG(pontos, seg){
+  const W = 640, H = 420, pad = 40;
+  const lats = pontos.map(p => p.lat), lons = pontos.map(p => p.lon);
+  let x0 = Math.min(...lons), x1 = Math.max(...lons), y0 = Math.min(...lats), y1 = Math.max(...lats);
+  const dx = Math.max(x1 - x0, 2), dy = Math.max(y1 - y0, 2); const k = Math.min((W - 2 * pad) / dx, (H - 2 * pad) / dy);
+  const X = lon => pad + (lon - x0) * k + ((W - 2 * pad) - dx * k) / 2, Y = lat => H - pad - (lat - y0) * k - ((H - 2 * pad) - dy * k) / 2;
+  return `<svg class="vi-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa da viagem">
+    <defs><pattern id="viGrade" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="currentColor" stroke-opacity=".07"/></pattern></defs>
+    <rect width="${W}" height="${H}" fill="url(#viGrade)"/>
+    ${seg.map(s => `<polyline points="${s.pts.map(([la, lo]) => `${X(lo).toFixed(1)},${Y(la).toFixed(1)}`).join(' ')}" fill="none" stroke="${s.tipo === 'voo' ? '#3D82D6' : '#E8B44F'}" stroke-width="2.4" stroke-dasharray="${s.tipo === 'voo' ? '1 7' : '6 6'}" stroke-linecap="round"/>`).join('')}
+    ${pontos.map((pt, k) => `<g transform="translate(${X(pt.lon).toFixed(1)},${Y(pt.lat).toFixed(1)})"><circle r="11" fill="#E8B44F"/><text text-anchor="middle" dy="4" font-size="11" font-weight="700" fill="#191204">${k + 1}</text><text x="15" dy="4" font-size="12" font-weight="600" fill="currentColor">${esc(pt.c)}</text></g>`).join('')}
+  </svg><div class="vi-mapa-nota">Mapa simplificado: sem internet para carregar o mapa completo.</div>`;
+}
+function rvFocar(i, mover = true){
+  const e = rvEventosDaTela[i]; if (!e) return;
+  $$('#rtPlano .vi-ev').forEach(x => x.classList.toggle('foco', +x.dataset.vi === i));
+  const l = e.para || e.de;
+  if (rvMapa && l && mover !== false) rvMapa.flyTo([l.lat, l.lon], Math.max(rvMapa.getZoom(), 5), {duration:.8});
+}
+/* "Percorrer a viagem": um avião anda pelo mapa, momento a momento, e a linha do
+   tempo acompanha. */
+function rvPercorrer(){
+  if (rvAnim){ cancelAnimationFrame(rvAnim.raf); rvAnim.m && rvAnim.m.remove(); rvAnim = null; $('#viPlay') && ($('#viPlay').innerHTML = '<svg><use href="#i-tocar"/></svg>Percorrer a viagem'); return; }
+  const seg = rvMapa && rvMapa._rvSeg; if (!rvMapa || !seg || !seg.length){ avisar('O passeio pelo mapa precisa do mapa completo (internet).', 'info'); return; }
+  const L = window.L;
+  const pts = []; seg.forEach(s => s.pts.forEach(pt => pts.push({pt, i:s.i})));
+  const m = L.marker(pts[0].pt, {icon:L.divIcon({className:'vi-aviao', html:'<svg viewBox="0 0 24 24"><path d="M21 15.5l-9-3.5V5.2a1.7 1.7 0 0 0-3.4 0V12l-6 2.3v2l6-1.6v3.5l-2 1.3v1.3l3.7-1 3.7 1v-1.3l-2-1.3V15l9 2.4z"/></svg>', iconSize:[28, 28], iconAnchor:[14, 14]}), zIndexOffset:1000}).addTo(rvMapa);
+  rvMapa.fitBounds(L.latLngBounds(pts.map(x => x.pt)).pad(.2), {maxZoom:6});
+  const dur = Math.min(16000, 3500 + pts.length * 40), t0 = performance.now();
+  $('#viPlay').innerHTML = '<svg><use href="#i-pausa"/></svg>Parar';
+  let ultI = -1;
+  const passo = now => {
+    const f = Math.max(0, Math.min(1, (now - t0) / dur)), k = Math.min(pts.length - 1, Math.floor(f * (pts.length - 1)));
+    const a = pts[k].pt, b = pts[Math.min(pts.length - 1, k + 1)].pt;
+    m.setLatLng(a);
+    const ang = 90 - Math.atan2(b[0] - a[0], b[1] - a[1]) * 180 / Math.PI;
+    const el = m.getElement(); if (el) el.firstChild && (el.firstChild.style.transform = `rotate(${ang}deg)`);
+    if (pts[k].i !== ultI){ ultI = pts[k].i; rvFocar(ultI, false); const alvo = document.querySelector(`#rtPlano .vi-ev[data-vi="${ultI}"]`); if (alvo) alvo.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+    if (f < 1) rvAnim.raf = requestAnimationFrame(passo); else { setTimeout(() => { if (rvAnim){ rvAnim.m.remove(); rvAnim = null; } if ($('#viPlay')) $('#viPlay').innerHTML = '<svg><use href="#i-tocar"/></svg>Percorrer a viagem'; }, 900); }
+  };
+  rvAnim = {m, raf:requestAnimationFrame(passo)};
 }
 </script>
 </body>
