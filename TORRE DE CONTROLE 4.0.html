@@ -8703,6 +8703,245 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 
 @media (max-width:480px){ .etapas{ gap:6px; } .etapas > button{ padding:9px 10px; gap:8px; } .et-n{ width:24px; height:24px; } .et-t b{ font-size:min(calc(13.5px * var(--esc)), 14px); } .et-seta{ width:14px; } }
 </style>
+<style>
+/* ══ CENTRAL DE COTAÇÕES (12/10/2026) ═════════════════════════════════════════ */
+@property --cq-ang{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+@keyframes cqGira{ to{ --cq-ang:360deg; } }
+@keyframes cqSelo{ 0%{ transform:scale(.3); opacity:0; } 60%{ transform:scale(1.12); opacity:1; } 100%{ transform:scale(1); } }
+@keyframes cqEntra{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+@keyframes cqPulso{ 0%{ box-shadow:0 0 0 0 color-mix(in oklab, var(--jade) 60%, transparent); } 100%{ box-shadow:0 0 0 9px transparent; } }
+
+/* ── funil ── */
+.cq-funil{ border:1px solid var(--fio); border-radius:var(--r-xl); padding:18px;
+  background:radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--anil-claro) 9%, transparent), transparent 55%), var(--sup-1); }
+.cq-funil-cab{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+.cq-kpis{ display:flex; gap:10px 22px; flex-wrap:wrap; margin-top:8px; }
+.cq-kpis span{ display:flex; flex-direction:column; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.3; }
+.cq-kpis b{ color:var(--giz); font-family:var(--f-m); font-variant-numeric:tabular-nums; font-size:calc(21px * var(--esc)); font-weight:600; letter-spacing:-.03em; }
+.cq-colunas{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+.cq-col{ background:var(--sup-0); border:1px solid var(--fio); border-radius:var(--r-lg); padding:12px 10px 10px; min-width:0; position:relative; overflow:hidden; }
+.cq-col::before{ content:''; position:absolute; inset:0 0 auto 0; height:3px; background:var(--cq-c); opacity:.9; }
+.cq-col-cab{ display:flex; align-items:center; gap:8px; padding:0 3px 10px; flex-wrap:wrap; font-size:calc(14px * var(--esc)); }
+.cq-bola{ width:8px; height:8px; border-radius:50%; background:var(--cq-c); box-shadow:0 0 0 4px color-mix(in oklab, var(--cq-c) 18%, transparent); flex:0 0 auto; }
+.cq-col-n{ font-family:var(--f-m); font-size:calc(12px * var(--esc)); padding:1px 8px; border-radius:99px; background:color-mix(in oklab, var(--cq-c) 16%, transparent); color:var(--cq-c); }
+.cq-col-cab small{ margin-left:auto; color:var(--grafite); font-family:var(--f-m); font-size:calc(12px * var(--esc)); }
+.cq-col-lista{ display:flex; flex-direction:column; gap:8px; max-height:330px; overflow:auto; padding:1px; }
+.cq-card{ text-align:left; display:grid; gap:3px; padding:10px 12px 9px; border-radius:var(--r); border:1px solid var(--fio); background:var(--sup-1); color:var(--giz);
+  transition:transform .2s var(--ease), border-color .2s, box-shadow .2s; animation:cqEntra .3s var(--ease) both; min-width:0; }
+.cq-card:hover{ transform:translateY(-2px); border-color:color-mix(in oklab, var(--cq-c) 55%, var(--fio)); box-shadow:var(--sombra-p); }
+.cq-card.on{ border-color:var(--cq-c); box-shadow:0 0 0 1px var(--cq-c) inset, var(--sombra-p); }
+.cq-card-tit{ font-weight:600; font-size:calc(14px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+.cq-card-alerta{ width:7px; height:7px; border-radius:50%; background:var(--ouro); flex:0 0 auto; }
+.cq-card-rota{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cq-card-pe{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-top:2px; }
+.cq-card-pe b{ font-family:var(--f-m); font-variant-numeric:tabular-nums; font-size:calc(13.5px * var(--esc)); font-weight:600; }
+.cq-card-pe small{ color:var(--grafite-dim); font-size:calc(11.5px * var(--esc)); white-space:nowrap; }
+.cq-pontos{ display:flex; gap:3px; margin-top:5px; }
+.cq-pontos i{ flex:1; height:3px; border-radius:2px; background:var(--fio-forte); }
+.cq-pontos i.f{ background:var(--cq-c); }
+.cq-col-vazio{ font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); text-align:center; padding:16px 6px; border:1px dashed var(--fio); border-radius:var(--r); }
+.cq-perdidas{ margin-top:12px; }
+.cq-perdidas > summary{ cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:8px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.cq-perdidas > summary::-webkit-details-marker{ display:none; }
+.cq-perd-lista{ display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); margin-top:10px; max-height:none; }
+
+/* ── mesa de trabalho ── */
+.cq-mesa{ scroll-margin-top:calc(var(--topo-h) + 14px); border:1px solid var(--fio); border-radius:var(--r-xl); background:var(--sup-1); padding:22px; display:flex; flex-direction:column; gap:20px; box-shadow:var(--sombra-p); }
+.cq-cab{ display:flex; gap:12px 16px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; }
+.cq-cab-l{ min-width:0; flex:1 1 300px; }
+.cq-cab-olho{ display:block; font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.14em; color:var(--grafite); margin-bottom:2px; }
+.cq-cab-nome{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.cq-cliente-in{ font-family:var(--f-d); font-size:calc(26px * var(--esc)); font-weight:700; letter-spacing:-.02em; background:transparent; border:0; border-bottom:1.5px dashed var(--fio-forte);
+  padding:2px 0; min-width:0; width:min(380px, 100%); color:var(--giz); border-radius:0; }
+.cq-cliente-in:focus{ outline:0; border-bottom-color:var(--anil-claro); border-bottom-style:solid; }
+.cq-cliente-in::placeholder{ color:var(--grafite-dim); }
+.cq-tempo{ display:flex; gap:6px 16px; flex-wrap:wrap; font-size:calc(12.5px * var(--esc)); color:var(--giz-2); width:100%; }
+.cq-tempo span{ display:inline-flex; gap:6px; align-items:center; }
+.cq-tempo i{ width:7px; height:7px; border-radius:50%; background:var(--cq-c); }
+.cq-tempo small{ color:var(--grafite); }
+
+/* ── trilho de etapas ── */
+.cq-trilho{ position:relative; scroll-margin-top:calc(var(--topo-h) + 18px); }
+.cq-trilho ol{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:6px; position:relative; }
+.cq-trilho-barra{ position:absolute; left:10%; right:10%; top:22px; height:2px; background:var(--fio-forte); border-radius:2px; }
+.cq-trilho-barra::after{ content:''; position:absolute; inset:0; transform-origin:left center; transform:scaleX(var(--p)); border-radius:inherit;
+  background:linear-gradient(90deg, var(--jade), var(--anil-claro)); transition:transform .7s var(--ease); }
+.cq-trilho button{ width:100%; display:flex; flex-direction:column; align-items:center; gap:7px; background:none; border:0; padding:0 2px; color:var(--grafite); position:relative; z-index:1; }
+.cq-n{ width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-family:var(--f-m); font-weight:600; font-size:calc(15px * var(--esc));
+  background:var(--sup-0); border:1.5px solid var(--fio-forte); color:var(--giz-2); transition:background .25s, border-color .25s, box-shadow .25s, transform .25s var(--ease); }
+.cq-trilho button:hover .cq-n{ transform:translateY(-2px); border-color:var(--anil-claro); }
+.cq-trilho button.feito .cq-n{ background:var(--jade); border-color:var(--jade); color:#fff; }
+.cq-trilho button.on .cq-n{ border-color:var(--anil-claro); color:var(--giz); box-shadow:0 0 0 5px color-mix(in oklab, var(--anil-claro) 22%, transparent); }
+.cq-trilho button.on.feito .cq-n{ color:#fff; border-color:var(--jade); box-shadow:0 0 0 5px color-mix(in oklab, var(--jade) 24%, transparent); }
+.cq-n svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2.6; }
+.cq-t{ display:flex; flex-direction:column; align-items:center; text-align:center; line-height:1.25; }
+.cq-t b{ font-size:calc(14px * var(--esc)); color:var(--giz-2); font-weight:600; }
+.cq-t small{ font-size:calc(12px * var(--esc)); color:var(--grafite-dim); }
+.cq-trilho button.on .cq-t b{ color:var(--giz); }
+
+.cq-passo{ display:flex; flex-direction:column; gap:16px; animation:cqEntra .35s var(--ease) both; }
+.cq-passo[hidden]{ display:none; }
+.cq-passo-cab h3{ font-size:calc(19px * var(--esc)); margin-bottom:4px; }
+.cq-passo-cab p{ margin:0; font-size:calc(13.5px * var(--esc)); line-height:1.5; }
+
+/* ── caixa de captura ── */
+.cq-caixa{ position:relative; border-radius:var(--r-xl); padding:2px; cursor:pointer; isolation:isolate; outline:0; }
+.cq-caixa::before{ content:''; position:absolute; inset:0; border-radius:inherit; padding:2px; z-index:-1; opacity:.5;
+  background:conic-gradient(from var(--cq-ang), var(--anil-claro), var(--jade), var(--ouro), var(--lilas), var(--anil-claro));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:cqGira 7s linear infinite; transition:opacity .25s; }
+.cq-caixa:hover::before, .cq-caixa:focus-visible::before, .cq-caixa.sobre::before{ opacity:1; }
+.cq-caixa.sobre .cq-caixa-miolo{ background:color-mix(in oklab, var(--jade) 8%, var(--sup-0)); }
+.cq-caixa-miolo{ border-radius:calc(var(--r-xl) - 2px); background:var(--sup-0); padding:26px 20px 22px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; transition:background .2s; }
+.cq-caixa-icones{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:6px; }
+.cq-chip{ display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:99px; font-size:calc(12.5px * var(--esc)); background:var(--sup-2); color:var(--giz-2); border:1px solid var(--fio); }
+.cq-chip svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.9; }
+.cq-caixa-miolo > b{ font-family:var(--f-d); font-size:calc(19px * var(--esc)); font-weight:700; letter-spacing:-.01em; }
+.cq-caixa-miolo > span{ color:var(--grafite); font-size:calc(13.5px * var(--esc)); max-width:60ch; line-height:1.5; }
+.cq-so-toque{ display:none; }
+@media (hover:none) and (pointer:coarse){ .cq-so-pc{ display:none; } .cq-so-toque{ display:inline; } }
+.cq-caixa-bts{ gap:9px; margin-top:8px; justify-content:center; flex-wrap:wrap; }
+.cq-lendo{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; padding:14px; border:1px solid var(--fio); border-radius:var(--r-lg); background:var(--sup-0); }
+.cq-link-bt{ background:none; border:0; padding:0; color:var(--anil-claro); text-decoration:underline; text-underline-offset:3px; font-size:calc(13px * var(--esc)); }
+
+/* ── achados ── */
+.cq-achados{ display:flex; flex-direction:column; gap:14px; }
+.cq-achados-cab{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.cq-achados-cab .fraco{ font-size:calc(13px * var(--esc)); }
+.cq-grupo{ display:flex; flex-direction:column; gap:8px; }
+.cq-grupo-cab{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:calc(14px * var(--esc)); }
+.cq-achado{ display:grid; grid-template-columns:auto minmax(150px, 1fr) minmax(0, 1.7fr) minmax(150px, auto) auto; grid-template-areas:"ck prog voo num x";
+  align-items:center; gap:14px; padding:12px 14px; border:1px solid var(--fio); border-radius:var(--r-lg); background:var(--sup-0); cursor:pointer;
+  transition:border-color .2s, background .2s, transform .2s var(--ease); animation:cqEntra .3s var(--ease) both; }
+.cq-achado:hover{ border-color:var(--fio-forte); }
+.cq-achado.on{ border-color:color-mix(in oklab, var(--jade) 65%, transparent); background:color-mix(in oklab, var(--jade) 7%, var(--sup-0)); }
+.cq-achado.sem{ cursor:default; opacity:.7; }
+.cq-ach-ck{ grid-area:ck; display:flex; }
+.cq-ach-ck input{ width:19px; height:19px; accent-color:var(--jade); margin:0; }
+.cq-ach-prog{ grid-area:prog; display:flex; align-items:center; gap:9px; min-width:0; }
+.cq-ach-prog > span{ display:flex; flex-direction:column; min-width:0; line-height:1.25; }
+.cq-ach-prog b{ font-size:calc(14px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cq-ach-prog small{ color:var(--grafite-dim); font-size:calc(11.5px * var(--esc)); }
+.cq-sem-prog{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:var(--sup-2); color:var(--grafite); font-weight:700; }
+.cq-ach-voo{ grid-area:voo; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.cq-ach-rota{ display:flex; align-items:center; gap:10px; font-family:var(--f-m); font-variant-numeric:tabular-nums; font-size:calc(14px * var(--esc)); }
+.cq-ach-rota b{ font-weight:600; white-space:nowrap; }
+.cq-ach-rota b span{ color:var(--giz-2); font-weight:400; margin-left:3px; }
+.cq-ach-rota sup{ color:var(--ouro); font-size:.7em; margin-left:1px; }
+.cq-seta{ flex:1 1 30px; max-width:70px; height:1.5px; background:linear-gradient(90deg, var(--fio-forte), var(--anil-claro)); position:relative; }
+.cq-seta::after{ content:''; position:absolute; right:-1px; top:-3px; border:4px solid transparent; border-left:6px solid var(--anil-claro); border-right:0; }
+.cq-ach-voo small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cq-ach-voo .etq{ align-self:flex-start; }
+.cq-ach-voo small.cq-ach-aviso{ color:var(--ouro); white-space:normal; }
+.cq-ach-num{ grid-area:num; display:flex; flex-direction:column; align-items:flex-end; text-align:right; line-height:1.3; }
+.cq-ach-num b{ font-family:var(--f-m); font-variant-numeric:tabular-nums; color:var(--ouro); font-size:calc(14px * var(--esc)); font-weight:600; white-space:nowrap; }
+.cq-ach-num small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; }
+.cq-ach-x{ grid-area:x; width:30px; height:30px; border-radius:50%; border:1px solid transparent; background:none; color:var(--grafite); display:grid; place-items:center; }
+.cq-ach-x:hover{ border-color:var(--fio); color:var(--brasa); }
+.cq-ach-x svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.cq-barra{ position:sticky; bottom:12px; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  padding:12px 14px 12px 18px; border-radius:var(--r-lg); border:1px solid var(--fio-forte); background:color-mix(in oklab, var(--sup-2) 86%, transparent);
+  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); box-shadow:var(--sombra); font-size:calc(14px * var(--esc)); }
+.cq-barra b{ font-family:var(--f-m); }
+.cq-chrome > summary{ cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.cq-chrome > summary::-webkit-details-marker{ display:none; }
+.cq-chrome-tit{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.cq-chrome-tit b{ color:var(--anil-claro); font-family:var(--f-d); font-size:calc(16px * var(--esc)); }
+.cq-chrome-tit .fraco{ font-size:calc(13px * var(--esc)); }
+.cq-antigo > summary{ cursor:pointer; list-style:none; display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; }
+.cq-antigo > summary::-webkit-details-marker{ display:none; }
+
+/* ── publicar ── */
+.cq-pub{ display:grid; grid-template-columns:minmax(0, 290px) minmax(0, 1fr); gap:28px; align-items:start; }
+.cq-fone{ width:100%; max-width:290px; aspect-ratio:9 / 18.5; border-radius:40px; padding:11px; position:relative; justify-self:center;
+  background:linear-gradient(150deg, #353b48, #0c0e13 60%); box-shadow:var(--sombra), inset 0 0 0 1.5px rgba(255,255,255,.09); }
+.cq-fone::before{ content:''; position:absolute; top:19px; left:50%; width:78px; height:22px; margin-left:-39px; border-radius:20px; background:#000; z-index:2; }
+.cq-fone-tela{ width:100%; height:100%; border-radius:30px; overflow:hidden; background:#fff; position:relative; }
+.cq-fone-tela iframe{ width:390px; border:0; transform-origin:0 0; display:block; pointer-events:auto; }
+.cq-pub-bloco{ display:flex; flex-direction:column; gap:12px; min-width:0; }
+.cq-publicar{ align-self:flex-start; font-size:calc(15.5px * var(--esc)); padding-inline:22px; min-height:46px; }
+.cq-pub-nota{ font-size:calc(13px * var(--esc)); margin:0; line-height:1.55; }
+.cq-manual{ display:flex; gap:9px; align-items:center; flex-wrap:wrap; padding-top:12px; border-top:1px solid var(--fio); font-size:calc(13px * var(--esc)); }
+.cq-pub-passos{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; font-size:calc(14px * var(--esc)); }
+.cq-pub-passos li{ display:flex; align-items:center; gap:10px; color:var(--grafite); }
+.cq-pub-passos li.ok{ color:var(--giz); }
+.cq-pub-passos li.vai{ color:var(--giz); font-weight:500; }
+.cq-pub-passos li.erro{ color:var(--brasa); }
+.cq-pub-passos li.aviso{ color:var(--ouro); }
+.cq-pp-ic{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--fio-forte); display:grid; place-items:center; flex:0 0 auto; }
+.cq-pub-passos li.ok .cq-pp-ic{ background:var(--jade); border-color:var(--jade); color:#fff; }
+.cq-pub-passos li.erro .cq-pp-ic{ background:var(--brasa); border-color:var(--brasa); color:#fff; }
+.cq-pub-passos li.aviso .cq-pp-ic{ border-color:var(--ouro); color:var(--ouro); }
+.cq-pub-passos li.vai .cq-pp-ic{ border-color:var(--anil-claro); border-top-color:transparent; animation:lpGira .8s linear infinite; }
+.cq-pp-ic svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:3; }
+.cq-vivo{ display:inline-flex; align-items:center; gap:8px; font-weight:600; font-size:calc(14px * var(--esc)); color:var(--giz-2); }
+.cq-vivo i{ width:9px; height:9px; border-radius:50%; background:var(--ouro); }
+.cq-vivo.on{ color:var(--jade); }
+.cq-vivo.on i{ background:var(--jade); animation:cqPulso 1.6s ease-out infinite; }
+.cq-vivo small{ color:var(--grafite); font-weight:400; }
+.cq-link{ display:flex; align-items:center; padding:12px 14px; border-radius:var(--r); background:var(--sup-0); border:1px solid var(--fio); min-width:0; }
+.cq-link code{ font-family:var(--f-m); font-size:calc(13px * var(--esc)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--anil-claro); }
+.cq-pub-bts{ display:flex; gap:9px; flex-wrap:wrap; }
+.cq-seguir{ justify-content:flex-end; gap:9px; flex-wrap:wrap; margin-top:4px; }
+
+/* ── aprovar ── */
+.cq-ops{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap:12px; }
+.cq-op{ border:1px solid var(--fio); border-radius:var(--r-lg); padding:16px; background:var(--sup-0); display:flex; flex-direction:column; gap:6px; transition:border-color .25s, box-shadow .25s; }
+.cq-op.on{ border-color:var(--jade); box-shadow:0 0 0 3px color-mix(in oklab, var(--jade) 20%, transparent); }
+.cq-op-cab{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.cq-op-rota{ font-family:var(--f-m); font-size:calc(15px * var(--esc)); font-weight:600; }
+.cq-op-sub{ font-size:calc(12.5px * var(--esc)); }
+.cq-op-preco{ font-family:var(--f-m); font-variant-numeric:tabular-nums; font-size:calc(27px * var(--esc)); font-weight:600; letter-spacing:-.03em; margin-top:6px; display:flex; align-items:baseline; gap:8px; }
+.cq-op-preco small{ font-size:calc(12px * var(--esc)); color:var(--grafite); font-family:var(--f-b); letter-spacing:0; font-weight:400; }
+.cq-op .bt{ margin-top:8px; justify-content:center; }
+.cq-op-res{ font-size:calc(13px * var(--esc)); padding:8px 10px; border-radius:var(--r-sm); background:var(--sup-1); }
+.cq-res.pos{ color:var(--jade); } .cq-res.neg{ color:var(--brasa); }
+
+/* ── emitir ── */
+.cq-emitir-grade{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap:1px; border:1px solid var(--fio); border-radius:var(--r-lg); overflow:hidden; background:var(--fio); }
+.cq-emitir-grade > div{ background:var(--sup-0); padding:12px 14px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.cq-emitir-grade span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.cq-emitir-grade b{ font-size:calc(14.5px * var(--esc)); font-weight:600; overflow-wrap:anywhere; }
+.cq-emitir-duas{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap:14px; }
+.cq-emitir-uma{ display:flex; flex-direction:column; gap:10px; padding:14px; border:1px solid var(--fio); border-radius:var(--r-lg); background:var(--sup-0); }
+.cq-emitir-uma.ok{ border-color:color-mix(in oklab, var(--jade) 55%, transparent); }
+.cq-emitir-uma > *{ flex:0 0 auto; }
+.cq-emitir-uma .bt{ align-self:flex-start; min-height:40px; }
+.cq-ok{ text-align:center; padding:26px 16px 10px; }
+.cq-ok-selo{ width:78px; height:78px; border-radius:50%; background:var(--jade); display:grid; place-items:center; margin:0 auto 14px; color:#fff;
+  animation:cqSelo .7s var(--mola) both; box-shadow:0 0 0 10px color-mix(in oklab, var(--jade) 16%, transparent); }
+.cq-ok-selo svg{ width:36px; height:36px; fill:none; stroke:currentColor; stroke-width:2.8; }
+.cq-ok h3{ font-size:calc(24px * var(--esc)); margin-bottom:6px; }
+.cq-ok-num{ font-size:calc(14px * var(--esc)); }
+.cq-confete{ position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden; }
+.cq-confete i{ position:absolute; top:38vh; width:8px; height:13px; border-radius:2px; }
+
+@media (prefers-reduced-motion:reduce){ .cq-caixa::before{ animation:none; } .cq-card, .cq-achado, .cq-passo{ animation:none; } }
+@media (max-width:1100px){ .cq-colunas{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:900px){
+  .cq-achado{ grid-template-columns:auto minmax(0, 1fr) auto; grid-template-areas:"ck prog x" ". voo voo" ". num num"; row-gap:8px; }
+  .cq-ach-num{ align-items:flex-start; text-align:left; }
+}
+@media (max-width:760px){ .cq-pub{ grid-template-columns:1fr; } .cq-fone{ max-width:250px; } }
+@media (max-width:640px){
+  .cq-funil{ padding:14px; }
+  .cq-colunas{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:10px; margin:0 -14px; padding:0 14px 4px; scrollbar-width:none; }
+  .cq-colunas::-webkit-scrollbar{ display:none; }
+  .cq-col{ flex:0 0 80%; scroll-snap-align:start; }
+  .cq-mesa{ padding:16px 14px; gap:16px; }
+  .cq-n{ width:34px; height:34px; font-size:13px; }
+  .cq-trilho-barra{ top:17px; }
+  .cq-t small{ display:none; }
+  .cq-t b{ font-size:12px; }
+  .cq-cliente-in{ font-size:calc(22px * var(--esc)); }
+  .cq-caixa-miolo{ padding:20px 14px 18px; }
+  .cq-kpis b{ font-size:calc(16px * var(--esc)); }
+  .cq-barra{ bottom:calc(72px + env(safe-area-inset-bottom)); }
+  .cq-kpis{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; width:100%; }
+  .cq-funil-cab > .bt{ width:100%; justify-content:center; }
+  .cq-funil-tit{ width:100%; }
+}
+</style>
 </head>
 <body>
 <script>
@@ -10011,35 +10250,43 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                  visto não avisa ninguém. -->
             <div id="ctAvisoPax"></div>
 
-            <div class="cartao">
-              <div class="cartao-cab">
-                <h3 style="color:var(--anil-claro)">Ler o print do voo
-                  <div class="sub">Cole a captura do Google Flights, do site da companhia ou de qualquer buscador.<br>O Claude lê os trechos, grátis pela sua assinatura, e eles seguem para a busca de milhas reais logo abaixo.</div></h3>
-                <span class="etq jade" id="etqIACot">grátis, pelo Claude</span>
-              </div>
-              <div class="solta-alvo" id="ctAlvo" style="padding:6px 0">
-              <div class="solta" id="ctSolta" tabindex="0">
-                <svg><use href="#i-imagem"/></svg>
-                <div class="solta-txt">
-                  <b>Cole com Ctrl+V, arraste o arquivo ou clique para escolher</b>
-                  <span>PNG, JPG ou WEBP até 5 MB. Ida e volta podem estar na mesma imagem.</span>
+            <!-- CENTRAL DE COTAÇÕES (12/10/2026, pedido do Jadiel): um processo só, do
+                 achado ao bilhete. Capturar (extensão, prints, PDF ou texto, tudo no
+                 mesmo lugar) → montar a página VEM → publicar e enviar o link →
+                 marcar a aprovação → registrar a emissão. O funil no topo mostra
+                 cada cotação na sua etapa. -->
+            <div id="cqFunil"></div>
+            <div class="cq-mesa" id="cqMesa">
+              <div class="cq-cab" id="cqCab"></div>
+              <nav class="cq-trilho" id="cqTrilho" aria-label="Etapas da cotação"></nav>
+              <div class="cq-passo" id="cqP1">
+                <div id="cqP1Topo"></div>
+                <div class="cq-caixa" id="cqCaixa" tabindex="0" role="button" aria-label="Colar ou escolher a busca, prints ou PDF">
+                  <div class="cq-caixa-miolo">
+                    <div class="cq-caixa-icones">
+                      <span class="cq-chip"><svg><use href="#i-faisca"/></svg>Resposta do Claude no Chrome</span>
+                      <span class="cq-chip"><svg><use href="#i-imagem"/></svg>Prints do voo</span>
+                      <span class="cq-chip"><svg><use href="#i-livro"/></svg>PDF do bilhete</span>
+                    </div>
+                    <b><span class="cq-so-pc">Cole aqui com Ctrl+V, arraste ou clique para escolher</span><span class="cq-so-toque">Toque aqui para escolher os prints ou o PDF</span></b>
+                    <span>Tudo cai no mesmo lugar e vira a mesma cotação: a resposta da extensão, os prints dos voos que ela não trouxe e o PDF.</span>
+                    <div class="linha cq-caixa-bts">
+                      <button type="button" class="bt fantasma" data-cq="colar-texto"><svg><use href="#i-copiar"/></svg>Colar texto</button>
+                      <button type="button" class="bt fantasma" data-cq="arquivo"><svg><use href="#i-imagem"/></svg>Escolher prints ou PDF</button>
+                    </div>
+                  </div>
+                  <input type="file" id="cqArq" accept="image/*,application/pdf,.pdf" multiple hidden>
                 </div>
-                <input type="file" id="ctArquivo" accept="image/png,image/jpeg,image/webp" hidden>
-              </div>
-              </div>
-              <div id="ctLeitura" style="margin-top:13px"></div>
-            </div>
-
-            <div class="cartao" id="ccCartao">
+                <div id="cqLendo"></div>
+                <div id="cqAchados"></div>
+                <details class="cartao cq-chrome" id="cqChromeDet">
+                  <summary><span class="cq-chrome-tit"><b>Buscar com o Claude no Chrome</b><span class="fraco">A extensão entra no site de cada programa e traz milhas, taxas e voos reais. Depois, cole a resposta na caixa acima.</span></span><span class="etq jade">dados reais</span></summary>
+                  <div style="margin-top:14px">
+              <div id="ccCartao">
               <!-- BUSCA REAL PELO CLAUDE NO CHROME (07/10/2026). A Torre monta a
                    instrução; a extensão entra nos sites dos programas, faz a busca e
                    devolve milhas, taxas e voos de verdade; a resposta colada aqui
                    vira opções da cotação. Nenhum número é estimado. -->
-              <div class="cartao-cab">
-                <h3 style="color:var(--anil-claro)">Buscar com o Claude no Chrome
-                  <div class="sub">A extensão entra no site de cada programa, faz a busca e traz milhas, taxas e voos reais. Grátis pela sua assinatura.</div></h3>
-                <span class="etq jade">dados reais</span>
-              </div>
               <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));align-items:end">
                 <div class="campo"><label>Origem</label><input type="text" id="bcOri" value="GRU" maxlength="3" style="text-transform:uppercase"></div>
                 <div class="campo"><label>Destino</label><input type="text" id="bcDes" value="LIS" maxlength="3" style="text-transform:uppercase"></div>
@@ -10054,14 +10301,27 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                 <button class="bt primario" id="btCcMontar"><svg><use href="#i-copiar"/></svg>Copiar a instrução</button>
               </div>
               <div id="bcPassos" style="margin-top:14px"></div>
-              <div class="campo" style="margin-top:12px"><label>Cole aqui a resposta do Claude</label>
-                <textarea id="ccResposta" rows="4" spellcheck="false" style="font-family:var(--f-m);font-size:calc(12.5px * var(--esc));line-height:1.6" placeholder="=== RESULTADO TORRE === ... === FIM ==="></textarea></div>
-              <div class="linha" style="gap:9px"><button class="bt fantasma" id="btCcLer"><svg><use href="#i-ok"/></svg>Ler a resposta</button></div>
-              <div id="bcSaida" style="margin-top:15px"></div>
+              <div id="bcSaida" hidden></div>
             </div>
+                  </div>
+                </details>
+              </div>
+              <div class="cq-passo" id="cqP2" hidden>
+                <div id="cqP2Topo"></div>
+                <section class="vem-no-orcamento" id="vemSecao">
+                  <span class="cont" id="contVem" hidden>0</span>
+                  <div class="pilha" style="gap:18px" id="vemRaiz"></div>
+                </section>
+              </div>
+              <div class="cq-passo" id="cqP3" hidden></div>
+              <div class="cq-passo" id="cqP4" hidden></div>
+              <div class="cq-passo" id="cqP5" hidden></div>
+            </div>
+            <div id="ctLeitura" hidden></div>
 
-            
-
+            <details class="cartao cq-antigo">
+              <summary><b>Orçamento pelo custo</b> <span class="fraco">o modo antigo: milhas × o seu milheiro + serviço, em texto</span></summary>
+              <div class="pilha" style="gap:18px;margin-top:14px">
             <div class="cartao">
               <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Montar cotação para o cliente<div class="sub">Você lança o custo real (milhas × seu CPM + taxas + serviço). O cliente recebe só o preço final e as opções.</div></h3></div>
               <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end">
@@ -10110,16 +10370,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="olho anil">Cotações salvas</div>
               <div class="pilha" style="gap:10px" id="blCotacoes"></div>
             </div>
-          
-            <!-- PÁGINA VEM dentro do Orçamento (07/10/2026, pedido do Jadiel): é o
-                 último passo da mesma cotação — do custo à página que o cliente recebe. -->
-            <section class="vem-no-orcamento" id="vemSecao">
-          <div class="pilha" style="gap:18px">
-            <div class="linha" style="flex-wrap:wrap;gap:9px"><div class="olho destaque" style="margin:0;flex:0 0 auto">Página VEM para o cliente <span class="cont" id="contVem">0</span></div></div>
-            <div class="nota ouro"><svg><use href="#i-faisca"/></svg><div>A mesma página que o Claude monta a partir dos prints: identidade da VEM, voo, bagagem, valor, PIX com desconto, cartão à vista e em 12x, e o botão do WhatsApp. Preencha com os dados do print, confira as contas e baixe a página e a imagem da prévia para subir no GitHub.</div></div>
-            <div class="pilha" style="gap:18px" id="vemRaiz"></div>
-          </div>
-        </section>
+              </div>
+            </details>
             <details class="cartao cc-buscadores">
               <summary><b>Buscadores gratuitos</b> <span class="fraco">para conferir por conta própria</span></summary>
               <div style="margin-top:14px">
@@ -10525,7 +10777,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 14:00';
+const BUILD = '2026-10-12 16:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15343,11 +15595,11 @@ function guiasAtendimento(raiz, cab){
   const naEmi = vistaAtual === 'emitidos' && raiz.id === 'p-em-resgates';
   if (!naCot && !naEmi){ if (velha) velha.remove(); return; }
   _ultimoDoPar.cotacoes = vistaAtual;
-  const nOrc = (DB.cotacoes || []).length;
+  const nOrc = typeof cqAbertas === 'function' ? cqAbertas() : (DB.cotacoes || []).length;
   const nEmi = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada').length;
   let sg = velha;
   if (!sg){ sg = document.createElement('div'); sg.className = 'etapas'; sg.id = 'segAtendimento'; sg.setAttribute('role', 'tablist'); }
-  sg.innerHTML = `<button type="button" role="tab" data-g="cotacoes" class="${naCot ? 'on' : ''}" aria-selected="${naCot}"><span class="et-n">1</span><span class="et-t"><b>Orçamentos</b><small>${nOrc} ${nOrc === 1 ? 'salvo' : 'salvos'}</small></span></button>
+  sg.innerHTML = `<button type="button" role="tab" data-g="cotacoes" class="${naCot ? 'on' : ''}" aria-selected="${naCot}"><span class="et-n">1</span><span class="et-t"><b>Cotações</b><small>${nOrc} em aberto</small></span></button>
     <svg class="et-seta" aria-hidden="true"><use href="#i-seta-d"/></svg>
     <button type="button" role="tab" data-g="emitidos" class="${naEmi ? 'on' : ''}" aria-selected="${naEmi}"><span class="et-n">2</span><span class="et-t"><b>Emitidos</b><small>${nEmi} ${nEmi === 1 ? 'emissão' : 'emissões'}</small></span></button>`;
   sg.querySelectorAll('button').forEach(b => b.onclick = () => { if (vistaAtual !== b.dataset.g) irPara(b.dataset.g); });
@@ -16035,25 +16287,27 @@ function renderHeroiCPF(){
 }
 function renderHeroiOrcamento(){
   const alvo = $('#heroiArea'); if (!alvo) return;
-  const l = DB.cotacoes || [];
-  const vem = (DB.vemCotacoes || []).length;
-  if (!l.length && !vem){ montarHeroi(alvo, {rot:'Cotações montadas', vazio:'Nenhuma cotação montada ainda. Leia um print ou busque pelo Claude no Chrome, monte a cotação e gere a página VEM para o cliente.'}); return; }
-  const clientes = new Set(l.map(c => semAcento(c.cliente)).filter(Boolean));
-  const total = soma(l.map(c => soma((c.opcoes || []).map(o => Number(o.preco) || 0))));
-  const opcoes = soma(l.map(c => (c.opcoes || []).length));
-  const emitidos = new Set((DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada').map(r => semAcento(r.cliente)).filter(Boolean));
-  const conv = [...clientes].filter(c => emitidos.has(c)).length;
-  const porCli = {}; l.forEach(c => { const n = c.cliente || 'sem nome'; porCli[n] = (porCli[n] || 0) + soma((c.opcoes || []).map(o => Number(o.preco) || 0)); });
-  const porMes = {}; l.forEach(c => { const d = c.quando ? new Date(c.quando) : null; if (!d || isNaN(d)) return; const k = d.toISOString().slice(0, 7); porMes[k] = (porMes[k] || 0) + 1; });
+  /* Desde a Central de Cotações (12/10/2026) o painel lê o funil: cada cotação
+     está numa etapa, e o número que importa é quanto está em aberto e quanto
+     vira emissão. */
+  const l = (DB.vemCotacoes || []).filter(x => typeof cqStatus === 'function');
+  if (!l.length){ montarHeroi(alvo, {rot:'Cotações em aberto', vazio:'Nenhuma cotação ainda. Cole a resposta do Claude no Chrome ou os prints do voo na Central de Cotações: ela monta a página do cliente, publica o link e leva até a emissão.'}); return; }
+  const st = x => cqStatus(x);
+  const n = k => l.filter(x => st(x) === k).length;
+  const aberto = soma(l.filter(x => ['enviada', 'aprovada'].includes(st(x))).map(x => cqCentavos(x) / 100));
+  const emit = n('emitida'), perd = n('perdida');
+  const conv = emit + perd ? Math.round(emit / (emit + perd) * 100) : null;
+  const porEtapa = ['rascunho', 'enviada', 'aprovada', 'emitida', 'perdida'].map(k => ({k, v:soma(l.filter(x => st(x) === k).map(x => cqCentavos(x) / 100))})).filter(x => x.v > 0);
+  const porMes = {}; l.forEach(x => { const d = x.criada ? new Date(x.criada) : null; if (!d || isNaN(d)) return; const k = d.toISOString().slice(0, 7); porMes[k] = (porMes[k] || 0) + 1; });
   const meses = Object.keys(porMes).sort().slice(-12);
   const serie = meses.map(k => ({r:rotuloMes(k), v:porMes[k]}));
   montarHeroi(alvo, {
-    rot:'Cotações montadas',
-    valor:`${nBR(l.length)}<small> ${l.length === 1 ? 'cotação' : 'cotações'}</small>`,
-    linha:`<span>Somam <b>${brl(total)}</b></span>${clientes.size ? `<span class="heroi-chip ${conv ? 'sobe' : ''}">${pct(conv / clientes.size * 100, 0)} viraram emissão</span>` : ''}`,
-    numeros:[[nBR(clientes.size), clientes.size === 1 ? 'cliente cotado' : 'clientes cotados'], [nBR(opcoes), opcoes === 1 ? 'opção montada' : 'opções montadas'], [nBR(vem), vem === 1 ? 'página VEM gerada' : 'páginas VEM geradas']],
-    fatias:fatiasHeroi(Object.keys(porCli).map(c => ({c, v:porCli[c]})), x => x.c.length > 22 ? x.c.slice(0, 21) + '…' : x.c), fmtFatia:v => brl(v), compRot:'Valor cotado por cliente',
-    dirRot:'Cotações por mês', dirSub:'Pela data em que foram montadas.',
+    rot:'Cotações em aberto',
+    valor:brl(aberto),
+    linha:`<span><b>${nBR(n('enviada') + n('aprovada'))}</b> esperando o cliente</span>${conv != null ? `<span class="heroi-chip ${conv >= 50 ? 'sobe' : ''}">${conv}% viraram emissão</span>` : '<span class="heroi-chip">nenhuma fechada ainda</span>'}`,
+    numeros:[[nBR(n('rascunho')), 'em montagem'], [nBR(n('aprovada')), n('aprovada') === 1 ? 'aprovada, a emitir' : 'aprovadas, a emitir'], [nBR(emit), emit === 1 ? 'emitida' : 'emitidas']],
+    fatias:fatiasHeroi(porEtapa, x => CQ_STATUS[x.k].n), fmtFatia:v => brl(v), compRot:'Valor no PIX por etapa',
+    dirRot:'Cotações por mês', dirSub:'Pela data em que foram abertas.',
     ult: serie.length ? {b:nBR(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null,
     serie, fmtSerie:v => nBR(Math.round(v)), semSerie:'A curva aparece a partir do segundo mês com cotação.'
   });
@@ -34788,6 +35042,8 @@ function editarReserva(id, rascunho){
       if (tr){ tr.reservaId = novo.id; if ((tr.situacao || 'planejado') === 'planejado') tr.situacao = 'emitido'; }
     }
     trechoEmRegistro = null;
+    /* Emissão aberta pela Central de Cotações: a cotação vira Emitida. */
+    const negocioDaEmissao = !id && r._negocio;
     /* A emissão alimenta três telas ao mesmo tempo: a lista, o controle de CPF e
        o resultado do balcão. Redesenhar só a lista deixava o controle mostrando o
        estado anterior até alguém recarregar a página — a vaga já tinha sido
@@ -34796,7 +35052,8 @@ function editarReserva(id, rascunho){
     sincronizarSaidaDaEmissao(novo);
     salvar(); fecharFolha();
     renderBalcao(); renderEmissoes(); renderFita();
-    if (vistaAtual === 'rota' && typeof renderRota === 'function') renderRota(); avisar('Emissão salva.', 'ok');
+    if (vistaAtual === 'rota' && typeof renderRota === 'function') renderRota();
+    if (negocioDaEmissao && typeof cqEmitido === 'function') cqEmitido(negocioDaEmissao, novo); else avisar('Emissão salva.', 'ok');
   };
 }
 
@@ -40323,7 +40580,7 @@ function importar(arquivo){
 
 /* O livro de lançamentos mora numa aba do Painel: sem ele aqui, apagar ou editar
    um lançamento pelo Painel deixava a linha velha na tabela até apertar F5. */
-const RENDER = { emitidos:() => renderBalcao(), cotacoes:() => { renderCotacoesSalvas(); ligarBuscaCC(); renderArsenal(); renderCobertura(); renderVemAba(); }, mesa:() => { renderMesa(); renderVender(); renderLancamentos(); },  fabrica:renderFabrica,
+const RENDER = { emitidos:() => renderBalcao(), cotacoes:() => { renderCotacoesSalvas(); ligarBuscaCC(); renderArsenal(); renderCobertura(); renderVemAba(); if (typeof cqRender === 'function') cqRender(); }, mesa:() => { renderMesa(); renderVender(); renderLancamentos(); },  fabrica:renderFabrica,
   comprar:renderVistaComprar, saldo:renderSaldo, rota:renderRota, emissoes:renderEmissoes, cartoes:renderCartoes, clientes:renderBalcao, vendas:renderBalcao, imposto:renderBalcao, ajustes:renderAjustes };
 /* ── correções de dados de 05/10/2026 ─────────────────────────────────────────
    Rodam a cada carga, inclusive quando o banco chega da nuvem, e são seguras de
@@ -41343,6 +41600,8 @@ function levarParaBuscaCC({ori, des, ida, volta, cabine}){
   if ($('#bcVolta')) $('#bcVolta').value = volta || '';
   if ($('#bcCab') && cabine) $('#bcCab').value = cabine;
   const c = $('#ccCartao');
+  if (typeof cqIrPasso === 'function') cqIrPasso(1, true);
+  if ($('#cqChromeDet')) $('#cqChromeDet').open = true;
   if (c){ c.scrollIntoView({behavior:'smooth', block:'start'}); c.classList.add('realce'); setTimeout(() => c.classList.remove('realce'), 1800); }
   avisar('Trecho levado para a busca. Escolha os programas e toque em Copiar a instrução.', 'ok', 6000);
 }
@@ -41691,12 +41950,12 @@ REGRAS
 
 FORMATO DA RESPOSTA (copie exatamente, uma linha por opção):
 === RESULTADO TORRE ===
-sentido;programa;voos;data;saida;chegada;paradas;milhas;taxas_reais;cabine
-IDA;Smiles;G3 1234, AF 457;${p.ida || 'AAAA-MM-DD'};22:10;14:30+1;1 (CDG);120000;350,00;${cab}
-IDA;PAGANTE;LA 8084;${p.ida || 'AAAA-MM-DD'};23:55;13:40+1;0;0;4320,00;${cab}
+sentido;programa;voos;data;saida;chegada;paradas;milhas;taxas_reais;cabine;origem;destino
+IDA;Smiles;G3 1234, AF 457;${p.ida || 'AAAA-MM-DD'};22:10;14:30+1;1 (CDG);120000;350,00;${cab};${p.ori};${p.des}
+IDA;PAGANTE;LA 8084;${p.ida || 'AAAA-MM-DD'};23:55;13:40+1;0;0;4320,00;${cab};${p.ori};${p.des}
 === FIM ===
 
-Na coluna programa, use: ${progs.map(k => ccNome(k)).join(', ')}${$('#ccPagante') && $('#ccPagante').checked ? ' ou PAGANTE' : ''}. Data no formato AAAA-MM-DD. Horários HH:MM, com +1 quando chega no dia seguinte.`;
+Na coluna programa, use: ${progs.map(k => ccNome(k)).join(', ')}${$('#ccPagante') && $('#ccPagante').checked ? ' ou PAGANTE' : ''}. Data no formato AAAA-MM-DD. Horários HH:MM, com +1 quando chega no dia seguinte. Na coluna voos, todos os voos da opção na ordem, separados por vírgula. Em paradas, quantas são e os aeroportos entre parênteses. Origem e destino em código de 3 letras (na volta, a origem é ${p.des}).`;
 }
 function progDoNomeCC(n){
   const x = semAcento(String(n || '').toLowerCase());
@@ -41717,7 +41976,7 @@ function lerRespostaCC(texto){
     const c = l.split(';').map(x => x.trim());
     const sem = /SEM DISPONIBILIDADE/i.test(l);
     return {sentido:/volta/i.test(c[0]) ? 'VOLTA' : 'IDA', nome:c[1] || '', prog:progDoNomeCC(c[1]), voos:c[2] || '', data:(c[3] || '').slice(0, 10), sai:c[4] || '', chega:c[5] || '',
-      paradas:c[6] || '', milhas:sem ? 0 : Math.round(num(c[7])), taxas:sem ? 0 : num(c[8]), cabine:c[9] || '', sem};
+      paradas:c[6] || '', milhas:sem ? 0 : Math.round(num(c[7])), taxas:sem ? 0 : num(c[8]), cabine:c[9] || '', ori:(c[10] || '').toUpperCase().slice(0, 3), des:(c[11] || '').toUpperCase().slice(0, 3), sem};
   }).filter(o => o.nome);
 }
 function renderRespostaCC(){
@@ -41775,7 +42034,7 @@ async function copiarInstrucaoCC(){
     <div><b>${ok ? 'Instrução copiada.' : 'Copie a instrução abaixo.'}</b> Agora:</div>
     <div>1. No Chrome, faça login nos sites dos programas escolhidos (a extensão não digita senha).</div>
     <div>2. Abra a extensão do Claude e cole a instrução.</div>
-    <div>3. Quando ele terminar, copie a resposta inteira dele e cole no campo abaixo.</div>
+    <div>3. Quando ele terminar, copie a resposta inteira dele e cole na caixa de captura, logo acima (Ctrl+V ou o botão Colar texto).</div>
     ${ok ? '' : `<textarea readonly rows="6" style="width:100%;margin-top:8px;font-family:var(--f-m);font-size:calc(12px * var(--esc))">${esc(txt)}</textarea>`}
   </div></div>`;
 }
@@ -45607,7 +45866,7 @@ function vemCarregarRascunho(){
 let vemRascTimer = null;
 function vemGuardarRascunho(){
   clearTimeout(vemRascTimer);
-  vemRascTimer = setTimeout(() => { DB.vemRascunho = JSON.parse(JSON.stringify(vemEst)); salvar(); }, 400);
+  vemRascTimer = setTimeout(() => { if (typeof cqSincRegistro === 'function') cqSincRegistro(); DB.vemRascunho = JSON.parse(JSON.stringify(vemEst)); salvar(); if (typeof cqRenderLeve === 'function') cqRenderLeve(); }, 400);
 }
 
 /* ── caminho "ops.0.ida.1.cia" dentro do estado ─────────────────────────────── */
@@ -45816,11 +46075,10 @@ function renderVem(){
     </div>
     <div class="cartao" id="vemConf"></div>
     <div class="linha fim vem-acoes" style="flex-wrap:wrap;gap:9px">
-      <button type="button" class="bt fantasma" data-vem-acao="nova"><svg><use href="#i-atualizar"/></svg>Nova cotação</button>
       <button type="button" class="bt fantasma" data-vem-acao="importar"><svg><use href="#i-subir"/></svg>Colar dados prontos</button>
       <button type="button" class="bt fantasma" data-vem-acao="copiar-dados"><svg><use href="#i-copiar"/></svg>Copiar dados</button>
       <button type="button" class="bt fantasma" data-vem-acao="ver"><svg><use href="#i-olho"/></svg>Ver a página</button>
-      <button type="button" class="bt primario" data-vem-acao="baixar"><svg><use href="#i-baixar"/></svg>Baixar página e imagem</button>
+      <button type="button" class="bt primario" data-vem-acao="cq-seguir">Seguir para enviar<svg><use href="#i-seta-d"/></svg></button>
     </div>
     <div id="vemResultado"></div>
     <details class="cartao vem-cond"${String(cfg.whatsapp || '').replace(/\D/g, '').length < 10 ? ' open' : ''}>
@@ -45836,10 +46094,7 @@ function renderVem(){
       ${vemCampo('Rodapé padrão das cotações novas', `<input type="text" data-vcfg="rodape" value="${esc(cfg.rodape)}">`, ' style="margin-top:12px"')}
       <p class="fraco" style="margin-top:12px;font-size:calc(12.5px * var(--esc));line-height:1.5">As mesmas regras da cotação feita pelo Claude: cartão à vista = base ÷ (1 − taxa à vista); PIX = cartão à vista − desconto; 12x = base ÷ (1 − taxa em 12x), parcela arredondada para cima. Base = milhas × milheiro ÷ 1.000 + taxas.</p>
     </details>
-    <div>
-      <div class="olho anil">Páginas geradas</div>
-      <div class="pilha" style="gap:10px" id="vemSalvas"></div>
-    </div>`;
+    `;
   prepararCamposData(raiz);
   ordenarSelects && ordenarSelects(raiz);
   vemRenderConf();
@@ -45930,10 +46185,10 @@ function vemRegistrar(g){
   const v = g.lista[0].viagens;
   const resumo = {cliente: g.lista[0].cliente, rota: `${v[0].voos[0].origem.iata} → ${v[0].voos[v[0].voos.length - 1].destino.iata}`,
     datas: v.map(x => x.voos[0].partida.slice(0, 10).split('-').reverse().slice(0, 2).join('/')).join(' · volta '),
-    opcoes: g.lista.length, pix: window.VEM.brl(menor)};
+    opcoes: g.lista.length, pix: window.VEM.brl(menor), pixC: Number(menor)};
   const agora = new Date().toISOString();
   let reg = vemEst.id && DB.vemCotacoes.find(x => x.id === vemEst.id);
-  if (reg && reg.nome !== g.nome) reg = null;   /* virou outro tipo: é outra página */
+  if (reg && reg.nome && reg.nome !== g.nome && !reg.status) reg = null;   /* virou outro tipo: é outra página (a cotação da Central continua a mesma) */
   if (!reg){ reg = {id: uid(), criada: agora}; DB.vemCotacoes.unshift(reg); }
   Object.assign(reg, {nome: g.nome, tipo: g.tipo, url: g.urlP, atualizada: agora, resumo, estado: JSON.parse(JSON.stringify({...vemEst, id: reg.id, nome: g.nome}))});
   vemEst.id = reg.id; vemEst.nome = g.nome;
@@ -45947,11 +46202,11 @@ function vemVer(){
     corpo: `<div class="linha" style="gap:9px;margin-bottom:12px"><div class="seg" id="vemTamanho"><button type="button" class="on" data-w="390">Celular</button><button type="button" data-w="100%">Computador</button></div>
       <span class="fraco">O botão do WhatsApp abre de verdade: confira a mensagem.</span></div>
       <div class="vem-moldura"><iframe id="vemIframe" title="Prévia da página" style="width:390px"></iframe></div>`,
-    pe: `<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="vemBaixarDaPrevia"><svg><use href="#i-baixar"/></svg>Baixar página e imagem</button>`
+    pe: `<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="vemBaixarDaPrevia"><svg><use href="#i-subir"/></svg>Publicar para o cliente</button>`
   });
   $('#vemIframe').srcdoc = g.pagina;
   $$('#vemTamanho button').forEach(b => b.onclick = () => { $$('#vemTamanho button').forEach(x => x.classList.toggle('on', x === b)); $('#vemIframe').style.width = /%$/.test(b.dataset.w) ? b.dataset.w : b.dataset.w + 'px'; });
-  $('#vemBaixarDaPrevia').onclick = () => { fecharFolha(); vemBaixar(); };
+  $('#vemBaixarDaPrevia').onclick = () => { fecharFolha(); cqIrPasso(3); cqPublicar(); };
 }
 
 /* ── páginas geradas ─────────────────────────────────────────────────────── */
@@ -46093,6 +46348,7 @@ function vemLigar(){
     }
     else if (a === 'ver') vemVer();
     else if (a === 'baixar') vemBaixar();
+    else if (a === 'cq-seguir') cqIrPasso(3);
     else if (a === 'copiar-link') copiarParaAreaDeTransferencia(b.dataset.url).then(ok => avisar(ok ? 'Link copiado.' : 'Não deu para copiar.', ok ? 'ok' : 'erro'));
     else if (a === 'abrir' || a === 'duplicar'){
       const x = (DB.vemCotacoes || []).find(y => y.id === b.dataset.id); if (!x) return;
@@ -46114,6 +46370,1007 @@ function renderVemAba(){ vemLigar(); renderVem(); }
 
 function vemContar(){ const c = document.getElementById('contVem'); if (c) c.textContent = String((DB.vemCotacoes || []).length); }
 
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   CENTRAL DE COTAÇÕES (12/10/2026, pedido do Jadiel)
+   Um processo só, do achado ao bilhete:
+     1. Capturar  · a resposta do Claude no Chrome, prints, PDF ou texto, tudo na
+                    mesma caixa. Cada voo encontrado vira um cartão para marcar.
+     2. Montar    · os voos marcados viram as opções da página VEM.
+     3. Enviar    · a página e a imagem sobem sozinhas para o GitHub (a mesma chave
+                    da Nuvem) e o link sai pronto para o WhatsApp.
+     4. Aprovar   · a opção que o cliente escolheu.
+     5. Emitir    · abre a emissão já preenchida; ao salvar, a cotação vira
+                    Emitida e a emissão entra em Emitidos e no painel.
+   Cada cotação é um registro de DB.vemCotacoes, o mesmo das páginas VEM: as
+   páginas antigas aparecem no funil como Enviadas.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const CQ_PASSOS = [
+  {n:'Capturar', d:'Busca ou print'},
+  {n:'Montar', d:'A página do cliente'},
+  {n:'Enviar', d:'Link no ar'},
+  {n:'Aprovar', d:'O cliente decide'},
+  {n:'Emitir', d:'Vira emissão'}];
+const CQ_STATUS = {
+  rascunho:{n:'Em montagem', c:'aco'},
+  enviada:{n:'Enviada', c:'ouro'},
+  aprovada:{n:'Aprovada', c:'jade'},
+  emitida:{n:'Emitida', c:'lilas'},
+  perdida:{n:'Não fechou', c:'brasa'}};
+const CQ_FONTE = {chrome:'Claude no Chrome', leitor:'print lido aqui', claude:'lido pelo Claude', texto:'texto colado'};
+let cqPasso = 1;
+let cqLeitura = null;      /* {fase, arquivos:[{url, pdf, nome}], msg, erro, avisos, ultimos} */
+let cqPub = null;          /* publicação em andamento: {id, passos:[{t, e}], erro} */
+let cqLigado = false;
+
+const cqLista = () => (DB.vemCotacoes = DB.vemCotacoes || []);
+function cqStatus(x){ if (!x) return 'rascunho'; if (x.status && CQ_STATUS[x.status]) return x.status; return x.reservaId ? 'emitida' : x.url ? 'enviada' : 'rascunho'; }
+const cqAtual = () => vemEst && vemEst.id ? cqLista().find(x => x.id === vemEst.id) || null : null;
+const cqAbertas = () => cqLista().filter(x => !['emitida', 'perdida'].includes(cqStatus(x))).length;
+function cqHist(reg, s){ reg.hist = reg.hist || []; reg.hist.push({s, em:new Date().toISOString()}); }
+function cqCentavos(x){
+  const r = x && x.resumo; if (!r) return 0;
+  if (r.pixC != null && !isNaN(r.pixC)) return Number(r.pixC);
+  const t = String(r.pix || '').replace(/[^\d,]/g, '').replace(',', '.');
+  return Math.round((Number(t) || 0) * 100);
+}
+const cqBrlC = c => window.VEM.brl(BigInt(Math.round(Number(c) || 0)));
+const cqClone = o => JSON.parse(JSON.stringify(o));
+function cqIdade(iso){
+  const t = iso ? new Date(iso).getTime() : 0; if (!t) return '';
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return 'agora';
+  if (m < 60) return `há ${m} min`;
+  const h = Math.round(m / 60); if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24); return d === 1 ? 'ontem' : `há ${d} dias`;
+}
+const cqHora = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}).replace(',', ' às'); };
+const cqSomaDia = (iso, n) => { if (!iso) return ''; const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+/* ── o registro da cotação ──────────────────────────────────────────────────── */
+function cqTemConteudo(st){
+  if (!st) return false;
+  if (String((st.comum || {}).cliente || '').trim()) return true;
+  if ((st.achados || []).length) return true;
+  return (st.ops || []).some(o => String(o.milhas || '').trim() || (o.ida || []).some(t => t.de || t.para));
+}
+function cqResumoDe(st){
+  const c = st.comum || {}, o = (st.ops || [])[0] || {};
+  const ida = o.ida || [], vol = o.temVolta ? (o.volta || []) : [];
+  const de = ida[0] && ida[0].de, para = ida.length ? ida[ida.length - 1].para : '';
+  const dt = t => t && t.pData ? t.pData.split('-').reverse().slice(0, 2).join('/') : '';
+  let pix = '', pixC = null;
+  try {
+    const r = vemParaDados(st);
+    const v = r.lista.map(d => { try { return Number(d.milhas) > 0 && moedaNum(d.milheiro) > 0 ? window.VEM.calcular(d).pix : null; } catch (_) { return null; } }).filter(x => x != null);
+    if (v.length){ const m = v.reduce((a, b) => b < a ? b : a); pixC = Number(m); pix = window.VEM.brl(m); }
+  } catch (_) {}
+  return {cliente: String(c.cliente || '').trim() || 'Sem nome', rota: de || para ? `${de || '?'} → ${para || '?'}` : 'Rota a definir',
+    datas: [dt(ida[0]), vol.length ? 'volta ' + dt(vol[0]) : ''].filter(Boolean).join(' · '), opcoes: (st.ops || []).length, pix, pixC};
+}
+function cqGarantir(){
+  vemCarregarRascunho();
+  let reg = cqAtual();
+  if (!reg){
+    const agora = new Date().toISOString();
+    reg = {id:uid(), criada:agora, atualizada:agora, status:'rascunho', nome:null, url:null, tipo:'cotacao', hist:[]};
+    cqHist(reg, 'rascunho');
+    cqLista().unshift(reg);
+    vemEst.id = reg.id; vemEst.nome = null;
+  }
+  cqSincRegistro(reg);
+  return reg;
+}
+/* O formulário é a fonte; o registro guarda a cópia. Mudar a cotação depois de
+   publicada deixa a página do ar desatualizada, e isso precisa aparecer. */
+function cqSincRegistro(reg){
+  if (!vemEst) return;
+  if (!vemEst.id){ if (!cqTemConteudo(vemEst)) return; cqGarantir(); return; }
+  reg = reg || cqAtual(); if (!reg) return;
+  const conteudo = st => JSON.stringify(st ? {comum:st.comum, ops:st.ops} : null);
+  const mudou = conteudo(reg.estado) !== conteudo(vemEst);
+  reg.estado = cqClone(vemEst);
+  reg.resumo = Object.assign({}, reg.resumo || {}, cqResumoDe(vemEst));
+  if (mudou){ reg.atualizada = new Date().toISOString(); if (reg.publicada && cqStatus(reg) !== 'rascunho') reg.alterada = true; }
+}
+function cqSalvarAgora(){ if (vemEst){ cqSincRegistro(); DB.vemRascunho = cqClone(vemEst); } salvar(); }
+
+/* ══ CAPTURA ═══════════════════════════════════════════════════════════════════
+   Um "achado" é um voo encontrado, numa direção: {id, fonte, sentido, prog,
+   milhas, taxas, trechos:[{de, para, data, sai, chega, cData, cia, numero}],
+   paradas, preco, aviso, marcado}. Vários achados viram as opções da página. */
+const cqCodCia = cia => { const t = semAcento(String(cia || '').toLowerCase()); return Object.keys(PREFIXO_CIA).find(k => semAcento(PREFIXO_CIA[k][0].toLowerCase()) === t) || ''; };
+function cqVoo(cod){
+  const m = String(cod || '').toUpperCase().replace(/\s+/g, ' ').trim().match(/^([A-Z][A-Z0-9]|[0-9][A-Z])\s?0*(\d{1,4})$/);
+  if (!m) return {code:'', numero:String(cod || '').replace(/\D/g, ''), cia:''};
+  return {code:m[1], numero:m[2], cia:(PREFIXO_CIA[m[1]] || [])[0] || m[1]};
+}
+function cqHoraLimpa(h){ const m = String(h || '').match(/(\d{1,2})[:h](\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; }
+function cqMaisDias(h){ const m = String(h || '').match(/\+\s*(\d)/); return m ? +m[1] : 0; }
+const cqNomeProg = k => k ? (typeof ccNome === 'function' && (PROGRAMAS[k] || (typeof CC_EXTRA !== 'undefined' && CC_EXTRA[k])) ? ccNome(k) : prog(k).n) : 'programa a definir';
+
+function cqDoChrome(txt){
+  const linhas = lerRespostaCC(txt);
+  const p = typeof paramsCC === 'function' ? paramsCC() : {ori:'', des:''};
+  const achados = [], pagante = [];
+  linhas.forEach(o => {
+    const ori = o.ori || (o.sentido === 'VOLTA' ? p.des : p.ori), des = o.des || (o.sentido === 'VOLTA' ? p.ori : p.des);
+    if (o.prog === 'PAGANTE'){ if (o.taxas > 0) pagante.push({sentido:o.sentido, preco:o.taxas, voos:o.voos, sai:o.sai, chega:o.chega}); return; }
+    if (o.sem){ achados.push({id:uid(), fonte:'chrome', sentido:o.sentido, prog:o.prog, progNome:o.nome, sem:true, trechos:[], milhas:0, taxas:0}); return; }
+    const cods = String(o.voos || '').split(/\s*[,;\/+]\s*|\s+e\s+/).map(x => x.trim()).filter(Boolean);
+    const meio = (String(o.paradas || '').match(/\b[A-Z]{3}\b/g) || []);
+    const aeros = [ori, ...meio, des];
+    const n = Math.max(1, cods.length);
+    const trechos = [];
+    for (let i = 0; i < n; i++){
+      const v = cqVoo(cods[i]);
+      const de = n === aeros.length - 1 ? aeros[i] : (i === 0 ? ori : ''), para = n === aeros.length - 1 ? aeros[i + 1] : (i === n - 1 ? des : '');
+      trechos.push({de, para, cia:v.cia, numero:v.numero, data: i === 0 ? o.data : '', sai: i === 0 ? cqHoraLimpa(o.sai) : '',
+        chega: i === n - 1 ? cqHoraLimpa(o.chega) : '', cData: i === n - 1 && o.data ? cqSomaDia(o.data, cqMaisDias(o.chega)) : ''});
+    }
+    const parad = String(o.paradas || '').trim();
+    achados.push({id:uid(), fonte:'chrome', sentido:o.sentido, prog:o.prog, progNome:o.nome, milhas:o.milhas, taxas:o.taxas, trechos,
+      paradas: !parad || parad === '0' ? 'direto' : parad, sai:o.sai, chega:o.chega, data:o.data,
+      aviso: n > 1 ? 'Na montagem, confira o horário de cada voo da conexão.' : ''});
+  });
+  return {achados, pagante, pax:p.pax, cabine:p.cabine, rotulo:'resposta do Claude no Chrome'};
+}
+
+function cqDoLeitor(seg){
+  const d = seg.d || {};
+  let legs = (seg.linhas || []).map(l => {
+    const m = String(l).match(/^([A-Z][A-Z0-9]|[0-9][A-Z])0*(\d{1,4})\s+(\d{4}-\d{2}-\d{2})\s+([A-Z]{3})\s+([A-Z]{3})\s+(\d{4})\s+(\d{4})/);
+    if (!m) return null;
+    const sai = m[6].replace(/(\d\d)(\d\d)/, '$1:$2'), chega = m[7].replace(/(\d\d)(\d\d)/, '$1:$2');
+    return {de:m[4], para:m[5], cia:(PREFIXO_CIA[m[1]] || [])[0] || d.cia || m[1], numero:m[2], data:m[3], sai, chega, cData: chega < sai ? cqSomaDia(m[3], 1) : m[3]};
+  }).filter(Boolean);
+  if (!legs.length && (d.voos || []).length && (d.voos[0].origem || d.origem)){
+    legs = d.voos.map((v, i) => {
+      const cv = cqVoo(v.voo);
+      const data = i === 0 ? (d.data || '') : '';
+      return {de:v.origem || '', para:v.destino || '', cia:v.cia || cv.cia || d.cia || '', numero:cv.numero, data, sai:v.saida || '', chega:v.chegada || '',
+        cData: data && v.saida && v.chegada ? (v.chegada < v.saida ? cqSomaDia(data, 1) : data) : ''};
+    });
+  }
+  if (!legs.length) return {achados:[], pagante:[], avisos:(d.avisos || []), faltou:seg.faltou};
+  let ida = legs, volta = [];
+  const k = d.destino ? legs.findIndex(l => l.para === d.destino) : -1;
+  if (k >= 0 && k < legs.length - 1){ ida = legs.slice(0, k + 1); volta = legs.slice(k + 1); }
+  const pg = d.pagamento || {}, mi = d.milhas || {};
+  const progK = mi.programa || pg.programa || d.programa || (Object.values(PREFIXO_CIA).find(x => x[0] === (ida[0].cia || d.cia)) || [])[1] || '';
+  const milhas = Number(pg.pontos || mi.pontos) || 0;
+  const taxas = pg.dinheiro != null ? Number(pg.dinheiro) : (mi.taxas != null ? Number(mi.taxas) : null);
+  const novo = (sentido, tr, comValor) => ({id:uid(), fonte:'leitor', sentido, prog:progK, milhas: comValor ? milhas : 0, taxas: comValor ? taxas : 0, trechos:tr,
+    paradas: tr.length > 1 ? `${tr.length - 1} (${tr.slice(0, -1).map(t => t.para).join(', ')})` : 'direto', marcado:true,
+    aviso: comValor && !milhas && progK ? 'As milhas não aparecem no print: informe na montagem.' : ''});
+  const achados = [novo('IDA', ida, true)];
+  if (volta.length) achados.push(novo('VOLTA', volta, false));
+  return {achados, pagante: d.dinheiro && d.dinheiro.total ? [{sentido:'IDA', preco:d.dinheiro.total}] : [], avisos:(d.avisos || []).filter(a => !/Leitura feita/.test(a)),
+    pax: d.passageiros || (d.nomesPax || []).length || 0, nomes:d.nomesPax || []};
+}
+
+function cqDoClaude(json){
+  const voos = (json.voos || []).filter(v => v.origem && v.destino);
+  const porSent = {IDA:[], VOLTA:[]};
+  voos.forEach(v => porSent[v.sentido === 'volta' ? 'VOLTA' : 'IDA'].push(v));
+  const achados = [], pagante = [];
+  for (const sent of ['IDA', 'VOLTA']){
+    porSent[sent].forEach(v => {
+      const cv = cqVoo(v.voo);
+      const tr = [{de:v.origem, para:v.destino, cia:v.cia || cv.cia, numero:cv.numero, data:v.data || '', sai:cqHoraLimpa(v.saida), chega:cqHoraLimpa(v.chegada),
+        cData: v.data && v.saida && v.chegada ? (cqHoraLimpa(v.chegada) < cqHoraLimpa(v.saida) ? cqSomaDia(v.data, 1) : v.data) : ''}];
+      if (v.preco) pagante.push({sentido:sent, preco:Number(v.preco)});
+      achados.push({id:uid(), fonte:'claude', sentido:sent, prog: programaDaCia(v.cia) || '', milhas:0, taxas:null, trechos:tr, marcado:true,
+        paradas: v.conexoes ? `${v.conexoes} conexão` : 'direto',
+        aviso: v.conexoes ? 'Tem conexão: na montagem, some o voo de cada trecho.' : 'Informe as milhas e as taxas na montagem.'});
+    });
+  }
+  return {achados, pagante, avisos: json.aviso ? [json.aviso] : []};
+}
+
+/* Junta o que chegou ao que já estava na cotação. Na primeira resposta da
+   extensão, a opção mais barata de cada sentido já vem marcada. */
+function cqJuntar(res, fonte){
+  const reg = cqGarantir();
+  const st = vemEst;
+  st.achados = st.achados || [];
+  st.pagante = (st.pagante || []).concat(res.pagante || []);
+  const novos = res.achados || [];
+  if (fonte === 'chrome'){
+    const cpms = cpmPorPrograma();
+    const custoDe = a => { const meu = cpms[a.prog] != null ? cpms[a.prog] : (faixasDe(a.prog) || {}).alvo || 0; return a.milhas / 1000 * meu + (a.taxas || 0); };
+    const validos = novos.filter(a => !a.sem && a.milhas > 0);
+    /* ida e volta no mesmo programa saem numa emissão só: a melhor dupla do
+       mesmo programa ganha da soma de dois programas diferentes. */
+    if (!st.achados.some(a => a.marcado) && validos.some(a => a.sentido === 'VOLTA')){
+      const melhor = s2 => p2 => validos.filter(a => a.sentido === s2 && a.prog === p2).sort((x, y) => custoDe(x) - custoDe(y))[0];
+      const duplas = [...new Set(validos.map(a => a.prog))].map(p2 => ({i:melhor('IDA')(p2), v:melhor('VOLTA')(p2)})).filter(d2 => d2.i && d2.v)
+        .sort((x, y) => custoDe(x.i) + custoDe(x.v) - custoDe(y.i) - custoDe(y.v));
+      if (duplas.length){ duplas[0].i.marcado = true; duplas[0].v.marcado = true; }
+    }
+    ['IDA', 'VOLTA'].forEach(s => {
+      if (st.achados.concat(novos).some(a => a.sentido === s && a.marcado)) return;
+      const c = novos.filter(a => a.sentido === s && !a.sem && a.milhas > 0).map(a => {
+        const meu = cpms[a.prog] != null ? cpms[a.prog] : (faixasDe(a.prog) || {}).alvo || 0;
+        return {a, custo:a.milhas / 1000 * meu + (a.taxas || 0)};
+      }).sort((x, y) => x.custo - y.custo)[0];
+      if (c) c.a.marcado = true;
+    });
+  }
+  st.achados = st.achados.concat(novos);
+  if (res.pax && qtdNum(st.comum.adultos) <= 1 && !qtdNum(st.comum.criancas)) st.comum.adultos = res.pax;
+  if (res.cabine){ const m = {Y:'Econômica', W:'Premium Economy', C:'Executiva', J:'Executiva', F:'Primeira classe'}; if (m[res.cabine]) st.comum.cabine = m[res.cabine]; }
+  if ((res.nomes || []).length) st.paxNomes = [...new Set((st.paxNomes || []).concat(res.nomes))];
+  cqSincRegistro(reg); cqSalvarAgora();
+  return novos.length;
+}
+
+function cqTipoDoTexto(txt){
+  const t = String(txt || '').trim();
+  if (/RESULTADO TORRE/i.test(t) || t.split('\n').filter(l => (l.match(/;/g) || []).length >= 6).length) return 'chrome';
+  const j = typeof jsonDaResposta === 'function' ? jsonDaResposta(t) : null;
+  if (j){ try { const o = JSON.parse(j); if (Array.isArray(o) ? o[0] && o[0].viagens : o.viagens || o.opcoes) return 'vem'; if (o.voos) return 'claude'; } catch (_) {} }
+  return 'texto';
+}
+function cqReceberTexto(txt){
+  const tipo = cqTipoDoTexto(txt);
+  cqIrPasso(1, true);
+  try {
+    if (tipo === 'chrome'){
+      const r = cqDoChrome(txt);
+      if (!r.achados.length && !r.pagante.length) throw new Error('Não encontrei nenhuma linha de voo na resposta. Peça ao Claude para responder no formato da instrução (o bloco === RESULTADO TORRE ===) e cole de novo.');
+      const n = cqJuntar(r, 'chrome');
+      cqLeitura = {fase:'ok', msg:`${n} opç${n === 1 ? 'ão' : 'ões'} da extensão${r.pagante.length ? ' e o preço na pagante' : ''}.`, avisos:[]};
+    } else if (tipo === 'vem'){
+      const st = vemDeDados(JSON.parse(jsonDaResposta(txt)));
+      const reg = cqGarantir();
+      st.id = reg.id; st.nome = vemEst.nome; st.achados = vemEst.achados || [];
+      vemEst = st; cqSalvarAgora();
+      cqLeitura = null; cqIrPasso(2); avisar('Dados prontos carregados na página do cliente. Confira a Conferência.', 'ok'); return;
+    } else if (tipo === 'claude'){
+      const r = cqDoClaude(JSON.parse(jsonDaResposta(txt)));
+      if (!r.achados.length) throw new Error((r.avisos[0] || 'Nenhum voo na resposta.'));
+      const n = cqJuntar(r, 'claude');
+      cqLeitura = {fase:'ok', msg:`${n} voo${n === 1 ? '' : 's'} lido${n === 1 ? '' : 's'} pelo Claude.`, avisos:r.avisos};
+    } else {
+      const seg = segmentosDoTexto([txt], '');
+      const r = cqDoLeitor(seg);
+      if (!r.achados.length) throw new Error('Não reconheci voo nesse texto. Cole a resposta da extensão (com === RESULTADO TORRE ===) ou o print do voo.');
+      const n = cqJuntar(r, 'texto');
+      cqLeitura = {fase:'ok', msg:`${n} sentido${n === 1 ? '' : 's'} lido${n === 1 ? '' : 's'} do texto.`, avisos:r.avisos || []};
+    }
+  } catch (err){
+    cqLeitura = {fase:'erro', msg:err.message || String(err)};
+  }
+  cqRender();
+}
+
+async function cqReceberArquivos(lista){
+  const fs = [...lista].filter(f => (f.type || '').startsWith('image/') || ehPDF(f)).slice(0, 12);
+  if (!fs.length){ avisar('Use imagens (PNG, JPG, WEBP) ou PDF.', 'alerta'); return; }
+  cqIrPasso(1, true);
+  const urls = await Promise.all(fs.map(f => ehPDF(f) ? '' : new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = () => ok(''); fr.readAsDataURL(f); })));
+  cqLeitura = {fase:'lendo', msg:'Preparando o leitor', arquivos: fs.map((f, i) => ({url:urls[i], pdf:ehPDF(f), nome:f.name || ''})), ultimos:fs};
+  cqRenderLeitura();
+  try {
+    const w = await prepararLeitorOCR();
+    const textos = [];
+    for (let k = 0; k < fs.length; k++){ cqLeitura.msg = `Lendo ${k + 1} de ${fs.length}`; cqRenderLeitura(); textos.push(await textoDoArquivo(fs[k], w)); }
+    const r = cqDoLeitor(segmentosDoTexto(textos, ''));
+    if (!r.achados.length){
+      cqLeitura = Object.assign(cqLeitura, {fase:'nada', msg:'Não consegui tirar os voos deste print sozinho.' + (r.faltou ? ` Faltou ${r.faltou}.` : '')});
+    } else {
+      const n = cqJuntar(r, 'leitor');
+      cqLeitura = Object.assign(cqLeitura, {fase:'ok', msg:`${n === 2 ? 'Ida e volta lidas' : 'Voo lido'} no seu navegador.`, avisos:r.avisos || []});
+    }
+  } catch (err){
+    cqLeitura = Object.assign(cqLeitura || {}, {fase:'nada', msg:'Não deu para ler aqui: ' + (err.message || err)});
+  }
+  cqRender();
+}
+/* Print de buscador (Google Voos e afins) não tem o formato de um bilhete: aí
+   quem lê é o Claude, pela assinatura, com a regra rígida de não inventar. */
+async function cqLerPeloClaude(){
+  const f = cqLeitura && (cqLeitura.ultimos || []).find(x => (x.type || '').startsWith('image/'));
+  if (!f){ avisar('O Claude lê imagens. Para PDF, use o leitor daqui.', 'alerta'); return; }
+  const base64 = await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = () => err(new Error('não deu para abrir a imagem')); fr.readAsDataURL(f); });
+  try {
+    const bruto = await pedirAoClaude({titulo:'Ler o print pelo Claude', pedido:`Extraia os trechos desta captura. O ano corrente é ${new Date().getFullYear()}. Responda só o JSON.`, sistema:SISTEMA_PRINT,
+      imagem:{base64, mime: f.type === 'image/jpg' ? 'image/jpeg' : f.type}});
+    cqReceberTexto(bruto);
+  } catch (err){ avisar(err.message, 'info'); }
+}
+async function cqColarTexto(){
+  let txt = '';
+  try { txt = await navigator.clipboard.readText(); } catch (_) {}
+  if (txt && txt.trim()){ cqReceberTexto(txt); return; }
+  abrirFolha({titulo:'Colar texto', corpo:`<p class="fraco" style="margin:0 0 10px">Cole aqui a resposta do Claude no Chrome (o bloco que começa com <b>=== RESULTADO TORRE ===</b>), os dados prontos da página ou o texto copiado do site da companhia.</p>
+    <textarea id="cqTxt" rows="10" spellcheck="false" style="width:100%;font-family:var(--f-m);font-size:calc(12.5px * var(--esc));line-height:1.55" placeholder="=== RESULTADO TORRE === ... === FIM ==="></textarea>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="cqTxtOk"><svg><use href="#i-ok"/></svg>Ler</button>`});
+  setTimeout(() => $('#cqTxt') && $('#cqTxt').focus(), 60);
+  $('#cqTxtOk').onclick = () => { const v = $('#cqTxt').value; if (!v.trim()) return erroNoCampo($('#cqTxt'), 'Cole o texto primeiro.'); fecharFolha(); cqReceberTexto(v); };
+}
+
+/* Os voos marcados viram as opções: cada ida marcada é uma opção; a volta
+   marcada vai junto (uma para cada ida, ou a mesma para todas). Milhas e taxas
+   somam os dois sentidos. */
+function cqMontar(){
+  const st = vemEst, ach = (st.achados || []).filter(a => a.marcado && !a.sem);
+  let idas = ach.filter(a => a.sentido !== 'VOLTA'), voltas = ach.filter(a => a.sentido === 'VOLTA');
+  if (!idas.length && voltas.length){ idas = voltas; voltas = []; }
+  if (!idas.length){ avisar('Marque pelo menos um voo para montar a página.', 'alerta'); return; }
+  const livres = voltas.slice();
+  const parDe = (ida, i) => {
+    if (!voltas.length) return null;
+    if (voltas.length === 1) return voltas[0];
+    if (voltas.length === idas.length) return voltas[i];
+    const k = livres.findIndex(v => v.prog === ida.prog); if (k >= 0) return livres.splice(k, 1)[0];
+    return livres.shift() || voltas[0];
+  };
+  const trechos = tr => tr.map(t => { const x = vemNovoTrecho(t.de || '', t.para || '', t.cia || ''); Object.assign(x, {numero:t.numero || '', pData:t.data || '', pHora:t.sai || '', cHora:t.chega || '', cData:t.cData || t.data || ''}); if (!t.chega) x.cData = ''; return x; });
+  const anteriores = st.ops || [];
+  st.ops = idas.map((ida, i) => {
+    const v = parDe(ida, i);
+    const o = vemNovaOpcao();
+    const ant = anteriores[i]; if (ant && ant.bag) o.bag = cqClone(ant.bag);
+    const mil = (ida.milhas || 0) + (v ? v.milhas || 0 : 0);
+    const tx = ida.taxas == null && (!v || v.taxas == null) ? null : (Number(ida.taxas) || 0) + (v ? Number(v.taxas) || 0 : 0);
+    o.milhas = mil ? qtdTxt(mil) : '';
+    o.taxa = tx == null ? '' : moedaTxt(tx);
+    o.prog = ida.prog || (v && v.prog) || '';
+    o.partes = [{s:'ida', prog:ida.prog || '', milhas:ida.milhas || 0, taxas:Number(ida.taxas) || 0}].concat(v ? [{s:'volta', prog:v.prog || '', milhas:v.milhas || 0, taxas:Number(v.taxas) || 0}] : []);
+    o.ida = trechos(ida.trechos);
+    o.temVolta = !!v; o.volta = v ? trechos(v.trechos) : [];
+    return o;
+  });
+  cqSalvarAgora();
+  renderVem();
+  cqIrPasso(2);
+  avisar(`${st.ops.length === 1 ? 'Página montada com 1 opção' : `Página montada com ${st.ops.length} opções para comparar`}. Complete o que a Conferência pedir.`, 'ok', 5000);
+}
+
+/* ══ PUBLICAR ══════════════════════════════════════════════════════════════════
+   A página sobe pela API do GitHub com a mesma chave da Nuvem, no repositório
+   do endereço das páginas (jadielvargesmilhas-cloud/cotacoes). Sem chave, o
+   caminho antigo continua: baixar e subir à mão. */
+function cqRepoPaginas(){
+  const cfg = vemCfg();
+  if (cfg.repo && /^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) return cfg.repo;
+  const m = String(cfg.site || VEM_PADRAO.site).match(/^https?:\/\/([^.\/]+)\.github\.io\/([^\/?#]+)/i);
+  return m ? `${m[1]}/${m[2]}` : '';
+}
+const cqPodePublicar = () => !!(nuvemCfg().token && cqRepoPaginas());
+function cqExplicarGit(status, repo){
+  if (status === 404) return `a chave não alcança o repositório das páginas (${repo}). No GitHub, em Settings → Developer settings → a sua chave, inclua o repositório ${repo.split('/')[1]} e deixe Contents em Read and write.`;
+  if (status === 401) return 'a chave da Nuvem não foi aceita. Ela pode ter vencido ou sido revogada.';
+  if (status === 403) return `o GitHub recusou gravar em ${repo}. A chave precisa de Contents em Read and write nesse repositório.`;
+  if (status === 409 || status === 422) return 'o arquivo mudou no meio do caminho. Tente publicar de novo.';
+  if (status >= 500) return 'o GitHub está com problema agora. Tente daqui a pouco.';
+  return `o GitHub respondeu ${status}.`;
+}
+async function cqGitPut(repo, caminho, b64, msg){
+  const url = `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(caminho)}`;
+  const h = nuvemCabecalho();
+  let sha = null;
+  const g = await fetch(url + '?t=' + Date.now(), {headers:h});
+  if (g.ok) sha = (await g.json()).sha;
+  else if (g.status !== 404) throw new Error(cqExplicarGit(g.status, repo));
+  const corpo = {message:msg, content:b64}; if (sha) corpo.sha = sha;
+  const r = await fetch(url, {method:'PUT', headers:h, body:JSON.stringify(corpo)});
+  if (!r.ok) throw new Error(cqExplicarGit(r.status, repo));
+}
+const cqBlob64 = blob => new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = () => err(new Error('não deu para preparar a imagem')); fr.readAsDataURL(blob); });
+function cqMarca(txt){ let h = 0; const s = String(txt); for (let i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) | 0; } return (h >>> 0).toString(36) + '.' + s.length; }
+
+async function cqPublicar(){
+  if (cqPub && cqPub.fase === 'indo') return;
+  const r0 = vemParaDados(vemEst);
+  if (r0.erros.length){ cqIrPasso(3); avisar('Ainda falta preencher: veja a lista.', 'erro'); return; }
+  if (!cqPodePublicar()){ cqIrPasso(3); return; }
+  const reg = cqGarantir();
+  const g = vemGerar(); if (!g) return;
+  const repo = cqRepoPaginas();
+  cqPub = {id:reg.id, fase:'indo', passos:[{t:'Montando a página', e:'ok'}, {t:'Enviando a página para o GitHub', e:'vai'}, {t:'Enviando a imagem da prévia do WhatsApp', e:''}, {t:'Esperando o GitHub colocar no ar', e:''}]};
+  cqRender();
+  const passo = (i, e) => { cqPub.passos[i].e = e; if (i + 1 < cqPub.passos.length && e === 'ok') cqPub.passos[i + 1].e = 'vai'; cqRenderP3(); };
+  try {
+    const msg = `Cotação ${g.lista[0].cliente} ${hojeISO()}`;
+    await cqGitPut(repo, g.nome + '.html', paraBase64(g.pagina), msg);
+    passo(1, 'ok');
+    try {
+      const img = await window.VEM.imagemPrevia(g.previa);
+      await cqGitPut(repo, g.nome + '.jpg', await cqBlob64(img), msg + ' (prévia)');
+      passo(2, 'ok');
+    } catch (err){ cqPub.passos[2].e = 'aviso'; cqPub.passos[2].t = 'A imagem da prévia não subiu: ' + (err.message || err) + '. A página funciona sem ela.'; cqPub.passos[3].e = 'vai'; cqRenderP3(); }
+    vemRegistrar(g);
+    const reg2 = cqAtual() || reg;
+    const primeira = !reg2.publicada;
+    reg2.publicada = {em:new Date().toISOString(), marca:cqMarca(g.pagina), noAr:false};
+    reg2.alterada = false;
+    if (cqStatus(reg2) === 'rascunho'){ reg2.status = 'enviada'; cqHist(reg2, 'enviada'); }
+    else if (!primeira) cqHist(reg2, 'republicada');
+    cqSalvarAgora();
+    cqPub.fase = 'esperando';
+    cqRender();
+    cqVigiar(reg2.id, g.urlP, reg2.publicada.marca);
+  } catch (err){
+    cqPub.fase = 'erro'; cqPub.erro = err.message || String(err);
+    cqPub.passos.forEach(p => { if (p.e === 'vai') p.e = 'erro'; });
+    cqRender();
+  }
+}
+/* O GitHub Pages leva de 30 segundos a 2 minutos para pôr no ar. A Torre
+   pergunta à própria página até ela responder com a versão nova. */
+async function cqVigiar(id, url, marca){
+  const fim = Date.now() + 4 * 60 * 1000;
+  let falhasRede = 0;
+  while (Date.now() < fim){
+    await new Promise(ok => setTimeout(ok, 5000));
+    if (!cqPub || cqPub.id !== id) return;
+    try {
+      const r = await fetch(url + '?v=' + Date.now(), {cache:'no-store'});
+      if (r.ok && cqMarca(await r.text()) === marca){
+        const reg = cqLista().find(x => x.id === id);
+        if (reg && reg.publicada){ reg.publicada.noAr = true; salvar(); }
+        cqPub.passos[3].e = 'ok'; cqPub.passos[3].t = 'No ar: o link já abre para o cliente';
+        cqPub.fase = 'ok'; cqRender(); avisar('A página está no ar.', 'ok'); return;
+      }
+    } catch (_){ if (++falhasRede >= 3) break; }
+  }
+  if (!cqPub || cqPub.id !== id) return;
+  cqPub.passos[3].e = 'aviso'; cqPub.passos[3].t = 'Enviado. O GitHub costuma pôr no ar em 1 ou 2 minutos: abra o link antes de mandar, para conferir.';
+  cqPub.fase = 'ok'; cqRender();
+}
+function cqFoneCliente(nome){
+  const n = semAcento(String(nome || '').trim().toLowerCase()); if (!n) return '';
+  const p = (DB.pessoas || []).find(x => semAcento(String(x.nome || '').toLowerCase()) === n) || (DB.pessoas || []).find(x => semAcento(String(x.nome || '').toLowerCase()).split(' ')[0] === n.split(' ')[0] && n.split(' ').length === 1);
+  let f = p ? String(p.fone || '').replace(/\D/g, '') : '';
+  if (f.length === 10 || f.length === 11) f = '55' + f;
+  return f.length >= 12 ? f : '';
+}
+function cqWhats(reg){
+  const r = reg.resumo || {}, nome = String(r.cliente || '').split(' ')[0];
+  const txt = `Olá, ${nome}! Aqui está a sua cotação ${r.rota ? 'de ' + r.rota.replace(' → ', ' para ') : ''}: ${reg.url}`;
+  const f = cqFoneCliente(r.cliente);
+  return `https://wa.me/${f}?text=${encodeURIComponent(txt)}`;
+}
+
+/* ══ APROVAR E EMITIR ══════════════════════════════════════════════════════════ */
+function cqOpcoes(reg){
+  const st = (reg && reg.estado) || vemEst;
+  let r; try { r = vemParaDados(st); } catch (_) { return []; }
+  return r.lista.map((d, i) => {
+    let c = null; try { if (Number(d.milhas) > 0 && moedaNum(d.milheiro) > 0) c = window.VEM.calcular(d); } catch (_) {}
+    const o = st.ops[i] || {};
+    const vs = d.viagens || [];
+    const voos = vs.flatMap(v => v.voos.map(f => `${f.cia} ${f.numero}`));
+    return {i, d, c, o, cia:[...new Set(vs.flatMap(v => v.voos.map(f => f.cia)))].join(' + '), voos,
+      ida: vs[0] ? `${vs[0].voos[0].origem.iata} → ${vs[0].voos[vs[0].voos.length - 1].destino.iata}` : `${(o.ida || [{}])[0].de || '?'} → ${((o.ida || []).slice(-1)[0] || {}).para || '?'}`,
+      datas: vs.map(v => dataBR(v.voos[0].partida.slice(0, 10))).join(' · volta ')};
+  });
+}
+function cqAprovar(i){
+  const reg = cqAtual(); if (!reg) return;
+  reg.aprovada = {op:i, em:new Date().toISOString()};
+  reg.status = 'aprovada'; cqHist(reg, 'aprovada');
+  cqSalvarAgora(); cqConfete(); cqIrPasso(5);
+  avisar('Aprovada. Agora é registrar a emissão.', 'ok');
+}
+function cqDesfazer(){
+  const reg = cqAtual(); if (!reg) return;
+  const ant = cqStatus(reg);
+  reg.status = reg.publicada || reg.url ? 'enviada' : 'rascunho'; delete reg.aprovada;
+  cqHist(reg, reg.status); cqSalvarAgora(); cqIrPasso(4);
+  avisar(ant === 'perdida' ? 'A cotação voltou a ficar em aberto.' : 'Aprovação desfeita.', 'info');
+}
+function cqPerdida(){
+  const reg = cqAtual(); if (!reg) return;
+  confirmar('O cliente não fechou?', 'A cotação sai das abertas e fica em "Não fecharam", no fim do funil. Dá para reabrir depois.', () => {
+    reg.status = 'perdida'; delete reg.aprovada; cqHist(reg, 'perdida'); cqSalvarAgora(); cqRender();
+  }, 'Não fechou');
+}
+function cqMista(o){ const p = (o && o.partes || []).filter(x => x.prog); return p.length === 2 && p[0].prog !== p[1].prog ? p : null; }
+function cqRascunhoEmissao(reg, parte){
+  const st = reg.estado || vemEst, ops = cqOpcoes(reg), x = ops[(reg.aprovada || {}).op || 0] || ops[0];
+  if (!x) return null;
+  const o = x.o, mista = cqMista(o);
+  let ida = o.ida || [], vol = o.temVolta ? (o.volta || []) : [];
+  let progK = o.prog || programaDaCia((ida[0] || {}).cia) || '', milhas = qtdNum(o.milhas), taxas = moedaNum(o.taxa), cobrado = x.c ? Number(x.c.pix) / 100 : 0;
+  if (mista && parte){
+    const base = p => (Number(p.milhas) || 0) / 1000 * moedaNum(o.milheiro) + (Number(p.taxas) || 0);
+    const p = mista.find(y => y.s === parte), tot = base(mista[0]) + base(mista[1]);
+    cobrado = Math.round(cobrado * (tot ? base(p) / tot : .5) * 100) / 100;
+    if (parte === 'volta'){ ida = vol; } vol = [];
+    progK = p.prog; milhas = Number(p.milhas) || 0; taxas = Number(p.taxas) || 0;
+  }
+  const itin = [...ida, ...vol].map(t => { const c = cqCodCia(t.cia); return c && t.numero && t.pData && t.pHora && t.cHora ? `${c}${String(t.numero).padStart(4, '0')} ${t.pData} ${t.de} ${t.para} ${t.pHora.replace(':', '')} ${t.cHora.replace(':', '')}` : ''; }).filter(Boolean).join('\n');
+  const cli = String(st.comum.cliente || '').trim();
+  const pes = (DB.pessoas || []).find(p => semAcento(String(p.nome || '').toLowerCase()) === semAcento(cli.toLowerCase()));
+  const de = (ida[0] || {}).de, para = (ida.slice(-1)[0] || {}).para;
+  const nums = [...ida, ...vol].map(t => t.numero).filter(Boolean);
+  const cias = [...new Set([...ida, ...vol].map(t => t.cia).filter(Boolean))].join(' + ');
+  const desc = [`${de} → ${para}${vol.length ? ' (ida e volta)' : mista ? (parte === 'volta' ? ' (volta)' : ' (ida)') : ''}`, cias, nums.length ? 'Voo' + (nums.length > 1 ? 's ' : ' ') + nums.join(' e ') : ''].filter(Boolean).join(' · ');
+  return {tipo:'voo', quem:'terceiro', cliente:pes ? pes.nome : cli, clienteId:pes ? pes.id : '', desc, data:(ida[0] || {}).pData || hojeISO(), hora:(ida[0] || {}).pHora || '',
+    trajeto: vol.length ? 'idavolta' : 'ida', dataVolta:(vol[0] || {}).pData || '', horaVolta:(vol[0] || {}).pHora || '',
+    prog:progK, milhas, taxas, cobrado, custoExtra:0, status:'emitida', pax:[], criada:hojeISO(), criadaHora:horaAgora(), pagto:'aguardando', itin,
+    _negocio: reg.id + (mista && parte ? '|' + parte : '')};
+}
+function cqEmitir(parte){
+  const reg = cqAtual(); if (!reg) return;
+  const r = cqRascunhoEmissao(reg, parte); if (!r){ avisar('Não achei a opção aprovada.', 'erro'); return; }
+  editarReserva(null, r);
+  avisar('Emissão aberta já preenchida. Escolha os passageiros, informe o localizador e salve.', 'info', 7000);
+}
+function cqEmitido(chave, reserva){
+  const [id, parte] = String(chave).split('|');
+  const reg = cqLista().find(x => x.id === id); if (!reg) return;
+  if (parte){
+    reg.emissoes = Object.assign({}, reg.emissoes || {}, {[parte]:reserva.id});
+    if (!(reg.emissoes.ida && reg.emissoes.volta)){
+      salvar(); if (vistaAtual === 'cotacoes') cqRender();
+      avisar(`${parte === 'ida' ? 'Ida' : 'Volta'} registrada. Falta a ${parte === 'ida' ? 'volta' : 'ida'}.`, 'ok', 5000); return;
+    }
+  }
+  reg.status = 'emitida'; reg.reservaId = parte ? reg.emissoes.ida : reserva.id; reg.loc = reserva.loc; cqHist(reg, 'emitida');
+  salvar();
+  if (vemEst && vemEst.id === id){ cqPasso = 5; }
+  if (vistaAtual === 'cotacoes') cqRender();
+  cqConfete();
+  avisar('Emissão registrada. Já está em Emitidos e no painel.', 'ok', 5000);
+}
+
+/* Quanto a opção custa ao seu milheiro e quanto sobra vendendo pelo milheiro
+   das Condições de venda. Vender abaixo do próprio custo é o erro que mais
+   dói, e ele precisa aparecer antes de o cliente receber o preço. */
+function cqCusto(progK, milhas, taxas){
+  if (!progK || !(milhas > 0)) return null;
+  const cpms = cpmPorPrograma(); const meu = cpms[progK] != null ? cpms[progK] : (faixasDe(progK) || {}).alvo;
+  return meu ? milhas / 1000 * meu + (Number(taxas) || 0) : null;
+}
+function cqVendaPix(milhas, taxas){
+  const cfg = vemCfg(); if (!(moedaNum(cfg.milheiro) > 0) || !(milhas > 0)) return null;
+  try { return Number(window.VEM.calcular({milhas:String(Math.round(milhas)), milheiro:vemNumTxt(cfg.milheiro), taxa_embarque:String(Number(taxas) || 0), desconto_pix:vemNumTxt(cfg.pix), taxa_cartao_1x:vemNumTxt(cfg.t1), taxa_cartao_12x:vemNumTxt(cfg.t12)}).pix) / 100; } catch (_) { return null; }
+}
+function cqResultadoOpcao(x){
+  if (!x || !x.c) return null;
+  const ps = (x.o.partes || []).filter(p => p.prog);
+  const custo = ps.length ? ps.reduce((t, p) => { if (t == null) return null; const c2 = cqCusto(p.prog, p.milhas, p.taxas); return c2 == null ? null : t + c2; }, 0)
+    : cqCusto(x.o.prog, qtdNum(x.o.milhas), moedaNum(x.o.taxa));
+  if (custo == null) return null;
+  const pix = Number(x.c.pix) / 100;
+  return {custo, pix, res:pix - custo};
+}
+const cqResTxt = (r, base) => r == null ? '' : `<b class="cq-res ${r >= 0 ? 'pos' : 'neg'}">${r >= 0 ? 'sobra ' + brl(r) : 'prejuízo de ' + brl(-r)}</b>${base ? ` <span class="fraco">(${pct(r / base * 100, 0)})</span>` : ''}`;
+
+/* ══ DESENHO ═══════════════════════════════════════════════════════════════════ */
+function cqPassoDe(reg){
+  const s = cqStatus(reg);
+  if (s === 'aprovada' || s === 'emitida') return 5;
+  if (s === 'enviada' || s === 'perdida') return reg.alterada ? 3 : 4;
+  const st = reg ? reg.estado : vemEst;
+  return st && (st.ops || []).some(o => (o.ida || []).some(t => t.de && t.para)) ? 2 : 1;
+}
+function cqProgresso(reg){
+  const s = cqStatus(reg);
+  if (s === 'emitida') return 5; if (s === 'aprovada') return 4; if (s === 'enviada' || s === 'perdida') return 3;
+  const st = reg ? reg.estado : null;
+  return st && (st.ops || []).some(o => (o.ida || []).some(t => t.de && t.para)) ? 2 : (st && (st.achados || []).length ? 1 : 0);
+}
+function cqRenderFunil(){
+  const cx = $('#cqFunil'); if (!cx) return;
+  const l = cqLista();
+  const G = {rascunho:[], enviada:[], aprovada:[], emitida:[], perdida:[]};
+  l.forEach(x => G[cqStatus(x)].push(x));
+  Object.values(G).forEach(a => a.sort((x, y) => String(y.atualizada || y.criada || '').localeCompare(String(x.atualizada || x.criada || ''))));
+  const somaG = k => G[k].reduce((a, x) => a + cqCentavos(x), 0);
+  const fech = G.emitida.length + G.perdida.length;
+  const conv = fech ? Math.round(G.emitida.length / fech * 100) : null;
+  const atual = vemEst && vemEst.id;
+  const cartao = x => {
+    const s = cqStatus(x), r = x.resumo || {}, n = cqProgresso(x);
+    return `<button type="button" class="cq-card${x.id === atual ? ' on' : ''}" data-cq-abrir="${x.id}" style="--cq-c:var(--${CQ_STATUS[s].c})">
+      <span class="cq-card-tit">${esc(r.cliente || 'Sem nome')}${x.alterada ? '<span class="cq-card-alerta" title="Mudou depois de publicar"></span>' : ''}</span>
+      <span class="cq-card-rota">${esc(r.rota || 'Rota a definir')}${r.datas ? ' · ' + esc(r.datas) : ''}</span>
+      <span class="cq-card-pe"><b>${r.pix ? esc(r.pix) : 'sem preço'}</b><small>${esc(cqIdade(x.atualizada || x.criada))}</small></span>
+      <span class="cq-pontos" aria-hidden="true">${CQ_PASSOS.map((p, i) => `<i class="${i < n ? 'f' : ''}"></i>`).join('')}</span></button>`;
+  };
+  const col = k => `<section class="cq-col" style="--cq-c:var(--${CQ_STATUS[k].c})">
+      <div class="cq-col-cab"><span class="cq-bola"></span><b>${CQ_STATUS[k].n}</b><span class="cq-col-n">${G[k].length}</span>${somaG(k) ? `<small>${cqBrlC(somaG(k))}</small>` : ''}</div>
+      <div class="cq-col-lista">${G[k].map(cartao).join('') || `<div class="cq-col-vazio">${k === 'rascunho' ? 'Toque em Nova cotação' : 'Nenhuma'}</div>`}</div></section>`;
+  cx.innerHTML = `<div class="cq-funil">
+    <div class="cq-funil-cab">
+      <div class="cq-funil-tit"><div class="olho anil" style="margin:0">Funil de cotações</div>
+        <div class="cq-kpis">
+          <span><b>${cqBrlC(somaG('enviada') + somaG('aprovada'))}</b>em aberto, no PIX</span>
+          <span><b>${conv == null ? 'n/d' : conv + '%'}</b>viraram emissão</span>
+          <span><b>${G.aprovada.length}</b>${G.aprovada.length === 1 ? 'aprovada a emitir' : 'aprovadas a emitir'}</span>
+        </div></div>
+      <button type="button" class="bt primario" data-cq="nova"><svg><use href="#i-mais"/></svg>Nova cotação</button>
+    </div>
+    <div class="cq-colunas">${['rascunho', 'enviada', 'aprovada', 'emitida'].map(col).join('')}</div>
+    ${G.perdida.length ? `<details class="cq-perdidas" style="--cq-c:var(--brasa)"><summary><span class="cq-bola"></span>${G.perdida.length} ${G.perdida.length === 1 ? 'não fechou' : 'não fecharam'}</summary><div class="cq-col-lista cq-perd-lista">${G.perdida.map(cartao).join('')}</div></details>` : ''}
+  </div>`;
+}
+function cqRenderCab(){
+  const cx = $('#cqCab'); if (!cx) return;
+  vemCarregarRascunho();
+  const reg = cqAtual(), s = cqStatus(reg), c = CQ_STATUS[s];
+  const nomes = (DB.pessoas || []).map(p => p.nome).filter(Boolean);
+  const hist = (reg && reg.hist || []).filter((h, i, a) => !(i && a[i - 1].s === h.s));
+  cx.innerHTML = `<datalist id="cqClientes">${nomes.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="cq-cab-l">
+      <label class="cq-cab-olho" for="cqCliente">Cotação para</label>
+      <div class="cq-cab-nome"><input id="cqCliente" class="cq-cliente-in" list="cqClientes" autocomplete="off" placeholder="nome do cliente" value="${esc((vemEst.comum || {}).cliente || '')}">
+        <span class="etq ${c.c === 'aco' ? '' : c.c}" style="${c.c === 'aco' ? 'color:var(--aco)' : ''}">${reg ? c.n : 'Nova'}</span></div>
+    </div>
+    <div class="cq-cab-d">
+      ${reg ? `<button type="button" class="bt p vermelho-solido" data-cq="excluir"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}
+    </div>
+    ${hist.length ? `<div class="cq-tempo">${hist.map(h => `<span style="--cq-c:var(--${(CQ_STATUS[h.s] || {c:'aco'}).c})"><i></i>${h.s === 'republicada' ? 'Publicada de novo' : h.s === 'rascunho' ? 'Aberta' : CQ_STATUS[h.s].n} <small>${esc(cqHora(h.em))}</small></span>`).join('')}</div>` : ''}`;
+}
+function cqFeito(i){
+  const reg = cqAtual(), s = cqStatus(reg);
+  if (i === 1) return !!((vemEst.achados || []).length) || cqProgresso(reg) >= 2;
+  if (i === 2) return !!(reg && (reg.nome || reg.url));
+  if (i === 3) return ['enviada', 'aprovada', 'emitida', 'perdida'].includes(s) && !!(reg && (reg.url || reg.publicada));
+  if (i === 4) return ['aprovada', 'emitida'].includes(s);
+  return s === 'emitida';
+}
+function cqRenderTrilho(){
+  const cx = $('#cqTrilho'); if (!cx) return;
+  let ult = 0; for (let i = 1; i <= 5; i++) if (cqFeito(i)) ult = i;
+  cx.innerHTML = `<span class="cq-trilho-barra" style="--p:${Math.min(1, ult / 4)}"></span><ol>${CQ_PASSOS.map((p, i) => {
+    const n = i + 1, f = cqFeito(n);
+    return `<li><button type="button" class="${cqPasso === n ? 'on' : ''}${f ? ' feito' : ''}" data-cq-passo="${n}" aria-current="${cqPasso === n ? 'step' : 'false'}">
+      <span class="cq-n">${f ? '<svg><use href="#i-ok"/></svg>' : n}</span><span class="cq-t"><b>${p.n}</b><small>${p.d}</small></span></button></li>`;
+  }).join('')}</ol>`;
+}
+function cqRotaAchado(a){
+  const t = a.trechos || []; if (!t.length) return '';
+  const de = t[0].de || '?', para = t[t.length - 1].para || '?';
+  return `<b>${esc(de)} <span>${esc(cqHoraLimpa(t[0].sai) || '')}</span></b><i class="cq-seta"></i><b>${esc(para)} <span>${esc(cqHoraLimpa(t[t.length - 1].chega) || '')}${cqMaisDias(a.chega) ? '<sup>+' + cqMaisDias(a.chega) + '</sup>' : ''}</span></b>`;
+}
+function cqRenderLeitura(){
+  const cx = $('#cqLendo'); if (!cx) return;
+  const L = cqLeitura;
+  if (!L){ cx.innerHTML = ''; return; }
+  if (L.fase === 'lendo'){
+    cx.innerHTML = `<div class="cq-lendo"><div class="lp-miniaturas">${(L.arquivos || []).map(a => a.pdf
+      ? `<div class="lp-mini lp-pdf"><svg><use href="#i-livro"/></svg><b>PDF</b><small>${esc(a.nome.replace(/\.pdf$/i, '').slice(0, 22))}</small><span class="lp-varredura"></span></div>`
+      : `<div class="lp-mini"><img src="${a.url}" alt=""><span class="lp-varredura"></span></div>`).join('')}</div>
+      <div class="lp-passos"><div class="agora"><span class="lp-bola"></span>${esc(L.msg)}</div><div class="lp-dica">Tudo acontece no seu navegador, sem custo.</div></div></div>`;
+    return;
+  }
+  const temImg = (L.ultimos || []).some(f => (f.type || '').startsWith('image/'));
+  if (L.fase === 'nada') cx.innerHTML = `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div><b>${esc(L.msg)}</b></div>
+      <div>Print de buscador (Google Voos, Kayak e afins) quem lê melhor é o Claude, de graça pela sua assinatura.</div>
+      ${temImg ? `<div class="linha" style="gap:9px;margin-top:6px"><button type="button" class="bt p primario" data-cq="ler-claude"><svg><use href="#i-faisca"/></svg>Pedir ao Claude para ler</button></div>` : ''}</div></div>`;
+  else if (L.fase === 'erro') cx.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>${esc(L.msg)}</div></div>`;
+  else cx.innerHTML = `<div class="nota jade cq-lido"><svg><use href="#i-ok"/></svg><div class="pilha compacta"><div><b>${esc(L.msg)}</b> Confira e marque o que vai para o cliente.</div>
+      ${(L.avisos || []).map(a => `<div class="fraco">${esc(a)}</div>`).join('')}
+      ${temImg ? `<div><button type="button" class="cq-link-bt" data-cq="ler-claude">Leitura errada? Pedir ao Claude para ler o print</button></div>` : ''}</div></div>`;
+}
+function cqRenderAchados(){
+  const cx = $('#cqAchados'); if (!cx) return;
+  const st = vemEst, ach = st.achados || [];
+  if (!ach.length){ cx.innerHTML = ''; return; }
+  const cpms = cpmPorPrograma(), sal = saldoPorPrograma();
+  const grupo = sent => {
+    const ls = ach.filter(a => a.sentido === sent); if (!ls.length) return '';
+    const pg = (st.pagante || []).filter(p => p.sentido === sent).sort((x, y) => x.preco - y.preco)[0];
+    const r0 = ls.find(a => (a.trechos || []).length) || {};
+    const rota = r0.trechos ? `${r0.trechos[0].de || '?'} → ${r0.trechos[r0.trechos.length - 1].para || '?'}` : '';
+    return `<div class="cq-grupo">
+      <div class="cq-grupo-cab"><b>${sent === 'VOLTA' ? 'Volta' : 'Ida'}</b><span class="fraco">${esc(rota)}</span>${pg ? `<span class="etq">na pagante a partir de ${brl(pg.preco)}</span>` : ''}</div>
+      ${ls.map(a => {
+        if (a.sem) return `<div class="cq-achado sem"><span class="cq-ach-ck"></span><span class="cq-ach-prog">${a.prog ? discoProg(ccProg(a.prog), 'p') : ''}<span><b>${esc(a.prog ? cqNomeProg(a.prog) : a.progNome || '')}</b><small>${esc(CQ_FONTE[a.fonte] || '')}</small></span></span><span class="cq-ach-voo"><span class="etq brasa">sem disponibilidade</span></span><span class="cq-ach-num"></span><button type="button" class="cq-ach-x" data-cq-tirar="${a.id}" aria-label="Tirar"><svg><use href="#i-x"/></svg></button></div>`;
+        const custo = cqCusto(a.prog, a.milhas, a.taxas), venda = cqVendaPix(a.milhas, a.taxas);
+        const voos = (a.trechos || []).map(t => [cqCodCia(t.cia) || t.cia, t.numero].filter(Boolean).join(' ')).filter(Boolean).join(', ');
+        return `<label class="cq-achado${a.marcado ? ' on' : ''}">
+          <span class="cq-ach-ck"><input type="checkbox" data-cq-marcar="${a.id}"${a.marcado ? ' checked' : ''}></span>
+          <span class="cq-ach-prog">${a.prog ? discoProg(ccProg(a.prog), 'p') : '<span class="cq-sem-prog">?</span>'}<span><b>${esc(/pelo mundo/i.test(a.progNome || '') ? 'Azul pelo Mundo' : a.prog ? cqNomeProg(a.prog) : (a.progNome || 'programa a definir'))}</b><small>${esc(CQ_FONTE[a.fonte] || '')}</small></span></span>
+          <span class="cq-ach-voo"><span class="cq-ach-rota">${cqRotaAchado(a)}</span><small>${esc([voos, a.paradas, (a.trechos[0] || {}).data ? dataBR(a.trechos[0].data) : ''].filter(Boolean).join(' · '))}</small>${a.aviso ? `<small class="cq-ach-aviso">${esc(a.aviso)}</small>` : ''}</span>
+          <span class="cq-ach-num">${a.milhas ? `<b>${nBR(a.milhas)} milhas</b>` : '<b class="fraco">milhas a informar</b>'}<small>${a.taxas != null && a.taxas !== '' ? '+ ' + brl(a.taxas) + ' de taxas' : 'taxas a informar'}</small>${custo ? `<small>custa ${brl(custo)} ao seu milheiro${a.prog && (sal[a.prog] || 0) >= a.milhas ? ' · tem saldo' : ''}</small>` : ''}${custo != null && venda != null ? `<small>${cqResTxt(venda - custo)} na venda</small>` : ''}</span>
+          <button type="button" class="cq-ach-x" data-cq-tirar="${a.id}" aria-label="Tirar este voo" data-dica="Tirar"><svg><use href="#i-x"/></svg></button>
+        </label>`;
+      }).join('')}</div>`;
+  };
+  const m = ach.filter(a => a.marcado && !a.sem);
+  const idas = m.filter(a => a.sentido !== 'VOLTA').length || (m.length ? m.length : 0);
+  cx.innerHTML = `<div class="cq-achados">
+    <div class="cq-achados-cab"><div><b>O que foi encontrado</b><div class="fraco">Marque a ida e a volta que vão para o cliente. Marque mais de uma ida para ele comparar.</div></div>
+      <button type="button" class="bt p fantasma" data-cq="limpar-achados">Limpar</button></div>
+    ${grupo('IDA')}${grupo('VOLTA')}
+    <div class="cq-barra"><span><b>${m.length}</b> ${m.length === 1 ? 'voo marcado' : 'voos marcados'}${m.length ? ` · ${idas} ${idas === 1 ? 'opção' : 'opções'} na página` : ''}</span>
+      <button type="button" class="bt primario" data-cq="montar"${m.length ? '' : ' disabled'}>Montar a página<svg><use href="#i-seta-d"/></svg></button></div>
+  </div>`;
+}
+function cqRenderP1(){
+  const t = $('#cqP1Topo'); if (t) t.innerHTML = `<div class="cq-passo-cab"><h3>Capturar os voos</h3><p class="fraco">Busque pela extensão do Claude no Chrome (abaixo) e cole a resposta aqui. Para os voos que ela não trouxe, cole os prints no mesmo lugar.</p></div>`;
+  cqRenderLeitura(); cqRenderAchados();
+}
+function cqRenderP2(){
+  const t = $('#cqP2Topo'); if (!t) return;
+  t.innerHTML = `<div class="cq-passo-cab"><h3>Montar a página do cliente</h3><p class="fraco">Complete o que faltar: a Conferência, no fim, diz exatamente o quê. As contas são as mesmas da página que o cliente recebe.</p></div>`;
+}
+function cqRenderP3(){
+  const cx = $('#cqP3'); if (!cx || cx.hidden) return;
+  const reg = cqAtual();
+  let r; try { r = vemParaDados(vemEst); } catch (err) { r = {erros:[err.message], lista:[]}; }
+  const cab = `<div class="cq-passo-cab"><h3>Publicar e enviar</h3><p class="fraco">A página sobe para o seu GitHub e o link sai pronto para o WhatsApp. Sem baixar nada, sem subir à mão.</p></div>`;
+  if (r.erros.length){
+    cx.innerHTML = cab + `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div><b>Antes de publicar, falta:</b><ul class="vem-lista">${r.erros.slice(0, 8).map(x => `<li>${esc(x)}</li>`).join('')}</ul>${r.erros.length > 8 ? `<div class="fraco">e mais ${r.erros.length - 8}.</div>` : ''}
+      <div class="linha" style="margin-top:10px"><button type="button" class="bt p primario" data-cq-passo="2"><svg><use href="#i-seta-e"/></svg>Voltar para Montar</button></div></div></div>`;
+    return;
+  }
+  const pub = cqPub && reg && cqPub.id === reg.id ? cqPub : null;
+  const pode = cqPodePublicar(), repo = cqRepoPaginas();
+  const passos = pub ? `<ol class="cq-pub-passos">${pub.passos.map(p => `<li class="${p.e}"><span class="cq-pp-ic">${p.e === 'ok' ? '<svg><use href="#i-ok"/></svg>' : p.e === 'erro' ? '<svg><use href="#i-x"/></svg>' : p.e === 'aviso' ? '<svg><use href="#i-info"/></svg>' : ''}</span>${esc(p.t)}</li>`).join('')}</ol>` : '';
+  let lado;
+  if (pub && pub.fase === 'indo') lado = `<div class="cq-pub-bloco"><div class="olho anil" style="margin:0 0 10px">Publicando</div>${passos}</div>`;
+  else if (reg && reg.url && (reg.publicada || cqStatus(reg) !== 'rascunho') && !(pub && pub.fase === 'erro')){
+    const noAr = (reg.publicada || {}).noAr || (pub && pub.fase === 'ok' && pub.passos[3].e === 'ok');
+    const fone = cqFoneCliente((reg.resumo || {}).cliente);
+    lado = `<div class="cq-pub-bloco">
+      ${reg.alterada ? `<div class="nota ouro" style="margin-bottom:12px"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div><b>Você mudou a cotação depois de publicar.</b> O cliente ainda vê a versão anterior.</div><div><button type="button" class="bt p primario" data-cq="publicar"${pode ? '' : ' disabled'}><svg><use href="#i-subir"/></svg>Publicar de novo, com o mesmo link</button></div></div></div>` : ''}
+      <div class="cq-vivo ${noAr ? 'on' : ''}"><i></i>${noAr ? 'No ar' : pub && pub.fase === 'esperando' ? 'Entrando no ar…' : 'Publicada'}${reg.publicada ? ` <small>${esc(cqHora(reg.publicada.em))}</small>` : ''}</div>
+      <div class="cq-link"><code>${esc(reg.url)}</code></div>
+      <div class="cq-pub-bts">
+        <a class="bt primario cq-zap" href="${esc(cqWhats(reg))}" target="_blank" rel="noopener" data-cq="zap"><svg><use href="#i-seta"/></svg>Enviar no WhatsApp${fone ? '' : ' (escolher contato)'}</a>
+        <button type="button" class="bt fantasma" data-vem-acao-cq="copiar" data-url="${esc(reg.url)}"><svg><use href="#i-copiar"/></svg>Copiar o link</button>
+        <a class="bt fantasma" href="${esc(reg.url)}" target="_blank" rel="noopener"><svg><use href="#i-olho"/></svg>Abrir</a>
+      </div>
+      ${pub && pub.passos ? passos : ''}
+      <div class="linha cq-seguir"><button type="button" class="bt primario" data-cq-passo="4">Seguir para a aprovação<svg><use href="#i-seta-d"/></svg></button></div>
+    </div>`;
+  } else {
+    lado = `<div class="cq-pub-bloco">
+      ${pub && pub.fase === 'erro' ? `<div class="nota brasa" style="margin-bottom:12px"><svg><use href="#i-alerta"/></svg><div><b>Não deu para publicar:</b> ${esc(pub.erro)}</div></div>${passos}` : ''}
+      ${pode ? `<button type="button" class="bt primario cq-publicar" data-cq="publicar"><svg><use href="#i-subir"/></svg>Publicar e gerar o link</button>
+        <p class="fraco cq-pub-nota">Sobe a página e a imagem da prévia direto em <b>${esc(repo)}</b>, com a chave da Nuvem. Em 1 ou 2 minutos o link abre para o cliente, e a Torre avisa quando estiver no ar.</p>`
+      : `<div class="nota ouro"><svg><use href="#i-info"/></svg><div class="pilha compacta"><div><b>Para publicar sozinha, a Torre usa a chave da Nuvem.</b> Ela ainda não está preenchida neste aparelho.</div>
+          <div>Em <b>Ajustes → Nuvem</b>, informe a chave. Ela precisa ter acesso também ao repositório <b>${esc(repo || 'das páginas')}</b>, com Contents em Read and write.</div></div></div>`}
+      <div class="cq-manual"><span class="fraco">Ou do jeito antigo:</span>
+        <button type="button" class="bt p fantasma" data-cq="baixar"><svg><use href="#i-baixar"/></svg>Baixar e subir à mão</button>
+        ${reg && reg.url ? `<button type="button" class="bt p fantasma" data-cq="ja-enviei"><svg><use href="#i-ok"/></svg>Já subi e enviei ao cliente</button>` : ''}</div>
+      <div id="vemResultado"></div>
+    </div>`;
+  }
+  const perdas = cqOpcoes(null).map(x => ({x, r:cqResultadoOpcao(x)})).filter(y => y.r && y.r.res < 0);
+  if (perdas.length && !(pub && pub.fase === 'indo')) lado = `<div class="nota brasa cq-alerta-preco"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div><b>Atenção ao preço:</b> ${perdas.map(y => `${perdas.length > 1 || cqOpcoes(null).length > 1 ? 'a opção ' + (y.x.i + 1) : 'esta cotação'} dá prejuízo de ${brl(-y.r.res)} ao seu milheiro`).join('; ')}.</div><div>O milheiro de venda (${esc(vemCfg().milheiro || 'n/d')}) está abaixo do que essas milhas custaram a você. Ajuste o milheiro na montagem, ou publique assim se for de propósito.</div></div></div>` + lado;
+  lado = `<div class="cq-pub-bloco">${lado}</div>`;
+  cx.innerHTML = cab + `<div class="cq-pub"><div class="cq-fone"><div class="cq-fone-tela"><iframe id="cqPrevia" title="A página como o cliente vê" tabindex="-1"></iframe></div></div>${lado}</div>`;
+  try {
+    const g = vemGerar();
+    if (g){ const f = $('#cqPrevia'); f.srcdoc = g.pagina; requestAnimationFrame(cqAjustarFone); }
+  } catch (_) {}
+}
+function cqAjustarFone(){
+  const f = $('#cqPrevia'); if (!f) return;
+  const tela = f.parentElement, k = tela.clientWidth / 390;
+  if (!k) return;
+  f.style.transform = `scale(${k})`;
+  f.style.height = Math.ceil(tela.clientHeight / k) + 'px';
+}
+function cqRenderP4(){
+  const cx = $('#cqP4'); if (!cx || cx.hidden) return;
+  const reg = cqAtual(), s = cqStatus(reg), ops = cqOpcoes(reg);
+  const cab = `<div class="cq-passo-cab"><h3>A resposta do cliente</h3><p class="fraco">Quando ele responder no WhatsApp, marque aqui a opção que ele escolheu.</p></div>`;
+  if (!reg || !ops.length){ cx.innerHTML = cab + `<div class="nota"><svg><use href="#i-info"/></svg><div>Monte a página primeiro: as opções aparecem aqui.</div></div>`; return; }
+  const ap = reg.aprovada ? reg.aprovada.op : null;
+  cx.innerHTML = cab + `${s === 'rascunho' ? '<div class="nota ouro" style="margin-bottom:12px"><svg><use href="#i-info"/></svg><div>Esta cotação ainda não foi publicada. Se o cliente aprovou por outro caminho, pode marcar mesmo assim.</div></div>' : ''}
+    ${s === 'perdida' ? `<div class="nota brasa" style="margin-bottom:12px"><svg><use href="#i-alerta"/></svg><div class="pilha compacta"><div>Marcada como <b>não fechou</b>.</div><div><button type="button" class="bt p fantasma" data-cq="desfazer">Reabrir a cotação</button></div></div></div>` : ''}
+    <div class="cq-ops">${ops.map(x => `<div class="cq-op${ap === x.i ? ' on' : ''}">
+      <div class="cq-op-cab"><b>${ops.length > 1 ? 'Opção ' + (x.i + 1) : 'A cotação'}</b>${ap === x.i ? '<span class="etq jade">aprovada</span>' : ''}</div>
+      <div class="cq-op-rota">${esc(x.ida)}${x.o.temVolta ? ' <span class="fraco">ida e volta</span>' : ''}</div>
+      <div class="fraco cq-op-sub">${esc([x.cia, x.datas].filter(Boolean).join(' · '))}</div>
+      <div class="cq-op-preco">${x.c ? window.VEM.brl(x.c.pix) : 'n/d'}<small>no PIX</small></div>
+      <div class="fraco cq-op-sub">${x.c ? `ou 12x de ${window.VEM.brl(x.c.parcela)} · ${nBR(x.d.milhas)} milhas${x.o.prog ? ' ' + esc(cqNomeProg(x.o.prog)) : ''}` : ''}</div>
+      ${(() => { const r = cqResultadoOpcao(x); return r ? `<div class="cq-op-res">Ao seu milheiro custa ${brl(r.custo)}: ${cqResTxt(r.res, r.pix)}</div>` : ''; })()}
+      ${ap === x.i ? `<button type="button" class="bt fantasma" data-cq="desfazer">Desfazer a aprovação</button>` : `<button type="button" class="bt primario" data-cq-aprovar="${x.i}"${s === 'emitida' ? ' disabled' : ''}><svg><use href="#i-ok"/></svg>O cliente aprovou${ops.length > 1 ? ' esta' : ''}</button>`}
+    </div>`).join('')}</div>
+    ${['enviada', 'rascunho'].includes(s) ? `<div class="linha cq-seguir"><button type="button" class="bt perigo" data-cq="perdida">O cliente não fechou</button></div>` : ''}`;
+}
+function cqRenderP5(){
+  const cx = $('#cqP5'); if (!cx || cx.hidden) return;
+  const reg = cqAtual(), s = cqStatus(reg);
+  const cab = `<div class="cq-passo-cab"><h3>Emitir</h3><p class="fraco">A emissão abre já preenchida com a opção aprovada. Ao salvar, ela entra em Emitidos, no painel e no controle de CPF.</p></div>`;
+  if (s === 'emitida'){
+    const ids = reg.emissoes ? [reg.emissoes.ida, reg.emissoes.volta] : [reg.reservaId];
+    const todas = ids.map(i => (DB.reservas || []).find(x => x.id === i)).filter(Boolean);
+    const rs = todas.length > 1 ? {desc:todas.map(x => x.desc).join(' + '), loc:todas.map(x => x.loc).filter(Boolean).join(' e '), data:todas[0].data,
+      cobrado:soma(todas.map(x => Number(x.cobrado) || 0)), _res:soma(todas.map(x => typeof resultadoReserva === 'function' ? resultadoReserva(x) : 0)), id:todas[0].id} : todas[0];
+    cx.innerHTML = cab + `<div class="cq-ok"><div class="cq-ok-selo"><svg><use href="#i-ok"/></svg></div>
+      <h3>Emitida</h3>
+      <p class="fraco">${rs ? esc([rs.desc, rs.loc ? 'localizador ' + rs.loc : '', rs.data ? 'voo em ' + dataBR(rs.data) : ''].filter(Boolean).join(' · ')) : 'A emissão foi registrada.'}</p>
+      ${rs ? (() => { const res = rs._res != null ? rs._res : typeof resultadoReserva === 'function' ? resultadoReserva(rs) : null; return `<p class="cq-ok-num">Cobrado <b>${brl(rs.cobrado)}</b>${res != null ? ` · resultado <b style="color:var(--${res >= 0 ? 'jade' : 'brasa'})">${brl(res)}</b>` : ''}</p>`; })() : ''}
+      <div class="cq-pub-bts" style="justify-content:center">
+        ${rs ? `<button type="button" class="bt fantasma" data-cq="ver-emissao"><svg><use href="#i-lapis"/></svg>Abrir a emissão</button>` : ''}
+        <button type="button" class="bt fantasma" data-cq="ir-emitidos"><svg><use href="#i-seta-d"/></svg>Ver em Emitidos</button>
+        <button type="button" class="bt primario" data-cq="nova"><svg><use href="#i-mais"/></svg>Nova cotação</button></div></div>`;
+    return;
+  }
+  if (s !== 'aprovada'){
+    cx.innerHTML = cab + `<div class="nota"><svg><use href="#i-info"/></svg><div class="pilha compacta"><div>Primeiro marque a opção que o cliente aprovou.</div><div><button type="button" class="bt p primario" data-cq-passo="4"><svg><use href="#i-seta-e"/></svg>Ir para Aprovar</button></div></div></div>`;
+    return;
+  }
+  const linha = (rot, v) => v ? `<div><span>${rot}</span><b>${v}</b></div>` : '';
+  const ops0 = cqOpcoes(reg), x0 = ops0[(reg.aprovada || {}).op || 0] || ops0[0], mista = x0 && cqMista(x0.o);
+  if (mista){
+    const feito = reg.emissoes || {};
+    cx.innerHTML = cab + `<div class="nota ouro" style="margin-bottom:12px"><svg><use href="#i-info"/></svg><div>A ida e a volta saem de programas diferentes (${esc(prog(mista[0].prog).n)} e ${esc(prog(mista[1].prog).n)}): são <b>duas emissões</b>, cada uma com as suas milhas. O valor cobrado foi dividido na proporção do custo de cada uma.</div></div>
+      <div class="cq-emitir-duas">${['ida', 'volta'].map(pt => { const r = cqRascunhoEmissao(reg, pt) || {}; const ok = feito[pt];
+        return `<div class="cq-emitir-uma${ok ? ' ok' : ''}"><div class="cq-op-cab"><b>${pt === 'ida' ? 'Emissão da ida' : 'Emissão da volta'}</b>${ok ? '<span class="etq jade">registrada</span>' : ''}</div>
+          <div class="cq-emitir-grade">${linha('Trecho', esc(r.desc || ''))}${linha('Voo', r.data ? dataBR(r.data) + (r.hora ? ' às ' + esc(r.hora) : '') : '')}${linha('Programa', r.prog ? esc(prog(r.prog).n) : '')}${linha('Milhas e taxas', `${nBR(r.milhas || 0)} + ${brl(r.taxas || 0)}`)}${linha('Cobrado', brl(r.cobrado || 0))}</div>
+          ${ok ? '' : `<button type="button" class="bt primario" data-cq="emitir" data-parte="${pt}"><svg><use href="#i-bilhete"/></svg>Registrar a ${pt}</button>`}</div>`; }).join('')}</div>
+      <div class="linha cq-seguir"><button type="button" class="bt fantasma" data-cq="desfazer">Desfazer a aprovação</button></div>`;
+    return;
+  }
+  const r = cqRascunhoEmissao(reg) || {};
+  cx.innerHTML = cab + `<div class="cq-emitir">
+    <div class="cq-emitir-grade">
+      ${linha('Cliente', esc(r.cliente || ''))}
+      ${linha('Trecho', esc(r.desc || ''))}
+      ${linha('Voo', r.data ? dataBR(r.data) + (r.hora ? ' às ' + esc(r.hora) : '') + (r.dataVolta ? ' · volta ' + dataBR(r.dataVolta) : '') : '')}
+      ${linha('Programa', r.prog ? esc(prog(r.prog).n) : '<span class="fraco">escolha na emissão</span>')}
+      ${linha('Milhas e taxas', `${nBR(r.milhas || 0)} + ${brl(r.taxas || 0)}`)}
+      ${linha('Cobrado (PIX)', brl(r.cobrado || 0))}
+    </div>
+    ${(vemEst.paxNomes || []).length ? `<div class="nota" style="margin-top:12px"><svg><use href="#i-usuarios"/></svg><div><b>No print:</b> ${vemEst.paxNomes.map(esc).join(', ')}. Escolha do cadastro na emissão.</div></div>` : ''}
+    <div class="linha cq-seguir"><button type="button" class="bt fantasma" data-cq="desfazer">Desfazer a aprovação</button><button type="button" class="bt primario cq-publicar" data-cq="emitir"><svg><use href="#i-bilhete"/></svg>Registrar a emissão</button></div>
+  </div>`;
+}
+/* o painel do topo e a guia "Cotações · N em aberto" acompanham o funil */
+function cqRenderTopo(){
+  if (vistaAtual !== 'cotacoes') return;
+  const sg = document.querySelector('#segAtendimento [data-g="cotacoes"] small'); if (sg) sg.textContent = `${cqAbertas()} em aberto`;
+  const h = $('#heroiArea'); if (h && !h.hidden && typeof renderHeroiOrcamento === 'function'){ clearTimeout(cqRenderTopo._t); cqRenderTopo._t = setTimeout(renderHeroiOrcamento, 120); }
+}
+function cqRenderLeve(){
+  if (vistaAtual !== 'cotacoes' || !$('#cqMesa')) return;
+  cqRenderFunil(); cqRenderTrilho(); cqRenderTopo();
+  const n = $('#cqCliente'); if (n && document.activeElement !== n) n.value = (vemEst.comum || {}).cliente || '';
+}
+function cqRender(){
+  if (!$('#cqMesa')) return;
+  vemCarregarRascunho();
+  cqLigar();
+  cqRenderFunil(); cqRenderCab(); cqRenderTrilho(); cqRenderTopo();
+  for (let i = 1; i <= 5; i++){ const p = $('#cqP' + i); if (p) p.hidden = cqPasso !== i; }
+  if (cqPasso === 1) cqRenderP1();
+  if (cqPasso === 2) cqRenderP2();
+  cqRenderP3(); cqRenderP4(); cqRenderP5();
+}
+function cqIrPasso(n, quieto){
+  cqPasso = n;
+  if (vistaAtual !== 'cotacoes'){ return; }
+  if (n === 2 && $('#vemRaiz') && !$('#vemRaiz').innerHTML.trim()) renderVemAba();
+  cqRender();
+  if (!quieto){ const m = $('#cqTrilho'); if (m){ const t = m.getBoundingClientRect().top; if (t < 70 || t > innerHeight * .55) m.scrollIntoView({behavior:'smooth', block:'start'}); } }
+}
+function cqAbrir(id){
+  const reg = cqLista().find(x => x.id === id); if (!reg) return;
+  if (!(vemEst && vemEst.id === id)){
+    cqSalvarAgora();
+    vemEst = reg.estado ? cqClone(reg.estado) : vemNovoEstado();
+    vemEst.id = reg.id; vemEst.nome = reg.nome || null;
+    DB.vemRascunho = cqClone(vemEst); salvar();
+    cqLeitura = null;
+    renderVem();
+  }
+  cqPasso = cqPassoDe(reg);
+  cqRender();
+  const m = $('#cqMesa'); if (m) m.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function cqNova(){
+  cqSalvarAgora();
+  vemEst = vemNovoEstado(); DB.vemRascunho = cqClone(vemEst); salvar();
+  cqLeitura = null; cqPub = null; cqPasso = 1;
+  renderVem(); cqRender();
+  const n = $('#cqCliente'); if (n){ n.focus(); n.scrollIntoView({behavior:'smooth', block:'center'}); }
+}
+function cqExcluir(){
+  const reg = cqAtual(); if (!reg) return;
+  confirmar(`Excluir a cotação de ${(reg.resumo || {}).cliente || 'cliente'}?`, reg.url ? 'Ela sai do funil. A página que já está no GitHub continua lá: para tirá-la do ar, apague os dois arquivos no repositório.' : 'Ela sai do funil.', () => {
+    DB.vemCotacoes = cqLista().filter(x => x.id !== reg.id);
+    vemEst = vemNovoEstado(); DB.vemRascunho = cqClone(vemEst); salvar();
+    cqLeitura = null; cqPub = null; cqPasso = 1; renderVem(); cqRender();
+    avisar('Cotação excluída.', 'ok');
+  }, 'Excluir');
+}
+
+/* Confete curto na aprovação e na emissão: o fechamento é o momento que
+   merece festa. Quem prefere menos movimento não vê nada. */
+function cqConfete(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cores = ['var(--jade)', 'var(--ouro)', 'var(--anil-claro)', 'var(--lilas)', 'var(--brasa)'];
+  const cx = document.createElement('div'); cx.className = 'cq-confete'; document.body.appendChild(cx);
+  for (let i = 0; i < 70; i++){
+    const p = document.createElement('i');
+    p.style.background = cores[i % cores.length];
+    p.style.left = (40 + Math.random() * 20) + 'vw';
+    cx.appendChild(p);
+    const ang = Math.random() * Math.PI - Math.PI, v = 280 + Math.random() * 380;
+    p.animate([{transform:'translate(0,0) rotate(0)', opacity:1},
+      {transform:`translate(${Math.cos(ang) * v}px, ${Math.sin(ang) * v * .9 + 520}px) rotate(${Math.random() * 900}deg)`, opacity:0}],
+      {duration:1300 + Math.random() * 700, easing:'cubic-bezier(.2,.7,.4,1)', fill:'forwards'});
+  }
+  setTimeout(() => cx.remove(), 2300);
+}
+
+/* ── eventos ────────────────────────────────────────────────────────────────── */
+function cqLigar(){
+  if (cqLigado) return; cqLigado = true;
+  const v = $('#v-cotacoes'); if (!v) return;
+  v.addEventListener('click', ev => {
+    const passo = ev.target.closest('[data-cq-passo]'); if (passo){ cqIrPasso(+passo.dataset.cqPasso); return; }
+    const ab = ev.target.closest('[data-cq-abrir]'); if (ab){ cqAbrir(ab.dataset.cqAbrir); return; }
+    const ap = ev.target.closest('[data-cq-aprovar]'); if (ap){ cqAprovar(+ap.dataset.cqAprovar); return; }
+    const ti = ev.target.closest('[data-cq-tirar]');
+    if (ti){ ev.preventDefault(); vemEst.achados = (vemEst.achados || []).filter(a => a.id !== ti.dataset.cqTirar); cqSalvarAgora(); cqRenderAchados(); cqRenderTrilho(); return; }
+    const cp = ev.target.closest('[data-vem-acao-cq="copiar"]');
+    if (cp){ copiarParaAreaDeTransferencia(cp.dataset.url).then(ok => avisar(ok ? 'Link copiado.' : 'Não deu para copiar.', ok ? 'ok' : 'erro')); return; }
+    const b = ev.target.closest('[data-cq]'); if (!b) return;
+    const a = b.dataset.cq;
+    if (a === 'nova') cqNova();
+    else if (a === 'arquivo') $('#cqArq').click();
+    else if (a === 'colar-texto') cqColarTexto();
+    else if (a === 'montar') cqMontar();
+    else if (a === 'limpar-achados') confirmar('Limpar o que foi encontrado?', 'Os voos encontrados saem desta cotação. A página montada continua como está.', () => { vemEst.achados = []; vemEst.pagante = []; cqLeitura = null; cqSalvarAgora(); cqRender(); }, 'Limpar');
+    else if (a === 'ler-claude') cqLerPeloClaude();
+    else if (a === 'publicar') cqPublicar();
+    else if (a === 'baixar'){ cqGarantir(); vemBaixar().then(() => { const h = $('#vemResultado') ? $('#vemResultado').innerHTML : ''; cqRender(); if ($('#vemResultado')) $('#vemResultado').innerHTML = h; }); }
+    else if (a === 'ja-enviei'){ const reg = cqAtual(); if (reg){ reg.status = 'enviada'; cqHist(reg, 'enviada'); cqSalvarAgora(); cqIrPasso(4); } }
+    else if (a === 'zap'){ const reg = cqAtual(); if (reg && cqStatus(reg) === 'rascunho'){ reg.status = 'enviada'; cqHist(reg, 'enviada'); cqSalvarAgora(); } setTimeout(() => cqRender(), 300); }
+    else if (a === 'desfazer') cqDesfazer();
+    else if (a === 'perdida') cqPerdida();
+    else if (a === 'emitir') cqEmitir(b.dataset.parte);
+    else if (a === 'excluir') cqExcluir();
+    else if (a === 'ir-emitidos') irPara('emitidos');
+    else if (a === 'ver-emissao'){ const reg = cqAtual(); if (reg && reg.reservaId) editarReserva(reg.reservaId); }
+  });
+  v.addEventListener('change', ev => {
+    const m = ev.target.closest('[data-cq-marcar]');
+    if (m){ const a = (vemEst.achados || []).find(x => x.id === m.dataset.cqMarcar); if (a){ a.marcado = m.checked; cqSalvarAgora(); cqRenderAchados(); } }
+  });
+  v.addEventListener('input', ev => {
+    if (ev.target.id === 'cqCliente'){
+      vemEst.comum.cliente = ev.target.value;
+      const f = $('#vemRaiz [data-vk="comum.cliente"]'); if (f) f.value = ev.target.value;
+      vemGuardarRascunho();
+    } else if (ev.target.matches && ev.target.matches('#vemRaiz [data-vk="comum.cliente"]')){
+      const n = $('#cqCliente'); if (n) n.value = ev.target.value;
+    }
+  });
+  const arq = $('#cqArq');
+  if (arq) arq.onchange = e => { if (e.target.files.length) cqReceberArquivos(e.target.files); e.target.value = ''; };
+  const caixa = $('#cqCaixa');
+  if (caixa){
+    caixa.addEventListener('click', e => { if (e.target.closest('button')) return; $('#cqArq').click(); });
+    caixa.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === caixa){ e.preventDefault(); $('#cqArq').click(); } });
+    ['dragenter', 'dragover'].forEach(t => caixa.addEventListener(t, e => { e.preventDefault(); caixa.classList.add('sobre'); }));
+    ['dragleave', 'drop'].forEach(t => caixa.addEventListener(t, e => { e.preventDefault(); caixa.classList.remove('sobre'); }));
+    caixa.addEventListener('drop', e => {
+      const fs = [...(e.dataTransfer.files || [])];
+      if (fs.length) cqReceberArquivos(fs);
+      else { const t = e.dataTransfer.getData('text'); if (t && t.trim()) cqReceberTexto(t); }
+    });
+  }
+  /* colar em qualquer lugar da tela de Cotações: imagem vira leitura, texto fora
+     de campo vira captura. Dentro de um campo, colar continua sendo colar. */
+  document.addEventListener('paste', e => {
+    if (vistaAtual !== 'cotacoes' || ponteAberta() || ($('#veu') && $('#veu').classList.contains('aberto'))) return;
+    const dados = e.clipboardData; if (!dados) return;
+    const fs = [...(dados.files || [])].filter(f => (f.type || '').startsWith('image/') || ehPDF(f));
+    const alvo = e.target, emCampo = alvo && alvo.closest && alvo.closest('input, textarea, select, [contenteditable="true"]');
+    if (fs.length){ e.preventDefault(); cqReceberArquivos(fs); return; }
+    if (emCampo) return;
+    const t = dados.getData('text'); if (!t || !t.trim()) return;
+    e.preventDefault(); cqReceberTexto(t);
+  });
+  addEventListener('resize', () => { if (cqPasso === 3) cqAjustarFone(); });
+}
 </script>
 </body>
 </html>
