@@ -9480,6 +9480,11 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .pl-antec button.on{ background:var(--ouro); border-color:var(--ouro); color:var(--sobre-ouro); }
 .pl-antec.grande button{ height:40px; padding:0 18px; font-size:calc(14px * var(--esc)); }
 </style>
+<style>
+/* plano B do mapa no tema escuro: o OpenStreetMap colorido escurecido para combinar */
+.vi-mapa-osm-escuro{ filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6); }
+.vi-mapa-nomes{ pointer-events:none; }
+</style>
 </head>
 <body>
 <script>
@@ -11340,7 +11345,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 21:40';
+const BUILD = '2026-10-13 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -49444,6 +49449,28 @@ function rvPercurso(ev){
   });
   return seg;
 }
+/* Fundo do mapa (08/10/2026). A CARTO passou a exigir chave em 23/09/2026 e
+   carimbava "API KEY REQUIRED" nos azulejos. Agora o fundo é o Canvas da Esri
+   (cinza claro ou escuro, combina com o tema), gratuito e sem chave, com os
+   nomes das cidades numa segunda camada. Se a Esri falhar, troca sozinho para
+   o OpenStreetMap, também sem chave. */
+function camadaMapaBase(L, mapa, escuro){
+  const tom = escuro ? 'Dark' : 'Light';
+  const esri = (q) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${tom}_Gray_${q}/MapServer/tile/{z}/{y}/{x}`;
+  const base = L.tileLayer(esri('Base'), {maxZoom:16, maxNativeZoom:16, attribution:'Mapa &copy; Esri, HERE, Garmin &middot; &copy; OpenStreetMap'}).addTo(mapa);
+  const nomes = L.tileLayer(esri('Reference'), {maxZoom:16, maxNativeZoom:16, pane:'overlayPane', className:'vi-mapa-nomes'}).addTo(mapa);
+  let ok = 0, erro = 0, trocou = false;
+  base.on('tileload', () => { ok++; });
+  base.on('tileerror', () => {
+    erro++;
+    if (trocou || ok || erro < 4) return;
+    trocou = true;
+    try { mapa.removeLayer(base); mapa.removeLayer(nomes); } catch(e){}
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, className:escuro ? 'vi-mapa-osm-escuro' : '',
+      attribution:'&copy; OpenStreetMap'}).addTo(mapa).bringToBack();
+  });
+  return base;
+}
 async function desenharMapaViagem(ev){
   const cx = $('#viMapa'); if (!cx) return;
   const pontos = []; ev.forEach((e, i) => [e.de, e.para].forEach(l => { if (l && !pontos.some(x => x.cod === l.cod)) pontos.push({...l, i}); }));
@@ -49458,8 +49485,7 @@ async function desenharMapaViagem(ev){
     if (rvMapa){ try{ rvMapa.remove(); }catch(e){} rvMapa = null; }
     const escuro = document.documentElement.dataset.theme !== 'papel';
     rvMapa = L.map(cx, {zoomControl:true, attributionControl:true, scrollWheelZoom:false, worldCopyJump:true});
-    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${escuro ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`, {subdomains:'abcd', maxZoom:18,
-      attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(rvMapa);
+    camadaMapaBase(L, rvMapa, escuro);
     seg.forEach(s => L.polyline(s.pts, {color:s.tipo === 'voo' ? '#3D82D6' : '#E8B44F', weight:s.tipo === 'voo' ? 2.6 : 2.2, opacity:.95, dashArray:s.tipo === 'voo' ? '1 7' : '6 6', lineCap:'round', className:'vi-rota ' + s.tipo}).addTo(rvMapa));
     pontos.forEach((pt, k) => L.marker([pt.lat, pt.lon], {icon:L.divIcon({className:'vi-pino', html:`<span>${k + 1}</span>`, iconSize:[26, 26], iconAnchor:[13, 13]})})
       .bindTooltip(`${k + 1}. ${esc(pt.c)}`, {direction:'top', offset:[0, -12], className:'vi-dica'}).addTo(rvMapa));
