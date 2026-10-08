@@ -10987,7 +10987,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 21:30';
+const BUILD = '2026-10-12 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -34684,7 +34684,7 @@ function resultadoReserva(r){
   return (Number(r.cobrado) || 0) - custoReserva(r);
 }
 const ICONE_TIPO = {voo:'#i-aviao', hospedagem:'#i-hotel', carro:'#i-carro'};
-const ROTULO_TIPO = {voo:'Voo', hospedagem:'Hospedagem', carro:'Carro'};
+const ROTULO_TIPO = {voo:'Voo', hospedagem:'Hospedagem', carro:'Carro', outro:'Outro resgate'};
 let filtroReservaTipo = 'todas', filtroReservaQuem = 'terceiro';   /* Emitidos (Negócio): só para cliente */
 
 function renderBalcao(){
@@ -35198,7 +35198,7 @@ function editarReserva(id, rascunho){
         </div>
         <div id="rsPaxLista"></div>
       </div>
-      <div class="campo"><label>Programa</label><select id="rsProg"><option value="">na pagante</option>${PROG_MILHAS.map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Programa</label><select id="rsProg"><option value="">na pagante</option>${PROG_MILHAS.concat(r.prog && !PROG_MILHAS.includes(r.prog) && PROGRAMAS[r.prog] ? [r.prog] : []).map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
       <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="rsMilhas" value="${qtdTxt(r.milhas)}"></div>
       <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="rsTaxas" value="${moedaTxt(r.taxas)}"></div>
       <div class="campo"><label>Cartão (pagamento/taxas)</label><select id="rsCartao"><option value="">não informado</option>${
@@ -35444,6 +35444,7 @@ function editarReserva(id, rascunho){
     trechoEmRegistro = null;
     /* Emissão aberta pela Central de Cotações: a cotação vira Emitida. */
     const negocioDaEmissao = !id && r._negocio;
+    const rvDaEmissao = !id && r._rvRes;
     /* A emissão alimenta três telas ao mesmo tempo: a lista, o controle de CPF e
        o resultado do balcão. Redesenhar só a lista deixava o controle mostrando o
        estado anterior até alguém recarregar a página — a vaga já tinha sido
@@ -35453,7 +35454,10 @@ function editarReserva(id, rascunho){
     salvar(); fecharFolha();
     renderBalcao(); renderEmissoes(); renderFita();
     if (vistaAtual === 'rota' && typeof renderRota === 'function') renderRota();
-    if (negocioDaEmissao && typeof cqEmitido === 'function') cqEmitido(negocioDaEmissao, novo); else avisar('Emissão salva.', 'ok');
+    if (rvDaEmissao){ const pl = (DB.planos || []).find(x => x.id === rvDaEmissao.plano); const rr = pl && (pl.reservas || []).find(x => x.id === rvDaEmissao.id);
+      if (rr){ rr.reservaId = novo.id; rr.contaId = novo.contaId || rr.contaId; salvar(); if (vistaAtual === 'rota') renderPlano(); } }
+    if (negocioDaEmissao && typeof cqEmitido === 'function') cqEmitido(negocioDaEmissao, novo);
+    else avisar(rvDaEmissao ? 'Lançado no Diário: os pontos saíram do saldo da conta escolhida.' : 'Emissão salva.', 'ok', rvDaEmissao ? 5000 : 3600);
   };
 }
 
@@ -48062,6 +48066,7 @@ function editarReservaViagem(id, cat){
       ${campoParcelas('rvParcelas', r.parcelas).replace('class="campo', 'class="campo rv-ct')}
       ${campo('Programa', `<select id="rvProg"><option value="">escolha</option>${progs.filter(k2 => PROGRAMAS[k2]).map(k2 => `<option value="${k2}"${k2 === r.prog ? ' selected' : ''}>${esc(prog(k2).n)}</option>`).join('')}</select>`, 'rv-pt')}
       ${campo('Pontos ou milhas usados', `<input type="text" inputmode="numeric" data-milhar id="rvPontos" value="${r.pontos ? qtdTxt(r.pontos) : ''}">`, 'rv-pt')}
+      ${campo('Conta do grupo que pagou', `<select id="rvContaPg"><option value="">escolha a conta</option>${(DB.contas || []).map(k2 => `<option value="${k2.id}"${k2.id === (r.contaId || ((DB.contas || []).length === 1 ? DB.contas[0].id : '')) ? ' selected' : ''}>${esc(nomeCurto(k2.nome))}</option>`).join('')}</select>`, 'rv-pt')}
       ${campo('Dinheiro pago junto (R$)', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvCompl" value="${r.compl ? moedaTxt(r.compl) : ''}" placeholder="taxas, complemento">`, 'rv-pt')}
       ${campo('Valor do milheiro', `<select id="rvBase" data-ordem="natural">${Object.entries(BASES_MILHEIRO).map(([v, n]) => `<option value="${v}"${v === (r.base || 'custo') ? ' selected' : ''}>${n}</option>`).join('')}</select>`, 'rv-pt')}
       ${campo('Valor de cotação (R$ por mil)', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvOutro" value="${r.milheiroOutro ? moedaTxt(r.milheiroOutro) : ''}">`, 'rv-pt rv-outro')}
@@ -48130,6 +48135,7 @@ function editarReservaViagem(id, cat){
     if (x.moeda !== 'BRL' && x.valor && !(x.cambio > 0) && x.pagamento !== 'pontos') faltam.push({sel:'#rvCambio', msg:'Informe o câmbio, ou toque em Hoje.'});
     if (x.pagamento === 'pontos' && !x.prog) faltam.push({sel:'#rvProg', msg:'Qual programa pagou?'});
     if (x.pagamento === 'pontos' && !(x.pontos > 0)) faltam.push({sel:'#rvPontos', msg:'Quantos pontos ou milhas foram usados?'});
+    if (x.pagamento === 'pontos' && !x.contaId && (DB.contas || []).length) faltam.push({sel:'#rvContaPg', msg:'De qual conta do grupo saíram os pontos?'});
     if (x.pagamento === 'pontos' && x.base === 'outro' && !(x.milheiroOutro > 0)) faltam.push({sel:'#rvOutro', msg:'Informe o valor de cotação: quanto vale cada mil pontos.'});
     if (faltam.length){ errosNosCampos(faltam); return; }
     p.reservas = rvLista(p);
@@ -48147,10 +48153,22 @@ function lerFormReserva(){
     pagamento:v('#rvPg'), valor:moedaNum(v('#rvValor')), moeda:v('#rvMoeda') || 'BRL', cambio:v('#rvMoeda') === 'BRL' ? 0 : num('#rvCambio'),
     cartaoId:v('#rvPg') === 'cartao' ? v('#rvCartao') : '', parcelas:v('#rvPg') === 'cartao' ? (Number(v('#rvParcelas')) || 1) : 1,
     prog:v('#rvPg') === 'pontos' ? v('#rvProg') : '', pontos:v('#rvPg') === 'pontos' ? qtdNum(v('#rvPontos')) : 0,
-    compl:v('#rvPg') === 'pontos' ? moedaNum(v('#rvCompl')) : 0, base:v('#rvPg') === 'pontos' ? (v('#rvBase') || 'custo') : '', milheiroOutro:v('#rvPg') === 'pontos' && v('#rvBase') === 'outro' ? moedaNum(v('#rvOutro')) : 0,
+    compl:v('#rvPg') === 'pontos' ? moedaNum(v('#rvCompl')) : 0, contaId:v('#rvPg') === 'pontos' ? v('#rvContaPg') : '', base:v('#rvPg') === 'pontos' ? (v('#rvBase') || 'custo') : '', milheiroOutro:v('#rvPg') === 'pontos' && v('#rvBase') === 'outro' ? moedaNum(v('#rvOutro')) : 0,
     codigo:v('#rvCod').trim().toUpperCase(), fornecedor:v('#rvForn').trim(), cancelAte:v('#rvCancel'), situacao:v('#rvSit') || 'reservado', link:v('#rvLink').trim(), obs:v('#rvObs').trim()};
 }
 
+/* Pago com pontos: lança a saída no Diário pela mesma folha de emissão dos voos,
+   já preenchida (programa, pontos, conta, código). Ao salvar, os pontos saem do
+   saldo da conta escolhida e a reserva fica marcada como lançada. */
+function rvLancarNoDiario(id){
+  const p = P(); const r = rvLista(p).find(x => x.id === id); if (!r) return;
+  const C = RV_CATS[r.cat] || RV_CATS.outro;
+  editarReserva(null, {tipo:r.cat === 'hospedagem' ? 'hospedagem' : r.cat === 'carro' ? 'carro' : 'outro', quem:'proprio', cliente:'',
+    desc:`${C.n} · ${r.titulo}${r.cidade ? ' · ' + r.cidade : ''}`, loc:r.codigo || '', data:r.ini || p.inicio, hora:r.iniH || '', prog:r.prog,
+    milhas:Number(r.pontos) || 0, taxas:Number(r.compl) || 0, cobrado:0, custoExtra:0, precoVista:rvPagante(r), status:'emitida', trajeto:'ida', pax:[],
+    criada:hojeISO(), contaId:r.contaId || '', metaId:p.metaId || '', _rvRes:{plano:p.id, id:r.id}});
+  avisar('Confira a conta e os passageiros e toque em Salvar: os pontos saem do saldo.', 'info', 6000);
+}
 /* ══ LISTA (aba Trechos) ═══════════════════════════════════════════════════════ */
 function rvQuando(r){
   const C = RV_CATS[r.cat] || RV_CATS.outro, d = x => x ? dataBR(x).slice(0, 5) : '';
@@ -48175,10 +48193,11 @@ function reservasViagemHTML(p){
       return `<div class="rv-item${r.situacao === 'cancelado' ? ' cancelado' : ''}" style="--rv-c:${C.c}">
         <span class="rv-cat-ic"><svg><use href="#i-${C.i}"/></svg></span>
         <div class="rv-item-c"><div class="rv-item-t"><b>${esc(r.titulo)}</b><span class="rv-tipo">${C.n}</span>${r.situacao !== 'reservado' ? `<span class="etq ${r.situacao === 'pago' ? 'jade' : r.situacao === 'cancelado' ? 'brasa' : 'ouro'}">${RV_SIT[r.situacao]}</span>` : ''}</div>
-          <div class="rv-item-s">${esc(rvQuando(r))}${onde ? ' · ' + esc(onde) : ''}${r.codigo ? ` · <span class="rv-cod">${esc(r.codigo)}</span>` : ''}</div>
+          <div class="rv-item-s">${esc(rvQuando(r))}${onde ? ' · ' + esc(onde) : ''}${r.codigo ? ` · <span class="rv-cod">${esc(r.codigo)}</span>` : ''}${r.pagamento === 'pontos' && r.contaId ? ` · pago por ${esc(nomeCurto((DB.contas.find(k2 => k2.id === r.contaId) || {}).nome || ''))}` : ''}</div>
           ${canc != null && canc >= 0 ? `<div class="rv-canc ${canc <= 3 ? 'perto' : ''}">cancela grátis até ${dataBR(r.cancelAte)}${canc === 0 ? ' (hoje)' : canc <= 3 ? ` (faltam ${canc} dias)` : ''}</div>` : ''}</div>
         <div class="rv-item-v"><b>${v ? brl(v) : '<span class="fraco">sem valor</span>'}</b>${r.pagamento === 'pontos' && r.pontos ? `<small>${nBR(r.pontos)} ${r.prog ? esc(prog(r.prog).n) : 'pontos'}</small>${(e => e == null ? '' : `<small class="${e >= 0 ? 'jade' : 'brasa'}">economia ${e >= 0 ? '' : '−'}${brl(Math.abs(e))}</small>`)(rvEconomia(r))}` : r.moeda !== 'BRL' && r.valor ? `<small>${rvFmtMoeda(r.valor, r.moeda)}</small>` : `<small>${esc(RV_PAGTO[r.pagamento] || '')}</small>`}</div>
-        <div class="acoes-cel">${r.link ? `<a class="bt p fantasma icone" href="${esc(r.link)}" target="_blank" rel="noopener" data-dica="Abrir o voucher"><svg><use href="#i-link"/></svg></a>` : ''}
+        <div class="acoes-cel">${r.pagamento === 'pontos' && r.pontos && r.situacao !== 'cancelado' ? (r.reservaId && (DB.reservas || []).some(y => y.id === r.reservaId) ? `<span class="etq jade" data-dica="Os pontos já saíram do saldo">no Diário</span>` : `<button class="bt p fantasma" onclick="rvLancarNoDiario('${r.id}')" data-dica="Desconta os pontos do saldo da conta que pagou">Lançar no Diário</button>`) : ''}
+          ${r.link ? `<a class="bt p fantasma icone" href="${esc(r.link)}" target="_blank" rel="noopener" data-dica="Abrir o voucher"><svg><use href="#i-link"/></svg></a>` : ''}
           <button class="bt p fantasma icone" onclick="editarReservaViagem('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button></div>
       </div>`; }).join('')}</div>
       <div class="rt-trechos-pe rv-pe">${Object.keys(porCat).map(k => `<span><b>${brl(porCat[k])}</b> ${esc(RV_CATS[k].n.toLowerCase())}</span>`).join('')}<span class="esticar"></span>
