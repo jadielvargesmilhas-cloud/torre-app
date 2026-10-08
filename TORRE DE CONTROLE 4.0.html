@@ -9334,6 +9334,31 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .pl-dia-hotel{ background:color-mix(in oklab, #5B8DEF 16%, transparent); color:#7FA6F2; }
 :root[data-theme="papel"] .pl-dia-hotel{ color:#3B66C4; }
 </style>
+<style>
+.pl-dia-t{ display:flex; align-items:baseline; gap:7px; min-width:0; }
+.pl-dia-num{ flex:0 0 auto; font-weight:700; color:var(--ouro); font-size:calc(12.5px * var(--esc)); letter-spacing:.02em; }
+.pl-dia-cid{ min-width:0; white-space:normal; line-height:1.35; }
+.pl-dia-t{ white-space:normal !important; overflow:visible !important; text-overflow:clip !important; }
+.pl-bandeira{ font-size:1.05em; margin-right:4px; font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; }
+.pl-cid-seta{ color:var(--grafite-dim); margin:0 2px; }
+.pl-cid{ white-space:nowrap; }
+.pl-linha-dia{ font:700 calc(12px * var(--esc))/1.3 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--ouro); margin-bottom:3px; }
+.pl-linha-cid{ text-transform:none; letter-spacing:0; font-size:calc(13px * var(--esc)); color:var(--giz-2); font-weight:600; margin-left:4px; }
+</style>
+<style>
+/* coluna do dia estreita (tablet com menu aberto): o valor e as ações descem
+   para baixo do texto, como no celular */
+.pl-linha{ container-type:inline-size; }
+@container (max-width:560px){
+  .pl-ev{ grid-template-columns:calc(52px * var(--esc)) calc(16px * var(--esc)) minmax(0,1fr) !important; }
+  .pl-ev-num{ grid-column:3; text-align:left; padding-top:6px; }
+  .pl-ev-num:empty{ display:none; }
+  .pl-ev-num b, .pl-ev-num small{ display:inline; margin-right:7px; }
+  .pl-ev-acoes{ grid-column:3; opacity:.65; padding-left:0; margin-top:6px; }
+  .pl-elo{ grid-template-columns:calc(52px * var(--esc)) calc(16px * var(--esc)) minmax(0,1fr) !important; }
+  .pl-ev-tit{ overflow-wrap:anywhere; }
+}
+</style>
 </head>
 <body>
 <script>
@@ -11194,7 +11219,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 11:30';
+const BUILD = '2026-10-13 12:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31887,7 +31912,7 @@ function renderPlanoDias(){
           return `<button class="pl-dia${iso === planoDia ? ' on' : ''}" onclick="planoDia='${iso}';renderPlano()">
             <div class="pl-dia-n"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${SEM3P[d.getDay()]}</span></div>
             <div class="pl-dia-c">
-              <div class="pl-dia-t">${esc(cidadeDoDia(p, iso) || cidadeDoVoo(p, iso) || 'Dia ' + (i + 1))}</div>
+              <div class="pl-dia-t"><b class="pl-dia-num">Dia ${i + 1}</b>${(c2 => c2 ? `<span class="pl-dia-cid">${c2}</span>` : '')(rotuloCidadesDia(p, iso, true) || esc(cidadeDoDia(p, iso) || ''))}</div>
               <div class="pl-dia-s">${marcosDoDia(p, iso).filter(m => m.k !== 'res' || m.r.cat === 'hospedagem').sort((a, b) => hm2min(a.inicio || '23:59') - hm2min(b.inicio || '23:59')).map(m => m.k === 'prazo' ? `<span class="pl-dia-voo pl-dia-prazo">prazo</span> ` : m.k === 'res' ? `<span class="pl-dia-voo pl-dia-hotel">${m.fase === 'ini' ? 'check-in' : 'check-out'} ${m.inicio || '?'}</span> ` : `<span class="pl-dia-voo">${m.k === 'des' ? 'pousa' : 'decola'} ${m.inicio || '?'}</span> `).join('')}<span class="pl-dia-n2">${its.length} ${its.length === 1 ? 'parada' : 'paradas'}${c ? ' · ' + brl(c) : ''}</span></div>
             </div>
             <i class="pl-pulso ${r.z}" style="height:${Math.max(4, r.p * 100)}%" data-dica="${r.rot}: ${min2dur(r.ocup)} ocupados"></i>
@@ -31898,6 +31923,7 @@ function renderPlanoDias(){
       <div class="pl-linha">
         <div class="pl-linha-cab">
           <div>
+            <div class="pl-linha-dia">Dia ${ds.indexOf(planoDia) + 1}${(c2 => c2 ? ` <span class="pl-linha-cid">${c2}</span>` : '')(rotuloCidadesDia(p, planoDia, true) || esc(cidadeDoDia(p, planoDia) || ''))}</div>
             <div class="pl-linha-rot">${dataLongaPlano(planoDia)}</div>
             <div class="pl-linha-sub">${paradasDo(p, planoDia).length} paradas · ${brl(custoDia(p, planoDia))} · ${rt.rot.toLowerCase()}, ${min2dur(rt.ocup)} ocupados</div>
           </div>
@@ -32015,6 +32041,51 @@ function cidadeDoVoo(p, iso){
   });
   const ate = pontos.filter(x => x[0] <= iso + ' 23:59').sort((a, b) => a[0].localeCompare(b[0])).pop();
   return ate ? ate[1] : '';
+}
+/* ── cidades do dia, com bandeira (08/10/2026) ────────────────────────────────
+   "Dia 1 · Rio de Janeiro"; num dia de deslocamento, "Dia 4 · Lisboa → Porto".
+   A cidade vem de onde a pessoa está: pousos, trens e ônibus, hotéis e a cidade
+   das paradas. A bandeira aparece quando a viagem passa por outro país. */
+const bandeira = cc => /^[A-Z]{2}$/.test(String(cc || '')) ? String(cc).toUpperCase().replace(/./g, ch => String.fromCodePoint(127397 + ch.charCodeAt(0))) : '';
+function pontosDeCidade(p){
+  const pontos = [], ts = ordenarTrechos(trechosDe(p));
+  ts.forEach((t, i, a) => {
+    if (i === 0 && t.origem && t.data) pontos.push({k:t.data + ' ' + (t.saida || '00:00'), c:cidadeIATA(t.origem), cc:(aeroporto(t.origem) || {}).p || '', casa:true});
+    /* a volta: o dia do embarque mostra para onde se volta ("Rio de Janeiro → Salvador") */
+    if (a.length > 1 && i === a.length - 1){ if (t.destino && t.data) pontos.push({k:t.data + ' ' + (t.saida || '23:58'), c:cidadeIATA(t.destino), cc:(aeroporto(t.destino) || {}).p || '', volta:true}); return; }
+    const h = typeof horasDoTrecho === 'function' ? horasDoTrecho(t) : null, d = t.data ? (h && h.mais ? somaDiasISO(t.data, h.mais) : t.data) : '';
+    if (d && t.destino) pontos.push({k:d + ' ' + ((h && h.chegada) || '12:00'), c:cidadeIATA(t.destino), cc:(aeroporto(t.destino) || {}).p || ''});
+    /* voo noturno da ida: o dia do embarque já diz para onde se vai ("Salvador → Lisboa") */
+    if (i === 0 && d && t.data && d !== t.data && t.destino) pontos.push({k:t.data + ' 23:59', c:cidadeIATA(t.destino), cc:(aeroporto(t.destino) || {}).p || '', volta:true});
+  });
+  const lugar = nome => (typeof rvLugar === 'function' ? rvLugar(nome) : null) || {};
+  if (typeof rvLista === 'function' && typeof RV_CATS !== 'undefined') rvLista(p).filter(r => r.situacao !== 'cancelado' && r.ini).forEach(r => {
+    const C = RV_CATS[r.cat] || {};
+    if (C.m === 'movimento' && r.cat !== 'traslado' && r.para) pontos.push({k:r.ini + ' ' + (r.fimH || r.iniH || '12:00'), c:r.para, cc:lugar(r.para).p || ''});
+    if (r.cat === 'hospedagem' && r.cidade) pontos.push({k:r.ini + ' ' + (r.iniH || '15:00'), c:r.cidade, cc:lugar(r.cidade).p || ''});
+  });
+  (p.paradas || []).filter(x => x.cidade && x.dia).forEach(x => pontos.push({k:x.dia + ' ' + (x.inicio || '12:00'), c:x.cidade, cc:lugar(x.cidade).p || ''}));
+  pontos.sort((a, b) => a.k.localeCompare(b.k));
+  /* cidade sem país conhecido (um bairro, uma vila) herda o país do ponto anterior */
+  let ult = ''; pontos.forEach(x => { if (x.cc) ult = x.cc; else x.cc = ult; });
+  return pontos;
+}
+function cidadesDoDia(p, iso){
+  const pts = pontosDeCidade(p);
+  /* o dia da partida mostra de onde se saiu ("Salvador → Rio de Janeiro") */
+  const antes = pts.filter(x => x.k < iso + ' 00:00' && !x.casa && !x.volta).pop();
+  const noDia = pts.filter(x => x.k.startsWith(iso + ' '));
+  const lista = (antes ? [antes] : []).concat(noDia);
+  const out = [];
+  lista.forEach(x => { const ultimo = out[out.length - 1]; if (!ultimo || semAcento(ultimo.c.toLowerCase()) !== semAcento(String(x.c).toLowerCase())) out.push({c:x.c, cc:x.cc}); });
+  return out;
+}
+const viagemComPaises = p => escopoPlano(p) === 'int' || new Set(pontosDeCidade(p).map(x => x.cc).filter(Boolean)).size > 1;
+function rotuloCidadesDia(p, iso, html){
+  const cs = cidadesDoDia(p, iso); if (!cs.length) return '';
+  const flag = viagemComPaises(p);
+  return cs.map(x => { const b = flag ? bandeira(x.cc) : '';
+    return html ? `<span class="pl-cid">${b ? `<span class="pl-bandeira" aria-hidden="true">${b}</span>` : ''}${esc(x.c)}</span>` : (b ? b + ' ' : '') + x.c; }).join(html ? ' <span class="pl-cid-seta">→</span> ' : ' → ');
 }
 const desembarqueDoDia = (p, iso) => marcosDoDia(p, iso).find(m => m.k === 'des' && m.inicio) || null;
 
@@ -32260,7 +32331,7 @@ function editarParada(id){
 
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
       <div class="campo" style="grid-column:1 / -1"><label>O que é</label><input type="text" id="paTit" value="${esc(base.titulo)}" placeholder="Chegada — voo GRU → Narita"></div>
-      <div class="campo"><label>Dia</label><select id="paDia">${ds.map((d, i) => `<option value="${d}"${d === base.dia ? ' selected' : ''}>Dia ${i + 1} — ${dataBR(d)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Dia</label><select id="paDia">${ds.map((d, i) => `<option value="${d}"${d === base.dia ? ' selected' : ''}>Dia ${i + 1}${(c2 => c2 ? ' · ' + c2 : '')(rotuloCidadesDia(p, d, false))} · ${dataBR(d)}</option>`).join('')}</select></div>
       <div class="campo"><label>Começa</label><input type="time" id="paIni" value="${base.inicio}"></div>
       <div class="campo"><label>Dura (min)</label><input type="number" id="paDur" value="${base.dur}" step="15" min="0"></div>
       <div class="campo"><label>Local</label><input type="text" id="paLocal" value="${esc(base.local)}" placeholder="Terminal 2"></div>
