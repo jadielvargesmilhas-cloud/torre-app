@@ -3925,6 +3925,9 @@ table.tb-pontos .venda-ganho{ display:block; white-space:nowrap; }
 .rs-dir{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; align-self:flex-start; }
 .rs-dir-topo{ display:flex; align-items:center; gap:12px; }
 .rs-custo{ font-size:calc(13px * var(--esc)); color:var(--grafite); text-align:right; white-space:nowrap; }
+/* Coluna da direita com a mesma largura em todas as emissões: assim o miolo
+   tem a mesma largura e a marca da companhia cai na mesma vertical. */
+@media (min-width:561px){ .linha-reserva > .rs-dir{ min-width:300px; } }
 @media (max-width:560px){ .rs-dir{ flex:1 1 100%; } .rs-custo{ white-space:normal; } }
 .rs-voo-bt{ display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:3px 0; border:0; background:none; cursor:pointer; font:inherit;
   font-size:calc(12.5px * var(--esc)); font-weight:600; color:var(--anil-claro); }
@@ -7554,7 +7557,12 @@ table.tb-trechos .tr-pg-val{ display:block; margin-top:5px; }
 }
 
 /* ── emissão na lista: marca, "i" e localizador à direita (06/10/2026) ───────── */
-.em-dir{ margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-weight:400; }
+.em-dir{ margin-left:auto; display:inline-grid; grid-template-columns:28px 20px calc(8ch + 20px); align-items:center; gap:7px; font-weight:400; }
+/* sempre o último da linha: selos que venham depois não empurram a coluna */
+.item-tit > .em-dir{ order:10; }
+.em-c{ display:flex; align-items:center; justify-content:center; min-width:0; }
+.em-c3{ justify-content:flex-start; }
+.em-c3 .em-loc{ display:block; width:100%; text-align:center; box-sizing:border-box; }
 .em-dir .info-i{ margin-left:0; }
 .em-dir .oq-marca{ flex-shrink:0; }
 .em-loc{ font-family:var(--f-m); font-size:calc(12.5px * var(--esc)); letter-spacing:.08em; color:var(--giz-2); padding:2px 8px;
@@ -10517,7 +10525,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 13:40';
+const BUILD = '2026-10-12 14:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -33787,7 +33795,9 @@ function marcaEmissao(r){
   const marca = pg ? discoProg(pg, 'p oq-marca', cia) : cia ? `<span class="oq-cia">${esc(cia)}</span>` : '';
   const info = resto ? `<span class="info-i" tabindex="0" data-dica="${esc(resto)}" aria-label="${esc(resto)}"><svg><use href="#i-info"/></svg></span>` : '';
   const lc = loc ? `<span class="em-loc" data-dica="Localizador">${esc(loc)}</span>` : '';
-  return marca || info || lc ? `<span class="em-dir">${marca}${info}${lc}</span>` : '';
+  /* Três colunas fixas (marca, "i", localizador), com lugar guardado mesmo
+     quando falta uma: a marca da companhia cai sempre na mesma vertical. */
+  return marca || info || lc ? `<span class="em-dir"><span class="em-c em-c1">${marca}</span><span class="em-c em-c2">${info}</span><span class="em-c em-c3">${lc}</span></span>` : '';
 }
 
 function oQueCurto(desc){
