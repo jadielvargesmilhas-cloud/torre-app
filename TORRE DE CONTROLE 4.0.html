@@ -9447,6 +9447,30 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 @media (max-width:600px){ #segModoRoteiro{ display:grid !important; grid-template-columns:repeat(2, minmax(0, 1fr)); width:100%; }
   #segModoRoteiro button{ white-space:nowrap; justify-content:center; } }
 </style>
+<style>
+/* os botões do checklist ficam à direita, logo abaixo do lápis de editar */
+.pl-ev > .pl-chk{ grid-column:3 / -1; grid-row:2; align-self:start; justify-self:end; justify-content:flex-end; margin-top:8px; }
+.pl-chk-b.aj:hover{ border-color:var(--ouro); color:var(--ouro); background:var(--lavagem-ouro); }
+.pl-chk-aj{ white-space:nowrap; display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:99px; border:1px dashed color-mix(in oklab, var(--ouro) 55%, transparent); background:var(--lavagem-ouro); color:var(--ouro); font:600 calc(12px * var(--esc))/1 var(--f-b); cursor:pointer; }
+.pl-chk-aj svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; }
+@media (max-width:620px){ .pl-ev > .pl-chk{ grid-column:1 / -1; justify-self:end; grid-row:auto; margin-top:8px; flex-wrap:nowrap; gap:5px; }
+  .pl-ev-acoes{ justify-self:end; }
+  .pl-ev > .pl-chk .pl-chk-b{ padding:0 10px; gap:4px; white-space:nowrap; }
+  .pl-ev > .pl-chk:has(.pl-chk-prox){ flex-wrap:wrap; } }
+@container (max-width:560px){ .pl-ev > .pl-chk{ grid-column:1 / -1; justify-self:end; grid-row:auto; margin-top:8px; flex-wrap:nowrap; gap:5px; }
+  .pl-ev-acoes{ justify-self:end; }
+  .pl-ev > .pl-chk .pl-chk-b{ padding:0 10px; gap:4px; white-space:nowrap; }
+  .pl-ev > .pl-chk:has(.pl-chk-prox){ flex-wrap:wrap; } }
+</style>
+<style>
+/* antecedência da chegada ao aeroporto */
+.pl-antec{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:9px; }
+.pl-antec > span{ font:600 calc(11px * var(--esc))/1 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); margin-right:4px; }
+.pl-antec button{ height:28px; min-width:42px; padding:0 11px; border-radius:99px; border:1px solid var(--fio); background:transparent; color:var(--grafite); font:600 calc(12.5px * var(--esc))/1 var(--f-b); cursor:pointer; transition:.15s; }
+.pl-antec button:hover{ border-color:var(--ouro); color:var(--ouro); }
+.pl-antec button.on{ background:var(--ouro); border-color:var(--ouro); color:var(--sobre-ouro); }
+.pl-antec.grande button{ height:40px; padding:0 18px; font-size:calc(14px * var(--esc)); }
+</style>
 </head>
 <body>
 <script>
@@ -11307,7 +11331,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 20:30';
+const BUILD = '2026-10-13 21:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -32121,10 +32145,13 @@ function marcosDoDia(p, iso){
     const noturnoIda = i === 0 && dataCheg && t.data && dataCheg !== t.data;
     /* chegada ao aeroporto (sugerida), para o roteiro mostrar o intervalo até o
        voo, onde cabe a sala VIP */
-    if ((i > 0 || noturnoIda) && t.data === iso && sai && hm2min(sai) - (intl ? 180 : 120) >= 0)
-      out.push({marco:true, k:'aero', id:'aero-' + t.id, t, inicio:min2hm(hm2min(sai) - (intl ? 180 : 120)), dur:0,
+    /* antecedência: padrão 2h (nacional) ou 3h (internacional), ou a que o
+       viajante escolheu para aproveitar mais a sala VIP */
+    const antec = Number(t.antecMin) || (intl ? 180 : 120);
+    if ((i > 0 || noturnoIda) && t.data === iso && sai && hm2min(sai) - antec >= 0)
+      out.push({marco:true, k:'aero', id:'aero-' + t.id, t, antec, inicio:min2hm(hm2min(sai) - antec), dur:0,
         titulo:`Chegada ao aeroporto de ${cidadeIATA(t.origem) || String(t.origem || '').toUpperCase()}`, aeroporto:String(t.origem || '').toUpperCase()});
-    if ((i > 0 || noturnoIda) && t.data === iso) out.push({marco:true, k:'emb', id:'emb-' + t.id, t, inicio:sai, dur:0, antes:intl ? 180 : 120,
+    if ((i > 0 || noturnoIda) && t.data === iso) out.push({marco:true, k:'emb', id:'emb-' + t.id, t, inicio:sai, dur:0, antes:Number(t.antecMin) || (intl ? 180 : 120),
       titulo:`Embarque ${volta ? 'de volta' : i === 0 ? 'da ida' : ''} ${String(t.origem || '').toUpperCase()} → ${String(t.destino || '').toUpperCase()}`.replace(/\s+/g, ' ')});
     if (!volta && dataCheg === iso) out.push({marco:true, k:'des', id:'des-' + t.id, t, inicio:che, dur:0,
       titulo:`Desembarque em ${cidadeIATA(t.destino) || String(t.destino || '').toUpperCase()}`});
@@ -32174,9 +32201,14 @@ function marcosDoDia(p, iso){
    começo do dia, embarque no fim) */
 function eventosDoDia(p, iso){
   const ms = marcosDoDia(p, iso), its = paradasDo(p, iso);
+  /* ajuste do dia (atrasou, remarcou): o horário novo vale no roteiro, e o
+     previsto fica guardado para mostrar o que mudou */
+  /* cópia: o ajuste nunca altera a parada, o trecho ou a reserva guardados */
+  const aj = x => { const a = ((p.ajustes || {})[x.id]); return a && a.hora && x.k !== 'aero' ? Object.assign({}, x, {inicioOrig:x.inicio, inicio:a.hora, ajuste:a}) : x; };
+  const lista = ms.concat(its).map(aj);
   const chave = x => x.inicio ? hm2min(x.inicio) : (x.k === 'prazo' ? -2 : x.k === 'des' ? -1 : 1e4);
   const peso = x => x.k === 'des' ? 0 : x.k === 'res' && x.fase === 'fim' ? 1 : x.k === 'aero' ? 2 : x.marco ? 3 : 4;
-  return ms.concat(its).sort((a, b) => chave(a) - chave(b) || peso(a) - peso(b));
+  return lista.sort((a, b) => chave(a) - chave(b) || peso(a) - peso(b));
 }
 /* a cidade do dia sem parada: a do último pouso até aquele dia */
 function cidadeDoVoo(p, iso){
@@ -32268,12 +32300,81 @@ function execResumoHTML(p, iso){
     <div class="pl-exec-barra"><i class="ok" style="width:${r.ok / r.total * 100}%"></i><i class="nao" style="width:${r.nao / r.total * 100}%"></i></div>
     <div class="pl-exec-txt"><b>${r.ok} de ${r.total}</b> etapas feitas${r.nao ? ` · <span class="brasa">${r.nao} não ${r.nao === 1 ? 'cumprida' : 'cumpridas'}</span>` : ''}${r.pend ? ` · ${r.pend} ${r.pend === 1 ? 'pendente' : 'pendentes'}` : ''}<em>${pc}%</em></div></div>`;
 }
+const MOTIVOS_AJUSTE = {atraso:'Atrasou', antecipado:'Antecipou', remarcado:'Remarcado', trocado:'Trocado', outro:'Ajustado'};
+function ajusteChip(it){
+  const a = it.ajuste; if (!a) return '';
+  const dif = it.inicioOrig && a.hora ? hm2min(a.hora) - hm2min(it.inicioOrig) : null;
+  const txt = a.motivo === 'atraso' && dif > 0 ? `Atrasou ${min2dur(dif)}` : a.motivo === 'antecipado' && dif < 0 ? `Antecipou ${min2dur(-dif)}` : (MOTIVOS_AJUSTE[a.motivo] || 'Ajustado');
+  return `<button type="button" class="pl-chk-aj" onclick="ajustarEtapa('${it.id}')" data-dica="${esc(a.nota || 'Toque para mudar o ajuste')}"><svg><use href="#i-relogio"/></svg>${esc(txt)}${it.inicioOrig ? ` · era ${esc(it.inicioOrig)}` : ''}</button>`;
+}
 function chkHTML(p, it, proximaId){
   const e = execDe(p, it.id), ehHoje = planoDia === hojeISO();
   const quando = e ? (e.dia === planoDia || ehHoje ? `às ${e.hora}` : `em ${dataBR(e.dia).slice(0, 5)}`) : '';
   return `<div class="pl-chk" onclick="event.stopPropagation()">${e
     ? `<button type="button" class="pl-chk-st ${e.st}" onclick="marcarEtapaDia('${it.id}','${e.st}')" data-dica="Toque para desmarcar">${e.st === 'ok' ? `<svg><use href="#i-ok"/></svg>Feito ${quando}` : `<svg><use href="#i-x"/></svg>Não cumprido`}</button>`
-    : `${it.id === proximaId ? '<span class="pl-chk-prox">próximo</span>' : ''}<button type="button" class="pl-chk-b ok" onclick="marcarEtapaDia('${it.id}','ok')"><svg><use href="#i-ok"/></svg>Feito</button><button type="button" class="pl-chk-b nao" onclick="marcarEtapaDia('${it.id}','nao')"><svg><use href="#i-x"/></svg>Não cumpri</button>`}</div>`;
+    : `${it.id === proximaId ? '<span class="pl-chk-prox">próximo</span>' : ''}<button type="button" class="pl-chk-b ok" onclick="marcarEtapaDia('${it.id}','ok')"><svg><use href="#i-ok"/></svg>Feito</button><button type="button" class="pl-chk-b nao" onclick="marcarEtapaDia('${it.id}','nao')"><svg><use href="#i-x"/></svg>Não cumpri</button>${it.ajuste ? '' : `<button type="button" class="pl-chk-b aj" onclick="ajustarEtapa('${it.id}')"><svg><use href="#i-relogio"/></svg>Ajustar</button>`}`}${ajusteChip(it)}</div>`;
+}
+/* Ajustar uma etapa: novo horário (atraso, antecipação, remarcação, troca) e,
+   na parada, também outro dia. A reserva e o trecho não mudam: o ajuste é o que
+   aconteceu de fato, e o previsto continua guardado ao lado. */
+function definirAntecedencia(tid, min){
+  const p = P(); if (!p) return;
+  const t = trechosDe(p).find(x => x.id === tid); if (!t) return;
+  const padrao = escopoPlano(p) === 'int' ? 180 : 120;
+  if (min && min !== padrao) t.antecMin = min; else delete t.antecMin;
+  salvar(); renderPlano();
+  avisar(`Chegada ao aeroporto ${min2dur(min || padrao)} antes do voo.`, 'ok');
+}
+function ajustarEtapa(id){
+  const p = P(); if (!p) return;
+  const it = eventosDoDia(p, planoDia).find(x => x.id === id); if (!it) return;
+  if (it.k === 'aero') return ajustarAeroporto(p, it);
+  const a = (p.ajustes || {})[id] || {};
+  const prev = it.inicioOrig || it.inicio || '';
+  const parada = !it.marco, ds = diasDoPlano(p);
+  abrirFolha({titulo:'Ajustar etapa', corpo:`
+    <p class="fraco" style="margin:0 0 12px"><b>${esc(it.titulo || 'Etapa')}</b>${prev ? ` · previsto para <b>${esc(prev)}</b>` : ''}</p>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div class="campo"><label>O que aconteceu</label><select id="ajMot" data-ordem="natural">${Object.entries({atraso:'Atrasou', antecipado:'Antecipou', remarcado:'Foi remarcado', trocado:'Troquei por outra coisa', outro:'Outro ajuste'}).map(([k, n]) => `<option value="${k}"${k === (a.motivo || 'atraso') ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="campo"><label>Novo horário</label><input type="time" id="ajHora" value="${esc(a.hora || prev)}"></div>
+      ${parada ? `<div class="campo"><label>Dia</label><select id="ajDia" data-ordem="natural">${ds.map((d, i) => `<option value="${d}"${d === it.dia ? ' selected' : ''}>Dia ${i + 1} · ${dataBR(d).slice(0, 5)}</option>`).join('')}</select></div>` : ''}
+      <div class="campo" style="grid-column:1 / -1"><label>Anotação <span class="fraco">opcional</span></label><input type="text" id="ajNota" value="${esc(a.nota || '')}" placeholder="Ex.: voo atrasou por chuva; troquei o passeio pelo museu"></div>
+    </div>
+    ${it.marco ? `<p class="fraco" style="margin:12px 0 0;font-size:calc(12.5px * var(--esc))">A reserva continua como foi feita. O ajuste mostra no roteiro o horário que valeu de fato.</p>` : ''}`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${a.hora ? `<button type="button" class="bt fantasma" id="ajDesfaz">Desfazer ajuste</button>` : ''}<button type="button" class="bt primario" id="ajSalvar"><svg><use href="#i-ok"/></svg>Salvar ajuste</button>`});
+  if (a.hora && $('#ajDesfaz')) $('#ajDesfaz').onclick = () => { delete p.ajustes[id]; salvar(); fecharFolha(); renderPlano(); avisar('Ajuste desfeito: vale de novo o horário previsto.', 'ok'); };
+  $('#ajSalvar').onclick = () => {
+    const hora = $('#ajHora').value;
+    if (!hora) return erroNoCampo($('#ajHora'), 'Informe o novo horário.');
+    p.ajustes = p.ajustes || {};
+    p.ajustes[id] = {hora, motivo:$('#ajMot').value, nota:$('#ajNota').value.trim(), em:Date.now()};
+    if (parada && $('#ajDia')){ const par = (p.paradas || []).find(x => x.id === id); if (par && $('#ajDia').value !== par.dia){ par.dia = $('#ajDia').value; planoDia = par.dia; } }
+    salvar(); fecharFolha(); renderPlano(); avisar('Ajuste salvo no roteiro.', 'ok');
+  };
+}
+/* chegada ao aeroporto: o horário escolhido vira a antecedência do trecho, e o
+   roteiro inteiro (folga até o voo, sala VIP) se recalcula a partir dela */
+function ajustarAeroporto(p, it){
+  const t = it.t, sai = (horasDoTrecho(t) || {}).saida || t.saida || '';
+  const padrao = escopoPlano(p) === 'int' ? 180 : 120;
+  abrirFolha({titulo:'Chegada ao aeroporto', corpo:`
+    <p class="fraco" style="margin:0 0 12px">Voo sai às <b>${esc(sai)}</b>. O padrão é chegar <b>${min2dur(padrao)}</b> antes. Quer mais tempo de sala VIP? Chegue mais cedo.</p>
+    <div class="pl-antec grande">${[120, 180, 240, 300].map(m => `<button type="button" data-m="${m}" class="${it.antec === m ? 'on' : ''}">${m / 60}h antes</button>`).join('')}</div>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:14px">
+      <div class="campo"><label>Ou um horário exato de chegada</label><input type="time" id="ajHora" value="${esc(it.inicio)}"></div>
+    </div>
+    <p class="fraco" id="ajAntTxt" style="margin:10px 0 0"></p>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${t.antecMin ? `<button type="button" class="bt fantasma" id="ajDesfaz">Voltar ao padrão</button>` : ''}<button type="button" class="bt primario" id="ajSalvar"><svg><use href="#i-ok"/></svg>Salvar</button>`});
+  const txt = () => { const d = hm2min(sai) - hm2min($('#ajHora').value || it.inicio); $('#ajAntTxt').textContent = d > 0 ? `Chegando ${min2dur(d)} antes do voo.` : 'O horário precisa ser antes da partida do voo.';
+    $$('.folha .pl-antec button').forEach(b => b.classList.toggle('on', Number(b.dataset.m) === d)); };
+  $$('.folha .pl-antec button').forEach(b => b.onclick = () => { $('#ajHora').value = min2hm(hm2min(sai) - Number(b.dataset.m)); txt(); });
+  $('#ajHora').addEventListener('input', txt); $('#ajHora').addEventListener('change', txt); txt();
+  if ($('#ajDesfaz')) $('#ajDesfaz').onclick = () => { fecharFolha(); definirAntecedencia(t.id, 0); };
+  $('#ajSalvar').onclick = () => {
+    const d = hm2min(sai) - hm2min($('#ajHora').value || '');
+    if (!$('#ajHora').value || d <= 0) return erroNoCampo($('#ajHora'), 'Escolha um horário antes da partida do voo.');
+    fecharFolha(); definirAntecedencia(t.id, d);
+  };
 }
 const chkCls = (p, it, proximaId) => { if (it.k === 'prazo') return ''; const e = execDe(p, it.id); return e ? ' exec-' + e.st : it.id === proximaId ? ' exec-prox' : ''; };
 
@@ -32300,13 +32401,13 @@ function fioDoTempo(p, iso){
     if (it.marco && it.k === 'aero'){
       const t = it.t, temVip = its.some(x => x.k === 'res' && x.r.cat === 'salavip');
       html += `<div class="pl-ev pl-voo pl-aero${chkCls(p, it, proximaId)}" data-id="${it.id}" onclick="editarTrechoDoDia('${t.id}')">
-        <div class="pl-hora"><b>${esc(it.inicio)}</b><span>sugerido</span></div>
+        <div class="pl-hora"><b>${esc(it.inicio)}</b><span>${t.antecMin ? 'escolhido' : 'sugerido'}</span></div>
         <div class="pl-marca"><i class="pl-marca-voo"><svg><use href="#i-mapa"/></svg></i></div>
         <div class="pl-ev-corpo"><div class="pl-ev-tit">${esc(it.titulo)}</div>
-          <div class="pl-ev-loc">Check-in, despacho de bagagem e raio-x. ${escopoPlano(p) === 'int' ? '3 horas antes em voo internacional.' : '2 horas antes em voo nacional.'}</div>
+          <div class="pl-ev-loc">Check-in, despacho de bagagem e raio-x. ${t.antecMin ? `Você escolheu chegar ${min2dur(it.antec)} antes do voo.` : escopoPlano(p) === 'int' ? '3 horas antes em voo internacional.' : '2 horas antes em voo nacional.'}</div>
+          <div class="pl-antec" onclick="event.stopPropagation()"><span>Chegar antes</span>${[120, 180, 240, 300].map(m => `<button type="button" class="${it.antec === m ? 'on' : ''}" onclick="definirAntecedencia('${t.id}',${m})">${m / 60}h</button>`).join('')}<button type="button" class="${[120, 180, 240, 300].includes(it.antec) ? '' : 'on'}" onclick="ajustarEtapa('${it.id}')" data-dica="Escolher um horário exato">${[120, 180, 240, 300].includes(it.antec) ? 'outro' : min2dur(it.antec)}</button></div>
           ${temVip ? '' : `<div class="pl-ev-nota"><button type="button" class="bt p fantasma pl-vip-bt" onclick="event.stopPropagation();novaSalaVip('${t.id}')"><svg><use href="#i-poltrona"/></svg>Incluir sala VIP</button></div>`}
-          ${chkHTML(p, it, proximaId)}
-        </div><div class="pl-ev-num"></div><div class="pl-ev-acoes"></div></div>`;
+        </div><div class="pl-ev-num"></div><div class="pl-ev-acoes"></div>${chkHTML(p, it, proximaId)}</div>`;
       const prox = its[i + 1];
       if (prox && prox.inicio){ const vao = hm2min(prox.inicio) - hm2min(it.inicio);
         if (vao >= 20) html += `<div class="pl-elo folga"><span>${min2dur(vao)} até ${prox.k === 'emb' ? 'o voo' : 'a próxima'}</span></div>`; }
@@ -32336,10 +32437,10 @@ function fioDoTempo(p, iso){
           ${it.sub ? `<div class="pl-ev-loc">${esc(it.sub)}</div>` : ''}
           ${it.avisoVip ? `<div class="pl-ev-nota brasa">${esc(it.avisoVip)}</div>` : ''}
           ${it.antesPouso ? `<div class="pl-ev-nota brasa">Este horário está antes do pouso (${esc((its.find(x => x.k === 'des') || {}).inicio || '')}). Confira a reserva.</div>` : it.previsto ? `<div class="pl-ev-nota">Chegada prevista ao hotel, depois do ${its.some(x => x.k === 'res' && x.r.cat === 'traslado') ? 'traslado' : 'desembarque'}. Se o horário for outro, toque para informar na reserva.</div>` : it.padrao ? `<div class="pl-ev-nota">Horário padrão de hotel. Se o seu for outro, toque para informar na reserva.</div>` : !it.inicio ? `<div class="pl-ev-nota">Sem horário: toque para informar na reserva.</div>` : ''}
-          ${chkHTML(p, it, proximaId)}
         </div>
         <div class="pl-ev-num">${it.fase === 'ini' && typeof rvValor === 'function' && rvValor(r) ? `<b>${brl(rvValor(r))}</b>` : ''}</div>
         <div class="pl-ev-acoes" onclick="event.stopPropagation()"><button class="bt p fantasma icone" onclick="editarReservaViagem('${r.id}')" data-dica="Editar a reserva"><svg><use href="#i-lapis"/></svg></button></div>
+        ${chkHTML(p, it, proximaId)}
       </div>`;
       const prox = its[i + 1];
       if (prox && it.inicio && prox.inicio){
@@ -32358,13 +32459,13 @@ function fioDoTempo(p, iso){
         <div class="pl-ev-corpo">
           <div class="pl-ev-tit">${esc(it.titulo)}<span class="etq anil">${ehDes ? 'começo do roteiro' : 'voo'}</span></div>
           <div class="pl-ev-loc">${esc([String(t.cia || '').split(' · ')[0], t.loc ? 'localizador ' + String(t.loc).toUpperCase() : ''].filter(Boolean).join(' · ') || 'Trecho da jornada')}${!it.inicio ? ' · <b class="brasa">sem horário: toque para informar no trecho</b>' : ''}</div>
-          ${!ehDes && it.inicio ? `<div class="pl-ev-nota">Esteja no aeroporto até <b>${min2hm(hm2min(it.inicio) - it.antes)}</b> (${it.antes / 60} horas antes, ${it.antes === 180 ? 'voo internacional' : 'voo nacional'}).</div>` : ''}
+          ${!ehDes && it.inicio ? `<div class="pl-ev-nota">Esteja no aeroporto até <b>${min2hm(hm2min(it.inicio) - it.antes)}</b> (${it.t && it.t.antecMin ? `${min2dur(it.antes)} antes, como você escolheu` : `${it.antes / 60} horas antes, ${it.antes === 180 ? 'voo internacional' : 'voo nacional'}`}).</div>` : ''}
           ${!ehDes && !it.inicio && !its.some(x => x.k === 'res' && x.r.cat === 'salavip') ? `<div class="pl-ev-nota"><button type="button" class="bt p fantasma pl-vip-bt" onclick="event.stopPropagation();novaSalaVip('${t.id}')"><svg><use href="#i-poltrona"/></svg>Incluir sala VIP</button></div>` : ''}
           ${ehDes && it.inicio ? `<div class="pl-ev-nota">Bagagem e saída do aeroporto: conte uns 45 minutos antes da primeira parada.</div>` : ''}
-          ${chkHTML(p, it, proximaId)}
         </div>
         <div class="pl-ev-num"></div>
         <div class="pl-ev-acoes" onclick="event.stopPropagation()"><button class="bt p fantasma icone" onclick="editarTrechoDoDia('${t.id}')" data-dica="Editar o trecho (horários do voo)"><svg><use href="#i-lapis"/></svg></button></div>
+        ${chkHTML(p, it, proximaId)}
       </div>`;
       const prox = its[i + 1];
       if (prox && it.inicio && prox.inicio){
@@ -32390,7 +32491,6 @@ function fioDoTempo(p, iso){
           ${v && v.rot ? `<span class="etq ${v.z}" data-dica="${v.custo ? `Rendeu ${brl2(v.cpm)} por milheiro contra ${brl2(v.custo)} que custou para fabricar` : 'Sem custo apurado neste programa'}">${esc(v.rot)}</span>` : ''}</div>
         ${(it.local || it.cidade) ? `<div class="pl-ev-loc">${esc([it.local, it.cidade].filter(Boolean).join(' · '))} · ${esc(it.inicio)}–${esc(fim)}</div>` : ''}
         ${it.nota ? `<div class="pl-ev-nota">${esc(it.nota)}</div>` : ''}
-        ${chkHTML(p, it, proximaId)}
       </div>
       <div class="pl-ev-num">${custoR || it.custo ? `<b>${fmtMoeda(it.custo, it.moeda)}</b>${it.moeda && it.moeda !== 'BRL' ? `<small>${brl(custoR)}</small>` : ''}` : ''}</div>
       <div class="pl-ev-acoes" onclick="event.stopPropagation()">
@@ -32398,6 +32498,7 @@ function fioDoTempo(p, iso){
         <button class="bt p fantasma icone" onclick="duplicarParada('${it.id}')" data-dica="Duplicar logo em seguida"><svg><use href="#i-copiar"/></svg></button>
         <button class="bt p fantasma icone" onclick="pedirRemoverParada('${it.id}')" data-dica="Remover do roteiro"><svg><use href="#i-lixo"/></svg></button>
       </div>
+      ${chkHTML(p, it, proximaId)}
     </div>`;
 
     const prox = its[i + 1];
