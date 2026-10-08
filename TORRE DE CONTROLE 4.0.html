@@ -9449,15 +9449,24 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 </style>
 <style>
 /* os botões do checklist ficam à direita, logo abaixo do lápis de editar */
-.pl-ev > .pl-chk{ grid-column:3 / -1; grid-row:2; align-self:start; justify-self:end; justify-content:flex-end; margin-top:8px; }
+/* computador: na mesma linha da última frase do texto, encostados à direita (a posição vertical é calculada em alinharChecklist) */
+.pl-ev > .pl-chk{ position:absolute; right:0; top:auto; bottom:11px; margin:0; flex-wrap:nowrap; justify-content:flex-end; }
+.pl-chk > .pl-ev-acoes{ padding-left:0; margin-right:2px; }
+.pl-chk > .pl-ev-acoes:empty{ display:none; }
+/* o lápis mora na barra, recolhido; abre ao passar o mouse (no toque fica sempre aberto) */
+.pl-chk > .pl-ev-acoes{ max-width:0; overflow:hidden; opacity:0; margin-right:-6px; transition:max-width .22s var(--ease), opacity .16s var(--ease), margin .22s var(--ease); }
+.pl-ev:hover .pl-chk > .pl-ev-acoes, .pl-ev:focus-within .pl-chk > .pl-ev-acoes{ max-width:140px; opacity:1; margin-right:2px; }
+@media (hover: none){ .pl-chk > .pl-ev-acoes{ max-width:none; opacity:.65; margin-right:2px; } }
+.pl-chk-vao{ display:inline-block; height:1em; vertical-align:middle; pointer-events:none; }
+.pl-chk-cauda{ white-space:nowrap; }
 .pl-chk-b.aj:hover{ border-color:var(--ouro); color:var(--ouro); background:var(--lavagem-ouro); }
 .pl-chk-aj{ white-space:nowrap; display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:99px; border:1px dashed color-mix(in oklab, var(--ouro) 55%, transparent); background:var(--lavagem-ouro); color:var(--ouro); font:600 calc(12px * var(--esc))/1 var(--f-b); cursor:pointer; }
 .pl-chk-aj svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; }
-@media (max-width:620px){ .pl-ev > .pl-chk{ grid-column:1 / -1; justify-self:end; grid-row:auto; margin-top:8px; flex-wrap:nowrap; gap:5px; }
+@media (max-width:620px){ .pl-ev > .pl-chk{ position:static; grid-column:1 / -1; justify-self:end; grid-row:auto; margin-top:8px; flex-wrap:nowrap; gap:5px; }
   .pl-ev-acoes{ justify-self:end; }
   .pl-ev > .pl-chk .pl-chk-b{ padding:0 10px; gap:4px; white-space:nowrap; }
   .pl-ev > .pl-chk:has(.pl-chk-prox){ flex-wrap:wrap; } }
-@container (max-width:560px){ .pl-ev > .pl-chk{ grid-column:1 / -1; justify-self:end; grid-row:auto; margin-top:8px; flex-wrap:nowrap; gap:5px; }
+@container (max-width:560px){ .pl-ev > .pl-chk{ position:static; grid-column:1 / -1; justify-self:end; grid-row:auto; margin-top:8px; flex-wrap:nowrap; gap:5px; }
   .pl-ev-acoes{ justify-self:end; }
   .pl-ev > .pl-chk .pl-chk-b{ padding:0 10px; gap:4px; white-space:nowrap; }
   .pl-ev > .pl-chk:has(.pl-chk-prox){ flex-wrap:wrap; } }
@@ -11331,7 +11340,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 21:10';
+const BUILD = '2026-10-13 21:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -49954,6 +49963,93 @@ function abrirSeletorLista(sel){
     if (typeof fecharFolha === 'function'){ const ff = fecharFolha; fecharFolha = function(){ fecharSeletorHora(); fecharSeletorLista(); return ff.apply(this, arguments); }; }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pronto); else pronto();
+})();
+</script>
+<script>
+/* Checklist do dia (08/10/2026): no computador os botões Feito / Não cumpri /
+   Ajustar ficam na mesma linha da última frase do texto da etapa, encostados à
+   direita. O texto quebra antes dos botões (nunca passa por baixo deles), e se a
+   etapa for curta os botões descem só o bastante para não cobrir o lápis. */
+function alinharChecklist(raiz){
+  (raiz || document).querySelectorAll('.pl-fio > .pl-ev').forEach(ev => {
+    const chk = ev.querySelector(':scope > .pl-chk'); if (!chk) return;
+    const corpo = ev.querySelector(':scope > .pl-ev-corpo');
+    const ac = ev.querySelector('.pl-ev-acoes');
+    ev.querySelectorAll('.pl-chk-cauda').forEach(x => { const pai = x.parentNode; x.querySelectorAll('.pl-chk-vao').forEach(v => v.remove()); pai.replaceChild(document.createTextNode(x.textContent), x); pai.normalize(); });
+    ev.querySelectorAll('.pl-chk-vao').forEach(x => x.remove());
+    chk.style.top = ''; chk.style.bottom = ''; ev.style.paddingBottom = '';
+    const largo = getComputedStyle(chk).position === 'absolute';
+    /* no computador, lápis e botões formam uma barra só, na linha da última
+       frase; no celular o lápis volta para o lugar dele, acima dos botões */
+    if (ac){ if (largo && ac.parentElement !== chk) chk.prepend(ac); else if (!largo && ac.parentElement === chk) ev.insertBefore(ac, chk); }
+    const ult = corpo ? [...corpo.children].filter(x => x.getClientRects().length).pop() : null;
+    if (!largo || !ult) return;
+    /* um espaço invisível do tamanho da barra no fim da última frase: o texto
+       quebra naturalmente e a última linha sempre termina antes dos botões */
+    const vao = document.createElement('span'); vao.className = 'pl-chk-vao';
+    /* largura da barra: com o lápis aberto (W1) e com ele recolhido (W0); o
+       lápis só abre ao passar o mouse, então a linha tenta caber a barra inteira
+       e, se não der, cabe ao menos os botões */
+    const W0 = Math.ceil(chk.getBoundingClientRect().width + 14);
+    const acDentro = ac && ac.parentElement === chk && ac.children.length;
+    const W1 = acDentro && ac.getBoundingClientRect().width < 2 ? W0 + ac.scrollWidth + 6 : W0;
+    vao.style.width = W1 + 'px';
+    /* o espaço vai logo depois da última palavra */
+    const tw = document.createTreeWalker(ult, NodeFilter.SHOW_TEXT); let txt = null;
+    while (tw.nextNode()) if (tw.currentNode.nodeValue.trim()) txt = tw.currentNode;
+    const depoisDoTexto = txt && !(() => { let n = txt; while (n && n !== ult){ let x = n.nextSibling; while (x){ if (x.nodeType === 1 ? x.getClientRects().length : x.nodeValue.trim()) return true; x = x.nextSibling; } n = n.parentNode; } return false; })();
+    /* texto dentro de botão ou etiqueta: o espaço vai depois dela, nunca dentro */
+    let ancora = null;
+    if (depoisDoTexto && txt.parentNode !== ult){ ancora = txt.parentNode; while (ancora.parentNode !== ult) ancora = ancora.parentNode; }
+    if (ancora) ancora.after(vao); else if (depoisDoTexto) txt.parentNode.insertBefore(vao, txt.nextSibling); else ult.appendChild(vao);
+    const sozinho = () => {
+      if (!depoisDoTexto) return false;
+      let fim = 0;
+      if (ancora) fim = ancora.getBoundingClientRect().bottom;
+      else { const r = document.createRange(); r.selectNodeContents(txt); const rs = [...r.getClientRects()].filter(x => x.width > 0); fim = rs.length ? Math.max(...rs.map(x => x.bottom)) : 0; }
+      return vao.getBoundingClientRect().top >= fim - 2;
+    };
+    if (sozinho() && W1 !== W0){ vao.style.width = W0 + 'px'; if (sozinho()) vao.style.width = W1 + 'px'; }
+    /* se a frase inteira não cabe ao lado dos botões, as últimas palavras descem
+       junto com eles (o máximo que couber), em vez de os botões ficarem sozinhos
+       numa linha nova */
+    if (depoisDoTexto && !ancora && sozinho()){
+      const pal = txt.nodeValue.replace(/\s+$/, '').split(/(\s+)/);
+      const lim = ult.clientWidth - (parseFloat(getComputedStyle(ult).paddingLeft) || 0) - (parseFloat(getComputedStyle(ult).paddingRight) || 0);
+      const cauda = document.createElement('span'); cauda.className = 'pl-chk-cauda';
+      txt.parentNode.insertBefore(cauda, txt.nextSibling);
+      let melhor = 0;
+      const palavras = pal.filter((x, i) => i % 2 === 0);
+      for (let k = 1; k < palavras.length; k++){
+        cauda.textContent = palavras.slice(-k).join(' ') + ' '; cauda.appendChild(vao);
+        if (cauda.getBoundingClientRect().width > lim) break; melhor = k;
+      }
+      if (melhor){
+        cauda.textContent = palavras.slice(-melhor).join(' ') + ' '; cauda.appendChild(vao);
+        txt.nodeValue = palavras.slice(0, -melhor).join(' ') + ' ';
+      } else { cauda.remove(); txt.parentNode.insertBefore(vao, txt.nextSibling); }
+    }
+    const e = ev.getBoundingClientRect(), c = chk.getBoundingClientRect(), v = vao.getBoundingClientRect();
+    const top = Math.max(6, v.top + v.height / 2 - c.height / 2 - e.top);
+    chk.style.top = Math.round(top) + 'px'; chk.style.bottom = 'auto';
+    const falta = top + c.height + 11 - e.height;
+    if (falta > 0) ev.style.paddingBottom = (11 + falta) + 'px';
+  });
+}
+(() => {
+  const orig = window.renderPlano;
+  if (typeof orig === 'function'){
+    window.renderPlano = renderPlano = function(){ const r = orig.apply(this, arguments); try { alinharChecklist(); vigiarChecklist(); } catch(e){ console.error(e); } return r; };
+  }
+  let larg = new WeakMap(), ro = null;
+  window.vigiarChecklist = function(){
+    if (!window.ResizeObserver) return;
+    if (!ro) ro = new ResizeObserver(ents => { let mudou = false;
+      ents.forEach(en => { const w = Math.round(en.contentRect.width); if (larg.get(en.target) !== w){ larg.set(en.target, w); mudou = true; } });
+      if (mudou) requestAnimationFrame(() => alinharChecklist()); });
+    document.querySelectorAll('.pl-fio').forEach(f => { if (!f.dataset.vigia){ f.dataset.vigia = '1'; ro.observe(f); } });
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => alinharChecklist());
 })();
 </script>
 </body>
