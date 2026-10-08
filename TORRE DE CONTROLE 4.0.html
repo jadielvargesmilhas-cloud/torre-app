@@ -4414,13 +4414,13 @@ body.palco-estreito .topo-titulo{ flex:0 1 auto; min-width:min(160px, 30%); }
 .ds-linha b{ color:var(--giz); font-family:var(--f-m); font-weight:600; }
 
 /* quatro números do item pronto, sempre os mesmos quatro e na mesma ordem */
-.ds-conta{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin:11px 0 12px; }
+.ds-conta{ display:flex; flex-wrap:wrap; gap:8px 20px; margin:11px 0 12px; }
 .ds-conta div{ display:flex; flex-direction:column; gap:2px; min-width:0; }
 .ds-conta span{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ds-conta b{ font-family:var(--f-m); font-variant-numeric:tabular-nums; font-size:calc(15px * var(--esc)); font-weight:600; color:var(--giz); white-space:nowrap; }
+.ds-conta b{ font-family:var(--f-m); font-variant-numeric:tabular-nums; font-size:calc(14.5px * var(--esc)); font-weight:500; color:var(--giz); white-space:nowrap; }
 .ds-conta b.jade{ color:var(--jade); }
 
-.ds-acoes{ display:flex; gap:7px; justify-content:flex-end; margin-top:auto; padding-top:10px; }
+.ds-acoes{ display:flex; gap:7px; justify-content:flex-end; flex-wrap:wrap; margin-top:auto; padding-top:10px; }
 .ds-item:not(.pronto) .ds-acoes{
   position:absolute; top:10px; right:11px; margin:0; opacity:0;
   transition:opacity .18s var(--ease);
@@ -8974,6 +8974,13 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .rv-cambio{ display:flex; gap:6px; } .rv-cambio input{ flex:1; min-width:0; }
 .rv-conta{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:12px; font-size:calc(13.5px * var(--esc)); }
 .rv-conta:empty{ display:none; }
+.rv-conta-grade{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1px; width:100%; border:1px solid var(--fio); border-radius:var(--r-lg); overflow:hidden; background:var(--fio); }
+.rv-conta-grade > div{ background:var(--sup-0); padding:11px 13px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.rv-conta-grade span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.rv-conta .rv-conta-grade b{ font-family:var(--f-m); font-size:calc(17px * var(--esc)); font-weight:500; color:var(--giz); }
+.rv-conta-grade em{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); font-style:normal; line-height:1.4; }
+.rv-conta .rv-conta-grade .pos b{ color:var(--jade); } .rv-conta .rv-conta-grade .neg b{ color:var(--brasa); }
+@media (max-width:640px){ .rv-conta-grade{ grid-template-columns:1fr; } }
 .rv-conta span{ color:var(--grafite); } .rv-conta b{ font-family:var(--f-m); font-size:calc(16px * var(--esc)); color:var(--ouro); } .rv-conta em{ color:var(--grafite); font-style:normal; font-size:calc(12.5px * var(--esc)); }
 @media (max-width:900px){ .rv-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:520px){ .rv-grade{ grid-template-columns:1fr; } .rv-grade .rv-largo{ grid-column:auto; } }
@@ -9081,6 +9088,58 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
   .vi-hora{ font-size:calc(11.5px * var(--esc)); padding-right:5px; }
 }
 @media (prefers-reduced-motion:reduce){ .vi-rota.voo, .vi-ev, .rv-item{ animation:none; } }
+</style>
+<style>
+/* ══ LISTA DE COMPRAS: da mira até os pontos na conta (08/10/2026) ═══════════ */
+.lc-jornada{ display:flex; align-items:center; gap:0; margin:0 20px 18px; padding:12px; border-radius:var(--r-lg); background:var(--sup-1); border:1px solid var(--fio); overflow-x:auto; scrollbar-width:none; }
+.lc-jornada::-webkit-scrollbar{ display:none; }
+.lc-passo{ flex:1 0 auto; display:flex; align-items:center; gap:10px; padding:6px 10px; border:0; background:none; color:var(--giz); text-align:left; border-radius:var(--r); transition:background .2s; }
+.lc-passo:hover{ background:var(--sup-2); }
+.lc-passo-n{ min-width:34px; height:34px; padding:0 8px; border-radius:99px; display:grid; place-items:center; font:600 calc(14px * var(--esc))/1 var(--f-m);
+  background:var(--sup-0); border:1.5px solid var(--fio-forte); color:var(--giz-2); }
+.lc-passo.mira .lc-passo-n{ border-color:var(--anil-claro); color:var(--anil-claro); }
+.lc-passo.vivo .lc-passo-n{ background:var(--ouro); border-color:var(--ouro); color:var(--sobre-ouro); animation:gmPulsa 1.8s ease-in-out infinite; }
+.lc-passo.pend .lc-passo-n{ border-color:var(--lilas); color:var(--lilas); }
+.lc-passo.ok .lc-passo-n{ border-color:var(--jade); color:var(--jade); }
+.lc-passo-t{ display:flex; flex-direction:column; line-height:1.25; }
+.lc-passo-t b{ font-size:calc(13.5px * var(--esc)); font-weight:600; white-space:nowrap; }
+.lc-passo-t small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.lc-fio{ flex:1 1 24px; min-width:18px; height:2px; background:linear-gradient(90deg, var(--fio-forte), var(--fio)); border-radius:2px; }
+.lc-sem{ display:flex; flex-direction:column; gap:4px; margin-top:8px; padding:10px 12px; border-radius:var(--r); background:var(--sup-1); border:1px dashed var(--fio-forte); font-size:calc(12.5px * var(--esc)); color:var(--giz-2); line-height:1.45; }
+.lc-sem b{ color:var(--giz); font-weight:600; }
+.lc-fonte{ display:flex; align-items:center; gap:7px; }
+.lc-dica{ margin-top:8px; font-size:calc(12px * var(--esc)); color:var(--ouro); }
+.lc-outras{ margin-top:6px; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.lc-receber{ margin:0 20px 20px; padding-top:16px; border-top:1px solid var(--fio); display:flex; flex-direction:column; gap:10px; }
+.lc-rec-tot{ font-size:calc(12.5px * var(--esc)); margin-left:auto; }
+.lc-receber .ds-topo{ flex-wrap:wrap; }
+@media (max-width:640px){ .lc-rec-tot{ flex:1 0 100%; margin-left:0; } }
+.lc-rec{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; gap:14px; padding:12px 14px; border-radius:var(--r-lg); border:1px solid var(--fio); background:var(--sup-0);
+  border-left:3px solid var(--lilas); }
+.lc-rec.atrasado{ border-left-color:var(--brasa); background:color-mix(in oklab, var(--brasa) 5%, var(--sup-0)); }
+.lc-rec-c{ min-width:0; display:flex; flex-direction:column; gap:5px; }
+.lc-rec-t{ display:flex; flex-direction:column; } .lc-rec-t b{ font-size:calc(14px * var(--esc)); } .lc-rec-t .fraco{ font-size:calc(12px * var(--esc)); }
+.lc-rec-barra{ height:5px; border-radius:99px; background:var(--sup-2); overflow:hidden; }
+.lc-rec-barra i{ display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg, var(--lilas), var(--jade)); }
+.lc-rec.atrasado .lc-rec-barra i{ background:var(--brasa); }
+.lc-rec-s{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.lc-rec-v{ display:flex; flex-direction:column; align-items:flex-end; } .lc-rec-v b{ font:500 calc(15px * var(--esc)) var(--f-m); color:var(--lilas); } .lc-rec-v small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.lc-feitas > summary{ cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:8px; font-size:calc(13px * var(--esc)); color:var(--grafite); padding:4px 0; }
+.lc-feitas > summary::-webkit-details-marker{ display:none; }
+.lc-feita{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--fio-suave); font-size:calc(13px * var(--esc)); }
+.lc-feita .fraco{ font-size:calc(12px * var(--esc)); } .lc-feita b{ font-family:var(--f-m); }
+.lc-escolha{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.lc-op{ display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:var(--r); border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); text-align:left; }
+.lc-op span{ display:flex; flex-direction:column; line-height:1.25; } .lc-op small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.lc-op.on{ border-color:var(--jade); box-shadow:0 0 0 3px var(--lavagem-jade); }
+.lc-grade{ grid-template-columns:repeat(4, minmax(0, 1fr)); align-items:end; }
+.sl-pend{ display:block; font-family:var(--f-b); font-size:calc(11.5px * var(--esc)); color:var(--lilas); font-weight:500; }
+@media (max-width:900px){ .lc-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:640px){
+  .lc-jornada{ margin:0 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:8px; } .lc-fio{ display:none; } .lc-passo{ padding:6px; } .lc-receber{ margin:0 14px 16px; }
+  .lc-rec{ grid-template-columns:auto minmax(0, 1fr) auto; } .lc-rec .acoes-cel{ grid-column:1 / -1; justify-content:flex-end; }
+  .lc-grade{ grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body>
@@ -9858,10 +9917,13 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="cartao" style="padding:0;overflow:hidden">
               <div class="cartao-cab" style="padding:20px 20px 0;margin-bottom:14px">
                 <h3 style="color:var(--anil-claro)">Lista de compras
-                  <div class="sub">O que você quer comprar e por qual retorno. A Torre compara a vitrine de hoje com o seu alvo e move o item de lado quando ele chega lá.</div></h3>
-                <button class="bt p primario" id="btNovoDesejo"><svg><use href="#i-mais"/></svg>Item</button>
+                  <div class="sub">Do produto na mira até os pontos na conta. A Torre vigia o shopping de pontos (Livelo, Esfera...) e as campanhas com as companhias (Magalu → Azul, Smiles...), avisa quando bate o seu alvo e acompanha os pontos até caírem.</div></h3>
+                <div class="linha" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="bt p fantasma" onclick="ativarAvisosDesejos()" data-dica="O celular ou o computador avisa quando um item chegar na hora de comprar"><svg><use href="#i-sino"/></svg>Avisar no aparelho</button>
+                <button class="bt p primario" id="btNovoDesejo"><svg><use href="#i-mais"/></svg>Item</button></div>
               </div>
+              <div id="lcJornada"></div>
               <div class="ds-grade" id="fbDesejos"></div>
+              <div id="lcReceber"></div>
             </div>
 
             <div class="cartao">
@@ -10925,7 +10987,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 19:30';
+const BUILD = '2026-10-12 21:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15257,6 +15319,12 @@ function avisos(){
   /* Item da lista que bateu o alvo. O prazo é o da promoção que o liberou: se
      ela fecha hoje, a compra é hoje — daí o grau 3, igual a qualquer outra
      janela que se esgota. */
+  /* pontos de compra bonificada que já deviam ter caído (ou caem hoje) */
+  comprasPendentes().forEach(c => {
+    const d = diasAte(c.previsto); if (d == null || d > 0) return;
+    L.push({grau:d < 0 ? 2 : 1, tipo:'credito', dias:d, t:d < 0 ? `${nBR(c.pts)} pontos ${prog(c.prog).n} atrasados` : `${nBR(c.pts)} pontos ${prog(c.prog).n} devem cair hoje`,
+      s:`${c.item ? c.item + ' · ' : ''}${nomeLojaCompra(c)} · previsão ${dataBR(c.previsto)}. Confira o extrato e toque em Caiu na conta.`, ir:['fabrica','fb-compras']});
+  });
   avaliarDesejos().filter(x => x.atingiu && x.melhor).forEach(x => {
     const dias = x.melhor.fim ? diasAte(x.melhor.fim) : null;
     if (dias !== null && dias < 0) return;
@@ -15265,7 +15333,7 @@ function avisos(){
     if (dias === null && !x.melhor.emPromo && x.d.prioridade < 3) return;
     L.push({ grau: dias === null ? (x.d.prioridade >= 3 ? 2 : 1) : dias <= 0 ? 3 : dias <= 2 ? 2 : 1,
       tipo:'desejo', dias,
-      t:`${x.d.n} a ${x.melhor.mult}× na ${x.melhor.loja.n}`,
+      t:`Hora de comprar: ${x.d.n}, ${nBRdec(x.melhor.mult)} pts/R$ em ${x.melhor.loja.n}`,
       s:`${brl(x.d.valor)} devolvem ${brl(x.melhor.retorno)} em ${prog(x.melhor.loja.prog).n}, ${pct(x.melhor.pc, 1)} do preço` +
         ` · alvo era ${x.d.alvoTipo === 'mult' ? x.d.alvo + '×' : pct(x.d.alvo, 0)}` +
         (dias === null ? '' : dias === 0 ? ' · último dia' : ` · fecha ${prazoTexto(dias)}`),
@@ -25593,8 +25661,7 @@ function renderCompras(){
     ? `<div class="vazio" style="padding:26px"><p>Nenhuma compra registrada.</p></div>`
     : `<table class="tb-dados"><thead><tr><th class="c">Data</th><th>Loja</th><th class="c">Programa</th><th class="n">Valor</th><th class="n">Mult.</th><th class="n">Pontos</th><th></th></tr></thead>
       <tbody>${cs.map(c => {
-        const l = DB.lojas.find(x => x.id === c.lojaId);
-        return `<tr><td class="c fraco">${dataBR(c.data)}</td><td>${esc(l ? l.n : 'loja removida')}</td>
+        return `<tr><td class="c fraco">${dataBR(c.data)}</td><td>${esc(nomeLojaCompra(c))}${c.status === 'pendente' ? ' <span class="etq lilas">a receber</span>' : ''}</td>
           <td class="c"><span class="etq"><span class="termo-marca" style="background:${prog(c.prog).cor}"></span>${esc(prog(c.prog).n)}</span></td>
           <td class="n">${brl(c.valor)}</td><td class="n">${c.mult}×</td>
           <td class="n" style="color:var(--jade)">${nBR(c.pts)}</td>
@@ -27891,7 +27958,7 @@ function renderSaldo(){
     const n = grupos[p].length;
     return `<button type="button" class="sl-linha" onclick="abrirFichaPrograma('${p}')" aria-label="Abrir a ficha de ${esc(prog(p).n)}">
       <span class="sl-prog">${discoProg(p)}<span class="sl-nome"><b>${esc(prog(p).n)}</b><small>${n} ${n === 1 ? 'titular' : 'titulares'}${prog(p).ali && !['n/d', 'hotel'].includes(prog(p).ali) ? ' · ' + esc(prog(p).ali) : ''}</small></span></span>
-      <span class="sl-saldo n"><b>${nBR(total)}</b><i class="sl-peso"><i style="width:${(total / totalGeral * 100).toFixed(1)}%;background:${prog(p).cor || 'var(--ouro)'}"></i></i></span>
+      <span class="sl-saldo n"><b>${nBR(total)}</b>${(q => q ? `<small class="sl-pend" title="Compras bonificadas registradas: entram no saldo quando o programa creditar">+ ${nBR(q)} a receber</small>` : '')(typeof pendentesDoPrograma === 'function' ? pendentesDoPrograma(p) : 0)}<i class="sl-peso"><i style="width:${(total / totalGeral * 100).toFixed(1)}%;background:${prog(p).cor || 'var(--ouro)'}"></i></i></span>
       <span class="sl-vale n">${brl(total / 1000 * f.alvo)}</span>
       <span class="sl-cpm n"><span class="sl-cpm-v">${c > 0 ? brl2(c) : 'n/d'}<small>/mil</small></span>
         <span class="sl-regua" title="ótimo até ${brl2(f.otimo)} · alvo até ${brl2(f.alvo)} · razoável até ${brl2(f.razoavel)}"><i style="flex:${f.otimo}"></i><i style="flex:${f.alvo - f.otimo}"></i><i style="flex:${f.razoavel - f.alvo}"></i><i style="flex:${teto - f.razoavel}"></i>${pos != null ? `<b style="left:${pos.toFixed(1)}%"></b>` : ''}</span>
@@ -43066,258 +43133,414 @@ const valorMilheiro = p => (faixasDe(p) || {}).alvo || 0;
    próprio desejo: quem mira multiplicador quer o maior número; quem mira retorno
    quer o maior dinheiro de volta, que pode estar numa loja com multiplicador
    menor mas programa mais valioso. */
-function avaliarDesejo(d){
-  const hoje = hojeISO();
-  const cands = [];
-
-  DB.lojas.forEach(l => {
-    if (d.prog && l.prog !== d.prog) return;
-    if (d.lojaId && l.id !== d.lojaId) return;
-    if (l.fim && l.fim < hoje) return;
-
-    /* A loja precisa vender a categoria do desejo. Vale quando é a especialidade
-       dela, quando ela tem faixa própria para aquela categoria, ou quando é loja
-       de tudo. Sem esta trava, um notebook casava com a Sephora só porque a
-       perfumaria estava pagando bem — o multiplicador existia, o produto não. */
-    const faixa = (l.faixas || []).find(f => f.cat === d.cat);
-    const serve = faixa || l.cat === d.cat || l.cat === 'geral';
-    if (!serve) return;
-
-    /* Dentro da loja, a faixa da categoria manda sobre o número de capa. */
-    const mult = faixa ? (Number(faixa.promo) || Number(faixa.base) || 0)
-                       : (Number(l.promo) || Number(l.base) || 0);
-    if (mult <= 0) return;
-    const emPromo = faixa ? (Number(faixa.promo) || 0) > 0 : (Number(l.promo) || 0) > 0;
-
-    const pts = d.valor * mult;
-    const retorno = pts / 1000 * valorMilheiro(l.prog);
-    cands.push({loja:l, mult, pts, retorno,
-                pc: d.valor > 0 ? retorno / d.valor * 100 : 0,
-                cat: faixa ? faixa.cat : 'geral',
-                fim: l.fim || '', emPromo});
-  });
-
-  if (!cands.length) return {d, melhor:null, atingiu:false, falta:null};
-  cands.sort((a, b) => d.alvoTipo === 'mult' ? b.mult - a.mult : b.retorno - a.retorno);
-  const m = cands[0];
-  const atingiu = d.alvoTipo === 'mult' ? m.mult >= d.alvo : m.pc >= d.alvo;
-  const atual = d.alvoTipo === 'mult' ? m.mult : m.pc;
-  return {d, melhor:m, atingiu, atual,
-          progresso: d.alvo > 0 ? clamp(atual / d.alvo * 100, 0, 100) : 0,
-          falta: Math.max(0, d.alvo - atual),
-          /* quanto o alvo valeria em dinheiro, para dar tamanho à distância */
-          alvoEmReais: d.alvoTipo === 'mult'
-            ? d.valor * d.alvo / 1000 * valorMilheiro(m.loja.prog)
-            : d.valor * d.alvo / 100};
-}
-const avaliarDesejos = () => (DB.desejos || []).filter(d => !d.feito).map(avaliarDesejo);
-
-/* ── as duas janelas ──────────────────────────────────────────────────────── */
-/* A miniatura fica sempre no mesmo lugar, com ou sem foto: um espaço de 48px
-   reservado. Item com foto e item sem foto na mesma coluna precisam alinhar o
-   nome na mesma altura, senão a lista fica serrilhada. */
 function fotoDsHTML(d){
   return `<button class="ds-foto${d.foto ? '' : ' vazia'}" onclick="abrirFicha('${d.id}')"
     data-dica="${d.foto ? 'Ver a ficha do produto' : 'Sem ficha ainda; clique para preencher'}">${
     d.foto ? `<img src="${d.foto}" alt="">` : `<svg><use href="#i-sacola"/></svg>`}</button>`;
 }
 
+
+/* ── onde se compra cada coisa (08/10/2026) ───────────────────────────────────
+   Uma cama box não se compra na Sephora. A Torre cruza a categoria do item com o
+   que cada loja vende: as lojas de tudo (Magalu, Casas Bahia, Amazon...) servem
+   para quase qualquer item; as especializadas, só para a sua categoria. Vale
+   para a loja do shopping de pontos (Livelo, Esfera) e para a campanha de compra
+   bonificada direto com a companhia (Magalu → Azul, Magalu → Smiles). */
+const LOJAS_DE_TUDO = /magalu|magazine|casas bahia|ponto( frio)?|extra\.com|amazon|americanas|submarino|shoptime|mercado livre|carrefour|kabum|via\b|walmart|shopee|aliexpress|girafa|fast ?shop|leroy|havan/i;
+const LOJAS_CAT = [
+  [/mobly|tok ?& ?stok|etna|camicado|madeira ?madeira|westwing|ortobom|castor|simmons|colch|leroy|telhanorte|c&c|polishop/i, 'casa'],
+  [/netshoes|centauro|decathlon|nike|adidas|puma|asics|olympikus|under armour/i, 'esporte'],
+  [/sephora|boticario|botic|natura|avon|eudora|quem disse|beleza na web|l.?occitane|mac\b|granado/i, 'beleza'],
+  [/drogasil|droga ?raia|pague menos|panvel|drogaria|farm|ultrafarma/i, 'farmácia'],
+  [/renner|riachuelo|c&a|zara|hering|dafiti|zattini|arezzo|shein|reserva|farm rio|lojas marisa|centauro moda/i, 'moda'],
+  [/apple|samsung|dell|lenovo|motorola|xiaomi|positivo|multilaser|kabum|fast ?shop|lg\b|sony/i, 'eletrônicos'],
+  [/booking|hoteis|hotels|decolar|expedia|airbnb|123 ?milhas|max ?milhas|zarpo|cvc|localiza|movida|unidas|rentcars|uber/i, 'viagem'],
+  [/ifood|rappi|p[aã]o de a[cç][uú]car|zé delivery|ze delivery|assai|atacad|hortifruti|st marche|cacau show|kopenhagen/i, 'alimentação'],
+  [/petz|petlove|cobasi/i, 'casa']
+];
+const LOJAS_SUGERIDAS = {
+  casa:['Magalu', 'Casas Bahia', 'Mobly', 'Amazon', 'Leroy Merlin', 'Tok&Stok', 'MadeiraMadeira'],
+  'eletrônicos':['Magalu', 'Casas Bahia', 'Amazon', 'Fast Shop', 'KaBuM!', 'Samsung', 'Apple'],
+  moda:['Renner', 'Riachuelo', 'C&A', 'Dafiti', 'Amazon'], beleza:['Sephora', 'O Boticário', 'Natura', 'Beleza na Web'],
+  'farmácia':['Drogasil', 'Droga Raia', 'Pague Menos'], esporte:['Netshoes', 'Centauro', 'Decathlon', 'Nike'],
+  viagem:['Booking', 'Decolar', 'Hoteis.com'], 'alimentação':['iFood', 'Pão de Açúcar', 'Carrefour'], geral:['Magalu', 'Amazon', 'Casas Bahia']
+};
+function lojaServeCategoria(nome, cat, catLoja){
+  if (!cat || cat === 'geral') return true;
+  if (catLoja && catLoja !== 'geral') return catLoja === cat;
+  if (LOJAS_DE_TUDO.test(nome || '')) return true;
+  const m = LOJAS_CAT.find(([re]) => re.test(nome || ''));
+  return m ? m[1] === cat : catLoja === 'geral';
+}
+const lojaBate = (nome, prefs) => !prefs.length || prefs.some(p => semAcento(String(nome).toLowerCase()).includes(semAcento(p.toLowerCase())) || semAcento(p.toLowerCase()).includes(semAcento(String(nome).toLowerCase())));
+const prefsDoDesejo = d => String(d.lojasPref || '').split(/[,;]/).map(s => s.trim()).filter(Boolean);
+/* Prazo de crédito: o que a regra da campanha diz ("em até 30 dias úteis"), ou o
+   costume de cada programa. Dias úteis viram corridos (× 1,4). */
+const PRAZO_CREDITO = {livelo:15, esfera:30, smiles:30, azul:30, latampass:30, tap:45, iberia:30, accor:30, atomos:30, itau:30};
+function prazoCreditoDias(fonte){
+  const t = Array.isArray(fonte.regra) ? fonte.regra.join(' ') : String(fonte.regra || fonte.obs || '');
+  const m = t.match(/(?:at[ée]|em)\s+(\d{1,3})\s+dias(\s+[úu]teis)?/i);
+  if (m) return Math.round(Number(m[1]) * (m[2] ? 1.4 : 1));
+  return PRAZO_CREDITO[fonte.prog] || 30;
+}
+
+/* ── avaliação de um desejo contra a vitrine de hoje ──────────────────────────
+   Junta as duas vitrines: as lojas do shopping de pontos (radar) e as campanhas
+   de compra bonificada com a companhia (no seu degrau de clube e cartão). Quem
+   mira multiplicador quer o maior número; quem mira retorno, o maior dinheiro
+   de volta. Também guarda a última oferta que já passou, para o item sem
+   campanha viva não ficar mudo. */
+function candidatosDesejo(d, vivos){
+  const hoje = hojeISO(), prefs = prefsDoDesejo(d), out = [];
+  const conta = (o) => { const pts = d.valor * o.mult, retorno = pts / 1000 * valorMilheiro(o.prog);
+    out.push({...o, pts, retorno, pc:d.valor > 0 ? retorno / d.valor * 100 : 0}); };
+  DB.lojas.forEach(l => {
+    if (d.prog && l.prog !== d.prog) return;
+    if (d.lojaId && l.id !== d.lojaId) return;
+    const viva = !(l.fim && l.fim < hoje);
+    if (viva !== vivos) return;
+    if (!lojaBate(l.n, prefs)) return;
+    const faixa = (l.faixas || []).find(f => f.cat === d.cat);
+    const serve = faixa || l.cat === d.cat || lojaServeCategoria(l.n, d.cat, l.cat);
+    if (!serve) return;
+    const mult = faixa ? (Number(faixa.promo) || Number(faixa.base) || 0) : (Number(l.promo) || Number(l.base) || 0);
+    if (mult <= 0) return;
+    conta({loja:l, prog:l.prog, mult, cat:faixa ? faixa.cat : 'geral', fim:l.fim || '', emPromo:faixa ? (Number(faixa.promo) || 0) > 0 : (Number(l.promo) || 0) > 0,
+      fonte:'shopping', link:l.link || '', regraTxt:l.obs || ''});
+  });
+  if (!d.lojaId) (DB.campanhas || []).forEach(c => {
+    if (c.tipo !== 'bonificada' || !c.parceiro || !c.para) return;
+    if (d.prog && c.para !== d.prog) return;
+    const viva = (!c.inicio || c.inicio <= hoje) && (!c.fim || c.fim >= hoje);
+    if (viva !== vivos) return;
+    if (!vivos && c.fim && diasAte(c.fim) < -180) return;
+    if (!lojaBate(c.parceiro, prefs) || !lojaServeCategoria(c.parceiro, d.cat, '')) return;
+    const deg = typeof seuDegrauBonificada === 'function' ? seuDegrauBonificada(c) : null;
+    const mult = Number(deg && deg.v) || Number(c.ptsPorReal) || 0; if (mult <= 0) return;
+    const topo = Math.max(Number(c.ptsPorReal) || 0, ...(c.faixas || []).map(f => Number(f.v) || 0));
+    conta({loja:{id:'camp:' + c.id, n:c.parceiro, prog:c.para, link:c.link || ''}, prog:c.para, mult, cat:'geral', fim:c.fim || '', emPromo:true,
+      fonte:'campanha', camp:c, degrau:deg ? deg.rot : '', topo, link:c.link || '', regraTxt:Array.isArray(c.regra) ? c.regra.join(' ') : (c.regra || '')});
+  });
+  /* a mesma loja no mesmo programa, das duas fontes: fica a que paga mais */
+  const melhorPorChave = {};
+  out.forEach(o => { const k = semAcento(o.loja.n.toLowerCase()) + '|' + o.prog; if (!melhorPorChave[k] || melhorPorChave[k].mult < o.mult) melhorPorChave[k] = o; });
+  return Object.values(melhorPorChave);
+}
+function avaliarDesejo(d){
+  const cands = candidatosDesejo(d, true);
+  const ord = (a, b) => d.alvoTipo === 'mult' ? b.mult - a.mult : b.retorno - a.retorno;
+  if (!cands.length){
+    const ult = candidatosDesejo(d, false).sort((a, b) => String(b.fim).localeCompare(String(a.fim)) || ord(a, b))[0] || null;
+    return {d, melhor:null, atingiu:false, falta:null, ultima:ult, outras:[]};
+  }
+  cands.sort(ord);
+  const m = cands[0];
+  const atingiu = d.alvoTipo === 'mult' ? m.mult >= d.alvo : m.pc >= d.alvo;
+  const atual = d.alvoTipo === 'mult' ? m.mult : m.pc;
+  return {d, melhor:m, outras:cands.slice(1, 4), atingiu, atual,
+          progresso: d.alvo > 0 ? clamp(atual / d.alvo * 100, 0, 100) : 0,
+          falta: Math.max(0, d.alvo - atual),
+          alvoEmReais: d.alvoTipo === 'mult' ? d.valor * d.alvo / 1000 * valorMilheiro(m.prog) : d.valor * d.alvo / 100};
+}
+const avaliarDesejos = () => (DB.desejos || []).filter(d => !d.feito).map(avaliarDesejo);
+const comprasPendentes = () => (DB.compras || []).filter(c => c.status === 'pendente');
+const pendentesDoPrograma = p => soma(comprasPendentes().filter(c => c.prog === p).map(c => Number(c.pts) || 0));
+const nomeLojaCompra = c => c.lojaNome || ((DB.lojas.find(x => x.id === c.lojaId) || {}).n) || 'loja';
+
+/* ── a jornada: da mira até o ponto na conta ──────────────────────────────── */
 function renderDesejos(){
   const host = $('#fbDesejos'); if (!host) return;
   const av = avaliarDesejos();
-  const prontos = av.filter(x => x.atingiu)
-    .sort((a, b) => (b.d.prioridade - a.d.prioridade) || (b.melhor.retorno - a.melhor.retorno));
-  const mira = av.filter(x => !x.atingiu)
-    .sort((a, b) => (b.d.prioridade - a.d.prioridade) || (b.progresso - a.progresso));
+  const prontos = av.filter(x => x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || (b.melhor.retorno - a.melhor.retorno));
+  const mira = av.filter(x => !x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || ((b.progresso || 0) - (a.progresso || 0)));
+  const pend = comprasPendentes(), feitas = (DB.compras || []).filter(c => c.status === 'creditado');
+  const alvoTexto = d => d.alvoTipo === 'mult' ? nBRdec(d.alvo) + ' pts/R$' : pct(d.alvo, 0) + ' de volta';
+  const fonteTxt = m => m.fonte === 'campanha' ? `Campanha ${esc(m.loja.n)} → ${esc(prog(m.prog).n)}` : `Shopping ${esc(prog(m.prog).n)} · ${esc(m.loja.n)}`;
 
-  const alvoTexto = d => d.alvoTipo === 'mult' ? d.alvo + '×' : pct(d.alvo, 0) + ' de volta';
+  const jornada = $('#lcJornada');
+  if (jornada){
+    const passo = (n, t, sub, cls, alvo) => `<button type="button" class="lc-passo ${cls}" data-lc-ir="${alvo}"><span class="lc-passo-n">${n}</span><span class="lc-passo-t"><b>${t}</b><small>${sub}</small></span></button>`;
+    jornada.innerHTML = `<div class="lc-jornada">
+      ${passo(mira.length, 'Na mira', 'esperando a campanha', 'mira', 'lcMira')}
+      <i class="lc-fio"></i>
+      ${passo(prontos.length, 'Hora de comprar', prontos.length ? 'a campanha chegou' : 'nada no alvo', prontos.length ? 'vivo' : '', 'lcProntos')}
+      <i class="lc-fio"></i>
+      ${passo(pend.length, 'Pontos a receber', pend.length ? nBR(soma(pend.map(c => c.pts))) + ' pontos' : 'nenhum pendente', pend.length ? 'pend' : '', 'lcReceber')}
+      <i class="lc-fio"></i>
+      ${passo(feitas.length, 'Na conta', feitas.length ? nBR(soma(feitas.map(c => c.pts))) + ' pontos' : 'ainda nada', 'ok', 'lcReceber')}
+    </div>`;
+    $$('#lcJornada [data-lc-ir]').forEach(b => b.onclick = () => { const el = $('#' + b.dataset.lcIr); if (el) el.scrollIntoView({behavior:'smooth', block:'center'}); });
+  }
 
   const cartaoMira = x => {
-    const {d, melhor} = x;
-    const p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
+    const {d, melhor, ultima} = x, p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
+    const sug = (LOJAS_SUGERIDAS[d.cat] || LOJAS_SUGERIDAS.geral).filter(n => !prefsDoDesejo(d).length || lojaBate(n, prefsDoDesejo(d)));
     return `<div class="ds-item" data-id="${d.id}">
       ${fotoDsHTML(d)}
       <div class="ds-corpo">
-      <div class="ds-cab">
-        <span class="ds-nome">${esc(d.n)}</span>
-        <span class="etq ${p.c}">${p.n}</span>
-      </div>
-      <div class="ds-sub">${brl(d.valor)} · ${esc(d.cat)}${d.prog ? ' · ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>
+      <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span></div>
+      <div class="ds-sub">${brl(d.valor)} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>
       ${melhor ? `
         <div class="ds-barra"><i style="width:${x.progresso}%"></i></div>
-        <div class="ds-linha">
-          <span>Melhor hoje <b>${melhor.mult}×</b>${melhor.cat !== 'geral' ? ' em ' + esc(melhor.cat) : ''} · ${esc(melhor.loja.n)}</span>
-          <em>${d.alvoTipo === 'mult' ? `faltam ${x.falta.toFixed(1)}×` : `faltam ${pct(x.falta, 1)}`}</em>
-        </div>
-        <div class="ds-linha fraco">
-          <span>Voltariam ${brl(melhor.retorno)}, ${pct(melhor.pc, 1)} do preço</span>
-          <em>no alvo: ${brl(x.alvoEmReais)}</em>
-        </div>`
-      : `<div class="ds-vazia">Nenhuma loja cadastrada atende esta categoria${d.prog ? ' na ' + esc(prog(d.prog).n) : ''}.</div>`}
+        <div class="ds-linha"><span>Hoje <b>${nBRdec(melhor.mult)}×</b> · ${esc(melhor.loja.n)} → ${esc(prog(melhor.prog).n)}</span>
+          <em>${d.alvoTipo === 'mult' ? `faltam ${nBRdec(Math.round(x.falta * 10) / 10)}×` : `faltam ${pct(x.falta, 1)}`}</em></div>
+        <div class="ds-linha fraco"><span>Voltam ${brl(melhor.retorno)} (${pct(melhor.pc, 1)})</span><em>no alvo ${brl(x.alvoEmReais)}</em></div>`
+      : `<div class="lc-sem">
+          <b>Sem campanha viva para ${esc(d.cat)}${d.prog ? ' na ' + esc(prog(d.prog).n) : ''} agora.</b>
+          ${ultima ? `<span>A última: <b>${nBRdec(ultima.mult)}×</b> em ${fonteTxt(ultima)}${ultima.fim ? `, até ${dataBR(ultima.fim)}` : ''}.</span>` : ''}
+          <span>A Torre avisa quando ${sug.slice(0, 4).join(', ')} ou outra loja que venda ${esc(d.cat)} abrir campanha${prefsDoDesejo(d).length ? ' (só nas lojas que você escolheu)' : ''}.</span></div>`}
       <div class="ds-acoes">
         <button class="bt p fantasma icone" onclick="abrirFicha('${d.id}')" data-dica="Ficha do produto"><svg><use href="#i-livro"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
         <button class="bt p fantasma icone" onclick="apagar('desejos','${d.id}','o item da lista')" data-dica="Tirar da lista"><svg><use href="#i-lixo"/></svg></button>
-      </div>
-      </div>
-    </div>`;
+      </div></div></div>`;
   };
-
   const cartaoPronto = x => {
-    const {d, melhor} = x;
-    const p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
-    const dias = melhor.fim ? diasAte(melhor.fim) : null;
-    const hoje = dias !== null && dias <= 0;
+    const {d, melhor} = x, p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
+    const dias = melhor.fim ? diasAte(melhor.fim) : null, hoje = dias !== null && dias <= 0;
     return `<div class="ds-item pronto${hoje ? ' urgente' : ''}" data-id="${d.id}">
       ${fotoDsHTML(d)}
       <div class="ds-corpo">
-      <div class="ds-cab">
-        <span class="ds-nome">${esc(d.n)}</span>
-        <span class="etq ${p.c}">${p.n}</span>
-        ${dias !== null ? `<span class="etq ${hoje ? 'brasa' : dias <= 2 ? 'ouro' : ''}">${
-          hoje ? '<i class="ponto pulsa"></i>último dia' : 'fecha ' + prazoTexto(dias)}</span>` : ''}
-      </div>
-      <div class="ds-sub">${esc(melhor.loja.n)} · ${esc(prog(melhor.loja.prog).n)}${melhor.cat !== 'geral' ? ' · ' + esc(melhor.cat) : ''}</div>
+      <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span>
+        ${dias !== null ? `<span class="etq ${hoje ? 'brasa' : dias <= 2 ? 'ouro' : ''}">${hoje ? '<i class="ponto pulsa"></i>último dia' : 'fecha ' + prazoTexto(dias)}</span>` : ''}</div>
+      <div class="ds-sub lc-fonte">${discoProg(melhor.prog, 'p')}<span>${fonteTxt(melhor)}${melhor.degrau ? ` · seu degrau: ${esc(melhor.degrau)}` : ''}</span></div>
       <div class="ds-conta">
-        <div><span>Multiplicador</span><b>${melhor.mult}×</b></div>
+        <div><span>Pontos por real</span><b>${nBRdec(melhor.mult)}</b></div>
         <div><span>Pontos</span><b>${nBR(melhor.pts)}</b></div>
         <div><span>Volta</span><b class="jade">${brl(melhor.retorno)}</b></div>
         <div><span>Do preço</span><b class="jade">${pct(melhor.pc, 1)}</b></div>
       </div>
+      ${melhor.topo && melhor.topo > melhor.mult ? `<div class="lc-dica">Com ${esc(((melhor.camp.faixas || []).find(f => Number(f.v) === melhor.topo) || {}).rot || 'o degrau máximo')}, seriam ${nBRdec(melhor.topo)} por real: ${nBR(d.valor * melhor.topo)} pontos.</div>` : ''}
+      ${x.outras.length ? `<div class="lc-outras">Também: ${x.outras.map(o => `${esc(o.loja.n)} ${nBRdec(o.mult)}× ${esc(prog(o.prog).n)}`).join(' · ')}</div>` : ''}
       <div class="ds-acoes">
-        <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg>Registrar Compra</button>
-        <button class="bt p fantasma icone" onclick="abrirFicha('${d.id}')" data-dica="Ficha do produto"><svg><use href="#i-livro"/></svg></button>
+        <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg>Registrar a compra</button>
+        ${melhor.link ? `<a class="bt p fantasma" href="${esc(melhor.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a loja</a>` : ''}
         <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
-      </div>
-      </div>
+      </div></div></div>`;
+  };
+  host.innerHTML = `
+    <div class="ds-coluna" id="lcProntos">
+      <div class="ds-topo"><div class="olho destaque" style="margin:0">Hora de comprar</div><span class="ds-cont${prontos.length ? ' vivo' : ''}">${prontos.length}</span></div>
+      <div class="ds-pilha">${prontos.length ? prontos.map(cartaoPronto).join('')
+        : `<div class="ds-nada"><svg><use href="#i-alvo"/></svg><div><b>Nada no alvo agora.</b> Quando uma loja do shopping de pontos ou uma campanha com a companhia bater o retorno que você pediu, o item atravessa para cá e você é avisado.</div></div>`}</div>
+    </div>
+    <div class="ds-coluna" id="lcMira">
+      <div class="ds-topo"><div class="olho anil" style="margin:0">Na mira</div><span class="ds-cont">${mira.length}</span></div>
+      <div class="ds-pilha">${mira.length ? mira.map(cartaoMira).join('')
+        : `<div class="ds-nada"><svg><use href="#i-sacola"/></svg><div><b>Lista vazia.</b> Cadastre o que você pretende comprar e o retorno que espera; a Torre vigia as vitrines por você.</div></div>`}</div>
+    </div>`;
+  renderReceber();
+  avisarDesejosNovos(prontos);
+}
+
+/* ── pontos a receber ─────────────────────────────────────────────────────── */
+function renderReceber(){
+  const cx = $('#lcReceber'); if (!cx) return;
+  const pend = comprasPendentes().sort((a, b) => String(a.previsto).localeCompare(String(b.previsto)));
+  const feitas = (DB.compras || []).filter(c => c.status === 'creditado').sort((a, b) => String(b.creditadoEm || b.data).localeCompare(String(a.creditadoEm || a.data))).slice(0, 8);
+  if (!pend.length && !feitas.length){ cx.innerHTML = ''; return; }
+  const linha = c => {
+    const ini = new Date(c.data + 'T12:00:00'), fim = new Date((c.previsto || c.data) + 'T12:00:00');
+    const tot = Math.max(1, (fim - ini) / 864e5), foi = clamp((Date.now() - ini) / 864e5 / tot * 100, 0, 100);
+    const d = diasAte(c.previsto), atras = d != null && d < 0;
+    return `<div class="lc-rec${atras ? ' atrasado' : ''}">
+      ${discoProg(c.prog)}
+      <div class="lc-rec-c"><div class="lc-rec-t"><b>${esc(c.item || nomeLojaCompra(c))}</b><span class="fraco">${esc(nomeLojaCompra(c))} · ${brl(c.valor)} em ${dataBR(c.data).slice(0, 5)}${c.pedido ? ' · pedido ' + esc(c.pedido) : ''}</span></div>
+        <div class="lc-rec-barra"><i style="width:${foi.toFixed(0)}%"></i></div>
+        <div class="lc-rec-s">${atras ? `<b class="brasa">Deveria ter caído em ${dataBR(c.previsto)}.</b> Confira no extrato do ${esc(prog(c.prog).n)} e, se não veio, abra reclamação com a loja.` : d === 0 ? 'Previsão de crédito: hoje' : `Previsão de crédito: ${dataBR(c.previsto)} · faltam ${d} dias`}</div></div>
+      <div class="lc-rec-v"><b>${nBR(c.pts)}</b><small>${esc(prog(c.prog).n)}</small></div>
+      <div class="acoes-cel"><button class="bt p primario" onclick="creditarCompra('${c.id}')"><svg><use href="#i-ok"/></svg>Caiu na conta</button>
+        <button class="bt p fantasma icone" onclick="editarCompraPendente('${c.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button></div>
     </div>`;
   };
+  cx.innerHTML = `<div class="lc-receber" id="lcReceberCx">
+    <div class="ds-topo"><div class="olho" style="margin:0;color:var(--lilas)">Pontos a receber</div><span class="ds-cont">${pend.length}</span>
+      ${pend.length ? `<span class="fraco lc-rec-tot">${nBR(soma(pend.map(c => c.pts)))} pontos a caminho, que já aparecem como pendentes em Saldos</span>` : ''}</div>
+    ${pend.length ? pend.map(linha).join('') : '<div class="ds-nada"><svg><use href="#i-relogio"/></svg><div>Nada a receber. Cada compra registrada fica aqui até os pontos caírem na conta.</div></div>'}
+    ${feitas.length ? `<details class="lc-feitas"><summary>Já caíram na conta <span class="ds-cont">${feitas.length}</span></summary>${feitas.map(c => `<div class="lc-feita">${discoProg(c.prog, 'p')}<span>${esc(c.item || nomeLojaCompra(c))}</span><span class="fraco">${esc(nomeLojaCompra(c))} · caiu em ${dataBR(c.creditadoEm || c.data)}</span><b class="jade">+${nBR(c.pts)}</b></div>`).join('')}</details>` : ''}
+  </div>`;
+}
 
-  host.innerHTML = `
-    <div class="ds-coluna">
-      <div class="ds-topo">
-        <div class="olho destaque" style="margin:0">Hora de comprar</div>
-        <span class="ds-cont${prontos.length ? ' vivo' : ''}">${prontos.length}</span>
-      </div>
-      <div class="ds-pilha">${prontos.length ? prontos.map(cartaoPronto).join('')
-        : `<div class="ds-nada"><svg><use href="#i-alvo"/></svg>
-             <div><b>Nada no alvo agora.</b> Quando a vitrine bater o retorno que você pediu, o item atravessa para cá e entra nos avisos.</div></div>`}</div>
+/* ── registrar a compra: os pontos ficam pendentes até o programa creditar ── */
+function comprarDesejo(id){
+  const d0 = (DB.desejos || []).find(x => x.id === id); if (!d0) return;
+  const x = avaliarDesejo(d0), cands = [x.melhor].concat(x.outras || []).filter(Boolean);
+  formCompraPendente({desejo:d0, cands});
+}
+function editarCompraPendente(id){ const c = (DB.compras || []).find(y => y.id === id); if (c) formCompraPendente({compra:c, cands:[]}); }
+function formCompraPendente({desejo, compra, cands}){
+  const c0 = compra || {};
+  const m0 = cands[0];
+  const base = compra ? {loja:c0.lojaNome || nomeLojaCompra(c0), prog:c0.prog, mult:c0.mult, valor:c0.valor, prazo:Math.max(1, Math.round((new Date(c0.previsto + 'T12:00:00') - new Date(c0.data + 'T12:00:00')) / 864e5))}
+    : {loja:m0 ? m0.loja.n : '', prog:m0 ? m0.prog : (desejo.prog || 'livelo'), mult:m0 ? m0.mult : 1, valor:desejo.valor, prazo:m0 ? prazoCreditoDias({regra:m0.regraTxt, prog:m0.prog}) : 30};
+  const progsAc = PROG_IDS.filter(k => PROGRAMAS[k]);
+  abrirFolha({titulo: compra ? 'Editar compra' : `Registrar a compra · ${esc(desejo.n)}`, largura:'larga', corpo:`
+    ${!compra && cands.length > 1 ? `<div class="lc-escolha">${cands.map((o, i) => `<button type="button" class="lc-op${i === 0 ? ' on' : ''}" data-i="${i}">${discoProg(o.prog, 'p')}<span><b>${esc(o.loja.n)}</b><small>${nBRdec(o.mult)} pts/R$ · ${esc(prog(o.prog).n)}</small></span></button>`).join('')}</div>` : ''}
+    <div class="grade lc-grade">
+      <div class="campo"><label>Loja</label><input type="text" id="lcLoja" value="${esc(base.loja)}"></div>
+      <div class="campo"><label>Programa que recebe</label><select id="lcProg">${progsAc.map(k => `<option value="${k}"${k === base.prog ? ' selected' : ''}>${esc(prog(k).n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Valor pago (R$)</label><input type="text" inputmode="decimal" data-moeda id="lcValor" value="${moedaTxt(base.valor || 0)}"></div>
+      <div class="campo"><label>Pontos por real</label><input type="text" inputmode="decimal" id="lcMult" value="${String(base.mult || 0).replace('.', ',')}"></div>
+      <div class="campo"><label>Pontos previstos</label><input type="text" inputmode="numeric" data-milhar id="lcPts" value="${qtdTxt(compra ? c0.pts : Math.round((base.valor || 0) * (base.mult || 0)))}"></div>
+      <div class="campo"><label>Data da compra</label><input type="date" id="lcData" value="${esc(c0.data || hojeISO())}"></div>
+      <div class="campo"><label>Prazo para creditar (dias)</label><input type="number" id="lcPrazo" min="1" max="180" value="${base.prazo}"></div>
+      <div class="campo"><label>Previsão de crédito</label><input type="date" id="lcPrev" value="${esc(c0.previsto || '')}"></div>
+      <div class="campo"><label>Conta que recebe</label><select id="lcConta">${(DB.contas || []).map(k => `<option value="${k.id}"${k.id === c0.contaId ? ' selected' : ''}>${esc(nomeCurto(k.nome))}</option>`).join('') || '<option value="">sem conta cadastrada</option>'}</select></div>
+      <div class="campo"><label>Número do pedido</label><input type="text" id="lcPedido" value="${esc(c0.pedido || '')}" placeholder="opcional"></div>
     </div>
-    <div class="ds-coluna">
-      <div class="ds-topo">
-        <div class="olho anil" style="margin:0">Na mira</div>
-        <span class="ds-cont">${mira.length}</span>
-      </div>
-      <div class="ds-pilha">${mira.length ? mira.map(cartaoMira).join('')
-        : `<div class="ds-nada"><svg><use href="#i-sacola"/></svg>
-             <div><b>Lista vazia.</b> Cadastre o que você pretende comprar e o preço que espera pagar; a Torre vigia a vitrine por você.</div></div>`}</div>
-    </div>`;
+    <div class="nota" style="margin-top:12px" id="lcPrevia"></div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${compra ? `<button type="button" class="bt vermelho-solido" id="lcExcluir"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}<button type="button" class="bt primario" id="lcSalvar"><svg><use href="#i-ok"/></svg>${compra ? 'Salvar' : 'Registrar: pontos a receber'}</button>`});
+  if (typeof prepararCamposData === 'function') prepararCamposData($('#folhaCorpo'));
+  ligarCampoMoeda('#lcValor'); ligarCampoContagem('#lcPts');
+  let ptsManual = !!compra;
+  const num = s => Number(String($(s).value).replace(/\./g, '').replace(',', '.')) || 0;
+  const recalc = (origem) => {
+    if (origem !== 'pts' && !ptsManual) $('#lcPts').value = qtdTxt(Math.round(moedaNum($('#lcValor').value) * num('#lcMult')));
+    if (origem !== 'prev') $('#lcPrev').value = somaDiasISO($('#lcData').value || hojeISO(), Number($('#lcPrazo').value) || 30);
+    const pts = qtdNum($('#lcPts').value), pg = $('#lcProg').value, ret = pts / 1000 * valorMilheiro(pg);
+    $('#lcPrevia').innerHTML = `<svg><use href="#i-faisca"/></svg><div><b>${nBR(pts)} pontos ${esc(prog(pg).n)}</b> ficam como <b>pendentes</b> até ${dataBR($('#lcPrev').value)}${ret ? `, valendo ${brl(ret)}` : ''}. Eles aparecem em Saldos como "a receber" e só entram no saldo quando você confirmar que caíram.</div>`;
+  };
+  $('#lcPts').addEventListener('input', () => { ptsManual = true; recalc('pts'); });
+  ['#lcValor', '#lcMult', '#lcProg', '#lcData', '#lcPrazo'].forEach(s => { $(s).addEventListener('input', () => recalc(s)); $(s).addEventListener('change', () => recalc(s)); });
+  $('#lcPrev').addEventListener('change', () => recalc('prev'));
+  $$('#folhaCorpo .lc-op').forEach(b => b.onclick = () => {
+    const o = cands[+b.dataset.i]; $$('#folhaCorpo .lc-op').forEach(y => y.classList.toggle('on', y === b));
+    $('#lcLoja').value = o.loja.n; $('#lcProg').value = o.prog; $('#lcMult').value = String(o.mult).replace('.', ',');
+    $('#lcPrazo').value = prazoCreditoDias({regra:o.regraTxt, prog:o.prog}); ptsManual = false; recalc();
+  });
+  if (compra) recalc('prev'); else recalc();
+  if ($('#lcExcluir')) $('#lcExcluir').onclick = () => confirmar('Excluir esta compra?', 'Os pontos pendentes saem da conta. Se ela veio da lista, o item volta para Na mira.', () => {
+    DB.compras = DB.compras.filter(y => y.id !== compra.id);
+    const d = (DB.desejos || []).find(y => y.id === compra.desejoId); if (d){ d.feito = false; delete d.compraId; }
+    salvar(); fecharFolha(); renderCompras(); renderSaldoSeAberto(); avisar('Compra excluída.', 'ok');
+  }, 'Excluir');
+  $('#lcSalvar').onclick = () => {
+    const valor = moedaNum($('#lcValor').value), pts = qtdNum($('#lcPts').value);
+    if (!valor) return erroNoCampo($('#lcValor'), 'Informe o valor pago.');
+    if (!(pts > 0)) return erroNoCampo($('#lcPts'), 'Informe quantos pontos a compra vai dar.');
+    const loja = $('#lcLoja').value.trim() || 'Loja', pg = $('#lcProg').value;
+    const lj = DB.lojas.find(l => semAcento(l.n.toLowerCase()) === semAcento(loja.toLowerCase()) && l.prog === pg);
+    const reg = {...c0, id:c0.id || uid(), lojaId:lj ? lj.id : (c0.lojaId || ''), lojaNome:loja, prog:pg, data:$('#lcData').value || hojeISO(), valor,
+      mult:num('#lcMult'), pts, previsto:$('#lcPrev').value, contaId:$('#lcConta').value, pedido:$('#lcPedido').value.trim(),
+      status:c0.status || 'pendente', item:c0.item || (desejo ? desejo.n : ''), desejoId:c0.desejoId || (desejo ? desejo.id : '')};
+    DB.compras = DB.compras || [];
+    if (compra) DB.compras[DB.compras.findIndex(y => y.id === compra.id)] = reg;
+    else {
+      DB.compras.push(reg);
+      if (desejo){ desejo.feito = true; desejo.compraId = reg.id; }
+    }
+    salvar(); fecharFolha(); renderCompras(); renderFita(); renderSaldoSeAberto();
+    avisar(compra ? 'Compra atualizada.' : `Compra registrada: ${nBR(pts)} pontos a receber até ${dataBR(reg.previsto)}.`, 'ok', 5000);
+  };
+}
+/* Os pontos caíram: viram lançamento no Diário (custo zero, acúmulo orgânico) e
+   passam a contar no saldo. A quantidade pode ser corrigida: às vezes cai menos. */
+function creditarCompra(id){
+  const c = (DB.compras || []).find(y => y.id === id); if (!c) return;
+  abrirFolha({titulo:'Os pontos caíram na conta', corpo:`
+    <p class="fraco" style="margin:0 0 12px">${esc(c.item || nomeLojaCompra(c))}: confira no extrato do ${esc(prog(c.prog).n)} quantos pontos entraram.</p>
+    <div class="grade lc-grade">
+      <div class="campo"><label>Pontos que entraram</label><input type="text" inputmode="numeric" data-milhar id="crPts" value="${qtdTxt(c.pts)}"></div>
+      <div class="campo"><label>Data do crédito</label><input type="date" id="crData" value="${hojeISO()}"></div>
+      <div class="campo"><label>Conta</label><select id="crConta">${(DB.contas || []).map(k => `<option value="${k.id}"${k.id === c.contaId ? ' selected' : ''}>${esc(nomeCurto(k.nome))}</option>`).join('')}</select></div>
+    </div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="crOk"><svg><use href="#i-ok"/></svg>Confirmar e somar ao saldo</button>`});
+  if (typeof prepararCamposData === 'function') prepararCamposData($('#folhaCorpo'));
+  ligarCampoContagem('#crPts');
+  $('#crOk').onclick = () => {
+    const pts = qtdNum($('#crPts').value); if (!(pts > 0)) return erroNoCampo($('#crPts'), 'Informe os pontos que entraram.');
+    const lanc = {id:uid(), criadoEm:Date.now(), data:$('#crData').value || hojeISO(), contaId:$('#crConta').value || c.contaId || (DB.contas[0] || {}).id, prog:c.prog,
+      tipo:'organico', qtd:pts, custo:0, nota:`${c.item ? c.item + ' · ' : ''}compra bonificada em ${nomeLojaCompra(c)}`};
+    DB.lancamentos.push(lanc);
+    if (typeof acertarSaldoDe === 'function' && lanc.contaId) try{ acertarSaldoDe(lanc.contaId, c.prog); }catch(e){}
+    const dif = pts - (Number(c.pts) || 0);
+    Object.assign(c, {status:'creditado', creditadoEm:lanc.data, ptsPrevistos:c.pts, pts, lancId:lanc.id});
+    salvar(); fecharFolha(); renderCompras(); renderLancamentos(); renderFita(); renderSaldoSeAberto(); if (typeof renderMesa === 'function') renderMesa();
+    avisar(`${nBR(pts)} pontos ${prog(c.prog).n} somados ao saldo.${dif < 0 ? ` Vieram ${nBR(-dif)} a menos que o previsto.` : ''}`, dif < 0 ? 'alerta' : 'ok', 6000);
+  };
+}
+function renderSaldoSeAberto(){ try{ if (typeof renderSaldo === 'function' && $('#v-saldo') && $('#v-saldo').classList.contains('on')) renderSaldo(); }catch(e){} }
+
+/* ── aviso no aparelho: quando um item chega na hora de comprar ─────────────
+   Com a Torre aberta (ou na aba do navegador), o aviso aparece no sistema do
+   celular ou do computador. Cada oferta avisa uma vez só. */
+function avisarDesejosNovos(prontos){
+  DB.cfg.desejosAvisados = DB.cfg.desejosAvisados || {};
+  const novos = prontos.filter(x => { const k = x.melhor.loja.id + '|' + x.melhor.mult + '|' + (x.melhor.fim || ''); if (DB.cfg.desejosAvisados[x.d.id] === k) return false; DB.cfg.desejosAvisados[x.d.id] = k; return true; });
+  if (!novos.length) return;
+  salvar();
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  novos.forEach(x => { try{ new Notification(`Hora de comprar: ${x.d.n}`, {body:`${nBRdec(x.melhor.mult)} pontos por real em ${x.melhor.loja.n} (${prog(x.melhor.prog).n}). Voltam ${brl(x.melhor.retorno)}.`, tag:'desejo-' + x.d.id}); }catch(e){} });
+}
+async function ativarAvisosDesejos(){
+  if (!('Notification' in window)){ avisar('Este navegador não mostra avisos do sistema. Os avisos continuam no sino da Torre.', 'info', 6000); return; }
+  const r = await Notification.requestPermission();
+  avisar(r === 'granted' ? 'Avisos ativados: quando um item chegar na hora de comprar, o aparelho avisa.' : 'Avisos do aparelho bloqueados. Eles continuam no sino da Torre.', r === 'granted' ? 'ok' : 'info', 6000);
+  renderDesejos();
 }
 
 /* ── formulário ───────────────────────────────────────────────────────────── */
 function editarDesejo(id){
   const d = id ? (DB.desejos || []).find(x => x.id === id)
-              : {n:'', cat:'eletrônicos', valor:0, prog:'', lojaId:'', alvoTipo:'retorno', alvo:15, prioridade:2, obs:''};
+              : {n:'', cat:'eletrônicos', valor:0, prog:'', lojaId:'', lojasPref:'', alvoTipo:'mult', alvo:10, prioridade:2, obs:''};
+  const conhecidas = [...new Set(DB.lojas.map(l => l.n).concat((DB.campanhas || []).filter(c => c.tipo === 'bonificada' && c.parceiro).map(c => c.parceiro)).concat(Object.values(LOJAS_SUGERIDAS).flat()))].sort((a, b) => a.localeCompare(b, 'pt'));
   abrirFolha({
     titulo: id ? 'Editar Item da Lista' : 'Novo Item na Lista de Compras', largura:'larga',
-    corpo:`<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
-      <div class="campo" style="grid-column:1 / -1"><label>O que você quer comprar</label><input type="text" id="dsN" value="${esc(d.n)}" placeholder="Geladeira Brastemp Frost Free"></div>
+    corpo:`<datalist id="dsLojasConh">${conhecidas.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="campo" style="grid-column:1 / -1"><label>O que você quer comprar</label><input type="text" id="dsN" value="${esc(d.n)}" placeholder="Cama box solteiro"></div>
       <div class="campo"><label>Preço estimado (R$)</label><input type="text" inputmode="decimal" data-moeda id="dsValor" value="${moedaTxt(d.valor)}"></div>
       <div class="campo"><label>Categoria</label><select id="dsCat">${CATEGORIAS_LOJA.map(c => `<option value="${c}"${c === d.cat ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
       <div class="campo"><label>Prioridade</label><select id="dsPri">${Object.entries(PRIORIDADES).map(([k, v]) => `<option value="${k}"${Number(k) === d.prioridade ? ' selected' : ''}>${v.n}</option>`).join('')}</select></div>
       <div class="campo"><label>Programa</label><select id="dsProg"><option value="">qualquer um</option>${PROG_IDS.map(p => `<option value="${p}"${p === d.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
-      <div class="campo"><label>Loja</label><select id="dsLoja"><option value="">qualquer uma</option>${DB.lojas.map(l => `<option value="${l.id}"${l.id === d.lojaId ? ' selected' : ''}>${esc(l.n)} · ${esc(prog(l.prog).n)}</option>`).join('')}</select></div>
+      <div class="campo" style="grid-column:1 / -1"><label>Lojas onde você compraria <span class="fraco">opcional, separadas por vírgula; vazio = qualquer loja que venda ${'a categoria'}</span></label>
+        <input type="text" id="dsLojas" list="dsLojasConh" value="${esc(d.lojasPref || (d.lojaId ? ((DB.lojas.find(l => l.id === d.lojaId) || {}).n || '') : ''))}" placeholder="Magalu, Casas Bahia, Mobly"></div>
+      <div class="campo" style="grid-column:1 / -1"><label>Link do produto <span class="fraco">opcional</span></label><input type="text" id="dsLink" value="${esc(d.link || '')}" placeholder="https://..."></div>
     </div>
     <div class="olho anil" style="margin:17px 0 10px">Quando avisar</div>
     <div class="linha rotulo-forte" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
       <div class="seg" id="segAlvo">
+        <button data-t="mult" class="${d.alvoTipo === 'mult' ? 'on' : ''}">Pontos por real</button>
         <button data-t="retorno" class="${d.alvoTipo === 'retorno' ? 'on' : ''}">Retorno em reais</button>
-        <button data-t="mult" class="${d.alvoTipo === 'mult' ? 'on' : ''}">Multiplicador</button>
       </div>
       <div class="campo" style="flex:0 0 auto;width:calc(140px * var(--esc))"><label id="dsAlvoRot">Alvo</label><input type="number" id="dsAlvo" value="${d.alvo}" step="0.5"></div>
     </div>
     <div id="dsPrevia" style="margin-top:14px"></div>
     <div class="campo" style="margin-top:13px"><label>Nota</label><input type="text" id="dsObs" value="${esc(d.obs || '')}" placeholder="Modelo 2024, só na cor inox"></div>`,
-    pe:`<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarDesejo">Salvar</button>`
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarDesejo">Salvar</button>`
   });
-
   let tipo = d.alvoTipo;
-  const rotulo = () => {
-    $('#dsAlvoRot').textContent = tipo === 'mult' ? 'Pontos por real' : '% do preço de volta';
-    $('#dsAlvo').step = tipo === 'mult' ? '0.5' : '1';
-  };
-  /* A prévia é o que ensina a diferença entre os dois alvos: mostra, com os
-     números do próprio item, quanto cada programa precisaria pagar para chegar
-     lá. É onde fica evidente que 10× na Livelo e 10× na Smiles não são a mesma
-     compra. */
+  const rotulo = () => { $('#dsAlvoRot').textContent = tipo === 'mult' ? 'Pontos por real' : '% do preço de volta'; $('#dsAlvo').step = tipo === 'mult' ? '0.5' : '1'; };
   const previa = () => {
     const v = moedaNum($('#dsValor').value), a = Number($('#dsAlvo').value) || 0;
     if (!v || !a){ $('#dsPrevia').innerHTML = `<div class="nota"><svg><use href="#i-info"/></svg><div>Preencha o preço e o alvo para ver o que isso significa em cada programa.</div></div>`; return; }
-    const linhas = PROG_VITRINE.map(p => {
-      const vm = valorMilheiro(p);
-      if (tipo === 'mult'){
-        const pts = v * a, ret = pts / 1000 * vm;
-        return {p, pts, ret, pc: ret / v * 100, precisa:a};
-      }
-      /* alvo em retorno: quantos pontos por real seriam necessários naquele
-         programa para devolver a porcentagem pedida */
-      const precisa = vm > 0 ? (a / 100) * 1000 / vm : 0;
-      const pts = v * precisa, ret = v * a / 100;
-      return {p, pts, ret, pc:a, precisa};
+    const linhas = PROG_VITRINE.map(p => { const vm = valorMilheiro(p);
+      if (tipo === 'mult'){ const pts = v * a, ret = pts / 1000 * vm; return {p, pts, ret, pc:ret / v * 100, precisa:a}; }
+      const precisa = vm > 0 ? (a / 100) * 1000 / vm : 0; return {p, pts:v * precisa, ret:v * a / 100, pc:a, precisa};
     }).sort((x, y) => tipo === 'mult' ? y.ret - x.ret : x.precisa - y.precisa);
-    $('#dsPrevia').innerHTML = `<div class="ds-previa">
-      ${linhas.map(l => `<div><span>${esc(prog(l.p).n)}</span>
-        <b>${l.precisa.toFixed(1)}×</b>
-        <em>${brl(l.ret)} · ${pct(l.pc, 1)}</em></div>`).join('')}
-      <p>${tipo === 'mult'
-        ? `Com <b>${a}×</b> num produto de ${brl(v)}, o dinheiro de volta muda conforme o programa, porque o milheiro de cada um vale diferente.`
-        : `Para devolver <b>${pct(a, 0)}</b> de ${brl(v)}, cada programa precisa de um multiplicador diferente. O da esquerda é o que exige menos.`}</p>
-    </div>`;
+    $('#dsPrevia').innerHTML = `<div class="ds-previa">${linhas.map(l => `<div><span>${esc(prog(l.p).n)}</span><b>${l.precisa.toFixed(1)}×</b><em>${brl(l.ret)} · ${pct(l.pc, 1)}</em></div>`).join('')}
+      <p>${tipo === 'mult' ? `Com <b>${a} pontos por real</b> num produto de ${brl(v)}, o dinheiro de volta muda conforme o programa, porque o milheiro de cada um vale diferente.` : `Para devolver <b>${pct(a, 0)}</b> de ${brl(v)}, cada programa precisa de um multiplicador diferente. O da esquerda é o que exige menos.`}</p></div>`;
   };
   $$('#segAlvo button').forEach(b => b.onclick = () => {
-    tipo = b.dataset.t;
-    $$('#segAlvo button').forEach(x => x.classList.toggle('on', x === b));
+    tipo = b.dataset.t; $$('#segAlvo button').forEach(x => x.classList.toggle('on', x === b));
     if (tipo === 'mult' && Number($('#dsAlvo').value) > 40) $('#dsAlvo').value = 10;
     if (tipo === 'retorno' && Number($('#dsAlvo').value) < 3) $('#dsAlvo').value = 15;
     rotulo(); previa();
   });
   ['#dsValor', '#dsAlvo'].forEach(sel => $(sel).oninput = previa);
   rotulo(); previa();
-
   $('#btSalvarDesejo').onclick = () => {
-    const novo = {id:d.id || uid(), n:$('#dsN').value.trim() || 'Item sem nome',
-      cat:$('#dsCat').value, valor:moedaNum($('#dsValor').value),
-      prog:$('#dsProg').value, lojaId:$('#dsLoja').value,
-      alvoTipo:tipo, alvo:Number($('#dsAlvo').value) || 0,
-      prioridade:Number($('#dsPri').value) || 1, obs:$('#dsObs').value.trim(),
+    const novo = {...d, id:d.id || uid(), n:$('#dsN').value.trim() || 'Item sem nome', cat:$('#dsCat').value, valor:moedaNum($('#dsValor').value),
+      prog:$('#dsProg').value, lojaId:'', lojasPref:$('#dsLojas').value.trim(), link:$('#dsLink').value.trim(),
+      alvoTipo:tipo, alvo:Number($('#dsAlvo').value) || 0, prioridade:Number($('#dsPri').value) || 1, obs:$('#dsObs').value.trim(),
       feito:d.feito || false, criado:d.criado || hojeISO()};
     if (!novo.valor){ avisar('Informe o preço estimado: sem ele não dá para medir o retorno.', 'alerta'); return; }
     DB.desejos = DB.desejos || [];
     if (!conferirAntesDeSalvar('desejos', novo, 'um item igual na lista')) return;
     if (id) DB.desejos[DB.desejos.findIndex(x => x.id === id)] = novo; else DB.desejos.push(novo);
     salvar(); fecharFolha(); renderCompras(); renderFita();
-    avisar('Item na lista. A Torre passa a vigiar a vitrine por ele.', 'ok');
+    avisar('Item na lista. A Torre vigia o shopping de pontos e as campanhas com as companhias por ele.', 'ok');
   };
-}
-
-/* Comprar fecha o ciclo: registra a compra bonificada com a loja e o
-   multiplicador que dispararam o alerta, e tira o item da lista. */
-function comprarDesejo(id){
-  const x = avaliarDesejo((DB.desejos || []).find(d => d.id === id) || {});
-  if (!x.melhor) return;
-  const d = x.d, m = x.melhor;
-  confirmar('Registrar a compra',
-    `<b>${esc(d.n)}</b> por ${brl(d.valor)} na ${esc(m.loja.n)}, a ${m.mult}× — ${nBR(m.pts)} pontos ${esc(prog(m.loja.prog).n)}, ` +
-    `que valem ${brl(m.retorno)}. A compra entra no diário como acúmulo orgânico e o item sai da lista.`,
-    () => {
-      DB.compras.push({id:uid(), lojaId:m.loja.id, prog:m.loja.prog, data:hojeISO(),
-        valor:d.valor, mult:m.mult, pts:Math.round(m.pts)});
-      DB.lancamentos.push({id:uid(), criadoEm:Date.now(), data:hojeISO(), contaId:(DB.contas[0] || {}).id, prog:m.loja.prog,
-        tipo:'organico', qtd:Math.round(m.pts), custo:0, nota:`${d.n} · compra bonificada em ${m.loja.n}`});
-      DB.desejos = DB.desejos.filter(y => y.id !== id);
-      salvar(); renderCompras(); renderLancamentos(); renderMesa(); renderFita();
-      avisar(`${nBR(m.pts)} pontos orgânicos registrados. ${brl(m.retorno)} de volta.`, 'ok');
-    }, 'Registrar');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -47752,11 +47975,24 @@ const RV_PAGTO = {cartao:'Cartão de crédito', pix:'PIX ou débito', pontos:'Po
 const RV_SIT = {reservado:'Reservado', pago:'Pago', apagar:'A pagar', cancelado:'Cancelado'};
 const rvLista = p => (p && p.reservas) || [];
 const rvValor = r => r.situacao === 'cancelado' ? 0 : r.pagamento === 'pontos' ? (rvValorPontos(r) || 0) : (Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1);
-function rvValorPontos(r){
-  if (!(Number(r.pontos) > 0) || !r.prog) return 0;
-  const cpm = (cpmPorPrograma() || {})[r.prog] ?? (PROGRAMAS[r.prog] ? faixasDe(r.prog).alvo : null);
-  return cpm ? Number(r.pontos) / 1000 * cpm + (Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1) : 0;
+/* Pago com pontos ou milhas: o custo é pontos × o valor do milheiro escolhido
+   (custo real, valor-alvo ou valor de cotação, como nos trechos de voo), mais o
+   dinheiro pago junto. O "Valor" passa a ser o preço que se pagaria no hotel ou
+   na agência: é contra ele que a economia é medida. */
+function rvMilheiro(r){
+  const base = r.base || 'custo';
+  let m = typeof milheiroDaBase === 'function' ? milheiroDaBase(base, r.prog, r.milheiroOutro) : null;
+  let usado = base;
+  if (m == null && PROGRAMAS[r.prog]){ m = faixasDe(r.prog).alvo; usado = 'alvo'; }
+  return {m:m || 0, usado, pedido:base};
 }
+function rvValorPontos(r){
+  if (!(Number(r.pontos) > 0) || !r.prog) return Number(r.compl) || 0;
+  const {m} = rvMilheiro(r);
+  return Number(r.pontos) / 1000 * m + (Number(r.compl) || 0);
+}
+const rvPagante = r => (Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1);
+const rvEconomia = r => r.pagamento === 'pontos' && r.situacao !== 'cancelado' && rvPagante(r) > 0 && Number(r.pontos) > 0 ? rvPagante(r) - rvValorPontos(r) : null;
 const rvNoites = r => r.ini && r.fim ? Math.max(0, Math.round((new Date(r.fim + 'T12:00:00') - new Date(r.ini + 'T12:00:00')) / 864e5)) : 0;
 const rvFmtMoeda = (v, m) => (Number(v) || 0).toLocaleString('pt-BR', {style:'currency', currency:m || 'BRL'});
 
@@ -47819,13 +48055,16 @@ function editarReservaViagem(id, cat){
     <div class="olho anil" style="margin:18px 0 10px">Pagamento</div>
     <div class="grade rv-grade">
       ${campo('Forma', `<select id="rvPg" data-ordem="natural">${Object.entries(RV_PAGTO).map(([v, n]) => `<option value="${v}"${v === r.pagamento ? ' selected' : ''}>${n}</option>`).join('')}</select>`)}
-      ${campo('Valor', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvValor" value="${r.valor ? moedaTxt(r.valor) : ''}" placeholder="0,00">`, 'rv-vl')}
+      ${campo('<span id="rvValorRot">Valor</span>', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvValor" value="${r.valor ? moedaTxt(r.valor) : ''}" placeholder="0,00">`, 'rv-vl')}
       ${campo('Moeda', `<select id="rvMoeda" data-ordem="natural">${Object.entries(RV_MOEDAS).map(([v, n]) => `<option value="${v}"${v === r.moeda ? ' selected' : ''}>${v} · ${n}</option>`).join('')}</select>`, 'rv-vl')}
       ${campo('Câmbio (R$ por 1)', `<div class="rv-cambio"><input type="text" inputmode="decimal" id="rvCambio" value="${r.cambio ? String(r.cambio).replace('.', ',') : ''}" placeholder="6,20"><button type="button" class="bt p fantasma" id="rvCotar" data-dica="Busca a cotação comercial de agora">Hoje</button></div>`, 'rv-cb')}
       ${campo('Cartão', `<select id="rvCartao"><option value="">escolha</option>${cartoes.map(c => `<option value="${c.id}"${c.id === r.cartaoId ? ' selected' : ''}>${esc(nomeCartao(c.id))}</option>`).join('')}</select>`, 'rv-ct')}
       ${campoParcelas('rvParcelas', r.parcelas).replace('class="campo', 'class="campo rv-ct')}
       ${campo('Programa', `<select id="rvProg"><option value="">escolha</option>${progs.filter(k2 => PROGRAMAS[k2]).map(k2 => `<option value="${k2}"${k2 === r.prog ? ' selected' : ''}>${esc(prog(k2).n)}</option>`).join('')}</select>`, 'rv-pt')}
       ${campo('Pontos ou milhas usados', `<input type="text" inputmode="numeric" data-milhar id="rvPontos" value="${r.pontos ? qtdTxt(r.pontos) : ''}">`, 'rv-pt')}
+      ${campo('Dinheiro pago junto (R$)', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvCompl" value="${r.compl ? moedaTxt(r.compl) : ''}" placeholder="taxas, complemento">`, 'rv-pt')}
+      ${campo('Valor do milheiro', `<select id="rvBase" data-ordem="natural">${Object.entries(BASES_MILHEIRO).map(([v, n]) => `<option value="${v}"${v === (r.base || 'custo') ? ' selected' : ''}>${n}</option>`).join('')}</select>`, 'rv-pt')}
+      ${campo('Valor de cotação (R$ por mil)', `<input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="rvOutro" value="${r.milheiroOutro ? moedaTxt(r.milheiroOutro) : ''}">`, 'rv-pt rv-outro')}
     </div>
     <div class="rv-conta" id="rvConta"></div>
     <div class="olho anil" style="margin:18px 0 10px">A reserva</div>
@@ -47839,18 +48078,30 @@ function editarReservaViagem(id, cat){
     </div>`,
     pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${id ? `<button type="button" class="bt vermelho-solido" id="rvApagar"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}<button type="button" class="bt primario" id="rvSalvar"><svg><use href="#i-ok"/></svg>Salvar reserva</button>`});
   if (typeof prepararCamposData === 'function') prepararCamposData($('#folhaCorpo'));
-  ligarCampoMoeda('#rvValor'); ligarCampoContagem('#rvPontos');
+  ligarCampoMoeda('#rvValor'); ligarCampoMoeda('#rvCompl'); ligarCampoMoeda('#rvOutro'); ligarCampoContagem('#rvPontos');
   if (typeof ordenarSelects === 'function') ordenarSelects($('#folhaCorpo'));
   const conta = () => {
     const pg = $('#rvPg').value, moeda = $('#rvMoeda').value;
     $$('#folhaCorpo .rv-ct').forEach(e => e.style.display = pg === 'cartao' ? '' : 'none');
     $$('#folhaCorpo .rv-pt').forEach(e => e.style.display = pg === 'pontos' ? '' : 'none');
     $$('#folhaCorpo .rv-cb').forEach(e => e.style.display = moeda === 'BRL' ? 'none' : '');
+    $$('#folhaCorpo .rv-outro').forEach(e => e.style.display = pg === 'pontos' && $('#rvBase').value === 'outro' ? '' : 'none');
+    $('#rvValorRot').textContent = pg === 'pontos' ? (k === 'hospedagem' ? 'Preço no hotel ou na agência' : 'Preço pagando em dinheiro') : 'Valor';
     const x = lerFormReserva(); const v = rvValor(x);
-    const partes = [];
-    if (x.moeda !== 'BRL' && x.valor) partes.push(`${rvFmtMoeda(x.valor, x.moeda)} × ${x.cambio ? String(x.cambio).replace('.', ',') : '?'}`);
-    if (pg === 'pontos' && x.pontos) partes.push(`${nBR(x.pontos)} ${x.prog ? 'de ' + esc(prog(x.prog).n) : 'pontos'} ao seu milheiro`);
-    $('#rvConta').innerHTML = v ? `<span>Na conta da viagem</span><b>${brl(v)}</b>${partes.length ? `<em>${partes.join(' + ')}</em>` : ''}` : (x.moeda !== 'BRL' && x.valor && !x.cambio ? '<em class="n-ouro">Informe o câmbio (ou toque em Hoje) para converter para reais.</em>' : '');
+    const semCambio = x.moeda !== 'BRL' && x.valor && !x.cambio;
+    if (pg === 'pontos'){
+      const mi = rvMilheiro(x), pag = rvPagante(x), eco = rvEconomia(x);
+      const custoReal = typeof milheiroDaBase === 'function' ? milheiroDaBase('custo', x.prog) : null;
+      $('#rvConta').innerHTML = !x.prog || !x.pontos ? '<em>Escolha o programa e os pontos usados para ver o custo e a economia.</em>' : `<div class="rv-conta-grade">
+        <div><span>Custo da hospedagem</span><b>${brl(v)}</b><em>${nBR(x.pontos)} × ${brl2(mi.m)} por mil (${BASES_MILHEIRO[mi.usado].toLowerCase()}${mi.usado !== mi.pedido ? ', sem custo lançado neste programa' : ''})${x.compl ? ` + ${brl(x.compl)} em dinheiro` : ''}</em></div>
+        <div><span>${k === 'hospedagem' ? 'No hotel ou na agência' : 'Pagando em dinheiro'}</span><b>${pag ? brl(pag) : 'n/d'}</b><em>${semCambio ? '<span class="n-ouro">informe o câmbio</span>' : x.moeda !== 'BRL' && x.valor ? `${rvFmtMoeda(x.valor, x.moeda)} × ${String(x.cambio).replace('.', ',')}` : pag ? 'o preço para a mesma reserva' : 'preencha para calcular a economia'}</em></div>
+        <div class="${eco == null ? '' : eco >= 0 ? 'pos' : 'neg'}"><span>Economia</span><b>${eco == null ? 'n/d' : (eco >= 0 ? '' : '−') + brl(Math.abs(eco))}</b><em>${eco == null ? '' : eco >= 0 ? `${pct(eco / pag * 100, 0)} mais barato que pagar` : 'pagar em dinheiro sairia mais barato'}${pag && x.pontos ? ` · cada mil pontos rendeu ${brl2((pag - (Number(x.compl) || 0)) / (x.pontos / 1000))}` : ''}</em></div>
+      </div>${x.base === 'outro' && custoReal != null && moedaNum($('#rvOutro').value) > 0 && moedaNum($('#rvOutro').value) < custoReal ? `<em class="n-ouro">A cotação não pode ficar abaixo do custo real (${brl2(custoReal)} por mil): a conta usa o custo real.</em>` : ''}`;
+    } else {
+      const partes = [];
+      if (x.moeda !== 'BRL' && x.valor) partes.push(`${rvFmtMoeda(x.valor, x.moeda)} × ${x.cambio ? String(x.cambio).replace('.', ',') : '?'}`);
+      $('#rvConta').innerHTML = v ? `<span>Na conta da viagem</span><b>${brl(v)}</b>${partes.length ? `<em>${partes.join(' + ')}</em>` : ''}` : (semCambio ? '<em class="n-ouro">Informe o câmbio (ou toque em Hoje) para converter para reais.</em>' : '');
+    }
     const n = $('#rvNoites'); if (n){ const q = rvNoites(x); n.textContent = q ? `${q} ${q === 1 ? 'noite' : 'noites'}` : ''; }
   };
   $('#folhaCorpo').addEventListener('input', conta); $('#folhaCorpo').addEventListener('change', conta); conta();
@@ -47877,7 +48128,9 @@ function editarReservaViagem(id, cat){
     if (C.m === 'movimento' && !x.de) faltam.push({sel:'#rvDe', msg:'De onde sai?'});
     if (C.m === 'movimento' && !x.para) faltam.push({sel:'#rvPara', msg:'Para onde vai?'});
     if (x.moeda !== 'BRL' && x.valor && !(x.cambio > 0) && x.pagamento !== 'pontos') faltam.push({sel:'#rvCambio', msg:'Informe o câmbio, ou toque em Hoje.'});
+    if (x.pagamento === 'pontos' && !x.prog) faltam.push({sel:'#rvProg', msg:'Qual programa pagou?'});
     if (x.pagamento === 'pontos' && !(x.pontos > 0)) faltam.push({sel:'#rvPontos', msg:'Quantos pontos ou milhas foram usados?'});
+    if (x.pagamento === 'pontos' && x.base === 'outro' && !(x.milheiroOutro > 0)) faltam.push({sel:'#rvOutro', msg:'Informe o valor de cotação: quanto vale cada mil pontos.'});
     if (faltam.length){ errosNosCampos(faltam); return; }
     p.reservas = rvLista(p);
     const novo = {...(r0 || {}), ...x, id:(r0 && r0.id) || uid(), cat:k, criada:(r0 && r0.criada) || hojeISO()};
@@ -47894,6 +48147,7 @@ function lerFormReserva(){
     pagamento:v('#rvPg'), valor:moedaNum(v('#rvValor')), moeda:v('#rvMoeda') || 'BRL', cambio:v('#rvMoeda') === 'BRL' ? 0 : num('#rvCambio'),
     cartaoId:v('#rvPg') === 'cartao' ? v('#rvCartao') : '', parcelas:v('#rvPg') === 'cartao' ? (Number(v('#rvParcelas')) || 1) : 1,
     prog:v('#rvPg') === 'pontos' ? v('#rvProg') : '', pontos:v('#rvPg') === 'pontos' ? qtdNum(v('#rvPontos')) : 0,
+    compl:v('#rvPg') === 'pontos' ? moedaNum(v('#rvCompl')) : 0, base:v('#rvPg') === 'pontos' ? (v('#rvBase') || 'custo') : '', milheiroOutro:v('#rvPg') === 'pontos' && v('#rvBase') === 'outro' ? moedaNum(v('#rvOutro')) : 0,
     codigo:v('#rvCod').trim().toUpperCase(), fornecedor:v('#rvForn').trim(), cancelAte:v('#rvCancel'), situacao:v('#rvSit') || 'reservado', link:v('#rvLink').trim(), obs:v('#rvObs').trim()};
 }
 
@@ -47923,11 +48177,12 @@ function reservasViagemHTML(p){
         <div class="rv-item-c"><div class="rv-item-t"><b>${esc(r.titulo)}</b><span class="rv-tipo">${C.n}</span>${r.situacao !== 'reservado' ? `<span class="etq ${r.situacao === 'pago' ? 'jade' : r.situacao === 'cancelado' ? 'brasa' : 'ouro'}">${RV_SIT[r.situacao]}</span>` : ''}</div>
           <div class="rv-item-s">${esc(rvQuando(r))}${onde ? ' · ' + esc(onde) : ''}${r.codigo ? ` · <span class="rv-cod">${esc(r.codigo)}</span>` : ''}</div>
           ${canc != null && canc >= 0 ? `<div class="rv-canc ${canc <= 3 ? 'perto' : ''}">cancela grátis até ${dataBR(r.cancelAte)}${canc === 0 ? ' (hoje)' : canc <= 3 ? ` (faltam ${canc} dias)` : ''}</div>` : ''}</div>
-        <div class="rv-item-v"><b>${v ? brl(v) : '<span class="fraco">sem valor</span>'}</b>${r.pagamento === 'pontos' && r.pontos ? `<small>${nBR(r.pontos)} ${r.prog ? esc(prog(r.prog).n) : 'pontos'}</small>` : r.moeda !== 'BRL' && r.valor ? `<small>${rvFmtMoeda(r.valor, r.moeda)}</small>` : `<small>${esc(RV_PAGTO[r.pagamento] || '')}</small>`}</div>
+        <div class="rv-item-v"><b>${v ? brl(v) : '<span class="fraco">sem valor</span>'}</b>${r.pagamento === 'pontos' && r.pontos ? `<small>${nBR(r.pontos)} ${r.prog ? esc(prog(r.prog).n) : 'pontos'}</small>${(e => e == null ? '' : `<small class="${e >= 0 ? 'jade' : 'brasa'}">economia ${e >= 0 ? '' : '−'}${brl(Math.abs(e))}</small>`)(rvEconomia(r))}` : r.moeda !== 'BRL' && r.valor ? `<small>${rvFmtMoeda(r.valor, r.moeda)}</small>` : `<small>${esc(RV_PAGTO[r.pagamento] || '')}</small>`}</div>
         <div class="acoes-cel">${r.link ? `<a class="bt p fantasma icone" href="${esc(r.link)}" target="_blank" rel="noopener" data-dica="Abrir o voucher"><svg><use href="#i-link"/></svg></a>` : ''}
           <button class="bt p fantasma icone" onclick="editarReservaViagem('${r.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button></div>
       </div>`; }).join('')}</div>
       <div class="rt-trechos-pe rv-pe">${Object.keys(porCat).map(k => `<span><b>${brl(porCat[k])}</b> ${esc(RV_CATS[k].n.toLowerCase())}</span>`).join('')}<span class="esticar"></span>
+        ${(e => e ? `<span>Economia com pontos <b class="${e >= 0 ? 'jade' : 'brasa'}">${e >= 0 ? '' : '−'}${brl(Math.abs(e))}</b></span>` : '')(soma(rs.map(rvEconomia).filter(x => x != null)))}
         <span>Voos <b>${brl(voos)}</b> + reservas <b>${brl(tot)}</b> = viagem <b class="ouro">${brl(voos + tot)}</b></span></div>`
     : `<div class="vazio" style="border:0;padding:26px"><p>Nenhuma reserva ainda. Toque em <b>Nova reserva</b> e escolha o tipo: hotel, traslado, carro, trem, ingresso, show, experiência...</p></div>`}
   </div>`;
