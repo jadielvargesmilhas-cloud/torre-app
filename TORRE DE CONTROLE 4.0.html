@@ -11454,7 +11454,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 18:30';
+const BUILD = '2026-10-14 19:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19449,13 +19449,44 @@ function lerUmAnuncio(bloco){
     if (para && (desc || bon)) sugestao = {tipo:'compra', para, bonus:bon ? Number(bon[1].replace(',', '.')) : 0, desconto:desc ? Number(desc[1].replace(',', '.')) : 0,
       carrinho:pm ? Number(pm[1].replace('.', '').replace(',', '.')) : 0};
   }
+  /* Compra bonificada ("16 pontos por real"): vira campanha com a companhia, com
+     um degrau por público (assinante do clube, demais clientes). É ela que faz o
+     anúncio aparecer em Lojas parceiras, no caminho "Campanha com a companhia". */
+  if (!sugestao && cat === 'compras'){
+    const sg = bonificadaDoAnuncio(titulo, texto);
+    if (sg) sugestao = sg;
+  }
   /* o link principal é a página da oferta, não o PDF do regulamento */
   const link = links.find(u => !/\.pdf(\?|$)/i.test(u) && !/regulament/i.test(u)) || links[0] || '';
   return {titulo, fim, links, link, magos, destaque, cat, condicoes, sugestao};
 }
 
+const CAT_PARCEIRO = [[/netshoes|centauro|nike|adidas|decathlon|fila|new balance|track&field/i, 'esporte'], [/magalu|magazine|casas bahia|ponto|fast ?shop|americanas|kabum|samsung|apple/i, 'eletrônicos'],
+  [/renner|riachuelo|c&a|zara|dafiti|hering|insider|osklen|dudalina/i, 'moda'], [/sephora|boticário|natura|época|beleza/i, 'beleza'], [/drogasil|raia|pague menos|pacheco|farm/i, 'farmácia'],
+  [/booking|hoteis|decolar|samsonite|latam|azul viagens/i, 'viagem'], [/carrefour|pão de açúcar|ifood|rappi|zé delivery/i, 'alimentação'], [/camicado|tok|stok|lego|leroy|mobly/i, 'casa']];
+function bonificadaDoAnuncio(titulo, texto){
+  const linhas = String(texto || '').split('\n');
+  const degs = [];
+  linhas.forEach(l => { const m = l.match(/(\d{1,2}(?:[.,]\d)?)\s*(?:pontos?|milhas?)\s*por\s*real(?:\s+gasto)?\s*(?:para\s+)?(.*)$/i); if (!m) return;
+    const v = Number(m[1].replace(',', '.')); let quem = SEM_EMOJI(m[2] || '').replace(/[.;:]+$/, '').trim();
+    const clube = /demais|n[aã]o assinante/i.test(quem) ? false : /clube|assinante/i.test(quem) ? true : undefined;
+    quem = quem ? quem[0].toUpperCase() + quem.slice(1) : (clube === false ? 'Demais clientes' : 'Todos os clientes');
+    if (!degs.some(d => d.v === v && d.rot === quem)) degs.push({rot:quem, v, ...(clube !== undefined ? {clube} : {})}); });
+  const xm = String(titulo + ' ' + texto).match(/at[eé]\s*(\d{1,2})\s*x\s*1\b/i);
+  if (!degs.length && xm) degs.push({rot:'Todos os clientes', v:Number(xm[1])});
+  if (!degs.length) return null;
+  const para = veredProgNoTexto(titulo + '\n' + texto); if (!para) return null;
+  let parc = SEM_EMOJI(titulo).split(/\s+[-–—|]\s+/)[0];
+  [prog(para).n, curto(prog(para).n)].forEach(n => { parc = parc.replace(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), ' '); });
+  parc = parc.replace(/\b(com|e|na|no|em|at[eé]|ganhe|acumule|pontos?|milhas?|por|real|gasto|\d+(x\d+)?)\b/gi, ' ').replace(/[&+,]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!parc) return null;
+  const cat = (CAT_PARCEIRO.find(([r]) => r.test(parc)) || [0, 'geral'])[1];
+  degs.sort((a, b) => b.v - a.v);
+  return {tipo:'bonificada', para, parceiro:parc, cat, ptsPorReal:degs[0].v, faixas:degs};
+}
 function rotuloSugestao(sg){
   if (!sg) return '';
+  if (sg.tipo === 'bonificada') return `entra em Lojas parceiras: ${sg.parceiro}, até ${nBRdec(sg.ptsPorReal)} pontos ${prog(sg.para).n} por real`;
   if (sg.tipo === 'compra') return `vira campanha de compra: ${prog(sg.para).n}${sg.desconto ? `, ${nBRdec(sg.desconto)}% de desconto` : ''}${sg.bonus ? `, ${nBRdec(sg.bonus)}% de bônus` : ''}${sg.carrinho ? `, milheiro ${brl2(sg.carrinho)}` : ''}`;
   return `vira campanha: ${prog(sg.de).n} → ${prog(sg.para).n}, ${nBRdec(sg.bonus)}%`;
 }
@@ -19507,21 +19538,43 @@ function gravarAnuncios(){
   if (!marcados.length) return avisar('Nenhum anúncio marcado para gravar.', 'alerta');
   DB.mural = DB.mural || [];
   const agora = new Date().toISOString();
-  let novos = 0, repetidos = 0;
+  let novos = 0, repetidos = 0, nLojas = 0;
   marcados.forEach(i => {
     const a = anunciosLidos[i];
     /* O mesmo anúncio colado duas vezes não duplica: mesmo título e mesmo prazo. */
     if (DB.mural.some(m => SEM_EMOJI(m.titulo).toLowerCase() === SEM_EMOJI(a.titulo).toLowerCase() && (m.fim || '') === (a.fim || ''))) { repetidos++; return; }
-    DB.mural.push({id:uid(), cat:a.cat, titulo:a.titulo, fim:a.fim, link:a.link, links:a.links, pontuacao:a.destaque,
-      magos:a.magos, voto:0, texto:a.condicoes.join('\n'), imagem:'', lida:false, origem:'colado', criadoEm:agora, sugestao:a.sugestao});
+    const m = {id:uid(), cat:a.cat, titulo:a.titulo, fim:a.fim, link:a.link, links:a.links, pontuacao:a.destaque,
+      magos:a.magos, voto:0, texto:a.condicoes.join('\n'), imagem:'', lida:false, origem:'colado', criadoEm:agora, sugestao:a.sugestao};
+    DB.mural.push(m);
+    if (muralParaLojas(m)) nLojas++;
     novos++;
   });
   salvar(); fecharFolha();
   const alvoCat = anunciosLidos[marcados[0]].cat;
   if (novos) { catMural = alvoCat; }
   renderMural(); if (typeof renderMesa === 'function') renderMesa();
-  avisar(`${novos} ${novos === 1 ? 'oportunidade gravada' : 'oportunidades gravadas'} no mural.${repetidos ? ` ${repetidos} já estava${repetidos > 1 ? 'm' : ''} lá.` : ''}`, 'ok', 6000);
+  if (nLojas && typeof renderLojasParceiras === 'function') try { renderLojasParceiras(); } catch(e){}
+  avisar(`${novos} ${novos === 1 ? 'oportunidade gravada' : 'oportunidades gravadas'} no mural.${nLojas ? ` ${nLojas === 1 ? 'Uma entrou' : nLojas + ' entraram'} também em Lojas parceiras.` : ''}${repetidos ? ` ${repetidos} já estava${repetidos > 1 ? 'm' : ''} lá.` : ''}`, 'ok', 6000);
 }
+/* anúncio de compra bonificada vira campanha com a companhia (sem duplicar:
+   mesma loja, mesmo programa e mesmo prazo é a mesma campanha) */
+function muralParaLojas(m){
+  let sg = m.sugestao;
+  if (!sg && m.cat === 'compras'){ sg = bonificadaDoAnuncio(m.titulo, m.texto || ''); if (sg) m.sugestao = sg; }
+  if (!sg || sg.tipo !== 'bonificada' || m.campId) return false;
+  DB.campanhas = DB.campanhas || [];
+  const igual = DB.campanhas.find(c => c.tipo === 'bonificada' && c.para === sg.para && normLoja(c.parceiro || '') === normLoja(sg.parceiro) && (c.fim || '') === (m.fim || ''));
+  if (igual){ m.campId = igual.id; return false; }
+  const id = 'mural-bf-' + m.id;
+  DB.campanhas.push({id, tipo:'bonificada', parceiro:sg.parceiro, cat:sg.cat || 'geral', de:'', para:sg.para, ptsPorReal:sg.ptsPorReal, bonus:0, desconto:0, limite:0,
+    fim:m.fim || '', faixas:sg.faixas, titulo:m.titulo, regra:String(m.texto || '').split('\n').filter(Boolean).map(l => /[.!?;]$/.test(l) ? l.replace(/;$/, '.') : l + '.').join('\n'),
+    link:m.link || '', origem:'mural'});
+  m.campId = id;
+  return true;
+}
+/* anúncios gravados antes desta versão: entram em Lojas parceiras ao abrir */
+setTimeout(() => { try { let n = 0; (DB.mural || []).forEach(m => { if (m.cat === 'compras' && !m.campId && !(m.fim && m.fim < hojeISO()) && muralParaLojas(m)) n++; });
+  if (n){ salvar(); if (typeof renderLojasParceiras === 'function') renderLojasParceiras(); } } catch(e){ console.error(e); } }, 900);
 
 /* ── anúncio de transferência → campanha cadastrada ───────────────────────── */
 function virarCampanha(id){
@@ -19633,7 +19686,8 @@ function renderMural(){
           <button class="bt p fantasma icone${Number(m.voto) === 1 ? ' on-quente' : ''}" onclick="votarMural('${m.id}', 1)" data-dica="Esquentar: serve para mim">▲</button>
           <button class="bt p fantasma icone${Number(m.voto) === -1 ? ' on-frio' : ''}" onclick="votarMural('${m.id}', -1)" data-dica="Esfriar: não serve para mim">▼</button>
         </span>
-        ${m.sugestao ? `<button class="bt p" onclick="virarCampanha('${m.id}')" data-dica="Cadastrar como campanha, já preenchida"><svg><use href="#i-troca"/></svg>Virar campanha</button>` : ''}
+        ${m.sugestao && m.sugestao.tipo === 'bonificada' ? (m.campId ? `<button class="bt p" onclick="irItemMenu('fabrica','fb-campanhas','loja')" data-dica="Já está em Lojas parceiras, no caminho Campanha com a companhia"><svg><use href="#i-sacola"/></svg>Ver em Lojas</button>` : '')
+          : m.sugestao ? `<button class="bt p" onclick="virarCampanha('${m.id}')" data-dica="Cadastrar como campanha, já preenchida"><svg><use href="#i-troca"/></svg>Virar campanha</button>` : ''}
         <button class="bt p fantasma icone" onclick="marcarLida('${m.id}')" data-dica="${m.lida ? 'Marcar como não lida' : 'Marcar como lida'}">
           <svg style="${m.lida ? 'stroke:var(--jade)' : ''}"><use href="#i-ok"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarMural('${m.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -50671,7 +50725,7 @@ function vereditoAnuncio(m){
     const texto = `${m.titulo || ''}\n${m.texto || ''}`;
     const sg = m.sugestao;
     /* compra bonificada: pontos por real */
-    if (!sg && (m.cat === 'compras' || /pontos?\s+por\s+real/i.test(texto))){
+    if ((!sg || sg.tipo === 'bonificada') && (m.cat === 'compras' || /pontos?\s+por\s+real/i.test(texto))){
       const pts = Math.max(0, ...[...texto.matchAll(/(\d{1,2})\s*(?:pontos?|milhas?)\s*por\s*real/gi)].map(x => +x[1]), ...[...texto.matchAll(/at[eé]\s*(\d{1,2})\s*x\s*1\b/gi)].map(x => +x[1]));
       const p = veredProgNoTexto(texto); const f = p ? faixasDe(p) : null;
       if (!pts || !p || !f || !f.alvo) return null;
