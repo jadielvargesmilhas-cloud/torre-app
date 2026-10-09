@@ -11373,7 +11373,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 23:00';
+const BUILD = '2026-10-14 00:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -31139,6 +31139,17 @@ function trechosPorProximidade(textos){
   }
   return [];
 }
+function taxaDinheiroDoQuadro(tudo){
+  const i = String(tudo || '').search(/taxas\s+da\s+viagem|taxas\s+de\s+embarque/i); if (i < 0) return null;
+  const ls = String(tudo).slice(i).split('\n').slice(0, 25);
+  const k = ls.findIndex(l => /\bdinheiro\b/i.test(l)); if (k < 0) return null;
+  for (let j = k; j < Math.min(ls.length, k + 4); j++){
+    if (/milhas?\s*\+|\+\s*R\$/i.test(ls[j])) continue;
+    const m = ls[j].match(/R\$\s*(\d{1,3}(?:\.\d{3})*|\d+),(\d{2})/);
+    if (m) return Number(m[1].replace(/\./g, '') + '.' + m[2]);
+  }
+  return null;
+}
 function interpretarTextosPrints(textos, ref){
   /* Milhar escrito com espaço ("1 565,76") ou sem separador ("1565,76", como o
      leitor costuma devolver) vira o formato com ponto, que as regras entendem. */
@@ -31430,6 +31441,14 @@ function interpretarTextosPrints(textos, ref){
   if (d.pagamento && d.milhas && d.pagamento.pontos && d.milhas.pontos && Math.abs(d.pagamento.pontos - d.milhas.pontos) > d.milhas.pontos * 0.02)
     d.avisos.push(`A tela de pagamento mostra ${nBR(d.pagamento.pontos)} pontos${d.pagamento.dinheiro ? ' + ' + brl(d.pagamento.dinheiro) : ''}, diferente da busca (${nBR(d.milhas.pontos)} pontos). Confira se a compra incluiu outro trecho.`);
   if (d.milhas && !d.milhas.pontos && resgate && !d.avisos.some(a => /quantidade de milhas não aparece/.test(a))) d.avisos.push('A quantidade de milhas não aparece nos documentos: informe no campo Milhas.');
+  /* Smiles, quadro "Taxas da viagem" (08/10/2026): a taxa paga em dinheiro
+     é o valor da opção "Dinheiro" ("R$ 501,81"). As outras opções do quadro
+     ("32.640 milhas", "26.100 milhas + R$ 111,00") pagam a taxa com milhas e
+     não entram. */
+  if (!(d.milhas && d.milhas.taxas != null) && !(d.pagamento && d.pagamento.dinheiro != null)){
+    const tx = taxaDinheiroDoQuadro(tudo);
+    if (tx != null){ d.milhas = d.milhas || {}; d.milhas.taxas = tx; }
+  }
   d.avisos.push('Leitura feita no seu navegador, sem custo. Confira os números antes de preencher.');
   return d;
 }
@@ -37804,8 +37823,8 @@ function fecharSeletorData(){
   _dp = null;
   document.removeEventListener('pointerdown', dpForaClique, true);
   document.removeEventListener('keydown', dpTecla, true);
-  window.removeEventListener('resize', fecharSeletorData);
-  window.removeEventListener('scroll', fecharSeletorData, true);
+  window.removeEventListener('resize', dpRedim);
+  window.removeEventListener('scroll', dpRolou, true);
   if (campo) campo.focus({preventScroll:true});
 }
 function dpForaClique(e){
@@ -37894,6 +37913,7 @@ function dpDesenhar(focar){
 
 function abrirSeletorData(campo){
   if (_dp && _dp.campo === campo){ fecharSeletorData(); return; }
+  fecharTecladoAntes();
   fecharSeletorData();
   const base = dpData(campo.value) || new Date();
   const painel = document.createElement('div');
@@ -37919,8 +37939,8 @@ function abrirSeletorData(campo){
 
   document.addEventListener('pointerdown', dpForaClique, true);
   document.addEventListener('keydown', dpTecla, true);
-  window.addEventListener('resize', fecharSeletorData);
-  window.addEventListener('scroll', fecharSeletorData, true);
+  window.addEventListener('resize', dpRedim);
+  window.addEventListener('scroll', dpRolou, true);
 }
 
 /* readonly não é enfeite: é o que impede o painel nativo de subir no toque, no
@@ -47802,11 +47822,17 @@ async function vemLerPrintsFalta(lista){
     const w = await prepararLeitorOCR();
     const textos = [];
     for (let k = 0; k < fs.length; k++){ vemPrintLendo = `Arquivo ${k + 1} de ${fs.length}`; vemRenderConf(); textos.push(await textoDoArquivo(fs[k], w)); }
-    const r = cqDoLeitor(segmentosDoTexto(textos, ''));
-    const res = vemCompletarDoLeitor(r);
+    const seg = segmentosDoTexto(textos, '');
+    const r = cqDoLeitor(seg);
+    const res = vemCompletarDoLeitor(r, seg.d || {});
+    /* "1 parada" no print, mas só um voo lido: a conexão não aparece na tela de
+       busca, e a página sairia como voo direto */
+    const par = textos.join('\n').match(/\b(\d)\s*paradas?\b/i);
+    const nLeg = (((r.achados || []).find(a => a.sentido === 'IDA') || {}).trechos || []).length;
+    if (par && +par[1] > 0 && nLeg && nLeg <= +par[1] && vemEst.ops.some(o => o.ida.length <= +par[1])) res.avisos.push(`Atenção: o print mostra ${par[1]} parada${+par[1] > 1 ? 's' : ''}, mas não mostra onde. Se o voo tem conexão, abra "Mais detalhes" na Smiles e inclua o voo de cada trecho, senão a página mostra voo direto.`);
     vemPrintLendo = null;
     if (!res.feitos.length){
-      vemPrintMsg = {ok:false, html:`<b>Não achei no print o que falta.</b> ${res.motivo ? esc(res.motivo) + ' ' : ''}Tente o print da tela de resumo da emissão (com número do voo, datas e horários) ou o PDF do bilhete.`};
+      vemPrintMsg = {ok:false, html:`<b>Não achei no print o que falta.</b> ${res.motivo ? esc(res.motivo) + ' ' : ''}${res.avisos.length ? esc(res.avisos.join(' ')) + ' ' : ''}Tente o print da tela de resumo da emissão (com número do voo, datas e horários) ou o PDF do bilhete.`};
     } else {
       vemPrintMsg = {ok:true, html:`<b>Preenchido pelo print:</b> ${esc(res.feitos.join('; '))}.${res.avisos.length ? ' ' + esc(res.avisos.join(' ')) : ''} Confira nos campos acima.`};
       vemGuardarRascunho(); renderVem();
@@ -47821,16 +47847,22 @@ async function vemLerPrintsFalta(lista){
 }
 /* Leva os voos lidos para os campos vazios de cada opção: o voo certo é o da
    mesma rota (De e Para); sem rota preenchida, vale a ordem do print. */
-function vemCompletarDoLeitor(r){
+function vemCompletarDoLeitor(r, d){
+  d = d || {};
   const feitos = [], avisos = [];
   const achados = (r && r.achados) || [];
+  /* "AA0000": o leitor achou a companhia mas não o número; zero não é número de voo */
+  achados.forEach(a => (a.trechos || []).forEach(t => { if (/^0*$/.test(String(t.numero || ''))) t.numero = ''; }));
   const legsDe = sent => (achados.find(a => a.sentido === sent) || {}).trechos || [];
   const ida = legsDe('IDA'), volta = legsDe('VOLTA');
-  if (!ida.length && !volta.length) return {feitos, avisos, motivo:(r && r.faltou) ? `Faltou ${r.faltou}.` : 'Nenhum voo reconhecido.'};
+  const mi = d.milhas || {}, pg = d.pagamento || {};
+  const taxaLida = pg.dinheiro != null ? Number(pg.dinheiro) : (mi.taxas != null ? Number(mi.taxas) : ((achados.find(a => a.sentido === 'IDA') || {}).taxas));
+  const milhasLidas = Number(pg.pontos || mi.pontos) || Number((achados.find(a => a.sentido === 'IDA') || {}).milhas) || 0;
+  if (!ida.length && !volta.length && !(taxaLida > 0) && !milhasLidas) return {feitos, avisos, motivo:(r && r.faltou) ? `Faltou ${r.faltou}.` : 'Nenhum voo nem valor reconhecido.'};
   const vazio = v => !String(v == null ? '' : v).trim();
   vemEst.ops.forEach((o, oi) => {
     const N = vemEst.ops.length > 1 ? `Opção ${oi + 1}, ` : '';
-    const blocos = [['ida', ida]].concat(volta.length ? [['volta', volta]] : []);
+    const blocos = (ida.length ? [['ida', ida]] : []).concat(volta.length ? [['volta', volta]] : []);
     blocos.forEach(([sent, legs]) => {
       if (sent === 'volta' && !o.temVolta){
         if (o.volta.some(t => !vazio(t.de) || !vazio(t.numero))) return;
@@ -47860,9 +47892,8 @@ function vemCompletarDoLeitor(r){
         antes = t;
       });
     });
-    const a0 = achados.find(a => a.sentido === 'IDA') || {};
-    if (vazio(o.milhas) && Number(a0.milhas) > 0){ o.milhas = String(a0.milhas); feitos.push(N + 'milhas'); }
-    if (vazio(o.taxa) && a0.taxas != null && Number(a0.taxas) >= 0 && a0.fonte === 'leitor' && Number(a0.taxas) > 0){ o.taxa = String(a0.taxas).replace('.', ','); feitos.push(N + 'taxa de embarque'); }
+    if (vazio(o.milhas) && milhasLidas > 0){ o.milhas = String(milhasLidas); feitos.push(N + 'milhas'); }
+    if (vazio(o.taxa) && taxaLida > 0){ o.taxa = taxaLida.toFixed(2).replace('.', ','); feitos.push(`${N}taxa de embarque (R$ ${taxaLida.toFixed(2).replace('.', ',')})`); }
   });
   return {feitos, avisos:[...new Set(avisos)]};
 }
@@ -50040,12 +50071,12 @@ function fecharSeletorHora(){
   if (!_hp) return;
   _hp.painel.remove(); const c = _hp.campo; _hp = null;
   document.removeEventListener('pointerdown', hpFora, true); document.removeEventListener('keydown', hpTecla, true);
-  window.removeEventListener('resize', fecharSeletorHora); window.removeEventListener('scroll', hpRolou, true);
+  window.removeEventListener('resize', hpRedim); window.removeEventListener('scroll', hpRolou, true);
   if (c && !TOQUE_GROSSO.matches) c.focus({preventScroll:true});
 }
 function hpFora(e){ if (_hp && !_hp.painel.contains(e.target) && e.target !== _hp.campo && !(e.target.closest && e.target.closest('.hp-bt'))) fecharSeletorHora(); }
 function hpTecla(e){ if (_hp && e.key === 'Escape'){ e.preventDefault(); fecharSeletorHora(); } if (_hp && e.key === 'Enter'){ e.preventDefault(); fecharSeletorHora(); } }
-function hpRolou(e){ if (_hp && !_hp.painel.contains(e.target)) fecharSeletorHora(); }
+function hpRolou(e){ if (janelaRecente()) return; if (_hp && !_hp.painel.contains(e.target)) fecharSeletorHora(); }
 function hpGravar(){
   const {campo, h, m} = _hp; if (h == null) return;
   const v = `${String(h).padStart(2, '0')}:${String(m == null ? 0 : m).padStart(2, '0')}`;
@@ -50068,6 +50099,7 @@ function hpDesenhar(){
 }
 function abrirSeletorHora(campo){
   if (_hp && _hp.campo === campo){ fecharSeletorHora(); return; }
+  fecharTecladoAntes();
   fecharSeletorHora(); if (typeof fecharSeletorData === 'function') fecharSeletorData(); fecharSeletorLista();
   const [h, m] = /^\d{1,2}:\d{2}/.test(campo.value) ? campo.value.split(':').map(Number) : [null, null];
   const painel = document.createElement('div');
@@ -50080,7 +50112,31 @@ function abrirSeletorHora(campo){
   let esq = r.left; if (esq + larg > innerWidth - 8) esq = Math.max(8, innerWidth - larg - 8);
   painel.style.top = Math.round(topo) + 'px'; painel.style.left = Math.round(esq) + 'px';
   document.addEventListener('pointerdown', hpFora, true); document.addEventListener('keydown', hpTecla, true);
-  window.addEventListener('resize', fecharSeletorHora); window.addEventListener('scroll', hpRolou, true);
+  window.addEventListener('resize', hpRedim); window.addEventListener('scroll', hpRolou, true);
+}
+
+/* ── celular: teclado aberto e janelas do sistema (08/10/2026) ──────────────
+   No celular, abrir uma lista ou um relógio com o teclado ainda aberto (vindo
+   de um campo de texto) deixava a janela atrás do teclado; e o teclado, ao
+   fechar, muda a altura da tela e rola a página, o que fechava a janela na
+   mesma hora. Agora o teclado é fechado antes, e só uma mudança de LARGURA
+   (girar o celular) ou uma rolagem feita depois de aberta fecham a janela. */
+let _janelaAberta = 0, _janelaLarg = 0;
+function fecharTecladoAntes(){
+  _janelaAberta = Date.now(); _janelaLarg = innerWidth;
+  const a = document.activeElement;
+  if (a && a !== document.body && a.matches && a.matches('input:not([readonly]):not([type=checkbox]):not([type=radio]):not([type=button]), textarea, [contenteditable=""], [contenteditable=true]')) a.blur();
+}
+const janelaRecente = () => Date.now() - _janelaAberta < 900;
+function redimSoLargura(fechar){ return () => { if (Math.abs(innerWidth - _janelaLarg) > 40) fechar(); }; }
+const slRedim = redimSoLargura(() => fecharSeletorLista()), hpRedim = redimSoLargura(() => fecharSeletorHora()), dpRedim = redimSoLargura(() => fecharSeletorData());
+function dpRolou(e){ if (janelaRecente()) return; if (_dp && !_dp.painel.contains(e.target)) fecharSeletorData(); }
+/* a folha de baixo (lista no celular) fica sempre acima do teclado, se ele ainda estiver aberto */
+function slAjustarAoTeclado(){
+  if (!_sl || innerWidth > 640 || !window.visualViewport) return;
+  const vv = visualViewport, baixo = Math.max(0, innerHeight - vv.height - vv.offsetTop);
+  _sl.painel.style.setProperty('bottom', baixo + 'px', 'important');
+  _sl.painel.style.maxHeight = Math.round(Math.min(vv.height * 0.8, innerHeight * 0.7)) + 'px';
 }
 
 /* ── listas (select) ── */
@@ -50089,10 +50145,10 @@ function fecharSeletorLista(){
   if (!_sl) return;
   _sl.painel.remove(); if (_sl.fundo) _sl.fundo.remove(); _sl = null;
   document.removeEventListener('pointerdown', slFora, true); document.removeEventListener('keydown', slTecla, true);
-  window.removeEventListener('resize', fecharSeletorLista); window.removeEventListener('scroll', slRolou, true);
+  window.removeEventListener('resize', slRedim); window.removeEventListener('scroll', slRolou, true); if (window.visualViewport) visualViewport.removeEventListener('resize', slAjustarAoTeclado);
 }
 function slFora(e){ if (_sl && !_sl.painel.contains(e.target) && e.target !== _sl.sel) fecharSeletorLista(); }
-function slRolou(e){ if (_sl && !_sl.painel.contains(e.target)) fecharSeletorLista(); }
+function slRolou(e){ if (janelaRecente() || (_sl && _sl.fundo)) return; if (_sl && !_sl.painel.contains(e.target)) fecharSeletorLista(); }
 function slTecla(e){
   if (!_sl) return;
   const ops = [..._sl.painel.querySelectorAll('.tsl-op:not(:disabled)')].filter(b => !b.hidden);
@@ -50108,6 +50164,7 @@ function slEscolher(sel, v){
 }
 function abrirSeletorLista(sel){
   if (_sl && _sl.sel === sel){ fecharSeletorLista(); return; }
+  fecharTecladoAntes();
   fecharSeletorLista(); if (typeof fecharSeletorData === 'function') fecharSeletorData(); fecharSeletorHora();
   if (typeof ordenarSelect === 'function') try{ ordenarSelect(sel); }catch(e){}
   const rot = ((sel.closest('.campo') || {}).querySelector ? (sel.closest('.campo').querySelector('label') || {}).textContent : '') || sel.getAttribute('aria-label') || 'Escolha';
@@ -50137,7 +50194,8 @@ function abrirSeletorLista(sel){
   }
   const on = painel.querySelector('.tsl-op.on'); if (on){ on.classList.add('foco'); on.scrollIntoView({block:'nearest'}); }
   document.addEventListener('pointerdown', slFora, true); document.addEventListener('keydown', slTecla, true);
-  window.addEventListener('resize', fecharSeletorLista); window.addEventListener('scroll', slRolou, true);
+  window.addEventListener('resize', slRedim); window.addEventListener('scroll', slRolou, true);
+  if (window.visualViewport){ visualViewport.addEventListener('resize', slAjustarAoTeclado); slAjustarAoTeclado(); }
 }
 (function ligarSeletores(){
   const usa = s => s && s.tagName === 'SELECT' && !s.multiple && !(s.size > 1) && !s.disabled && !s.dataset.nativo;
