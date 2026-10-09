@@ -11417,7 +11417,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 09:30';
+const BUILD = '2026-10-14 17:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12233,6 +12233,7 @@ const PROG_HOTEL  = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'hotel');
 const CATEGORIAS_MURAL = {
   alerta:    {n:'Alertas importantes', ico:'i-alerta'},
   compras:   {n:'Compras bonificadas', ico:'i-sacola'},
+  pontos:    {n:'Compra de pontos',    ico:'i-dinheiro'},
   passagens: {n:'Passagens aéreas',    ico:'i-aviao'},
   cashback:  {n:'Cashback',            ico:'i-dinheiro'}
 };
@@ -19322,20 +19323,37 @@ function votarMural(id, v){
 
 /* ── leitura de anúncios de grupo ─────────────────────────────────────────── */
 const SEM_EMOJI = t => String(t).replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u2640\u2642\uFE0F\u200D\u20E3]/gu, '').replace(/[*_~]/g, '').replace(/\s+/g, ' ').trim();
-const RUIDO_ANUNCIO = /^(leia o regulamento|grave a operaç[ãa]o|confira o regulamento.*|link da (promoç[ãa]o|oferta):?|passo a passo:?|regras e informaç[õo]es importantes:?|detalhes da promoç[ãa]o:?|classificaç[ãa]o.*)$/i;
+const RUIDO_ANUNCIO = /^(leia o regulamento|grave a operaç[ãa]o|confira o regulamento.*|link da (promoç[ãa]o|oferta|parceria):?|compre pontos( presente)?|[^:]{2,38}:|passo a passo:?|regras e informaç[õo]es importantes:?|detalhes da promoç[ãa]o:?|classificaç[ãa]o.*)$/i;
 
 function lerAnuncios(texto){
   const linhas = String(texto || '').replace(/\r/g, '').split('\n');
   const blocos = []; let atual = [];
-  linhas.forEach(l => {
+  /* Novo anúncio: o alto-falante (🔊 📣 📢) sempre abre um. A sirene (🚨) é
+     ambígua: os grupos também a usam em cada linha das REGRAS de um anúncio
+     (09/10/2026: um Hilton com seis regras virava sete anúncios). Ela só abre
+     um anúncio novo quando vem depois de duas linhas em branco (o espaço entre
+     mensagens) ou quando logo abaixo dela vem o prazo da oferta. */
+  const prazoPerto = i => { let n = 0; for (let j = i + 1; j < linhas.length && n < 3; j++){ const t = linhas[j].trim(); if (!t) continue; n++;
+    if (/^(🔊|📣|📢|🚨)/u.test(t)) return false;
+    if (/^(⏱|⌛|⏳|🗓|📅)/u.test(t) || (/\b(at[eé]|v[aá]lid)/i.test(t) && /\d{1,2}\/\d{1,2}/.test(t) && t.length < 60)) return true; } return false; };
+  let brancas = 0;
+  linhas.forEach((l, i) => {
     const t = l.trim();
-    /* Novo anúncio começa numa linha de sirene ou alto-falante, o jeito dos grupos
-       abrirem uma oferta — desde que o bloco atual já tenha conteúdo. */
-    if (/^(🚨|🔊|📣|📢)/u.test(t) && atual.some(x => x.trim())) { blocos.push(atual); atual = []; }
+    const abre = /^(🔊|📣|📢)/u.test(t) || (/^🚨/u.test(t) && (brancas >= 2 || prazoPerto(i)));
+    if (abre && atual.some(x => x.trim())) { blocos.push(atual); atual = []; }
     atual.push(l);
+    brancas = t ? 0 : brancas + 1;
   });
   if (atual.some(x => x.trim())) blocos.push(atual);
-  return blocos.map(lerUmAnuncio).filter(a => a && a.titulo);
+  /* o mesmo anúncio colado duas vezes no mesmo texto entra uma vez só (fica o
+     mais completo) */
+  const out = [];
+  blocos.map(lerUmAnuncio).filter(a => a && a.titulo).forEach(a => {
+    const k = SEM_EMOJI(a.titulo).toLowerCase() + '|' + (a.fim || '');
+    const i = out.findIndex(x => SEM_EMOJI(x.titulo).toLowerCase() + '|' + (x.fim || '') === k);
+    if (i < 0) out.push(a); else if (a.condicoes.length > out[i].condicoes.length) out[i] = a;
+  });
+  return out;
 }
 
 function lerUmAnuncio(bloco){
@@ -19354,9 +19372,15 @@ function lerUmAnuncio(bloco){
   const baixo = texto.toLowerCase();
   let destaque = '';
   const md = [/até\s*([\d.,]+)\s*%\s*de\s*b[oô]nus/i, /([\d.,]+)\s*%\s*de\s*b[oô]nus/i, /até\s*([\d.,]+)\s*(milhas|pontos)\s*por\s*real/i,
-              /até\s*([\d.,]+)\s*%\s*de\s*desconto/i, /até\s*([\d.]+)\s*pontos\s*b[oô]nus/i];
+              /até\s*([\d.,]+)\s*%\s*de\s*desconto/i, /([\d.,]+)\s*%\s*de\s*desconto/i, /até\s*([\d.]+)\s*pontos\s*b[oô]nus/i];
   for (const r of md){ const x = texto.match(r); if (x){ destaque = SEM_EMOJI(x[0]).toLowerCase(); break; } }
+  /* "até 16x1" ou "16 pontos por real": o maior número de pontos por real */
+  if (!destaque){
+    const pr = [...texto.matchAll(/(\d{1,2})\s*(?:pontos?|milhas?)\s*por\s*real/gi)].map(x => +x[1]).concat([...texto.matchAll(/at[eé]\s*(\d{1,2})\s*x\s*1\b/gi)].map(x => +x[1]));
+    if (pr.length) destaque = `até ${Math.max(...pr)} pontos por real`;
+  }
   const cat = /cashback/.test(baixo) ? 'cashback'
+    : /compra\s+de\s+(pontos|milhas)|comprar\s+(pontos|milhas)|compre\s+pontos/.test(baixo) && !/(pontos|milhas)\s*por\s*real/.test(baixo) ? 'pontos'
     : /(milhas|pontos)\s*por\s*real|acumule|cr[eé]ditos?\s+uber|magalu|shopping|loja parceira/.test(baixo) ? 'compras'
     : /passage(m|ns)\s+(a[eé]rea|para|a partir)|ida e volta|trechos?\s|voos?\s+(para|a partir)/.test(baixo) ? 'passagens' : 'alerta';
   /* Tira só o marcador do passo ("2️⃣ Cadastre-se") — um dígito solto no começo
@@ -19366,7 +19390,7 @@ function lerUmAnuncio(bloco){
     .map(l => SEM_EMOJI(l.replace(/^\s*\d\uFE0F?\u20E3\s*/u, '')).replace(/^[-•·]+\s*/, '').trim())
     .filter(l => l && !RUIDO_ANUNCIO.test(l) && !/https?:\/\//.test(l)
       && !(/(até|válid[oa]s?)/i.test(l) && /\d{1,2}\/\d{1,2}/.test(l) && l.length < 60))
-    .filter(l => l.length > 3).slice(0, 14);
+    .filter(l => l.length > 3).slice(0, 24);
   /* Transferência bonificada reconhecível vira sugestão de campanha. */
   let sugestao = null;
   const mt = SEM_EMOJI(texto).match(/transfer[eê]ncia\s+de\s+pontos\s+(.+?)\s+para\s+(?:a\s+|o\s+)?([A-Za-zÀ-ú&. ]+?)(?:\s*$|\s*[\n(]|\s+at[eé]|\s+com)/im);
@@ -19377,9 +19401,27 @@ function lerUmAnuncio(bloco){
     const de = acha(mt[1]), para = acha(mt[2]);
     if (de && para && de !== para) sugestao = {tipo:'transferencia', de, para, bonus:Number(mb[1].replace(',', '.'))};
   }
-  return {titulo, fim, links, link:links[0] || '', magos, destaque, cat, condicoes, sugestao};
+  /* Compra de pontos com desconto ou bônus vira sugestão de campanha de compra.
+     O preço do milheiro só entra quando a mensagem o diz em reais. */
+  if (!sugestao && cat === 'pontos'){
+    const tl = SEM_EMOJI(texto).toLowerCase();
+    const para = Object.keys(PROGRAMAS).filter(k => k !== 'outro').sort((a, b) => prog(b).n.length - prog(a).n.length)
+      .find(k => tl.includes(prog(k).n.toLowerCase())) || null;
+    const desc = texto.match(/(\d{1,2}(?:[.,]\d+)?)\s*%\s*de\s*desconto/i), bon = texto.match(/(?:até\s*)?(\d{1,3}(?:[.,]\d+)?)\s*%\s*de\s*b[oô]nus/i);
+    const pm = texto.match(/(?:pre[cç]o\s+do\s+)?milheiro[^\n\d]{0,20}R\$\s*(\d{1,3}(?:[.,]\d{2})?)/i);
+    if (para && (desc || bon)) sugestao = {tipo:'compra', para, bonus:bon ? Number(bon[1].replace(',', '.')) : 0, desconto:desc ? Number(desc[1].replace(',', '.')) : 0,
+      carrinho:pm ? Number(pm[1].replace('.', '').replace(',', '.')) : 0};
+  }
+  /* o link principal é a página da oferta, não o PDF do regulamento */
+  const link = links.find(u => !/\.pdf(\?|$)/i.test(u) && !/regulament/i.test(u)) || links[0] || '';
+  return {titulo, fim, links, link, magos, destaque, cat, condicoes, sugestao};
 }
 
+function rotuloSugestao(sg){
+  if (!sg) return '';
+  if (sg.tipo === 'compra') return `vira campanha de compra: ${prog(sg.para).n}${sg.desconto ? `, ${nBRdec(sg.desconto)}% de desconto` : ''}${sg.bonus ? `, ${nBRdec(sg.bonus)}% de bônus` : ''}${sg.carrinho ? `, milheiro ${brl2(sg.carrinho)}` : ''}`;
+  return `vira campanha: ${prog(sg.de).n} → ${prog(sg.para).n}, ${nBRdec(sg.bonus)}%`;
+}
 let anunciosLidos = [];
 function abrirColarMural(){
   anunciosLidos = [];
@@ -19413,7 +19455,7 @@ function previaAnuncios(){
           ${a.destaque ? `<span class="etq ouro">${esc(a.destaque)}</span>` : ''}
           ${a.magos ? `<span class="mr-magos" title="Classificação do anúncio">${'🧙'.repeat(a.magos)}</span>` : ''}
           <span class="fraco">${a.condicoes.length} condições · ${a.links.length} link${a.links.length === 1 ? '' : 's'}</span>
-          ${a.sugestao ? `<span class="etq anil">vira campanha: ${esc(prog(a.sugestao.de).n)} → ${esc(prog(a.sugestao.para).n)}, ${nBRdec(a.sugestao.bonus)}%</span>` : ''}
+          ${a.sugestao ? `<span class="etq anil">${esc(rotuloSugestao(a.sugestao))}</span>` : ''}
         </div>
       </div>
     </div>`).join('');
@@ -19450,9 +19492,11 @@ function virarCampanha(id){
   editarCampanha(null, sg.tipo);
   setTimeout(() => {
     const val = (sel, v) => { const el = $(sel); if (el && v != null){ el.value = v; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
-    val('#cpTipo', sg.tipo); val('#cpDe', sg.de); val('#cpPara', sg.para);
+    val('#cpTipo', sg.tipo); if (sg.de) val('#cpDe', sg.de); val('#cpPara', sg.para);
     setTimeout(() => {
-      val('#cpBonus', String(sg.bonus).replace('.', ','));
+      val('#cpBonus', String(sg.bonus || 0).replace('.', ','));
+      if (sg.desconto) val('#cpDesc', String(sg.desconto));
+      if (sg.carrinho && $('#cpCarrinho')) val('#cpCarrinho', moedaTxt(sg.carrinho));
       val('#cpFim', m.fim); val('#cpLink', m.link); val('#cpTit', m.titulo);
       val('#cpRegra', String(m.texto || '').split('\n').filter(Boolean).map(l => /[.!?]$/.test(l) ? l : l + '.').join(' '));
       avisar('Campanha preenchida a partir do anúncio. Confira e salve.', 'ok', 5000);
