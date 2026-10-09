@@ -9513,6 +9513,50 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .cq-ajuda ol{ margin:6px 0 10px 20px; padding:0; line-height:1.6; }
 .cq-ajuda .bt{ text-decoration:none; }
 </style>
+<style>
+/* ── avisos: ações na própria linha ── */
+.av-item{ position:relative; touch-action:pan-y; }
+.av-acoes{ display:flex; gap:4px; flex:0 0 auto; opacity:0; transform:translateX(4px); transition:opacity .16s var(--ease), transform .16s var(--ease); }
+.av-item:hover .av-acoes, .av-item:focus-within .av-acoes{ opacity:1; transform:none; }
+@media (hover:none){ .av-acoes{ opacity:.8; transform:none; } }
+/* no computador os botões aparecem por cima da ponta direita do aviso, sem roubar
+   largura do texto (que antes quebrava mais cedo por causa deles) */
+@media (hover:hover){
+  .av-item .av-acoes{ position:absolute; right:10px; top:50%; transform:translate(6px, -50%); padding:5px; border-radius:12px;
+    background:var(--sup-1); box-shadow:-14px 0 18px -6px var(--sup-1), 0 6px 18px rgba(0,0,0,.18); pointer-events:none; }
+  .av-item:hover .av-acoes, .av-item:focus-within .av-acoes{ transform:translate(0, -50%); pointer-events:auto; }
+}
+.av-bt{ width:30px; height:30px; display:grid; place-items:center; border-radius:9px; border:1px solid var(--fio); background:var(--sup-0); color:var(--grafite); cursor:pointer; transition:.15s var(--ease); }
+.av-bt svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.av-bt:hover{ border-color:var(--ouro); color:var(--ouro); background:var(--lavagem-ouro); }
+.av-bt.ok:hover{ border-color:var(--jade); color:var(--jade); background:color-mix(in oklab, var(--jade) 12%, transparent); }
+.av-bt.nao:hover{ border-color:var(--brasa); color:var(--brasa); background:var(--lavagem-brasa); }
+@media (max-width:560px){ .av-item .av-acoes{ margin-left:auto; } .av-item .av-seta{ display:none; } }
+.av-item.av-saindo{ animation:avSai .26s var(--ease) forwards; pointer-events:none; }
+@keyframes avSai{ to{ opacity:0; transform:translateX(24px); max-height:0; padding-top:0; padding-bottom:0; margin:0; border-width:0; } }
+.av-item.av-puxa-ok{ box-shadow:inset 6px 0 0 var(--jade); background:color-mix(in oklab, var(--jade) 10%, var(--sup-0)); }
+.av-item.av-puxa-nao{ box-shadow:inset -6px 0 0 var(--brasa); background:color-mix(in oklab, var(--brasa) 10%, var(--sup-0)); }
+.av-op-i{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; opacity:.7; }
+.av-desfazer{ position:fixed; left:0; right:0; margin:0 auto; width:fit-content; bottom:calc(22px + env(safe-area-inset-bottom, 0px)); z-index:1470; display:flex; align-items:center; gap:14px;
+  max-width:min(560px, calc(100vw - 24px)); padding:10px 10px 10px 16px; border-radius:14px; background:var(--sup-0); border:1px solid var(--fio-forte); color:var(--giz);
+  box-shadow:0 18px 44px rgba(0,0,0,.34); font-size:calc(13.5px * var(--esc)); line-height:1.4; animation:avEntra .2s var(--ease); }
+.av-desfazer span{ flex:1; min-width:0; }
+.av-desfazer button{ flex:0 0 auto; border:1px solid var(--ouro); background:transparent; color:var(--ouro); border-radius:9px; padding:7px 13px; font:600 calc(13px * var(--esc))/1 var(--f-b); cursor:pointer; }
+.av-desfazer button:hover{ background:var(--lavagem-ouro); }
+.av-desfazer.saindo{ opacity:0; transform:translateY(10px); transition:.25s var(--ease); }
+@keyframes avEntra{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+@media (max-width:860px){ .av-desfazer{ bottom:calc(84px + env(safe-area-inset-bottom, 0px)); width:calc(100vw - 24px); } }
+.av-rodape{ display:flex; align-items:center; gap:8px; width:100%; margin-top:4px; padding:9px 12px; border:1px dashed var(--fio-forte); border-radius:var(--r); background:transparent; color:var(--grafite); font:500 calc(12.5px * var(--esc))/1.3 var(--f-b); cursor:pointer; text-align:left; }
+.av-rodape svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; opacity:.8; }
+.av-rodape span{ margin-left:auto; color:var(--ouro); font-weight:600; }
+.av-rodape:hover{ border-color:var(--ouro); color:var(--giz); }
+.av-grupo{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+.av-grupo-cab{ display:flex; align-items:center; gap:8px; font:600 calc(11px * var(--esc))/1 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
+.av-grupo-cab svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; }
+.av-grupo-cab b{ margin-left:auto; color:var(--giz); }
+.av-oc .bt{ flex:0 0 auto; }
+@media (max-width:560px){ .av-oc .bt{ margin-left:auto; } }
+</style>
 </head>
 <body>
 <script>
@@ -11373,7 +11417,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 00:10';
+const BUILD = '2026-10-14 09:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15630,7 +15674,7 @@ function avisos(){
   campanhasVivas().forEach(c => {
     const dias = diasAte(c.fim);
     if (dias !== null && dias <= 3){
-      L.push({ grau: dias <= 1 ? 2 : 1, tipo:'campanha', dias,
+      L.push({ grau: dias <= 1 ? 2 : 1, tipo:'campanha', dias, ref:'camp:' + c.id, fim:c.fim || '',
         t:c.titulo, s:`Fecha ${prazoTexto(dias)}${c.para ? ' · destino ' + prog(c.para).n : ''}`, ir:['fabrica','fb-campanhas'] });
     }
   });
@@ -15642,6 +15686,7 @@ function avisos(){
     const dias = diasAte(j.fim);
     if (dias !== null && dias < 0) return;
     L.push({ grau: dias === null ? 1 : dias <= 0 ? 3 : dias <= 3 ? 2 : 1, tipo:'janela', dias,
+      ref:'jan:' + j.prog + ':' + ((j.rota && j.rota.camp && j.rota.camp.id) || ''), fim:j.fim || '',
       curto:`Janela do ${prog(j.prog).n}`,
       t:`${prog(j.prog).n} sai a ${brl2(j.cpm)} o milheiro`,
       s:`${j.rota.via} · ${j.rota.detalhe}` +
@@ -15744,7 +15789,7 @@ function avisos(){
        de sempre daquela loja e vai continuar lá amanhã */
     if (dias === null && !x.melhor.emPromo && x.d.prioridade < 3) return;
     L.push({ grau: dias === null ? (x.d.prioridade >= 3 ? 2 : 1) : dias <= 0 ? 3 : dias <= 2 ? 2 : 1,
-      tipo:'desejo', dias,
+      tipo:'desejo', dias, ref:'desejo:' + (x.d.id || x.d.n) + ':' + x.melhor.loja.n, fim:x.melhor.fim || '',
       t:`Hora de comprar: ${x.d.n}, ${nBRdec(x.melhor.mult)} pts/R$ em ${x.melhor.loja.n}`,
       s:`${brl(x.d.valor)} devolvem ${brl(x.melhor.retorno)} em ${prog(x.melhor.loja.prog).n}, ${pct(x.melhor.pc, 1)} do preço` +
         ` · alvo era ${x.d.alvoTipo === 'mult' ? x.d.alvo + '×' : pct(x.d.alvo, 0)}` +
@@ -15756,7 +15801,7 @@ function avisos(){
     const dias = diasAte(l.fim);
     if (dias !== null && dias <= 2){
       const t = tetoLoja(l);
-      L.push({ grau:1, tipo:'loja', dias,
+      L.push({ grau:1, tipo:'loja', dias, ref:'loja:' + (l.id || l.n) + ':' + (l.fim || ''), fim:l.fim || '',
         curto:`${l.n} a ${t.promo}×`,
         t:`${l.n} a ${t.promo}×${t.cat !== 'geral' ? ' em ' + t.cat : ''} fecha ${prazoTexto(dias)}`,
         s:`${prog(l.prog).n} · fora da promoção volta a ${t.base}×`, ir:['fabrica','fb-compras'] });
@@ -15807,7 +15852,7 @@ function avisos(){
   (DB.mural || []).filter(m => !m.lida).forEach(m => {
     const d = diasAte(m.fim);
     if (d === null || d < 0 || d > 7) return;
-    L.push({ grau: d === 0 ? 3 : d <= 3 ? 2 : 1, tipo:'mural', dias:d,
+    L.push({ grau: d === 0 ? 3 : d <= 3 ? 2 : 1, tipo:'mural', dias:d, ref:'mural:' + m.id, fim:m.fim || '',
       t:m.titulo,
       s:`${CATEGORIAS_MURAL[m.cat] ? CATEGORIAS_MURAL[m.cat].n : 'Oportunidade'}${m.pontuacao ? ' · ' + m.pontuacao : ''} · ${d === 0 ? 'termina hoje' : 'termina ' + prazoTexto(d)}`,
       ir:['fabrica','fb-mural'] });
@@ -17307,7 +17352,7 @@ function renderMesa(){
      listas na mesma tela, e ver a mesma campanha duas vezes faz parecer que são
      duas oportunidades diferentes */
   const jaSugeridas = idsSugeridos();
-  const janelas = campanhasVivas().filter(c => !jaSugeridas.has(c.id)).slice(0, 6);
+  const janelas = campanhasVivas().filter(c => !jaSugeridas.has(c.id) && !avisoEscondido('camp:' + c.id)).slice(0, 6);
   $('#mesaJanelas').innerHTML = janelas.length ? janelas.map(c => {
     const dias = diasAte(c.fim);
     /* clube não tem bônus percentual: o que decide a adesão é o milheiro da
@@ -17324,12 +17369,14 @@ function renderMesa(){
        degrau de prazo continua existindo — jade cheio para o que fecha nos
        próximos dias, jade apagado para o que ainda tem folga —, só não muda
        mais de cor. */
-    return `<div class="item ok${dias > 5 ? ' suave' : ''}" style="cursor:pointer" onclick="abrirCampanhasEm('${c.tipo}')">
+    const avJ = {ref:'camp:' + c.id, tipo:'campanha', t:c.titulo, s:`${c.de ? prog(c.de).n + ' → ' : ''}${prog(c.para).n}`, fim:c.fim || '', dias};
+    return `<div class="item ok${dias > 5 ? ' suave' : ''} av-item" data-av="${esc(avJ.ref)}" style="cursor:pointer" onclick="abrirCampanhasEm('${c.tipo}')">
       <div class="item-corpo">
         <div class="item-tit">${esc(c.titulo)}</div>
         <div class="item-sub">${c.de ? esc(prog(c.de).n) + ' → ' : ''}${esc(prog(c.para).n)} · fecha ${prazoTexto(dias)}</div>
       </div>
       <div class="item-num" style="color:var(--ouro)">${numero}<small>${rotuloNumero}</small></div>
+      ${acoesAvisoHTML(avJ)}
     </div>`;
   /* Duas linhas, não uma frase corrida: a primeira constata, a segunda ensina o
      caminho. Emendadas, o "Cadastre em" some no meio do parágrafo e a instrução
@@ -17421,7 +17468,7 @@ function linhaAviso(a){
      significa prazo curto de verdade. */
   const classe = passou ? 'hoje passou' : a.grau === 3 ? 'hoje' : a.grau === 2 ? 'breve' : 'brando';
   const diasFora = passou ? Math.abs(a.dias) : 0;
-  return `<div class="item ${classe}" style="cursor:pointer" onclick="fecharFolha();irPara('${a.ir[0]}');irParaAba('${a.ir[0]}','${a.ir[1]}');${a.fn || ''}">
+  return `<div class="item ${classe} av-item" data-av="${esc(chaveAviso(a))}" style="cursor:pointer" onclick="fecharFolha();irPara('${a.ir[0]}');irParaAba('${a.ir[0]}','${a.ir[1]}');${a.fn || ''}">
     <div class="item-corpo">
       <div class="item-tit">${esc(a.t)}${a.grau === 3
         ? `<span class="etq brasa"><i class="ponto pulsa"></i>${
@@ -17437,7 +17484,8 @@ function linhaAviso(a){
       ${String(a.s).split('\n').filter(l => l.trim()).map((l, i) =>
         `<div class="item-sub">${i === 0 && a.si ? `<svg class="item-sub-i"><use href="${a.si}"/></svg>` : ''}${esc(l.trim())}</div>`).join('')}
     </div>
-    <svg style="width:15px;height:15px;fill:none;stroke:var(--grafite-dim);stroke-width:1.8"><use href="#i-seta-d"/></svg>
+    ${acoesAvisoHTML(a)}
+    <svg class="av-seta" style="width:15px;height:15px;fill:none;stroke:var(--grafite-dim);stroke-width:1.8"><use href="#i-seta-d"/></svg>
   </div>`;
 }
 
@@ -50299,6 +50347,194 @@ function alinharChecklist(raiz){
     document.querySelectorAll('.pl-fio').forEach(f => { if (!f.dataset.vigia){ f.dataset.vigia = '1'; ro.observe(f); } });
   };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => alinharChecklist());
+})();
+</script>
+<script>
+/* ══ AVISOS: JÁ APROVEITEI · LEMBRAR DEPOIS · NÃO ME INTERESSA (09/10/2026) ═══
+   O padrão das melhores caixas de entrada (Gmail, Linear, Todoist): cada aviso
+   se resolve ali mesmo, sem abrir nada.
+   · Já aproveitei / Já resolvi: some e fica registrado (a campanha da Magalu que
+     você já usou não volta a aparecer).
+   · Lembrar depois: some até amanhã cedo, daqui a 3 dias, na semana que vem ou
+     na véspera do fim da campanha, e volta sozinho.
+   · Não me interessa: some de vez.
+   Toda ação tem "Desfazer" por alguns segundos, e nada se perde: a lista
+   "Ocultos e adiados" mostra tudo e devolve qualquer item com um toque. No
+   celular, arrastar o aviso para a direita marca "Já aproveitei" e para a
+   esquerda, "Não me interessa". Vale para o Painel, "O que fazer hoje", a
+   Central de avisos e todos os contadores, que passam a contar só o que ainda
+   pede você. */
+const AV_OPORT = new Set(['campanha', 'janela', 'mural', 'loja', 'desejo']);
+let _avMapa = {}, _avListaAberta = null;
+function avEstado(){ DB.avisosEstado = DB.avisosEstado || {}; return DB.avisosEstado; }
+function chaveAviso(a){
+  if (a.ref) return a.ref;
+  return (a.tipo || 'aviso') + '|' + String(a.t || '').replace(/\(faltam[^)]*\)/gi, '').replace(/\d+\s*(dias?|h|horas?|min)\b/gi, '#').replace(/\b(hoje|amanhã|ontem)\b/gi, '#').replace(/\s+/g, ' ').trim();
+}
+function avisoEscondido(k){
+  const e = avEstado()[k]; if (!e) return false;
+  if (e.acao === 'adiado') return e.ate && Date.now() < new Date(e.ate).getTime();
+  return true;
+}
+/* limpeza: adiado vencido sai; o resto sai 30 dias depois do fim da campanha,
+   ou 180 dias depois da ação quando não há data de fim */
+function avLimpar(){
+  const st = avEstado(), agora = Date.now(); let mudou = false;
+  Object.keys(st).forEach(k => { const e = st[k];
+    const velho = e.acao === 'adiado' ? (e.ate && agora > new Date(e.ate).getTime())
+      : e.fim ? agora > new Date(e.fim + 'T23:59:59').getTime() + 30 * 864e5 : agora > (e.em || 0) + 180 * 864e5;
+    if (velho){ delete st[k]; mudou = true; } });
+  return mudou;
+}
+const avRotFeito = a => AV_OPORT.has(a.tipo) ? 'Já aproveitei' : 'Já resolvi';
+function acoesAvisoHTML(a){
+  const k = chaveAviso(a); _avMapa[k] = a;
+  const ka = esc(k).replace(/'/g, '&#39;');
+  return `<div class="av-acoes" onclick="event.stopPropagation()">
+    <button type="button" class="av-bt ok" onclick="avAgir('${ka}','feito',this)" data-dica="${avRotFeito(a)}" aria-label="${avRotFeito(a)}"><svg><use href="#i-ok"/></svg></button>
+    <button type="button" class="av-bt" onclick="avMenuAdiar('${ka}',this)" data-dica="Lembrar depois" aria-label="Lembrar depois"><svg><use href="#i-relogio"/></svg></button>
+    <button type="button" class="av-bt nao" onclick="avAgir('${ka}','oculto',this)" data-dica="Não me interessa" aria-label="Não me interessa"><svg><use href="#i-olho-fechado"/></svg></button>
+  </div>`;
+}
+const AV_ACAO_TXT = {feito:'Marcado como aproveitado', oculto:'Ocultado', adiado:'Adiado'};
+function avAgir(k, acao, el, ate, rotAte){
+  const a = _avMapa[k] || {};
+  const st = avEstado(), antes = st[k] ? {...st[k]} : null;
+  st[k] = {acao, em:Date.now(), t:a.t || '', s:String(a.s || '').split('\n')[0], tipo:a.tipo || '', fim:a.fim || '', ...(ate ? {ate} : {}), ...(rotAte ? {rotAte} : {})};
+  /* o Mural tem o próprio "lida": marcar aproveitado também a marca lá */
+  if (acao === 'feito' && String(k).startsWith('mural:')){ const m = (DB.mural || []).find(x => 'mural:' + x.id === k); if (m) m.lida = true; }
+  salvar();
+  const item = el && el.closest ? el.closest('.av-item') : null;
+  const fim = () => avRedesenhar();
+  if (item){ item.classList.add('av-saindo', 'av-' + acao); setTimeout(fim, 260); } else fim();
+  const nome = esc((a.curto || a.t || 'Aviso').slice(0, 60));
+  avDesfazer(`${AV_ACAO_TXT[acao]}${acao === 'adiado' && rotAte ? ' até ' + esc(rotAte) : ''}: <b>${nome}</b>`, () => {
+    if (antes) st[k] = antes; else delete st[k];
+    if (acao === 'feito' && String(k).startsWith('mural:')){ const m = (DB.mural || []).find(x => 'mural:' + x.id === k); if (m) m.lida = false; }
+    salvar(); avRedesenhar();
+  });
+}
+function avRedesenhar(){
+  try { if (typeof renderMesa === 'function') renderMesa(); } catch(e){ console.error(e); }
+  try { if (typeof renderFita === 'function') renderFita(); } catch(e){}
+  try { if (typeof montarColunaMenu === 'function'){ try { _marcaColuna = ''; } catch(_){} montarColunaMenu(); } } catch(e){}
+  try { const bh = document.querySelector('#btHoje'); if (bh){ const n = avisos().length; let c = bh.querySelector('.cont'); if (!n){ if (c) c.remove(); } else { if (!c){ c = document.createElement('span'); c.className = 'cont'; bh.appendChild(c); } c.textContent = n; } } } catch(e){}
+  try { if (typeof renderMural === 'function' && document.querySelector('#v-fabrica')) renderMural(); } catch(e){}
+  if (_avListaAberta && document.querySelector('#veu.aberto')){ const f = _avListaAberta; f(); }
+}
+/* barra de desfazer: no rodapé, nas cores do sistema, some sozinha */
+function avDesfazer(html, desfazer){
+  document.querySelectorAll('.av-desfazer').forEach(x => x.remove());
+  const el = document.createElement('div'); el.className = 'av-desfazer'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${html}</span><button type="button">Desfazer</button>`;
+  document.body.appendChild(el);
+  let t = setTimeout(() => sair(), 7000);
+  const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 250); };
+  el.querySelector('button').onclick = () => { clearTimeout(t); sair(); desfazer(); avisar('Desfeito: o aviso voltou.', 'ok', 2200); };
+}
+/* lembrar depois: o menu com as datas, no mesmo estilo das listas do sistema */
+function avMenuAdiar(k, btn){
+  const a = _avMapa[k] || {};
+  if (typeof fecharSeletorLista === 'function') fecharSeletorLista();
+  document.querySelectorAll('.av-menu, .av-menu-fundo, .av-desfazer').forEach(x => x.remove());
+  const as8 = d => { const x = new Date(d); x.setHours(8, 0, 0, 0); return x; };
+  const hoje = new Date(), ops = [];
+  const amanha = as8(new Date(hoje.getTime() + 864e5));
+  ops.push(['Amanhã cedo', amanha, 'amanhã']);
+  const tres = as8(new Date(hoje.getTime() + 3 * 864e5)); ops.push([`Em 3 dias (${tres.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit'})})`, tres, tres.toLocaleDateString('pt-BR').slice(0, 5)]);
+  const sem = as8(new Date(hoje.getTime() + 7 * 864e5)); ops.push(['Na semana que vem', sem, sem.toLocaleDateString('pt-BR').slice(0, 5)]);
+  if (a.fim){ const v = as8(new Date(a.fim + 'T12:00:00')); v.setDate(v.getDate() - 1);
+    if (v.getTime() - Date.now() > 20 * 36e5 && Math.abs(v - tres) > 864e5 / 2) ops.splice(1, 0, [`Na véspera do fim (${v.toLocaleDateString('pt-BR').slice(0, 5)})`, v, v.toLocaleDateString('pt-BR').slice(0, 5)]); }
+  /* nada de lembrar depois que a campanha já fechou: com prazo curto, entram
+     "daqui a 3 horas" e "hoje às 19h", e somem as datas além do fim */
+  if (a.fim){
+    const limite = new Date(a.fim + 'T23:59:59').getTime();
+    for (let i = ops.length - 1; i >= 0; i--) if (ops[i][1].getTime() > limite) ops.splice(i, 1);
+    const h19 = new Date(); h19.setHours(19, 0, 0, 0);
+    if (h19.getTime() - Date.now() > 36e5 && h19.getTime() <= limite) ops.unshift(['Hoje às 19h', h19, 'hoje às 19h']);
+    const t3 = new Date(Date.now() + 3 * 36e5); t3.setMinutes(0, 0, 0);
+    if (t3.getTime() <= limite && Math.abs(t3 - h19) > 36e5) ops.unshift([`Daqui a 3 horas (${String(t3.getHours()).padStart(2, '0')}h)`, t3, `${String(t3.getHours()).padStart(2, '0')}h`]);
+  }
+  if (!ops.length){ avisar('A campanha fecha em menos de 3 horas: decida agora ou marque Não me interessa.', 'alerta'); return; }
+  const painel = document.createElement('div'); painel.className = 'tsl av-menu'; painel.setAttribute('role', 'menu');
+  painel.innerHTML = `<div class="tsl-cab"><span>Lembrar depois</span><button type="button" data-fechar>Fechar</button></div><div class="tsl-lista">${ops.map((o, i) => `<button type="button" class="tsl-op" data-i="${i}"><svg class="av-op-i"><use href="#i-relogio"/></svg>${esc(o[0])}</button>`).join('')}</div>`;
+  let fundo = null;
+  if (innerWidth <= 640){ fundo = document.createElement('div'); fundo.className = 'tsl-fundo av-menu-fundo'; document.body.appendChild(fundo); }
+  document.body.appendChild(painel);
+  const fechar = () => { painel.remove(); if (fundo) fundo.remove(); document.removeEventListener('pointerdown', fora, true); document.removeEventListener('keydown', esc_, true); };
+  const fora = e => { if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) fechar(); };
+  const esc_ = e => { if (e.key === 'Escape') fechar(); };
+  painel.querySelectorAll('.tsl-op').forEach(b => b.onclick = () => { const o = ops[+b.dataset.i]; fechar(); avAgir(k, 'adiado', btn, o[1].toISOString(), o[2]); });
+  painel.querySelector('[data-fechar]').onclick = fechar; if (fundo) fundo.onclick = fechar;
+  if (innerWidth > 640){
+    const r = btn.getBoundingClientRect(); const alt = painel.offsetHeight, larg = Math.max(painel.offsetWidth, 240);
+    painel.style.minWidth = '240px';
+    let topo = r.bottom + 6; if (topo + alt > innerHeight - 8) topo = Math.max(8, r.top - alt - 6);
+    let esq = r.right - larg; if (esq < 8) esq = 8;
+    painel.style.top = Math.round(topo) + 'px'; painel.style.left = Math.round(esq) + 'px';
+  }
+  setTimeout(() => { document.addEventListener('pointerdown', fora, true); document.addEventListener('keydown', esc_, true); }, 0);
+}
+/* a lista do que saiu da frente: devolve qualquer item */
+function abrirAvisosOcultos(){
+  avLimpar();
+  const st = avEstado(), ks = Object.keys(st).filter(k => avisoEscondido(k));
+  const grupos = [['adiado', 'Lembrar depois', 'i-relogio'], ['feito', 'Já aproveitados ou resolvidos', 'i-ok'], ['oculto', 'Não me interessa', 'i-olho-fechado']];
+  const quando = e => e.acao === 'adiado' ? 'volta ' + new Date(e.ate).toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit'}) + ' às ' + String(new Date(e.ate).getHours()).padStart(2, '0') + 'h' : 'em ' + new Date(e.em).toLocaleDateString('pt-BR').slice(0, 5);
+  const corpo = ks.length ? grupos.map(([ac, tit, ic]) => { const l = ks.filter(k => st[k].acao === ac).sort((x, y) => (st[y].em || 0) - (st[x].em || 0)); return l.length ? `<div class="av-grupo"><div class="av-grupo-cab"><svg><use href="#${ic}"/></svg>${tit}<b>${l.length}</b></div>${l.map(k => { const e = st[k];
+      return `<div class="item av-oc"><div class="item-corpo"><div class="item-tit">${esc(e.t || k)}</div><div class="item-sub">${esc(e.s || '')}${e.s ? ' · ' : ''}${quando(e)}</div></div><button type="button" class="bt p" onclick="avMostrar('${esc(k).replace(/'/g, '&#39;')}')"><svg><use href="#i-olho"/></svg>Mostrar de novo</button></div>`; }).join('')}</div>` : ''; }).join('')
+    : `<div class="vazio" style="border:0"><svg><use href="#i-ok"/></svg><h4>Nada oculto</h4><p>Os avisos que você marcar como aproveitados, adiar ou ocultar ficam aqui, para voltar quando quiser.</p></div>`;
+  _avListaAberta = abrirAvisosOcultos;
+  abrirFolha({titulo:'Ocultos e adiados', largura:'media', corpo:`<p class="fraco jn-sub">O que saiu da sua frente. Nada foi apagado: toque em "Mostrar de novo" para o aviso voltar ao Painel.</p>${corpo}`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>${ks.length > 1 ? '<button type="button" class="bt fantasma" onclick="avMostrarTodos()">Mostrar todos de novo</button>' : ''}`});
+}
+function avMostrar(k){ const st = avEstado(), e = st[k]; delete st[k]; if (e && e.acao === 'feito' && String(k).startsWith('mural:')){ const m = (DB.mural || []).find(x => 'mural:' + x.id === k); if (m) m.lida = false; } salvar(); avRedesenhar(); avisar('O aviso voltou ao Painel.', 'ok', 2200); }
+function avMostrarTodos(){ confirmar('Mostrar todos de novo?', 'Todos os avisos ocultos, adiados e aproveitados voltam ao Painel enquanto ainda valerem.', () => { DB.avisosEstado = {}; salvar(); avRedesenhar(); }, 'Mostrar todos'); }
+function avQtdOcultos(){ return Object.keys(avEstado()).filter(k => avisoEscondido(k)).length; }
+/* rodapé dos dois cartões do Painel com o atalho para os ocultos */
+function avRodapesPainel(){
+  const n = avQtdOcultos();
+  ['#mesaUrgente', '#mesaJanelas'].forEach(sel => {
+    const cx = document.querySelector(sel); if (!cx) return;
+    cx.querySelectorAll('.av-rodape').forEach(x => x.remove());
+    if (sel === '#mesaJanelas' && !cx.querySelector('.av-item') && n && Object.keys(avEstado()).some(k => k.startsWith('camp:') && avisoEscondido(k)))
+      cx.innerHTML = `<div class="nota jade"><svg><use href="#i-ok"/></svg><div>As campanhas daqui você já aproveitou, adiou ou ocultou.</div></div>`;
+    if (!n) return;
+    const r = document.createElement('button'); r.type = 'button'; r.className = 'av-rodape';
+    r.innerHTML = `<svg><use href="#i-olho-fechado"/></svg>${n} ${n === 1 ? 'aviso oculto ou adiado' : 'avisos ocultos ou adiados'}<span>Ver</span>`;
+    r.onclick = abrirAvisosOcultos; cx.appendChild(r);
+  });
+}
+/* arrastar no celular: direita = já aproveitei, esquerda = não me interessa */
+(function(){
+  let it = null, x0 = 0, y0 = 0, dx = 0, modo = null;
+  document.addEventListener('touchstart', e => {
+    const el = e.target.closest && e.target.closest('.av-item'); if (!el || e.target.closest('.av-acoes')) return;
+    it = el; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; modo = null;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (!it) return;
+    const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+    if (!modo){ if (Math.abs(mx) > 12 && Math.abs(mx) > Math.abs(my) * 1.3) modo = 'h'; else if (Math.abs(my) > 10) { modo = 'v'; it = null; return; } else return; }
+    dx = mx; it.style.transition = 'none'; it.style.transform = `translateX(${dx}px)`;
+    it.classList.toggle('av-puxa-ok', dx > 40); it.classList.toggle('av-puxa-nao', dx < -40);
+  }, {passive:true});
+  document.addEventListener('touchend', () => {
+    if (!it) return; const el = it; it = null;
+    el.style.transition = ''; const lim = Math.min(120, el.offsetWidth * 0.32);
+    if (modo === 'h' && Math.abs(dx) > lim){ el.style.transform = `translateX(${dx > 0 ? '110%' : '-110%'})`; el.dataset.arrastou = '1'; setTimeout(() => avAgir(el.dataset.av, dx > 0 ? 'feito' : 'oculto', null), 180); }
+    else { el.style.transform = ''; el.classList.remove('av-puxa-ok', 'av-puxa-nao'); }
+    if (modo === 'h') { const bloq = ev => { ev.stopPropagation(); ev.preventDefault(); }; el.addEventListener('click', bloq, {capture:true, once:true}); setTimeout(() => el.removeEventListener('click', bloq, true), 400); }
+  });
+})();
+/* ligação: avisos() passa a devolver só o que ainda pede você; o Painel ganha o
+   rodapé; as listas em janela lembram qual estava aberta para se redesenhar */
+(function(){
+  if (typeof avisos === 'function'){ const orig = avisos; window.avisosTodos = orig; avisos = function(){ if (avLimpar()) salvar(); return orig.apply(this, arguments).filter(a => !avisoEscondido(chaveAviso(a))); }; }
+  if (typeof renderMesa === 'function'){ const rm = renderMesa; renderMesa = function(){ const r = rm.apply(this, arguments); try { avRodapesPainel(); } catch(e){ console.error(e); } return r; }; }
+  if (typeof abrirHoje === 'function'){ const ah = abrirHoje; abrirHoje = function(){ _avListaAberta = abrirHoje; return ah.apply(this, arguments); }; }
+  if (typeof abrirAvisos === 'function'){ const aa = abrirAvisos; abrirAvisos = function(){ _avListaAberta = abrirAvisos; return aa.apply(this, arguments); }; }
+  if (typeof fecharFolha === 'function'){ const ff = fecharFolha; fecharFolha = function(){ _avListaAberta = null; document.querySelectorAll('.av-menu, .av-menu-fundo').forEach(x => x.remove()); return ff.apply(this, arguments); }; }
 })();
 </script>
 </body>
