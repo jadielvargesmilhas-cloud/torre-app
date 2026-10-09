@@ -9557,6 +9557,43 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .av-oc .bt{ flex:0 0 auto; }
 @media (max-width:560px){ .av-oc .bt{ margin-left:auto; } }
 </style>
+<style>
+/* veredito pessoal de cada anúncio */
+.mr-vered{ margin:10px 0 2px; padding:11px 13px; border-radius:12px; border:1px solid color-mix(in oklab, var(--z) 35%, transparent); background:color-mix(in oklab, var(--z) 9%, transparent); --z:var(--jade); }
+.mr-vered.ouro{ --z:var(--ouro); } .mr-vered.brasa{ --z:var(--brasa); }
+.mr-vered-cab{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.mr-vered-selo{ font:600 calc(10.5px * var(--esc))/1 var(--f-b); letter-spacing:.09em; text-transform:uppercase; color:var(--grafite); }
+.mr-vered-cab b{ color:var(--z); font-size:calc(14.5px * var(--esc)); }
+.mr-vered-num{ margin-left:auto; font:600 calc(13px * var(--esc))/1 var(--f-m, var(--f-b)); color:var(--giz); }
+.mr-vered ul{ margin:7px 0 0 17px; padding:0; color:var(--giz-2); font-size:calc(13px * var(--esc)); line-height:1.5; }
+.mr-vered-pe{ margin-top:6px; font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.mr-vered.compacto{ margin-top:8px; padding:8px 11px; }
+.mr-vered.compacto .mr-vered-num{ margin-left:0; color:var(--grafite); font-weight:500; }
+</style>
+<style>
+/* resumo do dia */
+.rs-heroi{ position:relative; overflow:hidden; padding:20px 20px 18px; border-radius:18px; color:#EAF0FA;
+  background:radial-gradient(120% 140% at 100% 0%, rgba(232,180,79,.20), transparent 55%), linear-gradient(150deg, #13284A, #0B1830 70%); border:1px solid rgba(255,255,255,.08); }
+.rs-sauda{ font:700 calc(24px * var(--esc))/1.15 var(--f-t, var(--f-b)); letter-spacing:-.01em; }
+.rs-data{ margin-top:4px; font-size:calc(13px * var(--esc)); color:rgba(234,240,250,.66); }
+.rs-frase{ margin-top:12px; font-size:calc(15px * var(--esc)); line-height:1.45; color:#F6D58E; }
+.rs-nums{ display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-top:16px; }
+.rs-num{ padding:11px 12px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+.rs-num b{ display:block; font:700 calc(24px * var(--esc))/1 var(--f-t, var(--f-b)); color:#fff; }
+.rs-num span{ display:block; margin-top:5px; font-size:calc(12px * var(--esc)); color:rgba(234,240,250,.7); line-height:1.3; }
+.rs-num.brasa b{ color:#FF9C84; } .rs-num.ouro b{ color:#F2C46A; } .rs-num.anil b{ color:#8EC2FF; }
+.rs-sec{ margin-top:18px; }
+.rs-sec-tit{ display:flex; align-items:center; gap:8px; margin-bottom:9px; font:600 calc(11.5px * var(--esc))/1 var(--f-b); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
+.rs-sec-tit svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.rs-sec-tit.brasa{ color:var(--brasa); } .rs-sec-tit.ouro{ color:var(--ouro); } .rs-sec-tit.jade{ color:var(--jade); }
+.rs-oport{ display:flex; flex-direction:column; gap:3px; width:100%; text-align:left; padding:11px 13px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); cursor:pointer; font:inherit; }
+.rs-oport:hover{ border-color:var(--jade); }
+.rs-oport span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.rs-cart{ display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); font-size:calc(13.5px * var(--esc)); color:var(--giz-2); }
+.rs-cart b{ color:var(--giz); } .rs-cart .brasa, .rs-cart .brasa b{ color:var(--brasa); }
+.rs-auto{ display:flex; align-items:center; gap:8px; margin-top:18px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+:root[data-theme="papel"] .rs-heroi{ box-shadow:0 14px 34px rgba(19,40,74,.18); }
+</style>
 </head>
 <body>
 <script>
@@ -11417,7 +11454,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 17:30';
+const BUILD = '2026-10-14 18:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19457,6 +19494,7 @@ function previaAnuncios(){
           <span class="fraco">${a.condicoes.length} condições · ${a.links.length} link${a.links.length === 1 ? '' : 's'}</span>
           ${a.sugestao ? `<span class="etq anil">${esc(rotuloSugestao(a.sugestao))}</span>` : ''}
         </div>
+        ${typeof vereditoHTML === 'function' ? vereditoHTML({titulo:a.titulo, texto:a.condicoes.join('\n'), cat:a.cat, sugestao:a.sugestao}, true) : ''}
       </div>
     </div>`).join('');
   box.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => { anunciosLidos[Number(el.dataset.i)][el.dataset.k] = el.value; }));
@@ -19607,6 +19645,7 @@ function renderMural(){
         ${!morta && d !== null && d > 0 ? `<span class="fraco">${prazoTexto(d)}</span>` : ''}
         ${m.link ? `<a class="mural-link" href="${esc(m.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(String(m.link).replace(/^https?:\/\/(www\.)?/, '').slice(0, 46))}</a>` : ''}
       </div>
+      ${(typeof vereditoHTML === 'function' && !morta) ? vereditoHTML(m) : ''}
       ${m.texto ? `<div class="mural-texto">${listaCat(m.texto)}</div>` : ''}
     </div>`;
   }).join('')
@@ -50579,6 +50618,192 @@ function avRodapesPainel(){
   if (typeof abrirHoje === 'function'){ const ah = abrirHoje; abrirHoje = function(){ _avListaAberta = abrirHoje; return ah.apply(this, arguments); }; }
   if (typeof abrirAvisos === 'function'){ const aa = abrirAvisos; abrirAvisos = function(){ _avListaAberta = abrirAvisos; return aa.apply(this, arguments); }; }
   if (typeof fecharFolha === 'function'){ const ff = fecharFolha; fecharFolha = function(){ _avListaAberta = null; document.querySelectorAll('.av-menu, .av-menu-fundo').forEach(x => x.remove()); return ff.apply(this, arguments); }; }
+})();
+</script>
+<script>
+/* ══ PARA VOCÊ: O VEREDITO DE CADA ANÚNCIO (09/10/2026) ═════════════════════════
+   O anúncio é igual para todo mundo; o veredito é de cada um. A Torre recalcula
+   o milheiro da oferta e compara com a SUA carteira (o custo médio do que você
+   já tem) e com as SUAS faixas (ótimo, alvo, razoável). Nada vem pronto do
+   canal: quem vende a Torre para outras pessoas entrega o mesmo anúncio, e cada
+   assinante vê o veredito calculado com os próprios números.
+   · Compra de pontos: preço do carrinho, ou dólar, ou tabela com desconto e bônus.
+     Ponto de banco comprado é avaliado pelo destino: com a melhor transferência
+     bonificada viva (ou, sem nenhuma, com o bônus "bom" de mercado).
+   · Transferência: custo do seu ponto de origem, paridade e bônus.
+   · Compra bonificada (pontos por real): quanto da compra volta em pontos. */
+const VERED_NIVEIS = {
+  otimo:{rot:'Vale muito', z:'jade'}, bom:{rot:'Vale a pena', z:'jade'},
+  medio:{rot:'Só se precisar', z:'ouro'}, caro:{rot:'Não compensa', z:'brasa'}
+};
+function veredDolar(texto){ const m = String(texto || '').match(/d[óo]lar\s+(?:a|de|em)?\s*R\$\s*(\d+[.,]\d{1,2})/i); return m ? Number(m[1].replace(',', '.')) : (Number((DB.cfg || {}).dolar) || 5.5); }
+function veredProgNoTexto(texto){
+  const tl = SEM_EMOJI(texto).toLowerCase();
+  return Object.keys(PROGRAMAS).filter(k => k !== 'outro').sort((a, b) => prog(b).n.length - prog(a).n.length).find(k => tl.includes(prog(k).n.toLowerCase())) || null;
+}
+function veredNivelCPM(p, cpm){
+  const f = faixasDe(p) || {};
+  return !f.alvo ? null : cpm <= f.otimo ? 'otimo' : cpm <= f.alvo ? 'bom' : cpm <= f.razoavel ? 'medio' : 'caro';
+}
+function veredMedia(p, cpm){
+  const m = (cpmPorPrograma() || {})[p];
+  if (!(m > 0)) return '';
+  const d = (cpm - m) / m;
+  return Math.abs(d) < 0.03 ? `igual à sua média de ${brl2(m)}` : `${pct(Math.abs(d) * 100, 0)} ${d < 0 ? 'abaixo' : 'acima'} da sua média de ${brl2(m)}`;
+}
+/* o melhor destino para um ponto de banco: campanha de transferência viva, ou o
+   bônus "bom" de mercado nos destinos aéreos de sempre */
+function veredMelhorDestino(de, cpmDe){
+  const vivas = campanhasVivas('transferencia').filter(c => c.de === de);
+  const opc = [];
+  vivas.forEach(c => { const par = PARIDADES.find(x => x.de === de && x.para === c.para); const pp = par ? par.p : 1;
+    opc.push({para:c.para, bonus:c.bonus || 0, viva:true, cpm:cpmDe * pp / (1 + (c.bonus || 0) / 100)}); });
+  ['smiles', 'azul', 'latampass'].filter(k => !opc.some(o => o.para === k)).forEach(k => { const par = PARIDADES.find(x => x.de === de && x.para === k); const rb = REF_BONUS[k];
+    if (par && rb) opc.push({para:k, bonus:rb.bom, viva:false, cpm:cpmDe * par.p / (1 + rb.bom / 100)}); });
+  opc.forEach(o => { const f = faixasDe(o.para) || {}; o.folga = f.alvo ? (f.alvo - o.cpm) / f.alvo : -9; });
+  /* campanha aberta que já deixa a milha no alvo ganha da referência; senão,
+     fica a melhor das duas */
+  const vivaBoa = opc.filter(o => o.viva && o.folga >= 0).sort((a, b) => b.folga - a.folga)[0];
+  return vivaBoa || opc.sort((a, b) => b.folga - a.folga)[0] || null;
+}
+function vereditoAnuncio(m){
+  try {
+    const texto = `${m.titulo || ''}\n${m.texto || ''}`;
+    const sg = m.sugestao;
+    /* compra bonificada: pontos por real */
+    if (!sg && (m.cat === 'compras' || /pontos?\s+por\s+real/i.test(texto))){
+      const pts = Math.max(0, ...[...texto.matchAll(/(\d{1,2})\s*(?:pontos?|milhas?)\s*por\s*real/gi)].map(x => +x[1]), ...[...texto.matchAll(/at[eé]\s*(\d{1,2})\s*x\s*1\b/gi)].map(x => +x[1]));
+      const p = veredProgNoTexto(texto); const f = p ? faixasDe(p) : null;
+      if (!pts || !p || !f || !f.alvo) return null;
+      const ret = pts * f.alvo / 1000;
+      const nivel = ret >= 0.10 ? 'otimo' : ret >= 0.06 ? 'bom' : ret >= 0.03 ? 'medio' : 'caro';
+      return {nivel, num:`${pct(ret * 100, 1)} de volta`, linhas:[`${pts} pontos ${prog(p).n} por real equivalem a ${pct(ret * 100, 1)} do valor da compra (pelo seu alvo de ${brl2(f.alvo)} o milheiro).`,
+        nivel === 'otimo' || nivel === 'bom' ? 'Bom para o que você já ia comprar. Não compre só pelos pontos.' : 'Retorno baixo: só vale para compra que você já faria.']};
+    }
+    if (!sg) return null;
+    if (sg.tipo === 'transferencia'){
+      const par = PARIDADES.find(x => x.de === sg.de && x.para === sg.para); const pp = par ? par.p : 1;
+      const meu = (cpmPorPrograma() || {})[sg.de]; const base = meu > 0 ? meu : (faixasDe(sg.de) || {}).alvo;
+      if (!base) return null;
+      const cpm = base * pp / (1 + (sg.bonus || 0) / 100), nivel = veredNivelCPM(sg.para, cpm); if (!nivel) return null;
+      const f = faixasDe(sg.para);
+      return {nivel, num:`${brl2(cpm)} o milheiro`, linhas:[`Com ${meu > 0 ? 'o seu custo de ' + brl2(meu) : 'o alvo de ' + brl2(base)} no ${prog(sg.de).n}${pp !== 1 ? `, paridade ${nBRdec(pp)} : 1` : ''} e ${nBRdec(sg.bonus)}% de bônus, cada milheiro ${prog(sg.para).n} sai a ${brl2(cpm)}.`,
+        `Sua faixa no ${prog(sg.para).n}: ótimo até ${brl2(f.otimo)}, alvo ${brl2(f.alvo)}.${veredMedia(sg.para, cpm) ? ' ' + veredMedia(sg.para, cpm)[0].toUpperCase() + veredMedia(sg.para, cpm).slice(1) + '.' : ''}`]};
+    }
+    if (sg.tipo === 'compra'){
+      const p = sg.para; const f = faixasDe(p) || {};
+      let cpm = 0, como = '';
+      if (sg.carrinho > 0){ cpm = sg.carrinho; como = 'preço do anúncio'; }
+      else { const us = texto.match(/US\$\s*(\d+[.,]\d{1,2})/i);
+        if (us && Number(us[1].replace(',', '.')) < 30){ const dl = veredDolar(texto); cpm = Number(us[1].replace(',', '.')) * dl; como = `US$ ${us[1]} com o dólar a ${brl2(dl)}, sem IOF`; }
+        else if (tabelaDe(p) > 0){ cpm = tabelaDe(p) * (1 - (sg.desconto || 0) / 100) / (1 + (sg.bonus || 0) / 100); como = `tabela de ${brl2(tabelaDe(p))} com o desconto e o bônus`; } }
+      if (!(cpm > 0) || !f.alvo) return null;
+      const linhas = [`${prog(p).n} sai a ${brl2(cpm)} o milheiro (${como}).`];
+      let nivel = veredNivelCPM(p, cpm), num = `${brl2(cpm)} o milheiro`;
+      /* ponto de banco: o que importa é quanto custa a milha no destino */
+      if (prog(p).tipo === 'pontos'){
+        const d = veredMelhorDestino(p, cpm);
+        if (d){ const nd = veredNivelCPM(d.para, d.cpm);
+          linhas.push(d.viva ? `Com a transferência para ${prog(d.para).n} com ${nBRdec(d.bonus)}% de bônus, que está aberta agora, a milha sai a ${brl2(d.cpm)}.`
+            : `${campanhasVivas('transferencia').some(c => c.de === p) ? 'Nenhuma transferência aberta agora deixa a milha no seu alvo' : 'Sem transferência bonificada aberta agora'}. Com ${nBRdec(d.bonus)}% de bônus para ${prog(d.para).n} (o que costuma aparecer), a milha sairia a ${brl2(d.cpm)}.`);
+          if (nd){ nivel = d.viva ? nd : (nd === 'otimo' || nd === 'bom' ? 'medio' : nd); num = `${brl2(d.cpm)} a milha ${curto(prog(d.para).n)}`; }
+          if (!d.viva) linhas.push('Compre só se for transferir logo numa campanha boa: ponto de banco parado não rende.'); }
+      } else {
+        const md = veredMedia(p, cpm);
+        linhas.push(`Sua faixa no ${prog(p).n}: ótimo até ${brl2(f.otimo)}, alvo ${brl2(f.alvo)}, razoável até ${brl2(f.razoavel)}.${md ? ' ' + md[0].toUpperCase() + md.slice(1) + '.' : ''}`);
+        if (prog(p).tipo === 'hotel') linhas.push('Programa de hotel: só compensa com uma estadia em vista, comparando com a diária paga.');
+      }
+      return {nivel, num, linhas};
+    }
+  } catch(e){ console.error(e); }
+  return null;
+}
+function vereditoHTML(m, compacto){
+  const v = vereditoAnuncio(m); if (!v) return '';
+  const N = VERED_NIVEIS[v.nivel];
+  return `<div class="mr-vered ${N.z}${compacto ? ' compacto' : ''}"><div class="mr-vered-cab"><span class="mr-vered-selo">Para você</span><b>${N.rot}</b><span class="mr-vered-num">${esc(v.num)}</span></div>
+    ${compacto ? '' : `<ul>${v.linhas.map(l => `<li>${esc(l)}</li>`).join('')}</ul><div class="mr-vered-pe">Calculado com a sua carteira e as suas faixas de milheiro.</div>`}</div>`;
+}
+</script>
+<script>
+/* ══ RESUMO DO DIA (09/10/2026) ══════════════════════════════════════════════════
+   A primeira vez que a Torre abre no dia, ela mostra em dez segundos o que
+   importa: o que fecha hoje, o que vence na semana, a melhor oportunidade para
+   VOCÊ (pelo veredito do Mural), a carteira e a próxima viagem. Abre sozinho uma
+   vez por dia (dá para desligar no rodapé) e fica no botão "Resumo do dia" do
+   Painel. Os avisos dele são os mesmos do Painel, com Já aproveitei, Lembrar
+   depois e Não me interessa. */
+function rsNome(){
+  const t = (DB.contas || []).find(c => /^titular/i.test(c.papel || ''));
+  return t && t.nome ? String(t.nome).trim().split(/\s+/)[0].replace(/^./, x => x.toUpperCase()).replace(/(?<=.)\S+$/, x => x.toLowerCase()) : '';
+}
+function rsMelhorOportunidade(){
+  const peso = {otimo:4, bom:3};
+  const h = hojeISO();
+  const l = (DB.mural || []).filter(m => !(m.fim && m.fim < h) && !(typeof avisoEscondido === 'function' && avisoEscondido('mural:' + m.id)))
+    .map(m => ({m, v:vereditoAnuncio(m)})).filter(x => x.v && peso[x.v.nivel]);
+  l.sort((a, b) => peso[b.v.nivel] - peso[a.v.nivel] || (a.m.fim || '9999').localeCompare(b.m.fim || '9999'));
+  return l[0] || null;
+}
+function abrirResumoDia(){
+  const av = avisos();
+  const hoje = av.filter(a => a.grau === 3), semana = av.filter(a => a.grau === 2);
+  const h = new Date(), hora = h.getHours();
+  const sauda = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  const nome = rsNome();
+  const dataLonga = h.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  const est = (typeof estoquePorPrograma === 'function' ? estoquePorPrograma() : {}) || {};
+  const totMilhas = soma(Object.keys(est).filter(p => prog(p).tipo === 'milhas').map(p => est[p].qtd || 0));
+  const totPontos = soma(Object.keys(est).filter(p => prog(p).tipo === 'pontos').map(p => est[p].qtd || 0));
+  const vencem = av.filter(a => a.tipo === 'lote' && a.dias !== null && a.dias <= 30);
+  const viagem = (DB.planos || []).filter(p => p.inicio && p.inicio >= hojeISO()).sort((a, b) => a.inicio.localeCompare(b.inicio))[0];
+  const dv = viagem ? diasAte(viagem.inicio) : null;
+  const melhor = rsMelhorOportunidade();
+  const abertas = (DB.mural || []).filter(m => !(m.fim && m.fim < hojeISO())).length + campanhasVivas().length;
+  const frase = hoje.length ? `${hoje.length} ${hoje.length === 1 ? 'coisa fecha' : 'coisas fecham'} hoje. Comece por ${hoje.length === 1 ? 'ela' : 'elas'}.`
+    : semana.length ? 'Nada fecha hoje. Dá para planejar a semana com calma.' : 'Dia limpo: nada vencendo, nada fechando.';
+  const num = (v, r, z) => `<div class="rs-num${z ? ' ' + z : ''}"><b>${v}</b><span>${r}</span></div>`;
+  const corpo = `<div class="rs-heroi">
+      <div class="rs-sauda">${sauda}${nome ? ', ' + esc(nome) : ''}.</div>
+      <div class="rs-data">${esc(dataLonga.replace(/^./, x => x.toUpperCase()))}</div>
+      <div class="rs-frase">${frase}</div>
+      <div class="rs-nums">${num(hoje.length, 'fecham hoje', hoje.length ? 'brasa' : '')}${num(semana.length, 'nesta semana', semana.length ? 'ouro' : '')}${num(abertas, 'oportunidades abertas', '')}${dv !== null ? num(dv === 0 ? 'hoje' : dv, dv === 0 ? 'viagem começa' : `dias para ${esc(viagem.nome || 'a viagem')}`, 'anil') : ''}</div>
+    </div>
+    ${hoje.length ? `<div class="rs-sec"><div class="rs-sec-tit brasa"><svg><use href="#i-alerta"/></svg>Fecha hoje</div><div class="pilha" style="gap:8px">${hoje.slice(0, 4).map(a => linhaAviso(a)).join('')}</div></div>` : ''}
+    ${melhor ? `<div class="rs-sec"><div class="rs-sec-tit jade"><svg><use href="#i-faisca"/></svg>A melhor oportunidade para você</div>
+      <button type="button" class="rs-oport" onclick="fecharFolha();irPara('fabrica');irParaAba('fabrica','fb-mural');catMural='${melhor.m.cat}';renderMural()">
+        <b>${esc(melhor.m.titulo)}</b><span>${melhor.m.fim ? (diasAte(melhor.m.fim) === 0 ? 'termina hoje' : 'até ' + dataBR(melhor.m.fim)) : 'sem prazo'}</span></button>
+      ${vereditoHTML(melhor.m)}</div>` : ''}
+    ${semana.length ? `<div class="rs-sec"><div class="rs-sec-tit ouro"><svg><use href="#i-relogio"/></svg>Nesta semana</div><div class="pilha" style="gap:8px">${semana.slice(0, 3).map(a => linhaAviso(a)).join('')}</div>${semana.length > 3 ? `<button type="button" class="av-rodape" onclick="fecharFolha();abrirHoje()"><svg><use href="#i-sino"/></svg>E mais ${semana.length - 3} na semana<span>Ver tudo</span></button>` : ''}</div>` : ''}
+    <div class="rs-sec"><div class="rs-sec-tit"><svg><use href="#i-carteira"/></svg>Sua carteira</div>
+      <div class="rs-cart">${totMilhas || totPontos ? `<span><b>${nBR(totMilhas)}</b> milhas prontas para emitir</span><span><b>${nBR(totPontos)}</b> pontos de banco a direcionar</span>` : '<span>Nada lançado ainda. Lance as compras de pontos e milhas para a Torre acompanhar o custo.</span>'}
+        ${vencem.length ? `<span class="brasa"><b>${vencem.length}</b> ${vencem.length === 1 ? 'lote vence' : 'lotes vencem'} em até 30 dias</span>` : ''}</div></div>`;
+  _avListaAberta = abrirResumoDia;
+  abrirFolha({titulo:'Resumo do dia', largura:'media', corpo:corpo + `<label class="ck-rotulo rs-auto"><input type="checkbox" id="rsAuto"${(DB.cfg || {}).resumoAuto === false ? '' : ' checked'}> Abrir este resumo sozinho na primeira vez que eu entrar no dia</label>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" onclick="fecharFolha();irPara('mesa')"><svg><use href="#i-casa"/></svg>Ir ao Painel</button>`});
+  const ck = $('#rsAuto'); if (ck) ck.onchange = () => { DB.cfg.resumoAuto = ck.checked; salvar(); avisar(ck.checked ? 'O resumo vai abrir sozinho uma vez por dia.' : 'Pronto: o resumo só abre pelo botão "Resumo do dia".', 'ok', 2600); };
+  DB.cfg.resumoVisto = hojeISO(); salvar();
+}
+/* botão no Painel, ao lado de "O que fazer hoje" */
+function rsBotao(){
+  const bh = document.querySelector('#btHoje'); if (!bh || document.querySelector('#btResumo')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'bt'; b.id = 'btResumo';
+  b.innerHTML = '<svg><use href="#i-sol"/></svg>Resumo do dia'; b.onclick = abrirResumoDia;
+  bh.parentNode.insertBefore(b, bh);
+}
+(function(){
+  if (typeof renderMesa === 'function'){ const rm = renderMesa; renderMesa = function(){ const r = rm.apply(this, arguments); try { setTimeout(rsBotao, 0); } catch(e){} return r; }; }
+  /* abre sozinho uma vez por dia, depois que a Torre terminou de carregar */
+  const tentar = () => {
+    try {
+      if (window.__SEM_RESUMO || !DB || !DB.cfg) return;
+      if (DB.cfg.resumoAuto === false || DB.cfg.resumoVisto === hojeISO()) return;
+      if (document.querySelector('#veu.aberto')) return;
+      abrirResumoDia();
+    } catch(e){ console.error(e); }
+  };
+  if (document.readyState === 'complete') setTimeout(tentar, 1800); else addEventListener('load', () => setTimeout(tentar, 1800));
+  setTimeout(rsBotao, 1500);
 })();
 </script>
 </body>
