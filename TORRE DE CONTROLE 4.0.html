@@ -9594,6 +9594,19 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .rs-auto{ display:flex; align-items:center; gap:8px; margin-top:18px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 :root[data-theme="papel"] .rs-heroi{ box-shadow:0 14px 34px rgba(19,40,74,.18); }
 </style>
+<style>
+/* lembretes que custam caro esquecer: separados por um fio e em destaque */
+.dr-grupo.dr-k-lembrar{ grid-column:1 / -1; column-span:all; break-inside:avoid; margin-top:12px; padding:14px 16px 12px; border:1px solid color-mix(in oklab, var(--brasa) 40%, transparent) !important;
+  border-radius:12px; background:color-mix(in oklab, var(--brasa) 9%, transparent); position:relative; }
+.dr-grupo.dr-k-lembrar::before{ content:''; position:absolute; left:0; right:0; top:-13px; border-top:1px solid var(--fio-forte); }
+.dr-k-lembrar h3{ color:var(--brasa); text-transform:uppercase; letter-spacing:.06em; font-size:calc(12.5px * var(--esc)); }
+.dr-k-lembrar li{ color:var(--giz) !important; font-weight:600; border-left-color:var(--brasa) !important; }
+.mr-lembrar{ margin-top:12px; padding-top:12px; border-top:1px solid var(--fio-forte); }
+.mr-lembrar-tit{ display:flex; align-items:center; gap:8px; margin-bottom:8px; font:700 calc(12px * var(--esc))/1 var(--f-b); letter-spacing:.07em; text-transform:uppercase; color:var(--brasa); }
+.mr-lembrar-tit svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.mr-lembrar ul{ margin:0; padding:10px 14px 10px 30px; border-radius:11px; border:1px solid color-mix(in oklab, var(--brasa) 40%, transparent); background:color-mix(in oklab, var(--brasa) 9%, transparent);
+  color:var(--giz); font-weight:600; font-size:calc(14px * var(--esc)); line-height:1.6; }
+</style>
 </head>
 <body>
 <script>
@@ -11454,7 +11467,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 19:00';
+const BUILD = '2026-10-14 19:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19700,7 +19713,8 @@ function renderMural(){
         ${m.link ? `<a class="mural-link" href="${esc(m.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(String(m.link).replace(/^https?:\/\/(www\.)?/, '').slice(0, 46))}</a>` : ''}
       </div>
       ${(typeof vereditoHTML === 'function' && !morta) ? vereditoHTML(m) : ''}
-      ${m.texto ? `<div class="mural-texto">${listaCat(m.texto)}</div>` : ''}
+      ${m.texto ? (() => { const ls = String(m.texto).split('\n').map(l => l.trim().replace(/;$/, '.')), lem = ls.filter(l => LEMBRETE_REGRA.some(r => r.test(l))), resto = ls.filter(l => !lem.includes(l));
+        return `<div class="mural-texto">${listaCat(resto.join('\n'))}</div>${lem.length ? `<div class="mr-lembrar"><div class="mr-lembrar-tit"><svg><use href="#i-alerta"/></svg>Não deixe de fazer</div><ul>${lem.map(l => `<li>${esc(SEM_EMOJI(l))}</li>`).join('')}</ul></div>` : ''}`; })() : ''}
     </div>`;
   }).join('')
     : `<div class="vazio"><p>Nada em ${esc(CATEGORIAS_MURAL[catMural].n.toLowerCase())}${soAtivasMural ? ' com prazo aberto' : ''}. Cadastre o que chegar pelo canal e o prazo passa a avisar sozinho.</p></div>`);
@@ -20041,8 +20055,13 @@ const GRUPOS_REGRA = [
   {k:'obrig',  tit:'O que é obrigatório', tom:'ouro', icone:'alerta'},
   {k:'vant',   tit:'Vantagens',           tom:'jade', icone:'ok'},
   {k:'prazo',  tit:'Prazos e validade',   tom:'anil', icone:'relogio'},
-  {k:'outro',  tit:'Detalhes',            tom:'giz',  icone:'info'}
+  {k:'outro',  tit:'Detalhes',            tom:'giz',  icone:'info'},
+  /* O que costuma custar os pontos quando é esquecido: guardar o print e ler o
+     regulamento. Fica por último, separado por um fio e em destaque, para ser a
+     última coisa lida antes de comprar (09/10/2026). */
+  {k:'lembrar', tit:'Não deixe de fazer', tom:'lembrar', icone:'alerta'}
 ];
+const LEMBRETE_REGRA = [/\bprint/i, /captura(s)? de tela/i, /\bregulamento/i, /^lembre-se/i, /comprovante/i, /protocolo/i, /\bgrave (a|o|as|os) /i];
 /* Ganhos que são da campanha, e não do regulamento geral: milhas extras na
    primeira transferência, bônus adicional. Os gatilhos de vantagem do sistema
    foram escritos para clube — carência, fidelidade — e não os reconheciam. */
@@ -20050,6 +20069,7 @@ const VANTAGEM_CAMPANHA = [/milhas extras/i, /pontos extras/i, /b[ôo]nus (adici
 const PRAZO_REGRA = [/cr[ée]dit/i, /validade/i, /v[áa]lid[oa]s? por/i, /dias [úu]teis/i, /\bat[ée] \d/i, /\bexpira/i];
 
 function classificarRegra(l){
+  if (LEMBRETE_REGRA.some(r => r.test(l))) return 'lembrar';
   if (ESCOPO_CAMPANHA.some(r => r.test(l))) return 'escopo';
   if (OBRIGACAO_CAMPANHA.some(r => r.test(l)) || GATILHOS_RESTRICAO.some(r => r.test(l))) return 'obrig';
   if (GATILHOS_VANTAGEM.some(r => r.test(l)) || VANTAGEM_CAMPANHA.some(r => r.test(l))) return 'vant';
@@ -21829,7 +21849,7 @@ function abrirRegras(id, gatilho){
           <div class="dr-aba-painel" role="tabpanel" id="drp-regras" aria-labelledby="drt-regras"${ativa === 'regras' || abas.length === 1 ? '' : ' data-oculta'}>
             <div class="dr-regras-grade">
             ${GRUPOS_REGRA.filter(g => grupos[g.k]).map(g => `
-              <section class="dr-grupo dr-${g.tom}">
+              <section class="dr-grupo dr-${g.tom} dr-k-${g.k}">
                 <h3><svg><use href="#i-${g.icone}"/></svg>${g.tit}</h3>
                 <ul>${grupos[g.k].map(l => `<li>${topicosRegra(destacarNumeros(l))}</li>`).join('')}</ul>
               </section>`).join('')}
