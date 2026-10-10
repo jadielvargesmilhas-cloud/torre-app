@@ -9655,6 +9655,49 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
   .seg.pr-chips > button, .pr-camp-barra .seg > button{ flex:0 0 auto !important; width:auto !important; white-space:nowrap; }
 }
 </style>
+<style>
+/* Lista de desejos dentro das Promoções */
+.pr-lista-tag{ display:inline-flex; align-items:center; gap:6px; align-self:flex-start; margin-top:6px; padding:3px 10px 3px 8px; border-radius:999px;
+  border:1px solid color-mix(in srgb, var(--anil) 45%, transparent); background:color-mix(in srgb, var(--anil) 12%, transparent);
+  color:var(--anil); font-size:calc(12px * var(--esc)); font-weight:600; line-height:1.35; cursor:pointer; max-width:100%; }
+.pr-lista-tag b{ color:var(--giz); font-weight:700; font-size:inherit !important; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.pr-lista-tag i{ font-style:normal; color:var(--grafite); font-weight:500; white-space:nowrap; }
+.pr-lista-tag svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; flex:0 0 auto; }
+.pr-lista-tag.hora{ border-color:color-mix(in srgb, var(--jade) 55%, transparent); background:color-mix(in srgb, var(--jade) 14%, transparent); color:var(--jade); }
+.pr-lista-tag:hover, .pr-lista-tag:focus-visible{ filter:brightness(1.12); outline:none; box-shadow:0 0 0 2px color-mix(in srgb, currentColor 35%, transparent); }
+.pr-it .pr-txt{ display:flex; flex-direction:column; min-width:0; }
+.lj-lista{ padding:0; margin-top:-2px; }
+.lj-lista .pr-lista-tag{ margin-top:0; }
+.lj-lista-banda{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; margin:0 0 14px; border-radius:var(--r-lg, 14px);
+  border:1px solid color-mix(in srgb, var(--anil) 40%, transparent); background:color-mix(in srgb, var(--anil) 9%, var(--sup-0, transparent)); color:var(--giz); }
+.lj-lista-banda.hora{ border-color:color-mix(in srgb, var(--jade) 50%, transparent); background:color-mix(in srgb, var(--jade) 10%, var(--sup-0, transparent)); }
+.lj-lista-banda > svg{ width:18px; height:18px; fill:none; stroke:var(--anil); stroke-width:2; flex:0 0 auto; }
+.lj-lista-banda.hora > svg{ stroke:var(--jade); }
+.lj-lista-banda > span{ flex:1 1 240px; min-width:0; }
+@keyframes dsPiscar{ 0%,100%{ box-shadow:0 0 0 0 transparent; } 30%{ box-shadow:0 0 0 3px color-mix(in srgb, var(--ouro) 70%, transparent); } }
+.ds-item.ds-piscar{ animation:dsPiscar 1.6s var(--ease, ease) 2; }
+</style>
+<style>
+.lo-lista{ display:flex; flex-direction:column; gap:12px; }
+.lo-item{ border:1px solid var(--fio); border-radius:var(--r-lg, 14px); padding:14px 16px; background:var(--sup-0); display:flex; flex-direction:column; gap:10px; }
+.lo-item.bate{ border-color:color-mix(in srgb, var(--jade) 50%, transparent); }
+.lo-cab{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.lo-cab b{ color:var(--giz); font-size:calc(15px * var(--esc)); }
+.lo-nums{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+.lo-nums span{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.lo-nums small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.lo-nums b{ font-family:var(--f-m, monospace); color:var(--giz); white-space:nowrap; }
+.lo-nums b.jade{ color:var(--jade); }
+.lo-barra{ height:6px; border-radius:999px; background:var(--fio); overflow:hidden; }
+.lo-barra i{ display:block; height:100%; border-radius:inherit; background:var(--anil); }
+.lo-item.bate .lo-barra i{ background:var(--jade); }
+.lo-alvo{ margin:0; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.lo-alvo b{ color:var(--giz); }
+.lo-acoes{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+.av-desfazer.lo-feito button + button{ margin-left:0; }
+.av-desfazer.lo-feito .lo-ver{ background:transparent; border-color:transparent; color:var(--anil); }
+@media (max-width:560px){ .lo-nums{ grid-template-columns:repeat(2, minmax(0, 1fr)); } .lo-acoes .bt{ flex:1 1 auto; justify-content:center; } }
+</style>
 </head>
 <body>
 <script>
@@ -11515,7 +11558,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 21:40';
+const BUILD = '2026-10-14 23:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -22445,7 +22488,7 @@ function retornoLoja(l){
    no multiplicador do seu degrau de clube: a vitrine mostra tudo o que rende
    ponto ao comprar, num lugar só.
    ══════════════════════════════════════════════════════════════════════════════ */
-let tipoShopV = '', progLojaV = '', buscaLojaV = '', ordemLojaV = 'volta', gastoLojaV = 0, soMelhorLojaV = false, arquivoLojaTudo = false;
+let soListaV = false, tipoShopV = '', progLojaV = '', buscaLojaV = '', ordemLojaV = 'volta', gastoLojaV = 0, soMelhorLojaV = false, arquivoLojaTudo = false;
 const normLoja = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const matizLoja = t => { let h = 0; for (const ch of normLoja(t)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
 const siglaLoja = t => { const p = String(t || '?').replace(/[^A-Za-zÀ-ú0-9 ]/g, ' ').trim().split(/\s+/); return ((p[0] || '?')[0] + ((p[1] || p[0] || '')[p[1] ? 0 : 1] || '')).toUpperCase(); };
@@ -22569,7 +22612,7 @@ function renderLojasParceiras(){
   if (segP) segP.hidden = progs.length < 2;
 
   const busca = normLoja(buscaLojaV);
-  let lista = vivas.filter(l => (!tipoShopV || caminhoDe(l) === tipoShopV) && (!catLoja || l.cat === catLoja) && (!progLojaV || l.prog === progLojaV) && (!busca || normLoja(l.n).includes(busca)));
+  let lista = vivas.filter(l => (!soListaV || (typeof desejosDaOferta === 'function' && desejosDaOferta(l).length)) && (!tipoShopV || caminhoDe(l) === tipoShopV) && (!catLoja || l.cat === catLoja) && (!progLojaV || l.prog === progLojaV) && (!busca || normLoja(l.n).includes(busca)));
   /* Só o melhor programa de cada loja: das ofertas da mesma loja, fica a que
      dá mais volta com o valor do SEU ponto em cada programa. */
   if (soMelhorLojaV){
@@ -22705,7 +22748,7 @@ function renderArquivoLojas(mortas, busca){
 }
 
 function limparFiltrosLoja(){
-  catLoja = ''; progLojaV = ''; buscaLojaV = ''; soMelhorLojaV = false;
+  catLoja = ''; progLojaV = ''; buscaLojaV = ''; soMelhorLojaV = false; soListaV = false;
   const b = $('#ljBusca'); if (b) b.value = '';
   const m = $('#ljSoMelhor'); if (m) m.checked = false;
   renderLojasParceiras();
@@ -50972,26 +51015,30 @@ const PR_TIPOS = {tra:['Transferência', 'aco', '#i-troca'], com:['Compra', 'our
 let prFiltro = '';
 function prItensHoje(){
   const D = mpDadosOfertas(), it = [];
-  const camp = (c, k, tit, sub) => it.push({k, tit, sub, fim:c.fim || '', v:vereditoParaVoce(c), abrir:`abrirRegras('${c.id}', this)`});
+  const camp = (c, k, tit, sub) => it.push({k, tit, sub, fim:c.fim || '', v:vereditoParaVoce(c), des:desejosDaOferta('camp:' + c.id), abrir:`abrirRegras('${c.id}', this)`});
   D.tr.forEach(c => camp(c, 'tra', c.titulo || `${prog(c.de).n} → ${prog(c.para).n}`, `${prog(c.de).n} → ${prog(c.para).n}${c.bonus ? ' · ' + pct(c.bonus, 0) + ' de bônus' : ''}`));
   D.co.forEach(c => camp(c, 'com', c.titulo || prog(c.para).n, `${prog(c.para).n}${c.desconto ? ' · ' + pct(c.desconto, 0) + ' de desconto' : ''}${c.bonus ? ' · ' + pct(c.bonus, 0) + ' de bônus' : ''}`));
   D.cl.forEach(c => camp(c, 'clube', c.titulo || 'Clube ' + prog(c.para).n, 'Clube ' + prog(c.para).n));
   D.bo.forEach(c => camp(c, 'loja', c.titulo || c.parceiro, `${c.parceiro || ''} → ${prog(c.para).n} · compra bonificada`));
   /* lojas da vitrine: as cinco que mais devolvem, para não afogar a lista */
-  D.lj.map(l => ({l, v:vereditoLoja(l)})).sort((a, b) => ((b.v && b.v.nivel ? VERED_PESO[b.v.nivel] : 0) - (a.v && a.v.nivel ? VERED_PESO[a.v.nivel] : 0)) || (retornoLoja(b.l).valor - retornoLoja(a.l).valor)).slice(0, prFiltro === 'loja' ? 40 : 5)
-    .forEach(({l, v}) => it.push({k:'loja', tit:l.n, sub:`${prog(l.prog).n} · ${nBRdec(tetoLoja(l).promo)} por real`, fim:l.fim || '', v, abrir:`irItemMenu('fabrica','fb-campanhas','loja')`}));
+  D.lj.map(l => ({l, v:vereditoLoja(l)})).sort((a, b) => ((b.v && b.v.nivel ? VERED_PESO[b.v.nivel] : 0) - (a.v && a.v.nivel ? VERED_PESO[a.v.nivel] : 0)) || (retornoLoja(b.l).valor - retornoLoja(a.l).valor)).filter((x, i) => i < (prFiltro === 'loja' ? 40 : 5) || desejosDaOferta(x.l.id).length)
+    .forEach(({l, v}) => it.push({k:'loja', tit:l.n, sub:`${prog(l.prog).n} · ${nBRdec(tetoLoja(l).promo)} por real`, fim:l.fim || '', v, des:desejosDaOferta(l.id), abrir:`irItemMenu('fabrica','fb-campanhas','loja')`}));
   /* anúncios que não viraram campanha nem loja (avisos gerais, passagens) */
   (DB.mural || []).filter(m => !m.campId && !(m.fim && m.fim < hojeISO()) && !(typeof avisoEscondido === 'function' && avisoEscondido('mural:' + m.id)))
     .forEach(m => it.push({k:'anuncio', tit:m.titulo, sub:(CATEGORIAS_MURAL[m.cat] || {n:'Anúncio'}).n + (m.pontuacao ? ' · ' + m.pontuacao : ''), fim:m.fim || '', v:vereditoAnuncio(m),
       abrir:`irPara('fabrica');irParaAba('fabrica','fb-mural');catMural='${m.cat}';renderMural()`}));
-  it.sort((a, b) => ((b.v ? VERED_PESO[b.v.nivel] || 0 : 1.5) - (a.v ? VERED_PESO[a.v.nivel] || 0 : 1.5)) || (a.fim || '9999').localeCompare(b.fim || '9999'));
+  /* o que serve a um item da sua lista sobe: primeiro o que já bate o alvo */
+  const pesoLista = x => !x.des || !x.des.length ? 0 : x.des.some(y => y.hora) ? 2 : 1;
+  it.sort((a, b) => (pesoLista(b) - pesoLista(a)) || ((b.v ? VERED_PESO[b.v.nivel] || 0 : 1.5) - (a.v ? VERED_PESO[a.v.nivel] || 0 : 1.5)) || (a.fim || '9999').localeCompare(b.fim || '9999'));
   return it;
 }
 function prListaHojeHTML(){
   const todos = prItensHoje();
-  const cont = k => todos.filter(x => !k || x.k === k).length;
-  const l = todos.filter(x => !prFiltro || x.k === prFiltro);
-  const chips = [['', 'Todas'], ['tra', 'Transferência'], ['com', 'Compra'], ['clube', 'Clube'], ['loja', 'Lojas'], ['anuncio', 'Anúncios']].filter(([k]) => !k || cont(k));
+  const bate = (x, k) => !k || (k === 'lista' ? !!(x.des && x.des.length) : x.k === k);
+  const cont = k => todos.filter(x => bate(x, k)).length;
+  if (prFiltro === 'lista' && !cont('lista')) prFiltro = '';
+  const l = todos.filter(x => bate(x, prFiltro));
+  const chips = [['', 'Todas'], ['lista', 'Minha lista'], ['tra', 'Transferência'], ['com', 'Compra'], ['clube', 'Clube'], ['loja', 'Lojas'], ['anuncio', 'Anúncios']].filter(([k]) => !k || cont(k));
   const prazo = f => { if (!f) return 'sem prazo'; const d = diasAte(f); return d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `fecha em ${d} dias`; };
   return `<div class="pr-hoje">
     <div class="pr-hoje-cab"><div><h2>No ar agora</h2><p>Da melhor para você até a menos vantajosa, pela sua carteira e pelas suas faixas.</p></div>
@@ -51000,7 +51047,7 @@ function prListaHojeHTML(){
     <div class="pr-lista">${l.length ? l.map(x => { const T = PR_TIPOS[x.k], N = x.v ? VERED_NIVEIS[x.v.nivel] : null, d = x.fim ? diasAte(x.fim) : null;
       return `<button type="button" class="pr-it" onclick="${x.abrir}">
         <span class="pr-tipo pr-${T[1]}"><svg><use href="${T[2]}"/></svg>${T[0]}</span>
-        <span class="pr-txt"><b>${esc(x.tit)}</b><small>${esc(x.sub)} · <em class="${d === 0 ? 'hoje' : d !== null && d <= 3 ? 'logo' : ''}">${prazo(x.fim)}</em></small></span>
+        <span class="pr-txt"><b>${esc(x.tit)}</b><small>${esc(x.sub)} · <em class="${d === 0 ? 'hoje' : d !== null && d <= 3 ? 'logo' : ''}">${prazo(x.fim)}</em></small>${etiquetaListaHTML(x.des)}</span>
         ${N ? `<span class="pr-ver ${N.z}"><b>${N.rot}</b><small>${esc(x.v.num)}</small></span>` : '<span class="pr-ver"><small>sem dados para comparar</small></span>'}
         <svg class="pr-seta"><use href="#i-seta-d"/></svg></button>`; }).join('')
       : `<div class="nota"><svg><use href="#i-info"/></svg><div>Nada no ar${prFiltro ? ' neste tipo' : ''}. Cole os anúncios que chegarem: eles entram aqui sozinhos.</div></div>`}</div>
@@ -51146,6 +51193,171 @@ setTimeout(() => { try { let n = 0; (DB.mural || []).forEach(m => { if (!m.campI
     return _nds.apply(this, arguments);
   };
 })();
+</script>
+
+<script>
+/* ══ LISTA DE DESEJOS DENTRO DAS PROMOÇÕES (10/10/2026) ═══════════════════════
+   A lista continua em Acumular (é sua e termina em pontos entrando), mas a
+   oferta que serve a um item dela aparece marcada onde a oferta está: em Hoje
+   e na vitrine de Lojas. Assim não é preciso trocar de área para conferir. */
+let _desejosCache = null, _desejosCacheEm = 0;
+function mapaDesejosVitrine(){
+  if (_desejosCache && Date.now() - _desejosCacheEm < 400) return _desejosCache;
+  const mapa = {};
+  try {
+    (typeof avaliarDesejos === 'function' ? avaliarDesejos() : []).forEach(x => (x.todas || []).forEach(o => {
+      const k = String(o.loja && o.loja.id); if (!k) return;
+      const top = !!(x.melhor && x.melhor.loja && x.melhor.loja.id === o.loja.id);
+      (mapa[k] = mapa[k] || []).push({d:x.d, hora:!!(x.atingiu && top), top, o});
+    }));
+  } catch(e){ console.error(e); }
+  Object.values(mapa).forEach(l => l.sort((a, b) => (b.hora - a.hora) || (b.top - a.top) || ((b.d.prioridade || 0) - (a.d.prioridade || 0))));
+  _desejosCache = mapa; _desejosCacheEm = Date.now();
+  return mapa;
+}
+/* aceita a chave pronta ('camp:id' ou id da loja) ou um item da vitrine */
+function desejosDaOferta(ref){
+  const k = typeof ref === 'string' ? ref : !ref ? '' : ref.origem === 'bonificada' ? 'camp:' + ref.campId : String(ref.id);
+  return mapaDesejosVitrine()[k] || [];
+}
+function etiquetaListaHTML(des, classe){
+  if (!des || !des.length) return '';
+  const p = des[0], resto = des.length - 1;
+  const txt = p.hora ? 'Hora de comprar' : 'Na sua lista';
+  return `<span class="pr-lista-tag${p.hora ? ' hora' : ''}${classe ? ' ' + classe : ''}" role="link" tabindex="0"
+    onclick="event.stopPropagation();abrirListaNaOferta('${esc(String(p.o.loja.id))}')" onkeydown="if(event.key==='Enter'){event.stopPropagation();abrirListaNaOferta('${esc(String(p.o.loja.id))}')}"
+    title="Ver o que esta oferta faz pela sua lista"><svg><use href="#i-alvo"/></svg>${txt}: <b>${esc(p.d.n)}</b>${resto ? ` <i>e mais ${resto}</i>` : ''}</span>`;
+}
+function abrirDesejoNaLista(id){
+  irItemMenu('fabrica', 'fb-compras');
+  setTimeout(() => {
+    const el = document.querySelector(`#fbDesejos .ds-item[data-id="${id}"]`);
+    if (!el) return;
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+    el.classList.remove('ds-piscar'); void el.offsetWidth; el.classList.add('ds-piscar');
+  }, 450);
+}
+/* vitrine de Lojas: etiqueta no cartão e uma faixa com o filtro */
+(function(){
+  if (typeof cartaoLoja === 'function'){
+    const _cl = cartaoLoja;
+    cartaoLoja = function(l){
+      const h = _cl.apply(this, arguments), des = desejosDaOferta(l);
+      if (!des.length) return h;
+      return h.replace('<div class="lj-miolo">', `<div class="lj-lista">${etiquetaListaHTML(des)}</div><div class="lj-miolo">`)
+              .replace('<article class="lj-card', '<article class="lj-card lj-tem-desejo');
+    };
+  }
+  if (typeof renderLojasParceiras === 'function'){
+    const _rl = renderLojasParceiras;
+    renderLojasParceiras = function(){
+      _desejosCache = null;
+      const r = _rl.apply(this, arguments);
+      try {
+        const alvo = document.querySelector('#ljVitrine'); if (!alvo) return r;
+        const vivas = ofertasVitrine(), comDes = vivas.filter(l => desejosDaOferta(l).length);
+        const old = document.querySelector('#ljListaBanda'); if (old) old.remove();
+        if (!comDes.length && !soListaV) return r;
+        const hora = comDes.filter(l => desejosDaOferta(l).some(y => y.hora));
+        const itens = new Set((hora.length ? hora : comDes).flatMap(l => desejosDaOferta(l).filter(y => !hora.length || y.hora).map(y => y.d.id))).size;
+        const b = document.createElement('div'); b.id = 'ljListaBanda'; b.className = 'lj-lista-banda' + (hora.length ? ' hora' : '');
+        b.innerHTML = `<svg><use href="#i-alvo"/></svg><span>${hora.length
+          ? `<b>Hora de comprar:</b> ${hora.length === 1 ? 'uma loja' : hora.length + ' lojas'} já ${hora.length === 1 ? 'bate' : 'batem'} o alvo de ${itens === 1 ? 'um item' : itens + ' itens'} da sua lista.`
+          : `<b>${comDes.length === 1 ? 'Uma loja serve' : comDes.length + ' lojas servem'}</b> ${itens === 1 ? 'a um item' : 'a ' + itens + ' itens'} da sua Lista de desejos.`}</span>
+          <button type="button" class="bt p ${soListaV ? 'primario' : 'fantasma'}" id="btSoLista">${soListaV ? 'Mostrar todas as lojas' : 'Ver só essas'}</button>`;
+        alvo.parentNode.insertBefore(b, alvo);
+        b.querySelector('#btSoLista').onclick = () => { soListaV = !soListaV; renderLojasParceiras(); };
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* Hoje e Lojas mudam quando a lista muda */
+  if (typeof renderDesejos === 'function'){
+    const _rd = renderDesejos;
+    renderDesejos = function(){ _desejosCache = null; return _rd.apply(this, arguments); };
+  }
+  if (typeof renderMapaOfertas === 'function'){
+    const _rm = renderMapaOfertas;
+    renderMapaOfertas = function(){ _desejosCache = null; return _rm.apply(this, arguments); };
+  }
+})();
+</script>
+
+<script>
+/* ══ DA OFERTA À COMPRA SEM SAIR DE PROMOÇÕES (10/10/2026) ════════════════════
+   O item fica na lista até a promoção certa aparecer. Quando aparece, a etiqueta
+   abre "Sua lista nesta oferta": o que o item rende aqui e se bate o alvo. Em
+   "Comprei aqui", o registro já vem com esta loja, este programa e estes pontos.
+   Ao gravar, o item sai da lista e os pontos entram em Acumular como "a
+   receber" (o caminho de sempre). A barra de baixo permite desfazer. */
+function abrirListaNaOferta(chave){
+  _desejosCache = null;
+  const des = desejosDaOferta(String(chave)); if (!des.length) return;
+  const o0 = des[0].o, nome = o0.loja.n, pg = o0.prog;
+  const cartao = y => {
+    const d = y.d, o = y.o, x = avaliarDesejo(d), alvoM = alvoDoProg(d, o.prog);
+    const bate = d.alvoTipo === 'mult' ? o.mult >= alvoM : o.pc >= d.alvo;
+    const prog100 = Math.max(4, Math.min(100, d.alvoTipo === 'mult' ? (alvoM > 0 ? o.mult / alvoM * 100 : 0) : (d.alvo > 0 ? o.pc / d.alvo * 100 : 0)));
+    const alvoTxt = d.alvoTipo === 'mult' ? `${nBRdec(alvoM)} pontos por real` : `${pct(d.alvo, 0)} de volta`;
+    const melhorOutra = x.melhor && x.melhor.loja.id !== o.loja.id ? x.melhor : null;
+    return `<div class="lo-item${bate ? ' bate' : ''}">
+      <div class="lo-cab"><b>${esc(d.n)}</b><span class="etq ${bate ? 'jade' : 'anil'}">${bate ? 'Bate o seu alvo' : 'Ainda abaixo do alvo'}</span></div>
+      <div class="lo-nums">
+        <span><small>Valor</small><b>${brl(d.valor)}</b></span>
+        <span><small>Pontos aqui</small><b>${nBR(Math.round(o.pts))}</b></span>
+        <span><small>Voltam</small><b class="jade">${brl2(o.retorno)}</b></span>
+        <span><small>Do preço</small><b>${pct(o.pc, 1)}</b></span>
+      </div>
+      <div class="lo-barra"><i style="width:${prog100}%"></i></div>
+      <p class="lo-alvo">Seu alvo: <b>${alvoTxt}</b>. ${bate ? 'Esta oferta chega lá.' : `Faltam ${d.alvoTipo === 'mult' ? nBRdec(Math.max(0, alvoM - o.mult)) + ' pontos por real' : pct(Math.max(0, d.alvo - o.pc), 1)} para o alvo.`}${melhorOutra ? ` Hoje rende mais em <b>${esc(melhorOutra.loja.n)}</b> (${nBRdec(melhorOutra.mult)} por real).` : ''}</p>
+      <div class="lo-acoes">
+        <button type="button" class="bt p fantasma" onclick="fecharFolha();abrirDesejoNaLista('${d.id}')"><svg><use href="#i-alvo"/></svg>Ver na lista</button>
+        <button type="button" class="bt p ${bate ? 'primario' : 'fantasma'}" onclick="comprarDesejoNaOferta('${d.id}','${esc(String(o.loja.id))}')"><svg><use href="#i-ok"/></svg>Comprei aqui</button>
+      </div></div>`;
+  };
+  abrirFolha({titulo:`Sua lista nesta oferta · ${esc(nome)}`, corpo:`
+    <p class="fraco" style="margin:0 0 14px">${esc(nome)} → ${esc(prog(pg).n)}, ${nBRdec(o0.mult)} pontos por real${o0.fim ? `, ${diasAte(o0.fim) === 0 ? 'fecha hoje' : 'até ' + dataBR(o0.fim)}` : ''}. Cada item fica na lista até você comprar; ao registrar a compra, ele sai da lista e os pontos entram em Acumular como "a receber".</p>
+    <div class="lo-lista">${des.map(cartao).join('')}</div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+}
+function comprarDesejoNaOferta(id, chave){
+  const d0 = (DB.desejos || []).find(x => x.id === id); if (!d0) return;
+  const x = avaliarDesejo(d0), todas = x.todas || [];
+  const aqui = todas.find(o => String(o.loja.id) === String(chave));
+  const cands = (aqui ? [aqui] : []).concat([x.melhor].concat(x.outras || []).filter(o => o && o !== aqui)).slice(0, 4);
+  const antes = (DB.compras || []).length;
+  formCompraPendente({desejo:d0, cands});
+  const bt = document.querySelector('#lcSalvar'); if (!bt) return;
+  bt.addEventListener('click', () => setTimeout(() => {
+    const nova = (DB.compras || []).length > antes ? DB.compras[DB.compras.length - 1] : null;
+    if (!nova || nova.desejoId !== id) return;
+    document.querySelectorAll('.av-desfazer').forEach(e => e.remove());
+    document.querySelectorAll('#avisos .aviso').forEach(e => { if (/Compra registrada/.test(e.textContent)) e.remove(); });
+    prRedesenharTudoSeguro();
+    const el = document.createElement('div'); el.className = 'av-desfazer lo-feito'; el.setAttribute('role', 'status');
+    el.innerHTML = `<span><b>${esc(d0.n)}</b> saiu da lista. ${nBR(nova.pts)} pontos ${esc(prog(nova.prog).n)} a receber até ${dataBR(nova.previsto)}.</span>
+      <button type="button" class="lo-ver">Ver em Acumular</button><button type="button" class="lo-desf">Desfazer</button>`;
+    document.body.appendChild(el);
+    const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 250); };
+    let t = setTimeout(sair, 9000);
+    el.querySelector('.lo-ver').onclick = () => { clearTimeout(t); sair(); irItemMenu('fabrica', 'fb-acumular'); };
+    el.querySelector('.lo-desf').onclick = () => {
+      clearTimeout(t); sair();
+      DB.compras = (DB.compras || []).filter(c => c.id !== nova.id);
+      d0.feito = false; delete d0.compraId;
+      salvar(); prRedesenharTudoSeguro();
+      try { renderCompras(); renderFita(); renderSaldoSeAberto(); } catch(e){}
+      avisar(`Desfeito: ${d0.n} voltou para a lista.`, 'ok', 2600);
+    };
+  }, 0));
+}
+function prRedesenharTudoSeguro(){
+  _desejosCache = null;
+  try { if (document.querySelector('#p-fb-ofertas.on')) renderMapaOfertas(); } catch(e){ console.error(e); }
+  try { if (document.querySelector('#ljVitrine')) renderLojasParceiras(); } catch(e){ console.error(e); }
+  try { if (typeof renderDesejos === 'function') renderDesejos(); } catch(e){}
+  try { if (typeof avRedesenhar === 'function') avRedesenhar(); } catch(e){}
+}
 </script>
 </body>
 </html>
