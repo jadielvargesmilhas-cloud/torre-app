@@ -9812,6 +9812,10 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 @media (min-width:641px){ .av-motivos .tsl-cab{ display:flex !important; padding:8px 12px 4px; } .av-motivos .tsl-cab [data-fechar]{ display:none; }
   .av-motivos .tsl-cab span{ font:600 calc(11px * var(--esc))/1.2 var(--f-b); letter-spacing:.07em; text-transform:uppercase; color:var(--grafite); } }
 </style>
+<style>
+.espera-mot{ display:inline-flex; align-items:flex-start; gap:6px; color:var(--ouro); }
+.espera-mot svg{ width:13px; height:13px; flex:0 0 auto; margin-top:2px; fill:none; stroke:currentColor; stroke-width:2; }
+</style>
 </head>
 <body>
 <script>
@@ -11672,7 +11676,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 10:10';
+const BUILD = '2026-10-15 10:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17681,7 +17685,7 @@ function renderMesa(){
     return `<div class="item mira suave" style="opacity:.72">
       <div class="item-corpo">
         <div class="item-tit">${esc(d.n)} <span class="etq ${p.c}">${p.n}</span></div>
-        <div class="item-sub">${m ? `melhor hoje ${m.mult}× na ${esc(m.loja.n)} · ${
+        <div class="item-sub">${x.esperando ? `<span class="espera-mot"><svg><use href="#i-relogio"/></svg>${esc(x.esperando.txt)}</span>` : m ? `melhor hoje ${m.mult}× na ${esc(m.loja.n)} · ${
           d.alvoTipo === 'mult' ? `faltam ${x.falta.toFixed(1)}×` : `faltam ${pct(x.falta, 1)}`} para o alvo`
           : 'nenhuma loja cadastrada atende esta categoria'}</div>
       </div>
@@ -44741,7 +44745,7 @@ function renderDesejos(){
       ${fotoDsHTML(d)}
       <div class="ds-corpo">
       <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span></div>
-      <div class="ds-sub">${brl(d.valor)}${Number(d.frete) ? ' + frete ' + brl(d.frete) : ''} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>
+      <div class="ds-sub">${brl(d.valor)}${Number(d.frete) ? ' + frete ' + brl(d.frete) : ''} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>${x.esperando ? `<div class="ds-sub espera-mot" style="margin-top:4px"><svg><use href="#i-relogio"/></svg>${esc(x.esperando.txt)}</div>` : ''}
       ${caminhosItemHTML(x)}
       ${melhor ? `
         <div class="ds-barra"><i style="width:${x.progresso}%"></i></div>
@@ -51811,6 +51815,90 @@ function avMenuMotivo(k, btn){
   }
   setTimeout(() => { document.addEventListener('pointerdown', fora, true); document.addEventListener('keydown', esc_, true); }, 0);
 }
+</script>
+
+<script>
+/* ══ O QUE VOCÊ DECIDIU NUM AVISO VALE PARA A LISTA TODA (10/10/2026) ═════════
+   Pedido do Jadiel: marcou "Esperar uma campanha melhor" no aviso da Magalu,
+   mas Compras prioritárias continuava dizendo para registrar a compra.
+   Regra: oferta dispensada num aviso (não compensa, não uso o programa, o prazo
+   não dá, esperar campanha melhor, ou sem motivo) não pode mais pôr item
+   nenhum em "hora de comprar". Em "Esperar uma campanha melhor", a Torre guarda
+   o nível dispensado (14 por real na Azul, por exemplo) e só volta a chamar
+   quando aparecer coisa melhor no mesmo programa, para os itens que aquela
+   oferta servia. O item continua na lista, com o porquê escrito. */
+const MOTIVOS_DISPENSA = ['Não compensa para mim', 'Não uso este programa', 'O prazo não dá para mim', 'Esperar uma campanha melhor'];
+const MOTIVO_ESPERA = 'Esperar uma campanha melhor';
+const _candOrig = candidatosDesejo;
+function _chaveDesejo(d){ return String(d.id || d.n); }
+function _bateDispensa(z, d, o){
+  if (z.tipo === 'camp') return String(o.loja.id) === 'camp:' + z.id;
+  if (z.tipo === 'loja') return String(o.loja.id) === String(z.id);
+  if (z.tipo === 'desejo') return z.did === _chaveDesejo(d) && normLoja(o.loja.n) === normLoja(z.lojaN);
+  return false;
+}
+function dispensasAtivas(){
+  let st = {}; try { st = avEstado(); } catch(e){ return []; }
+  const out = []; let mudou = false;
+  Object.entries(st).forEach(([k, e]) => {
+    if (!e || e.acao !== 'oculto') return;
+    if (e.motivo && !MOTIVOS_DISPENSA.includes(e.motivo)) return;
+    const p = k.split(':'); let z = null;
+    if (p[0] === 'camp') z = {tipo:'camp', id:p.slice(1).join(':')};
+    else if (p[0] === 'loja') z = {tipo:'loja', id:p[1]};
+    else if (p[0] === 'desejo') z = {tipo:'desejo', did:p[1], lojaN:p.slice(2).join(':')};
+    if (!z) return;
+    z.k = k; z.motivo = e.motivo || ''; z.em = e.em || 0;
+    /* nível dispensado: guardado uma vez, para valer mesmo depois que a oferta acabar */
+    if (z.motivo === MOTIVO_ESPERA && !e.barra){
+      const ds = [], mults = [];
+      (DB.desejos || []).filter(d => !d.feito).forEach(d => {
+        _candOrig(d, true).filter(o => _bateDispensa(z, d, o)).forEach(o => { ds.push(_chaveDesejo(d)); mults.push({m:o.mult, prog:o.prog, loja:o.loja.n}); });
+      });
+      if (mults.length){ const top = mults.sort((a, b) => b.m - a.m)[0]; e.barra = {mult:top.m, prog:top.prog, loja:top.loja, ds:[...new Set(ds)]}; mudou = true; }
+    }
+    z.barra = e.barra || null;
+    out.push(z);
+  });
+  if (mudou) try { salvar(); } catch(e){}
+  return out;
+}
+function dispensaDe(d, o, zs){
+  return (zs || dispensasAtivas()).find(z => _bateDispensa(z, d, o)
+    || (z.motivo === MOTIVO_ESPERA && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)) && o.prog === z.barra.prog && Number(o.mult) <= Number(z.barra.mult) + 1e-9)) || null;
+}
+let _dispFiltro = null, _dispZs = null;
+candidatosDesejo = function(d, vivos){
+  const out = _candOrig.apply(this, arguments);
+  if (!vivos || _dispFiltro !== d) return out;
+  return out.filter(o => !dispensaDe(d, o, _dispZs));
+};
+(function(){
+  const _av = avaliarDesejo;
+  avaliarDesejo = function(d){
+    const zs = dispensasAtivas();
+    if (!zs.length) return _av.apply(this, arguments);
+    _dispFiltro = d; _dispZs = zs;
+    let x; try { x = _av.apply(this, arguments); } finally { _dispFiltro = null; _dispZs = null; }
+    if (!x.atingiu){
+      const fora = _candOrig(d, true).map(o => ({o, z:dispensaDe(d, o, zs)})).filter(y => y.z).sort((a, b) => b.o.mult - a.o.mult)[0];
+      if (fora){
+        const z = fora.z, b = z.barra;
+        x.esperando = {motivo:z.motivo, loja:fora.o.loja.n, mult:fora.o.mult,
+          txt: z.motivo === MOTIVO_ESPERA
+            ? `Você decidiu esperar campanha melhor que ${nBRdec(b ? b.mult : fora.o.mult)}× (${b ? b.loja : fora.o.loja.n}, ${prog((b && b.prog) || fora.o.prog).n}). A Torre avisa quando aparecer.`
+            : `Você dispensou ${fora.o.loja.n} (${nBRdec(fora.o.mult)}×): ${(z.motivo || 'não me interessa').toLowerCase()}.`};
+      }
+      /* a oferta dispensada já acabou: a espera continua valendo */
+      else if (!x.melhor){
+        const z = zs.find(z => z.motivo === MOTIVO_ESPERA && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)));
+        if (z) x.esperando = {motivo:z.motivo, loja:z.barra.loja, mult:z.barra.mult,
+          txt:`Você decidiu esperar campanha melhor que ${nBRdec(z.barra.mult)}× (${z.barra.loja}, ${prog(z.barra.prog).n}). A Torre avisa quando aparecer.`};
+      }
+    }
+    return x;
+  };
+})();
 </script>
 </body>
 </html>
