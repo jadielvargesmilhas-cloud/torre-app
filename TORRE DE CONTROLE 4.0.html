@@ -9816,6 +9816,9 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 .espera-mot{ display:inline-flex; align-items:flex-start; gap:6px; color:var(--ouro); }
 .espera-mot svg{ width:13px; height:13px; flex:0 0 auto; margin-top:2px; fill:none; stroke:currentColor; stroke-width:2; }
 </style>
+<style>
+.link-reconsiderar{ border:0; background:none; padding:0; margin-left:4px; font:inherit; font-weight:600; color:var(--anil); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+</style>
 </head>
 <body>
 <script>
@@ -11676,7 +11679,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 10:40';
+const BUILD = '2026-10-15 16:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17679,13 +17682,14 @@ function renderMesa(){
         <div class="item-sub">${esc(m.loja.n)} · ${esc(prog(m.loja.prog).n)} · ${m.mult}× devolvem ${brl(m.retorno)}, ${pct(m.pc, 1)} do preço</div>
       </div>
       <div class="item-acoes">
+        <button class="bt p fantasma icone" onclick="dispensarOfertaDesejo('${d.id}',this)" data-dica="Não me interessa agora" aria-label="Não me interessa agora"><svg><use href="#i-olho-fechado"/></svg></button>
         <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg>Registrar</button>
       </div>
     </div>`;
     return `<div class="item mira suave" style="opacity:.72">
       <div class="item-corpo">
         <div class="item-tit">${esc(d.n)} <span class="etq ${p.c}">${p.n}</span></div>
-        <div class="item-sub">${x.esperando ? `<span class="espera-mot"><svg><use href="#i-relogio"/></svg>${esc(x.esperando.txt)}</span>` : m ? `melhor hoje ${m.mult}× na ${esc(m.loja.n)} · ${
+        <div class="item-sub">${x.esperando ? `<span class="espera-mot"><svg><use href="#i-relogio"/></svg><span>${esc(x.esperando.txt)} <button type="button" class="link-reconsiderar" onclick="reconsiderarOferta('${esc(x.esperando.k)}')">Reconsiderar</button></span></span>` : m ? `melhor hoje ${m.mult}× na ${esc(m.loja.n)} · ${
           d.alvoTipo === 'mult' ? `faltam ${x.falta.toFixed(1)}×` : `faltam ${pct(x.falta, 1)}`} para o alvo`
           : 'nenhuma loja cadastrada atende esta categoria'}</div>
       </div>
@@ -44745,14 +44749,14 @@ function renderDesejos(){
       ${fotoDsHTML(d)}
       <div class="ds-corpo">
       <div class="ds-cab"><span class="ds-nome">${esc(d.n)}</span><span class="etq ${p.c}">${p.n}</span></div>
-      <div class="ds-sub">${brl(d.valor)}${Number(d.frete) ? ' + frete ' + brl(d.frete) : ''} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>${x.esperando ? `<div class="ds-sub espera-mot" style="margin-top:4px"><svg><use href="#i-relogio"/></svg>${esc(x.esperando.txt)}</div>` : ''}
+      <div class="ds-sub">${brl(d.valor)}${Number(d.frete) ? ' + frete ' + brl(d.frete) : ''} · ${esc(d.cat)}${d.prog ? ' · só ' + esc(prog(d.prog).n) : ''} · alvo ${alvoTexto(d)}</div>${x.esperando ? `<div class="ds-sub espera-mot" style="margin-top:4px"><svg><use href="#i-relogio"/></svg><span>${esc(x.esperando.txt)} <button type="button" class="link-reconsiderar" onclick="reconsiderarOferta('${esc(x.esperando.k)}')">Reconsiderar</button></span></div>` : ''}
       ${caminhosItemHTML(x)}
       ${melhor ? `
         <div class="ds-barra"><i style="width:${x.progresso}%"></i></div>
         <div class="ds-linha"><span>Melhor hoje <b>${nBRdec(melhor.mult)}×</b> · ${esc(melhor.loja.n)} → ${esc(prog(melhor.prog).n)}</span>
           <em>${d.alvoTipo === 'mult' ? `alvo ${nBRdec(x.alvoM)}× · faltam ${nBRdec(Math.round(x.falta * 10) / 10)}` : `faltam ${pct(x.falta, 1)}`}</em></div>
         <div class="ds-linha fraco"><span>Voltam ${brl(melhor.retorno)} (${pct(melhor.pc, 1)})</span><em>no alvo ${brl(x.alvoEmReais)}</em></div>`
-      : `<div class="lc-sem">
+      : x.esperando ? '' : `<div class="lc-sem">
           <b>Nenhum caminho com pontos para ${esc(d.cat)}${d.prog ? ' na ' + esc(prog(d.prog).n) : ''} agora.</b>
           ${ultima ? `<span>A última: <b>${nBRdec(ultima.mult)}×</b> em ${fonteTxt(ultima)}${ultima.fim ? `, até ${dataBR(ultima.fim)}` : ''}.</span>` : ''}
           <span>A Torre avisa quando ${sug.slice(0, 4).join(', ')} ou outra loja que venda ${esc(d.cat)} abrir campanha${prefsDoDesejo(d).length ? ' (só nas lojas que você escolheu)' : ''}.</span></div>`}
@@ -44783,6 +44787,7 @@ function renderDesejos(){
       <div class="ds-acoes">
         <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg>Registrar a compra</button>
         ${melhor.link ? `<a class="bt p fantasma" href="${esc(melhor.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a loja</a>` : ''}
+        <button class="bt p fantasma icone" onclick="dispensarOfertaDesejo('${d.id}',this)" data-dica="Não me interessa agora" aria-label="Não me interessa agora"><svg><use href="#i-olho-fechado"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
       </div></div></div>`;
   };
@@ -51782,11 +51787,12 @@ function ajustarUmaLinha(){
    motivo marca a caixinha e o aviso sai do Início. O motivo fica guardado e
    aparece na lista dos ocultos. */
 const AV_MOTIVOS = ['Não compensa para mim', 'Não uso este programa', 'Sem pontos ou dinheiro agora', 'O prazo não dá para mim', 'Esperar uma campanha melhor', 'Já resolvi de outro jeito', 'Outro motivo'];
-function avMenuMotivo(k, btn){
+function avMenuMotivo(k, btn, opts){
+  opts = opts || {};
   if (typeof fecharSeletorLista === 'function') fecharSeletorLista();
   document.querySelectorAll('.av-menu, .av-menu-fundo, .av-desfazer').forEach(x => x.remove());
   const painel = document.createElement('div'); painel.className = 'tsl av-menu av-motivos'; painel.setAttribute('role', 'menu');
-  painel.innerHTML = `<div class="tsl-cab"><span>Por que não interessa?</span><button type="button" data-fechar>Fechar</button></div>
+  painel.innerHTML = `<div class="tsl-cab"><span>${opts.titulo || 'Por que não interessa?'}</span><button type="button" data-fechar>Fechar</button></div>
     <div class="tsl-lista">${AV_MOTIVOS.map((m, i) => `<button type="button" class="tsl-op av-mot" role="menuitemcheckbox" aria-checked="false" data-i="${i}"><span class="av-caixa" aria-hidden="true"><svg><use href="#i-ok"/></svg></span>${esc(m)}</button>`).join('')}</div>`;
   let fundo = null;
   if (innerWidth <= 640){ fundo = document.createElement('div'); fundo.className = 'tsl-fundo av-menu-fundo'; document.body.appendChild(fundo); }
@@ -51801,7 +51807,8 @@ function avMenuMotivo(k, btn){
     setTimeout(() => {
       fechar();
       avAgir(k, 'oculto', btn);
-      try { const st = avEstado(); if (st[k]) { st[k].motivo = motivo; salvar(); } } catch(e){}
+      try { const st = avEstado(); if (st[k]) { st[k].motivo = motivo; if (opts.forte) st[k].forte = true; salvar(); } } catch(e){}
+      if (opts.depois) { try { opts.depois(motivo); } catch(e){ console.error(e); } return; }
       const barra = document.querySelector('.av-desfazer span'); if (barra) barra.insertAdjacentHTML('beforeend', ` <i class="av-mot-rot">· ${esc(motivo)}</i>`);
     }, 260);
   });
@@ -51842,7 +51849,7 @@ function dispensasAtivas(){
   const out = []; let mudou = false;
   Object.entries(st).forEach(([k, e]) => {
     if (!e || e.acao !== 'oculto') return;
-    if (e.motivo && !MOTIVOS_DISPENSA.includes(e.motivo)) return;
+    if (e.motivo && !e.forte && !MOTIVOS_DISPENSA.includes(e.motivo)) return;
     const p = k.split(':'); let z = null;
     if (p[0] === 'camp') z = {tipo:'camp', id:p.slice(1).join(':')};
     else if (p[0] === 'loja') z = {tipo:'loja', id:p[1]};
@@ -51884,7 +51891,7 @@ candidatosDesejo = function(d, vivos){
       const fora = _candOrig(d, true).map(o => ({o, z:dispensaDe(d, o, zs)})).filter(y => y.z).sort((a, b) => b.o.mult - a.o.mult)[0];
       if (fora){
         const z = fora.z, b = z.barra;
-        x.esperando = {motivo:z.motivo, loja:fora.o.loja.n, mult:fora.o.mult,
+        x.esperando = {k:z.k, motivo:z.motivo, loja:fora.o.loja.n, mult:fora.o.mult,
           txt: z.motivo === MOTIVO_ESPERA
             ? `Você decidiu esperar campanha melhor que ${nBRdec(b ? b.mult : fora.o.mult)}× (${b ? b.loja : fora.o.loja.n}, ${prog((b && b.prog) || fora.o.prog).n}). A Torre avisa quando aparecer.`
             : `Você dispensou ${fora.o.loja.n} (${nBRdec(fora.o.mult)}×): ${(z.motivo || 'não me interessa').toLowerCase()}.`};
@@ -51892,13 +51899,48 @@ candidatosDesejo = function(d, vivos){
       /* a oferta dispensada já acabou: a espera continua valendo */
       else if (!x.melhor){
         const z = zs.find(z => z.motivo === MOTIVO_ESPERA && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)));
-        if (z) x.esperando = {motivo:z.motivo, loja:z.barra.loja, mult:z.barra.mult,
+        if (z) x.esperando = {k:z.k, motivo:z.motivo, loja:z.barra.loja, mult:z.barra.mult,
           txt:`Você decidiu esperar campanha melhor que ${nBRdec(z.barra.mult)}× (${z.barra.loja}, ${prog(z.barra.prog).n}). A Torre avisa quando aparecer.`};
       }
     }
     return x;
   };
 })();
+</script>
+
+<script>
+/* "Não me interessa agora" no próprio item da lista (10/10/2026, ideia do
+   Jadiel). Mesmo menu de motivos do Início, mesma chave do aviso: decidir num
+   lugar vale nos dois. No item, todo motivo dispensa ESTA oferta para ESTE
+   item; "Já resolvi de outro jeito" também tira o item da lista. */
+function dispensarOfertaDesejo(id, btn){
+  const d = (DB.desejos || []).find(x => x.id === id); if (!d) return;
+  const x = avaliarDesejo(d), m = x.melhor; if (!m) return;
+  const k = 'desejo:' + (d.id || d.n) + ':' + m.loja.n;
+  _avMapa[k] = {ref:k, tipo:'desejo', t:`${d.n} na ${m.loja.n}`, curto:`${d.n} na ${m.loja.n}`, s:`${nBRdec(m.mult)} por real · ${prog(m.prog).n}`, fim:m.fim || ''};
+  avMenuMotivo(k, btn, {titulo:`Por que não agora? ${esc(m.loja.n)}, ${nBRdec(m.mult)}×`, forte:true, depois:motivo => {
+    let resolvido = false;
+    if (motivo === 'Já resolvi de outro jeito'){ d.feito = true; d.resolvidoFora = hojeISO(); resolvido = true; salvar(); }
+    prRedesenharTudoSeguro();
+    try { if (typeof renderMesa === 'function') renderMesa(); } catch(e){}
+    const txt = resolvido ? `<b>${esc(d.n)}</b> saiu da lista: resolvido de outro jeito.`
+      : motivo === MOTIVO_ESPERA ? `<b>${esc(d.n)}</b> volta para Na mira. A Torre espera campanha melhor que ${nBRdec(m.mult)}× na ${esc(prog(m.prog).n)}.`
+      : `<b>${esc(d.n)}</b> volta para Na mira, sem a ${esc(m.loja.n)}. <i class="av-mot-rot">· ${esc(motivo)}</i>`;
+    qcBarra(txt, () => {
+      const st = avEstado(); delete st[k];
+      if (resolvido){ d.feito = false; delete d.resolvidoFora; }
+      salvar(); prRedesenharTudoSeguro(); try { renderMesa(); } catch(e){}
+      avisar(`Desfeito: ${d.n} voltou para Hora de comprar.`, 'ok', 2400);
+    });
+  }});
+}
+function reconsiderarOferta(k){
+  const st = avEstado(); if (!st[k]) return;
+  delete st[k]; salvar();
+  prRedesenharTudoSeguro(); try { if (typeof renderMesa === 'function') renderMesa(); } catch(e){}
+  try { avRedesenhar(); } catch(e){}
+  avisar('Pronto: a oferta voltou a contar para a sua lista.', 'ok', 2600);
+}
 </script>
 </body>
 </html>
