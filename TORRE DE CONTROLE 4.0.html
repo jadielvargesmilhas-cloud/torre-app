@@ -9755,6 +9755,40 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
   #qcListaCx{ padding:0 16px 14px; }
 }
 </style>
+<style>
+/* Mapa das Ofertas: linhas de oferta dentro dos cartões */
+.pr-mapa{ gap:18px; }
+.pr-mapa .mp-grupo{ display:flex; flex-direction:column; gap:12px; }
+.pr-cartao{ gap:14px; }
+.pr-cartao:hover{ transform:none; }
+.mpr-lista{ position:relative; z-index:1; display:flex; flex-direction:column; gap:6px; }
+.mpr{ position:relative; display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:10px 12px 10px 15px; border-radius:var(--r); border:1px solid var(--fio-suave, var(--fio)); background:var(--sup-2); color:var(--giz); cursor:pointer; font:inherit; transition:border-color .18s, background .18s, transform .18s var(--ease); }
+.mpr::before{ content:''; position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:0 3px 3px 0; background:var(--grafite-dim, var(--fio)); }
+.mpr.v-jade::before{ background:var(--jade); } .mpr.v-ouro::before{ background:var(--ouro); } .mpr.v-brasa::before{ background:var(--brasa); }
+.mpr:hover{ border-color:color-mix(in oklab, var(--c) 55%, transparent); background:color-mix(in oklab, var(--c) 7%, var(--sup-2)); transform:translateX(2px); }
+.mpr-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.mpr-txt > b{ font:600 calc(14px * var(--esc))/1.3 var(--f-b); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.mpr-txt > small{ color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.35; }
+.mpr-txt em{ font-style:normal; } .mpr-txt em.logo{ color:var(--ouro); } .mpr-txt em.hoje{ color:var(--brasa); font-weight:600; }
+.mpr-txt .pr-lista-tag{ margin-top:5px; white-space:nowrap; }
+.mpr-v{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; gap:2px; text-align:right; max-width:46%; }
+.mpr-v b{ font:600 calc(13px * var(--esc))/1.2 var(--f-b); white-space:nowrap; }
+.mpr.v-jade .mpr-v b{ color:var(--jade); } .mpr.v-ouro .mpr-v b{ color:var(--ouro); } .mpr.v-brasa .mpr-v b{ color:var(--brasa); }
+.mpr-v small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.mpr-seta{ width:14px; height:14px; flex:0 0 auto; stroke:var(--grafite); fill:none; stroke-width:2; }
+.mp-grade-2 .mpr-v, .mp-grade-1 .mpr-v{ max-width:40%; }
+/* cartão estreito (três por linha): o veredito desce para baixo do nome */
+.mp-grade:not(.mp-grade-1):not(.mp-grade-2) .mpr{ flex-wrap:wrap; row-gap:6px; padding-right:30px; }
+.mp-grade:not(.mp-grade-1):not(.mp-grade-2) .mpr-txt{ flex:1 1 100%; }
+.mp-grade:not(.mp-grade-1):not(.mp-grade-2) .mpr-v{ max-width:none; flex-direction:row; align-items:baseline; gap:8px; text-align:left; }
+.mp-grade:not(.mp-grade-1):not(.mp-grade-2) .mpr-seta{ position:absolute; right:10px; top:50%; margin-top:-7px; }
+@media (max-width:1180px){ .pr-mapa .mp-grade:not(.mp-grade-1){ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .pr-mapa .mp-grade .mpr{ flex-wrap:wrap; row-gap:6px; padding-right:30px; } .pr-mapa .mp-grade .mpr-txt{ flex:1 1 100%; }
+  .pr-mapa .mp-grade .mpr-v{ max-width:none; flex-direction:row; align-items:baseline; gap:8px; text-align:left; }
+  .pr-mapa .mp-grade .mpr-seta{ position:absolute; right:10px; top:50%; margin-top:-7px; } }
+@media (max-width:700px){ .pr-mapa .mp-grade:not(.mp-grade-1){ grid-template-columns:minmax(0, 1fr); } }
+@media (max-width:560px){ .mpr{ flex-wrap:wrap; } .mpr-v{ align-items:flex-start; text-align:left; max-width:none; } .mpr-seta{ position:absolute; right:10px; top:14px; } .mpr-txt{ padding-right:16px; flex-basis:100%; } }
+</style>
 </head>
 <body>
 <script>
@@ -11615,7 +11649,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 00:10';
+const BUILD = '2026-10-15 09:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15059,10 +15093,10 @@ const AREAS = [
     /* A Lista de desejos mudou para cá (10/10/2026, decisão do Jadiel): o item
        espera a promoção, e é aqui que a promoção aparece. Comprado, ele sai da
        lista e os pontos entram em Acumular como "a receber". */
-    menu:[{g:'', itens:[['fabrica', 'fb-ofertas', 'Hoje', '#i-radar', undefined, ['fabrica', 'fb-mural']],
+    menu:[{g:'', itens:[['fabrica', 'fb-ofertas', 'Mapa das Ofertas', '#i-radar', undefined, ['fabrica', 'fb-mural']],
       ['fabrica', 'fb-compras', 'Lista de desejos', '#i-alvo'],
       ['fabrica', 'fb-campanhas', 'Campanhas', '#i-troca', 'camp'],
-      ['fabrica', 'fb-campanhas', 'Lojas', '#i-sacola', 'loja', ['fabrica', 'fb-campanhas', '', '', 'bonificada']]]}]},
+      ['fabrica', 'fb-campanhas', 'Lojas Parceiras', '#i-sacola', 'loja', ['fabrica', 'fb-campanhas', '', '', 'bonificada']]]}]},
   {k:'acumular',  n:'Acumular',  sub:'O que você faz para juntar',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
     menu:[{g:'', itens:[['fabrica', 'fb-acumular', 'Mapa do acúmulo', '#i-rota']]},
       {g:'Todo mês', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar']]},
@@ -39611,7 +39645,7 @@ function montarColunaMenu(raiz, vistaMedida){
    Área de um módulo só não precisa dela. */
 /* nome curto de cada item na segunda barra do celular, onde cabe pouco */
 const CURTO_ITEM = {'Comprar Milhas':'Comprar', 'Transferir Pontos':'Transferir', 'Compras Inteligentes':'Compras', 'Painel de bordo':'Painel',
-  'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Mapa das ofertas':'Mapa', 'Mapa do acúmulo':'Mapa', 'Transferência bonificada':'Transferir',
+  'Comprar milhas':'Comprar', 'Transferir pontos':'Transferir', 'Mapa das ofertas':'Mapa', 'Mapa das Ofertas':'Mapa', 'Lojas Parceiras':'Lojas', 'Mapa do acúmulo':'Mapa', 'Transferência bonificada':'Transferir',
   'Compra com desconto':'Desconto', 'Clubes em promoção':'Clubes', 'Lojas parceiras':'Lojas', 'Compra bonificada':'Bônus', 'Mural de anúncios':'Mural',
   'Lista de desejos':'Desejos',
   'Compra e transferência':'Transferência', 'Clubes e lojas':'Clubes e lojas', 'Meus cartões':'Meus cartões', 'Lançamentos':'Lançamentos'};
@@ -51583,6 +51617,111 @@ function qcBlocoHoje(){
     };
   }
 })();
+</script>
+
+<script>
+/* ══ MAPA DAS OFERTAS: OS CARTÕES DE ANTES COM A PRATICIDADE DE AGORA (10/10/2026)
+   Pedido do Jadiel: o visual antigo (um cartão por tipo, com cor, ícone e
+   contagem) era mais bonito; a lista nova era mais prática (clicou, abre a
+   campanha). Aqui ficam os dois: cada cartão traz as próprias ofertas, da
+   melhor para a pior pelo seu veredito, e cada linha abre a regra da campanha.
+   A explicação de cada tipo, que ocupava o cartão, só aparece quando ele está
+   vazio. "Fecham primeiro" voltou, e cada item dele também abre direto. */
+const PR_CARTOES = [
+  {g:'Pontos e milhas em oferta', p:'Você paga pelos pontos, ou leva os que já tem, com vantagem.', grade:'', itens:[
+    {k:'tra', cor:'aco', ic:'#i-troca', t:'Transferência bonificada', ir:"irItemMenu('fabrica','fb-campanhas','tra')", irTxt:'Ver todas',
+     oque:'Você leva os pontos do banco (Livelo, Esfera) para a companhia e ganha um bônus em cima.'},
+    {k:'com', cor:'ouro', ic:'#i-carrinho', t:'Compra com desconto', ir:"irItemMenu('fabrica','fb-campanhas','com')", irTxt:'Ver todas',
+     oque:'O próprio programa vende pontos ou milhas mais baratos por poucos dias.'},
+    {k:'clube', cor:'lilas', ic:'#i-atualizar', t:'Clubes em promoção', ir:"irItemMenu('fabrica','fb-campanhas','clube')", irTxt:'Ver todos',
+     oque:'Assinatura mensal de pontos com bônus de adesão ou preço menor.'}]},
+  {g:'Comprar e ganhar pontos', p:'Você compra um produto e os pontos vêm junto, de brinde.', grade:'mp-grade-2', itens:[
+    {k:'loja', cor:'jade', ic:'#i-sacola', t:'Lojas Parceiras', ir:"irItemMenu('fabrica','fb-campanhas','loja')", irTxt:'Ver a vitrine',
+     oque:'Você compra entrando pelo site do programa e ganha pontos por real gasto.'},
+    {k:'bonificada', cor:'brasa', ic:'#i-brilho', t:'Compra bonificada', ir:"irItemMenu('fabrica','fb-campanhas','bonificada')", irTxt:'Ver todas',
+     oque:'A loja faz parceria direta com a companhia: as milhas caem na Azul ou na Smiles.'}]},
+  {g:'Caixa de entrada', p:'Anúncios colados que não viraram campanha: avisos, passagens, cashback.', grade:'mp-grade-1', itens:[
+    {k:'anuncio', cor:'giz', ic:'#i-livro', t:'Anúncios para decidir', ir:"irPara('fabrica');irParaAba('fabrica','fb-mural')", irTxt:'Abrir o mural',
+     oque:'Cole a mensagem do grupo: o que for campanha ou loja entra sozinho nos cartões acima.'}]}
+];
+const PR_FILTRO_CARTAO = {tra:['tra'], com:['com'], clube:['clube'], loja:['loja', 'bonificada'], anuncio:['anuncio']};
+let prAbertos = new Set();
+function prItensMapa(){
+  const D = mpDadosOfertas(), it = [], hoje = hojeISO();
+  const topoB = c => Math.max(Number(c.ptsPorReal) || 0, ...(c.faixas || []).map(f => Number(f.v) || 0));
+  const camp = (c, g, rot, met) => it.push({g, k:g === 'bonificada' ? 'loja' : g, rot, met, tit:c.titulo || rot, fim:c.fim || '', v:vereditoParaVoce(c),
+    des:desejosDaOferta('camp:' + c.id), abrir:`abrirRegras('${c.id}', this)`});
+  D.tr.forEach(c => camp(c, 'tra', `${prog(c.de).n} → ${prog(c.para).n}`, c.bonus ? pct(c.bonus, 0) + ' de bônus' : 'bônus'));
+  D.co.forEach(c => camp(c, 'com', prog(c.para).n, [c.desconto ? pct(c.desconto, 0) + ' de desconto' : '', c.bonus ? pct(c.bonus, 0) + ' de bônus' : ''].filter(Boolean).join(' + ') || 'oferta'));
+  D.cl.forEach(c => camp(c, 'clube', 'Clube ' + prog(c.para).n, c.bonus ? pct(c.bonus, 0) + ' extra' : 'promoção'));
+  D.bo.forEach(c => camp(c, 'bonificada', `${c.parceiro || c.titulo} → ${prog(c.para).n}`, 'até ' + nBRdec(topoB(c)) + ' por real'));
+  D.lj.forEach(l => it.push({g:'loja', k:'loja', rot:`${l.n} · ${prog(l.prog).n}`, met:nBRdec(tetoLoja(l).promo || tetoLoja(l).base) + ' por real', tit:l.n, fim:l.fim || '', v:vereditoLoja(l),
+    des:desejosDaOferta(l.id), abrir:`irItemMenu('fabrica','fb-campanhas','loja')`}));
+  (DB.mural || []).filter(m => !m.campId && !(m.fim && m.fim < hoje) && !(typeof avisoEscondido === 'function' && avisoEscondido('mural:' + m.id)))
+    .forEach(m => it.push({g:'anuncio', k:'anuncio', rot:m.titulo, met:(CATEGORIAS_MURAL[m.cat] || {n:'Anúncio'}).n + (m.pontuacao ? ' · ' + m.pontuacao : ''), tit:m.titulo, fim:m.fim || '',
+      v:vereditoAnuncio(m), des:[], abrir:`irPara('fabrica');irParaAba('fabrica','fb-mural');catMural='${m.cat}';renderMural()`}));
+  const pesoLista = x => !x.des || !x.des.length ? 0 : x.des.some(y => y.hora) ? 2 : 1;
+  it.sort((a, b) => (pesoLista(b) - pesoLista(a)) || ((b.v ? VERED_PESO[b.v.nivel] || 0 : 1.5) - (a.v ? VERED_PESO[a.v.nivel] || 0 : 1.5)) || (a.fim || '9999').localeCompare(b.fim || '9999'));
+  return it;
+}
+function prPrazoTxt(f){ if (!f) return 'sem prazo'; const d = diasAte(f); return d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `fecha em ${d} dias`; }
+function prLinhaHTML(x){
+  const N = x.v ? VERED_NIVEIS[x.v.nivel] : null, d = x.fim ? diasAte(x.fim) : null;
+  return `<button type="button" class="mpr ${N ? 'v-' + N.z : 'v-nada'}" onclick="${x.abrir}" title="${esc(x.tit)}">
+    <span class="mpr-txt"><b>${esc(x.rot)}</b><small>${esc(x.met)} · <em class="${d === 0 ? 'hoje' : d !== null && d <= 3 ? 'logo' : ''}">${prPrazoTxt(x.fim)}</em></small>${etiquetaListaHTML(x.des)}</span>
+    <span class="mpr-v">${N ? `<b>${N.rot}</b><small>${esc(x.v.num)}</small>` : '<small>sem dados para comparar</small>'}</span>
+    <svg class="mpr-seta"><use href="#i-seta-d"/></svg></button>`;
+}
+function prCartaoHTML(c, linhas, total, i, cheio){
+  const aberto = cheio || prAbertos.has(c.k), mostrar = aberto ? linhas : linhas.slice(0, 3), resto = linhas.length - mostrar.length;
+  const melhor = linhas[0] && linhas[0].v ? VERED_NIVEIS[linhas[0].v.nivel] : null;
+  return `<article class="mp-bloco pr-cartao mp-${c.cor}${total ? '' : ' zero'}" style="--i:${i}">
+    <header>
+      <span class="mp-ic"><svg><use href="${c.ic}"/></svg></span>
+      <div class="mp-bloco-tit"><h4>${esc(c.t)}</h4>${melhor && total ? `<small>Melhor: ${melhor.rot.toLowerCase()}</small>` : ''}</div>
+      <div class="mp-num"><b>${total}</b><small>${c.k === 'anuncio' ? 'para decidir' : 'no ar'}</small></div>
+    </header>
+    ${linhas.length ? `<div class="mpr-lista">${mostrar.map(prLinhaHTML).join('')}</div>`
+      : `<p class="mp-oque">${c.oque}</p><div class="mp-melhor"><span class="mp-nada">${prFiltro === 'lista' ? 'Nada aqui serve aos itens da sua lista.' : c.k === 'anuncio' ? 'Nenhum anúncio esperando decisão.' : 'Nenhuma no ar agora. Quando chegar, aparece aqui.'}</span></div>`}
+    <footer>
+      ${resto > 0 ? `<button type="button" class="mp-liga" onclick="prAbertos.add('${c.k}');renderMapaOfertas()">Mais ${resto} ${resto === 1 ? 'oferta' : 'ofertas'}</button>`
+        : (!cheio && aberto && linhas.length > 3 ? `<button type="button" class="mp-liga" onclick="prAbertos.delete('${c.k}');renderMapaOfertas()">Mostrar menos</button>` : '')}
+      <button type="button" class="mp-ir" onclick="${c.ir}">${esc(c.irTxt)}<svg><use href="#i-seta-d"/></svg></button>
+    </footer>
+  </article>`;
+}
+prListaHojeHTML = function(){
+  const todos = prItensMapa();
+  const bate = (x, k) => !k || (k === 'lista' ? !!(x.des && x.des.length) : (PR_FILTRO_CARTAO[k] || [k]).includes(x.g));
+  const cont = k => todos.filter(x => bate(x, k)).length;
+  if (prFiltro && !cont(prFiltro) && prFiltro !== '') prFiltro = '';
+  const chips = [['', 'Todas'], ['lista', 'Minha lista'], ['tra', 'Transferência'], ['com', 'Compra'], ['clube', 'Clube'], ['loja', 'Lojas'], ['anuncio', 'Anúncios']].filter(([k]) => !k || cont(k));
+  /* fecham primeiro: o que não pode esperar, de todos os tipos, e abre direto */
+  const COR = {tra:'aco', com:'ouro', clube:'lilas', loja:'jade', bonificada:'brasa', anuncio:'giz'};
+  const fila = todos.filter(x => x.fim && diasAte(x.fim) >= 0 && x.g !== 'anuncio').sort((a, b) => a.fim.localeCompare(b.fim)).slice(0, 8);
+  let i = 0;
+  const grupos = PR_CARTOES.map(G => {
+    const cards = G.itens.filter(c => !prFiltro || (prFiltro === 'lista' ? todos.some(x => x.g === c.k && x.des && x.des.length) : (PR_FILTRO_CARTAO[prFiltro] || []).includes(c.k)))
+      .filter(c => prFiltro || c.k !== 'anuncio' || todos.some(x => x.g === 'anuncio'));
+    if (!cards.length) return '';
+    const cheio = !!prFiltro && prFiltro !== 'lista';
+    const grade = cards.length === 1 ? 'mp-grade-1' : cards.length === 2 ? 'mp-grade-2' : G.grade;
+    return `<section class="mp-grupo">
+      <div class="mp-grupo-cab"><h3>${esc(G.g)}</h3><p>${esc(G.p)}</p></div>
+      <div class="mp-grade ${grade}">${cards.map(c => { const linhas = todos.filter(x => x.g === c.k && bate(x, prFiltro)); return prCartaoHTML(c, linhas, todos.filter(x => x.g === c.k).length, i++, cheio); }).join('')}</div>
+    </section>`;
+  }).join('');
+  return `${qcBlocoHoje()}<div class="pr-hoje pr-mapa">
+    <div class="pr-hoje-cab"><div><h2>No ar agora</h2><p>Cada cartão traz as ofertas do seu tipo, da melhor para você até a menos vantajosa. Clique para abrir a campanha.</p></div>
+      <button type="button" class="bt primario" onclick="abrirColarMural()"><svg><use href="#i-copiar"/></svg>Colar anúncio</button></div>
+    <div class="seg pr-chips">${chips.map(([k, n]) => `<button type="button" class="${k === prFiltro ? 'on' : ''}" data-pr-f="${k}">${n} <span class="cont-disco">${cont(k)}</span></button>`).join('')}</div>
+    ${fila.length && !prFiltro ? `<section class="mp-fila" aria-label="Fecham primeiro"><div class="mp-fila-tit"><svg><use href="#i-relogio"/></svg>Fecham primeiro</div>
+      <div class="mp-fila-rolo">${fila.map(x => { const d = diasAte(x.fim); return `<button type="button" class="mp-fila-it mp-${COR[x.g]}" onclick="${x.abrir}" title="${esc(x.tit)}">
+        <i class="mp-fila-ponto"></i><span><b>${esc(x.rot)}</b><small>${esc(x.met)}</small></span><em class="${d === 0 ? 'hoje' : d <= 3 ? 'logo' : ''}">${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : d + ' dias'}</em></button>`; }).join('')}</div></section>` : ''}
+    ${grupos || `<div class="nota"><svg><use href="#i-info"/></svg><div>Nada no ar neste filtro. Cole os anúncios que chegarem: eles entram aqui sozinhos.</div></div>`}
+    <button type="button" class="av-rodape" onclick="irPara('fabrica');irParaAba('fabrica','fb-mural')"><svg><use href="#i-livro"/></svg>${(DB.mural || []).length} ${((DB.mural || []).length === 1) ? 'anúncio guardado' : 'anúncios guardados'}, com as regras completas<span>Abrir o mural</span></button>
+  </div>`;
+};
 </script>
 </body>
 </html>
