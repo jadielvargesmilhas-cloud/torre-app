@@ -9789,6 +9789,29 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 @media (max-width:700px){ .pr-mapa .mp-grade:not(.mp-grade-1){ grid-template-columns:minmax(0, 1fr); } }
 @media (max-width:560px){ .mpr{ flex-wrap:wrap; } .mpr-v{ align-items:flex-start; text-align:left; max-width:none; } .mpr-seta{ position:absolute; right:10px; top:14px; } .mpr-txt{ padding-right:16px; flex-basis:100%; } }
 </style>
+<style>
+/* frases de abertura em uma linha só (pedido do Jadiel, 10/10/2026); no celular voltam a quebrar */
+.mp-intro p, .mp-uma-linha{ max-width:none !important; }
+.mp-uma-linha b{ color:var(--giz); font-weight:600; }
+.mp-intro > div{ min-width:0; flex:1 1 auto; }
+/* no tablet o botão Colar anúncio desce, para a frase ter a largura toda */
+@media (max-width:1180px){ .pr-mapa .pr-hoje-cab > div{ flex-basis:100%; } }
+</style>
+<style>
+.av-motivos .av-mot{ display:flex; align-items:center; gap:10px; }
+.av-caixa{ width:18px; height:18px; flex:0 0 auto; border-radius:5px; border:1.5px solid var(--fio-forte, var(--grafite)); display:grid; place-items:center; transition:background .15s, border-color .15s; }
+.av-caixa svg{ width:12px; height:12px; fill:none; stroke:#fff; stroke-width:3; opacity:0; transform:scale(.4); transition:opacity .15s, transform .2s var(--ease, ease); }
+.av-mot:hover .av-caixa{ border-color:var(--brasa); }
+.av-mot.marcado .av-caixa{ background:var(--brasa); border-color:var(--brasa); }
+.av-mot.marcado .av-caixa svg{ opacity:1; transform:none; }
+.av-mot.marcado{ color:var(--giz); }
+.av-mot-rot{ font-style:normal; color:var(--grafite); }
+</style>
+<style>
+/* no computador, o menu de motivos mostra a pergunta no alto (sem o Fechar, que fica no celular) */
+@media (min-width:641px){ .av-motivos .tsl-cab{ display:flex !important; padding:8px 12px 4px; } .av-motivos .tsl-cab [data-fechar]{ display:none; }
+  .av-motivos .tsl-cab span{ font:600 calc(11px * var(--esc))/1.2 var(--f-b); letter-spacing:.07em; text-transform:uppercase; color:var(--grafite); } }
+</style>
 </head>
 <body>
 <script>
@@ -11649,7 +11672,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 09:20';
+const BUILD = '2026-10-15 10:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17669,7 +17692,7 @@ function renderMesa(){
   }).join('')
   : `<div class="nota"><svg><use href="#i-info"/></svg><div class="pilha compacta">
       <div>Nenhum item marcado como prioridade.</div>
-      <div>Em <b>Acumular › Lista de desejos</b>, defina a prioridade de um item da lista para que ele apareça aqui pronto para registrar.</div>
+      <div>Em <b>Promoções › Lista de desejos</b>, defina a prioridade de um item da lista para que ele apareça aqui pronto para registrar.</div>
     </div></div>`;
 
   renderFiltroConta();
@@ -50741,7 +50764,7 @@ function acoesAvisoHTML(a){
   return `<div class="av-acoes" onclick="event.stopPropagation()">
     <button type="button" class="av-bt ok" onclick="avAgir('${ka}','feito',this)" data-dica="${avRotFeito(a)}" aria-label="${avRotFeito(a)}"><svg><use href="#i-ok"/></svg></button>
     <button type="button" class="av-bt" onclick="avMenuAdiar('${ka}',this)" data-dica="Lembrar depois" aria-label="Lembrar depois"><svg><use href="#i-relogio"/></svg></button>
-    <button type="button" class="av-bt nao" onclick="avAgir('${ka}','oculto',this)" data-dica="Não me interessa" aria-label="Não me interessa"><svg><use href="#i-olho-fechado"/></svg></button>
+    <button type="button" class="av-bt nao" onclick="avMenuMotivo('${ka}',this)" data-dica="Não me interessa" aria-label="Não me interessa"><svg><use href="#i-olho-fechado"/></svg></button>
   </div>`;
 }
 const AV_ACAO_TXT = {feito:'Marcado como aproveitado', oculto:'Ocultado', adiado:'Adiado'};
@@ -50828,7 +50851,7 @@ function abrirAvisosOcultos(){
   avLimpar();
   const st = avEstado(), ks = Object.keys(st).filter(k => avisoEscondido(k));
   const grupos = [['adiado', 'Lembrar depois', 'i-relogio'], ['feito', 'Já aproveitados ou resolvidos', 'i-ok'], ['oculto', 'Não me interessa', 'i-olho-fechado']];
-  const quando = e => e.acao === 'adiado' ? 'volta ' + new Date(e.ate).toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit'}) + ' às ' + String(new Date(e.ate).getHours()).padStart(2, '0') + 'h' : 'em ' + new Date(e.em).toLocaleDateString('pt-BR').slice(0, 5);
+  const quando = e => e.acao === 'adiado' ? 'volta ' + new Date(e.ate).toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit'}) + ' às ' + String(new Date(e.ate).getHours()).padStart(2, '0') + 'h' : 'em ' + new Date(e.em).toLocaleDateString('pt-BR').slice(0, 5) + (e.motivo ? ' · ' + e.motivo : '');
   const corpo = ks.length ? grupos.map(([ac, tit, ic]) => { const l = ks.filter(k => st[k].acao === ac).sort((x, y) => (st[y].em || 0) - (st[x].em || 0)); return l.length ? `<div class="av-grupo"><div class="av-grupo-cab"><svg><use href="#${ic}"/></svg>${tit}<b>${l.length}</b></div>${l.map(k => { const e = st[k];
       return `<div class="item av-oc"><div class="item-corpo"><div class="item-tit">${esc(e.t || k)}</div><div class="item-sub">${esc(e.s || '')}${e.s ? ' · ' : ''}${quando(e)}</div></div><button type="button" class="bt p" onclick="avMostrar('${esc(k).replace(/'/g, '&#39;')}')"><svg><use href="#i-olho"/></svg>Mostrar de novo</button></div>`; }).join('')}</div>` : ''; }).join('')
     : `<div class="vazio" style="border:0"><svg><use href="#i-ok"/></svg><h4>Nada oculto</h4><p>Os avisos que você marcar como aproveitados, adiar ou ocultar ficam aqui, para voltar quando quiser.</p></div>`;
@@ -51712,7 +51735,7 @@ prListaHojeHTML = function(){
     </section>`;
   }).join('');
   return `${qcBlocoHoje()}<div class="pr-hoje pr-mapa">
-    <div class="pr-hoje-cab"><div><h2>No ar agora</h2><p>Cada cartão traz as ofertas do seu tipo, da melhor para você até a menos vantajosa. Clique para abrir a campanha.</p></div>
+    <div class="pr-hoje-cab"><div><h2>No ar agora</h2><p class="mp-uma-linha">Cada tipo de oferta tem a sua página. Aqui você <b>olha e decide</b>; para executar, use <button type="button" class="mp-link" onclick="mpIrArea('acumular')">Acumular</button>.</p></div>
       <button type="button" class="bt primario" onclick="abrirColarMural()"><svg><use href="#i-copiar"/></svg>Colar anúncio</button></div>
     <div class="seg pr-chips">${chips.map(([k, n]) => `<button type="button" class="${k === prFiltro ? 'on' : ''}" data-pr-f="${k}">${n} <span class="cont-disco">${cont(k)}</span></button>`).join('')}</div>
     ${fila.length && !prFiltro ? `<section class="mp-fila" aria-label="Fecham primeiro"><div class="mp-fila-tit"><svg><use href="#i-relogio"/></svg>Fecham primeiro</div>
@@ -51722,6 +51745,72 @@ prListaHojeHTML = function(){
     <button type="button" class="av-rodape" onclick="irPara('fabrica');irParaAba('fabrica','fb-mural')"><svg><use href="#i-livro"/></svg>${(DB.mural || []).length} ${((DB.mural || []).length === 1) ? 'anúncio guardado' : 'anúncios guardados'}, com as regras completas<span>Abrir o mural</span></button>
   </div>`;
 };
+</script>
+
+<script>
+/* Frase de abertura em uma linha: se não couber, a letra encolhe um pouco
+   (até 11 px); se nem assim couber, como no celular, a frase quebra. */
+function ajustarUmaLinha(){
+  document.querySelectorAll('.mp-uma-linha, .mp-intro p').forEach(p => {
+    if (!p.offsetParent) return;
+    p.style.fontSize = ''; p.style.whiteSpace = 'nowrap';
+    const base = parseFloat(getComputedStyle(p).fontSize), sw = p.scrollWidth, cw = p.clientWidth;
+    if (sw <= cw + 1) return;
+    const novo = Math.floor(base * cw / sw * 4) / 4;
+    if (novo >= 11){ p.style.fontSize = novo + 'px'; if (p.scrollWidth > p.clientWidth + 1) p.style.fontSize = (novo - .25) + 'px'; }
+    else { p.style.whiteSpace = 'normal'; }
+  });
+}
+(function(){
+  ['renderMapaOfertas', 'renderMapaAcumulo'].forEach(n => {
+    if (typeof window[n] !== 'function') return;
+    const f = window[n];
+    window[n] = function(){ const r = f.apply(this, arguments); requestAnimationFrame(() => requestAnimationFrame(ajustarUmaLinha)); return r; };
+  });
+  let t = null; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(ajustarUmaLinha, 120); });
+  if (typeof aplicarEscala === 'function'){ const ae = aplicarEscala; aplicarEscala = function(){ const r = ae.apply(this, arguments); setTimeout(ajustarUmaLinha, 60); return r; }; }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarUmaLinha);
+})();
+</script>
+
+<script>
+/* "Não me interessa" com o porquê (10/10/2026, pedido do Jadiel): um toque no
+   motivo marca a caixinha e o aviso sai do Início. O motivo fica guardado e
+   aparece na lista dos ocultos. */
+const AV_MOTIVOS = ['Não compensa para mim', 'Não uso este programa', 'Sem pontos ou dinheiro agora', 'O prazo não dá para mim', 'Já resolvi de outro jeito', 'Não confio nesta oferta', 'Outro motivo'];
+function avMenuMotivo(k, btn){
+  if (typeof fecharSeletorLista === 'function') fecharSeletorLista();
+  document.querySelectorAll('.av-menu, .av-menu-fundo, .av-desfazer').forEach(x => x.remove());
+  const painel = document.createElement('div'); painel.className = 'tsl av-menu av-motivos'; painel.setAttribute('role', 'menu');
+  painel.innerHTML = `<div class="tsl-cab"><span>Por que não interessa?</span><button type="button" data-fechar>Fechar</button></div>
+    <div class="tsl-lista">${AV_MOTIVOS.map((m, i) => `<button type="button" class="tsl-op av-mot" role="menuitemcheckbox" aria-checked="false" data-i="${i}"><span class="av-caixa" aria-hidden="true"><svg><use href="#i-ok"/></svg></span>${esc(m)}</button>`).join('')}</div>`;
+  let fundo = null;
+  if (innerWidth <= 640){ fundo = document.createElement('div'); fundo.className = 'tsl-fundo av-menu-fundo'; document.body.appendChild(fundo); }
+  document.body.appendChild(painel);
+  const fechar = () => { painel.remove(); if (fundo) fundo.remove(); document.removeEventListener('pointerdown', fora, true); document.removeEventListener('keydown', esc_, true); };
+  const fora = e => { if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) fechar(); };
+  const esc_ = e => { if (e.key === 'Escape') fechar(); };
+  painel.querySelectorAll('.av-mot').forEach(b => b.onclick = () => {
+    if (painel.dataset.feito) return; painel.dataset.feito = '1';
+    b.classList.add('marcado'); b.setAttribute('aria-checked', 'true');
+    const motivo = AV_MOTIVOS[+b.dataset.i];
+    setTimeout(() => {
+      fechar();
+      avAgir(k, 'oculto', btn);
+      try { const st = avEstado(); if (st[k]) { st[k].motivo = motivo; salvar(); } } catch(e){}
+      const barra = document.querySelector('.av-desfazer span'); if (barra) barra.insertAdjacentHTML('beforeend', ` <i class="av-mot-rot">· ${esc(motivo)}</i>`);
+    }, 260);
+  });
+  painel.querySelector('[data-fechar]').onclick = fechar; if (fundo) fundo.onclick = fechar;
+  if (innerWidth > 640){
+    const r = btn.getBoundingClientRect(); painel.style.minWidth = '260px';
+    const alt = painel.offsetHeight, larg = Math.max(painel.offsetWidth, 260);
+    let topo = r.bottom + 6; if (topo + alt > innerHeight - 8) topo = Math.max(8, r.top - alt - 6);
+    let esq = r.right - larg; if (esq < 8) esq = 8;
+    painel.style.top = Math.round(topo) + 'px'; painel.style.left = Math.round(esq) + 'px';
+  }
+  setTimeout(() => { document.addEventListener('pointerdown', fora, true); document.addEventListener('keydown', esc_, true); }, 0);
+}
 </script>
 </body>
 </html>
