@@ -11773,7 +11773,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 00:40';
+const BUILD = '2026-10-11 01:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -52676,5 +52676,576 @@ async function cofreEnviarAgora(){
   } catch(e){ console.error(e); try { avisar('A cópia da nuvem será atualizada na próxima sincronização.', 'alerta', 5000); } catch(_){} }
 }
 </script>
+<style>
+/* ══ conta: tela de entrada (e-mail e senha, como no SisProf) ══ */
+html.conta-fora body > *:not(#contaTela):not(script){ visibility:hidden !important; }
+html body > div#contaTela:not(script):not(.x){ visibility:visible !important; }
+#contaTela{ position:fixed; inset:0; z-index:2147483100; display:grid; place-items:center; padding:24px 16px; overflow:auto;
+  background:radial-gradient(1100px 620px at 15% -10%, color-mix(in srgb, var(--ouro) 16%, transparent), transparent),
+             radial-gradient(900px 600px at 100% 110%, color-mix(in srgb, var(--anil) 18%, transparent), transparent), var(--breu); visibility:visible !important; }
+.ct-caixa{ width:min(920px, 100%); display:grid; grid-template-columns:1fr 1fr; border-radius:22px; overflow:hidden; border:1px solid var(--fio);
+  background:var(--sup-0, #0f141c); box-shadow:0 30px 80px rgba(0,0,0,.35); }
+.ct-marca{ padding:38px 34px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px;
+  background:linear-gradient(160deg, color-mix(in srgb, var(--ouro) 14%, transparent), transparent 60%); border-right:1px solid var(--fio); }
+.ct-logo{ width:68px; height:68px; border-radius:18px; display:grid; place-items:center; background:color-mix(in srgb, var(--ouro) 16%, transparent); border:1px solid color-mix(in srgb, var(--ouro) 45%, transparent); }
+.ct-logo svg{ width:32px; height:32px; fill:none; stroke:var(--ouro); stroke-width:1.7; }
+.ct-marca h1{ margin:0; font:700 calc(24px * var(--esc, 1))/1.2 var(--f-d, inherit); color:var(--giz); }
+.ct-marca .ct-lema{ margin:0; color:var(--ouro); font-weight:700; font-size:calc(17px * var(--esc, 1)); }
+.ct-marca ul{ list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; text-align:left; width:100%; }
+.ct-marca li{ display:flex; gap:10px; align-items:flex-start; color:var(--grafite); font-size:calc(14px * var(--esc, 1)); line-height:1.45; }
+.ct-marca li b{ color:var(--giz); }
+.ct-marca li svg{ flex:0 0 18px; width:18px; height:18px; fill:none; stroke:var(--jade); stroke-width:2; margin-top:1px; }
+.ct-pe{ margin-top:auto; padding-top:18px; color:var(--grafite); font-size:calc(12.5px * var(--esc, 1)); line-height:1.5; }
+.ct-form{ padding:38px 34px; display:flex; flex-direction:column; gap:12px; justify-content:center; }
+.ct-form h2{ margin:0 0 4px; font:700 calc(20px * var(--esc, 1))/1.25 var(--f-d, inherit); color:var(--giz); }
+.ct-form .ct-sub{ margin:0 0 6px; color:var(--grafite); font-size:calc(13.5px * var(--esc, 1)); line-height:1.5; }
+.ct-form label.ct-rot{ font:700 calc(11.5px * var(--esc, 1)) var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); margin:4px 0 -4px; }
+.ct-campo{ position:relative; }
+.ct-campo input{ width:100%; box-sizing:border-box; padding:14px 16px; border-radius:12px; border:1px solid var(--fio-forte, var(--fio)); background:var(--sup-1, transparent); color:var(--giz); font:500 calc(16px * var(--esc, 1)) var(--f-b, inherit); }
+.ct-campo input:focus{ outline:none; border-color:var(--ouro); box-shadow:0 0 0 3px color-mix(in srgb, var(--ouro) 22%, transparent); }
+.ct-campo .ct-olho{ position:absolute; right:8px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:10px; border:1px solid var(--fio); background:var(--sup-0, transparent); display:grid; place-items:center; cursor:pointer; padding:0; }
+.ct-campo .ct-olho svg{ width:18px; height:18px; fill:none; stroke:var(--grafite); stroke-width:1.8; }
+.ct-campo.com-olho input{ padding-right:56px; }
+.ct-entrar{ width:100%; justify-content:center; padding:14px 16px !important; font-size:calc(15.5px * var(--esc, 1)) !important; margin-top:6px; }
+.ct-links{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.ct-link{ border:0; background:none; color:var(--ouro); font:600 calc(13.5px * var(--esc, 1)) var(--f-b, inherit); cursor:pointer; padding:6px 0; text-decoration:underline; text-underline-offset:3px; }
+.ct-erro{ margin:0; min-height:1.2em; color:var(--brasa); font-size:calc(13.5px * var(--esc, 1)); line-height:1.45; }
+.ct-ok{ margin:0; padding:12px 14px; border-radius:12px; color:var(--giz); background:color-mix(in srgb, var(--jade) 12%, transparent); border:1px solid color-mix(in srgb, var(--jade) 40%, transparent); font-size:calc(13.5px * var(--esc, 1)); line-height:1.5; }
+.ct-ok:empty{ display:none; } .ct-erro:empty{ display:none; }
+@media (max-width:760px){ .ct-caixa{ grid-template-columns:1fr; } .ct-marca{ border-right:0; border-bottom:1px solid var(--fio); padding:26px 22px; } .ct-marca ul, .ct-pe{ display:none; } .ct-form{ padding:26px 22px; } }
+/* cartão da conta em Ajustes → Dados */
+.nv-conta .nv-github{ display:none !important; }
+#contaCartao .ct-email{ font:700 calc(15px * var(--esc)) var(--f-b, inherit); color:var(--giz); }
+</style>
+<script>
+/* ══ CONTA COM E-MAIL E SENHA (11/10/2026) ═════════════════════════════════════
+   Pedido do Jadiel: entrar "igual ao SisProf". Cada pessoa tem a própria conta,
+   os dados ficam guardados nela (Supabase), e todos os aparelhos se atualizam
+   sozinhos. Substitui, quando ligada, a sincronização pelo GitHub e o cofre:
+   uma senha só, a da conta, e "Esqueci minha senha" por e-mail.
+
+   Com CONTA_SERVIDOR vazio, nada muda: a Torre funciona como antes. */
+const CONTA_SERVIDOR = {url:'', chave:''};
+const CONTA = Object.assign({}, CONTA_SERVIDOR, (window.__CONTA_TESTE || {}));
+const CONTA_SESSAO = 'torre-conta-sessao', CONTA_DONO = 'torre-conta-dono', CONTA_TRAZER = 'torre-conta-trazer';
+const contaLigada = () => !!(CONTA.url && CONTA.chave);
+function contaSessao(){ try { return JSON.parse(localStorage.getItem(CONTA_SESSAO) || 'null'); } catch(_){ return null; } }
+function contaGuardar(s){ try { localStorage.setItem(CONTA_SESSAO, JSON.stringify(s)); } catch(_){} }
+const contaAtiva = () => contaLigada() && !!(contaSessao() || {}).refresh_token;
+const contaVolta = () => location.origin + location.pathname;
+
+async function contaApi(caminho, {method = 'GET', corpo, token, prefer} = {}){
+  const h = {'apikey':CONTA.chave, 'Content-Type':'application/json'};
+  if (token) h.Authorization = 'Bearer ' + token;
+  if (prefer) h.Prefer = prefer;
+  let r;
+  try { r = await fetch(CONTA.url.replace(/\/+$/, '') + caminho, {method, headers:h, body:corpo ? JSON.stringify(corpo) : undefined, cache:'no-store'}); }
+  catch(e){ const x = new Error('sem conexão com a internet'); x.semRede = true; throw x; }
+  const t = await r.text(); let j = null;
+  try { j = t ? JSON.parse(t) : null; } catch(_){ j = {message:t}; }
+  return {ok:r.ok, status:r.status, j:j};
+}
+function contaSessaoDe(j){
+  return {access_token:j.access_token, refresh_token:j.refresh_token,
+          expires_at:j.expires_at ? j.expires_at * 1000 : Date.now() + (Number(j.expires_in) || 3600) * 1000,
+          user:{id:j.user.id, email:j.user.email}};
+}
+/* As mensagens do servidor vêm em inglês; aqui viram frase de gente. */
+function contaTraduz(r){
+  const j = r.j || {}, cod = j.error_code || j.code || j.error || '', msg = String(j.msg || j.message || j.error_description || '');
+  if (cod === 'invalid_credentials' || /invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
+  if (cod === 'email_not_confirmed' || /email not confirmed/i.test(msg)) return 'confirmar';
+  if (cod === 'user_already_exists' || /already registered|already exists/i.test(msg)) return 'Já existe uma conta com este e-mail. Use "Entrar" ou "Esqueci minha senha".';
+  if (cod === 'weak_password' || /password should be|weak/i.test(msg)) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (cod === 'same_password' || /different from the old/i.test(msg)) return 'A nova senha precisa ser diferente da anterior.';
+  if (cod === 'validation_failed' || /invalid format|unable to validate email/i.test(msg)) return 'Confira o e-mail digitado.';
+  if (cod === 'over_email_send_rate_limit' || r.status === 429 || /rate limit|security purposes/i.test(msg)) return 'Muitas tentativas seguidas. Espere um minuto e tente de novo.';
+  if (cod === 'signup_disabled' || /signups not allowed/i.test(msg)) return 'O cadastro de novas contas está fechado. Fale com o suporte.';
+  if (r.status >= 500) return 'O servidor está com problema agora. Tente daqui a pouco.';
+  return 'Não deu certo (' + (msg || r.status) + ').';
+}
+
+/* ── token: renova sozinho antes de vencer (uma renovação por vez) ─────────── */
+let _contaRenova = null;
+async function contaToken(forcar){
+  const s = contaSessao();
+  if (!s || !s.refresh_token) throw contaErroSaiu();
+  if (!forcar && s.expires_at - Date.now() > 60000) return s.access_token;
+  if (_contaRenova) return _contaRenova;
+  _contaRenova = (async () => {
+    const r = await contaApi('/auth/v1/token?grant_type=refresh_token', {method:'POST', corpo:{refresh_token:s.refresh_token}});
+    if (!r.ok){
+      if (r.status === 400 || r.status === 401 || r.status === 403){ contaSessaoTerminou(); throw contaErroSaiu(); }
+      throw new Error('o servidor da conta respondeu ' + r.status);
+    }
+    const n = contaSessaoDe(r.j); contaGuardar(n); return n.access_token;
+  })();
+  try { return await _contaRenova; } finally { _contaRenova = null; }
+}
+function contaErroSaiu(){ const e = new Error('a sessão terminou: entre de novo com e-mail e senha'); e.saiu = true; return e; }
+function contaSessaoTerminou(){
+  try { localStorage.removeItem(CONTA_SESSAO); } catch(_){}
+  if (!document.getElementById('contaTela')) contaTela('entrar', 'Por segurança, entre de novo com o seu e-mail e senha.');
+}
+async function contaRest(method, caminho, corpo, prefer){
+  let r = await contaApi(caminho, {method, corpo, prefer, token:await contaToken()});
+  if (r.status === 401){ r = await contaApi(caminho, {method, corpo, prefer, token:await contaToken(true)}); }
+  return r;
+}
+
+/* ── os dados da conta: uma linha por pessoa, com número de versão ─────────── */
+function contaDadosParaEnviar(){
+  const c = semSegredos(DB);
+  if (c.cfg) delete c.cfg.nuvem;   /* estado de sincronização é de cada aparelho */
+  return c;
+}
+async function contaLer(){
+  const id = contaSessao().user.id;
+  const r = await contaRest('GET', `/rest/v1/torre_dados?select=dados,versao&user_id=eq.${id}`);
+  if (!r.ok) throw new Error(contaTraduz(r));
+  if (!r.j || !r.j.length) return {vazio:true, sha:null, dados:null};
+  const d = r.j[0].dados;
+  return {vazio:false, sha:String(r.j[0].versao), dados:contaDesembrulha(d)};
+}
+/* o servidor pode devolver o texto com uma camada de aspas a mais */
+function contaDesembrulha(d){ for (let i = 0; i < 3 && typeof d === 'string'; i++) d = JSON.parse(d); return d; }
+async function contaGravar(sha){
+  /* vai como texto: o banco do servidor reordenaria os campos de um JSON, e a
+     comparação "mudou ou não" passaria a acusar diferença sempre */
+  const id = contaSessao().user.id, dados = JSON.stringify(contaDadosParaEnviar());
+  if (!sha){
+    const r = await contaRest('POST', '/rest/v1/torre_dados', {user_id:id, dados}, 'return=representation');
+    if (r.status === 409) return {conflito:true};
+    if (!r.ok) throw new Error(contaTraduz(r));
+    return {conflito:false, sha:String(r.j[0].versao)};
+  }
+  const r = await contaRest('PATCH', `/rest/v1/torre_dados?user_id=eq.${id}&versao=eq.${encodeURIComponent(sha)}`, {dados}, 'return=representation');
+  if (!r.ok) throw new Error(contaTraduz(r));
+  if (!r.j || !r.j.length) return {conflito:true};
+  return {conflito:false, sha:String(r.j[0].versao)};
+}
+async function contaVersaoRemota(){
+  const id = contaSessao().user.id;
+  const r = await contaRest('GET', `/rest/v1/torre_dados?select=versao&user_id=eq.${id}`);
+  if (!r.ok) throw new Error(contaTraduz(r));
+  return r.j && r.j.length ? String(r.j[0].versao) : null;
+}
+
+/* A sincronização que já existe passa a usar a conta, sem mudar a lógica de
+   quem mudou o quê (que já foi testada à exaustão). */
+(function(){
+  const _pronta = nuvemPronta, _ler = nuvemLer, _gravar = nuvemGravar, _estado = nuvemEstado, _conflito = nuvemAbrirConflito, _marcar = nuvemMarcarPendente;
+  nuvemPronta = function(){ return contaAtiva() ? true : _pronta.apply(this, arguments); };
+  nuvemLer = function(){ return contaAtiva() ? contaLer() : _ler.apply(this, arguments); };
+  nuvemGravar = function(sha){ return contaAtiva() ? contaGravar(sha) : _gravar.apply(this, arguments); };
+  nuvemEstado = function(estado, detalhe){
+    _estado.apply(this, arguments);
+    if (!contaAtiva()) return;
+    const el = document.getElementById('nuvemEstado');
+    if (el && estado === 'parado'){ const c = nuvemCfg(); el.innerHTML = `<span class="etq">${c.ultima ? 'Última vez às ' + new Date(c.ultima).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : 'Aguardando'}</span>`; }
+    if (el && estado === 'erro' && /internet/.test(detalhe || '')) el.innerHTML = '<span class="etq ouro">Sem internet: envia quando voltar</span>';
+    const cx = document.getElementById('nuvemErro');
+    if (cx && estado === 'erro' && /internet/.test(detalhe || '')) cx.innerHTML = '';
+  };
+  /* Aparelho novo na conta, ou que acabou de trocar de pessoa: traz da conta
+     sem perguntar. Só pergunta quando os dois lados têm trabalho de verdade. */
+  nuvemAbrirConflito = function(remoto, motivo){
+    if (contaAtiva() && contaJuntar(remoto, motivo === 'primeira')){ try { localStorage.removeItem(CONTA_TRAZER); } catch(_){} return; }
+    if (contaAtiva() && motivo === 'primeira' && (localStorage.getItem(CONTA_TRAZER) || contaBancoSemUso(DB))){
+      try { localStorage.removeItem(CONTA_TRAZER); } catch(_){}
+      DB = comSegredosLocais(remoto.dados);
+      nuvemCfg().sha = remoto.sha; nuvemCfg().marca = assinaturaDados(DB); nuvemCfg().ultima = Date.now();
+      salvar(); aplicarTudo(); nuvemEstado('ok');
+      avisar('Seus dados foram carregados da sua conta.', 'ok');
+      return;
+    }
+    const v = _conflito.apply(this, arguments);
+    if (contaAtiva()){
+      const veu = document.getElementById('veu');
+      if (veu) veu.querySelectorAll('div, p').forEach(el => {
+        if (el.children.length) return;
+        el.textContent = el.textContent
+          .replace('a outra continua no histórico do repositório e pode ser recuperada lá', 'a outra fica guardada nas cópias de segurança da sua conta')
+          .replace(/Nada é apagado de verdade:[\s\S]*$/, 'Nada se perde: a sua conta guarda uma cópia de segurança por hora, das últimas 48 horas.');
+      });
+    }
+    return v;
+  };
+  /* Com conta, envia sozinho poucos segundos depois de cada alteração. */
+  let t = null;
+  nuvemMarcarPendente = function(){
+    _marcar.apply(this, arguments);
+    if (!contaAtiva() || window.__contaSaindo) return;
+    clearTimeout(t);
+    t = setTimeout(function tenta(){
+      if (nuvemOcupada){ t = setTimeout(tenta, 1500); return; }
+      try { if (nuvemCfg().marca && assinaturaDados(DB) === nuvemCfg().marca){ nuvemPendente = false; return; } } catch(_){}
+      nuvemPendente = false; nuvemSincronizar(false);
+    }, 4000);
+  };
+})();
+/* ── junção automática, coleção por coleção ──────────────────────────────────
+   Guardamos uma impressão de cada coleção na última sincronização. Quando os dois
+   aparelhos mudaram, cada coleção fica com o lado que mexeu nela; as que vêm
+   sozinhas da internet (campanhas, lojas, vitrines) ficam com a da conta. Só
+   pergunta quando a MESMA lista foi alterada nos dois aparelhos. */
+const CONTA_AUTOMATICAS = ['campanhas', 'lojas', 'vitrines'];
+function contaImpressao(txt){ let h = 0x811c9dc5; for (let i = 0; i < txt.length; i++){ h ^= txt.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + '.' + txt.length; }
+function contaImpressoes(db){ const o = {}; colecoesDe(db, db).forEach(k => { o[k] = contaImpressao(JSON.stringify(colecaoDe(db, k))); }); return o; }
+function contaImpressoesItens(db){
+  const o = {};
+  colecoesDe(db, db).forEach(k => {
+    const lista = colecaoDe(db, k); if (COLECOES_DE_CFG.includes(k) || !lista.every(x => x && typeof x === 'object' && x.id != null)) return;
+    const m = {}; lista.forEach(x => { m[String(x.id)] = contaImpressao(JSON.stringify(x)); }); o[k] = m;
+  });
+  return o;
+}
+function contaMarcarBase(){ try { if (contaAtiva() && nuvemCfg().marca === assinaturaDados(DB)){ nuvemCfg().marcas = contaImpressoes(DB); nuvemCfg().marcasItens = contaImpressoesItens(DB); } } catch(_){} }
+/* Junta uma lista registro por registro (pelo id): o que um aparelho criou,
+   alterou ou apagou entra; só falha se o MESMO registro foi alterado nos dois. */
+function contaJuntarLista(aqui, la, base){
+  if (!base || ![aqui, la].every(l => Array.isArray(l) && l.every(x => x && typeof x === 'object' && x.id != null))) return null;
+  const imp = x => contaImpressao(JSON.stringify(x));
+  const mA = new Map(aqui.map(x => [String(x.id), x])), mL = new Map(la.map(x => [String(x.id), x]));
+  if (mA.size !== aqui.length || mL.size !== la.length) return null;
+  const fica = new Map();
+  for (const id of new Set([...mA.keys(), ...mL.keys()])){
+    const a = mA.get(id), l = mL.get(id), b = base[id];
+    if (a && l){
+      const ia = imp(a), il = imp(l);
+      if (ia === il || il === b) fica.set(id, a); else if (ia === b) fica.set(id, l); else return null;
+    } else if (a){ if (b === undefined || imp(a) !== b) fica.set(id, a); }
+    else { if (b === undefined || imp(l) !== b) fica.set(id, l); }
+  }
+  const saida = []; const usados = new Set();
+  aqui.forEach(x => { const id = String(x.id); if (fica.has(id)){ saida.push(fica.get(id)); usados.add(id); } });
+  la.forEach(x => { const id = String(x.id); if (fica.has(id) && !usados.has(id)){ saida.push(fica.get(id)); usados.add(id); } });
+  return saida;
+}
+function contaJuntar(remoto, primeira){
+  const base = primeira ? null : nuvemCfg().marcas;
+  const dif = diferencasEntre(DB, remoto.dados).map(d => d.colecao);
+  const trazer = [], travadas = [];
+  dif.forEach(k => {
+    const auto = CONTA_AUTOMATICAS.includes(k);
+    if (!base){ (auto ? trazer : travadas).push(k); return; }
+    const aqui = contaImpressao(JSON.stringify(colecaoDe(DB, k))) !== base[k];
+    const la = contaImpressao(JSON.stringify(colecaoDe(remoto.dados, k))) !== base[k];
+    if (la && !aqui) trazer.push(k);
+    else if (aqui && !la) return;
+    else if (auto) trazer.push(k);
+    else travadas.push(k);
+  });
+  const juntadas = {};
+  for (const k of travadas){
+    const j = contaJuntarLista(colecaoDe(DB, k), colecaoDe(remoto.dados, k), base && (nuvemCfg().marcasItens || {})[k]);
+    if (!j) return false;
+    juntadas[k] = j;
+  }
+  const novo = JSON.parse(JSON.stringify(DB));
+  Object.keys(juntadas).forEach(k => { novo[k] = juntadas[k]; });
+  trazer.forEach(k => {
+    if (COLECOES_DE_CFG.includes(k)){ novo.cfg = novo.cfg || {}; if (remoto.dados.cfg && remoto.dados.cfg[k] !== undefined) novo.cfg[k] = remoto.dados.cfg[k]; else delete novo.cfg[k]; }
+    else if (remoto.dados[k] !== undefined) novo[k] = remoto.dados[k]; else delete novo[k];
+  });
+  DB = novo;
+  nuvemCfg().sha = remoto.sha;
+  /* a marca passa a ser a da conta: se sobrou algo deste aparelho, a próxima
+     sincronização envia (só este lado mudou) */
+  nuvemCfg().marca = assinaturaDados(remoto.dados);
+  nuvemCfg().marcas = contaImpressoes(remoto.dados);
+  nuvemCfg().marcasItens = contaImpressoesItens(remoto.dados);
+  nuvemCfg().ultima = Date.now();
+  salvar(); aplicarTudo(); nuvemEstado('ok');
+  if (Object.keys(juntadas).length || trazer.some(k => !CONTA_AUTOMATICAS.includes(k))) avisar('Dados atualizados com o que você fez no outro aparelho.', 'ok');
+  /* sobrou alteração deste aparelho: envia já, sem esperar */
+  if (assinaturaDados(DB) !== nuvemCfg().marca) setTimeout(function t(){ if (nuvemOcupada) return setTimeout(t, 300); nuvemSincronizar(false); }, 300);
+  return true;
+}
+(function(){
+  const _s = nuvemSincronizar, _r = nuvemResolver;
+  nuvemSincronizar = async function(){
+    /* com a folha de escolha aberta, espera a decisão: não refaz a pergunta por baixo */
+    if (contaAtiva() && window._nuvemRemoto && document.querySelector('#veu.aberto')) return;
+    try { return await _s.apply(this, arguments); } finally { contaMarcarBase(); } };
+  nuvemResolver = async function(){ try { return await _r.apply(this, arguments); } finally { contaMarcarBase(); } };
+})();
+function contaBancoSemUso(db){
+  if (!db) return true;
+  const n = k => Array.isArray(db[k]) ? db[k].length : 0;
+  return ['lancamentos','contas','saldos','metas','reservas','desejos','cartoes','assinaturas','lotes','compras','cotacoes','pendentes','pagamentos','roteiros'].every(k => n(k) === 0);
+}
+
+/* ── volta do link do e-mail (#access_token=...&type=recovery) ─────────────── */
+window.__contaVolta = null;
+if (contaLigada() && /(^#|&)(access_token|error_code|error)=/.test(location.hash)){
+  try { window.__contaVolta = Object.fromEntries(new URLSearchParams(location.hash.slice(1))); } catch(_){}
+  try { history.replaceState(null, '', location.pathname + location.search); } catch(_){}
+}
+
+/* ── a tela de entrada ──────────────────────────────────────────────────────── */
+function contaTela(modo, aviso){
+  let el = document.getElementById('contaTela');
+  if (!el){ el = document.createElement('div'); el.id = 'contaTela'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
+  document.documentElement.classList.add('conta-fora');
+  const MODOS = {
+    entrar:    {t:'Entrar na sua conta', s:'Use o e-mail e a senha da sua conta. Os dados aparecem iguais em todos os seus aparelhos.', b:'Entrar'},
+    criar:     {t:'Criar a sua conta', s:'Escolha o e-mail e uma senha de pelo menos 6 caracteres. Vamos enviar um link para confirmar o e-mail.', b:'Criar conta'},
+    esqueci:   {t:'Esqueci minha senha', s:'Digite o e-mail da conta. Enviaremos um link para você criar uma senha nova.', b:'Enviar link'},
+    novaSenha: {t:'Criar uma senha nova', s:'Digite a senha nova duas vezes. Ela passa a valer em todos os aparelhos.', b:'Salvar a senha nova'}
+  };
+  const m = MODOS[modo] || MODOS.entrar;
+  const olho = id => `<button type="button" class="ct-olho" data-olho="${id}" aria-label="Mostrar a senha" title="Mostrar a senha"><svg><use href="#i-olho"/></svg></button>`;
+  el.innerHTML = `<div class="ct-caixa">
+    <div class="ct-marca">
+      <div class="ct-logo"><svg><use href="#i-escudo"/></svg></div>
+      <h1>Torre de Controle</h1>
+      <p class="ct-lema">Suas milhas sob controle.</p>
+      <ul>
+        <li><svg><use href="#i-ok"/></svg><span><b>Carteira e saldos</b> de todos os programas, com vencimentos à vista.</span></li>
+        <li><svg><use href="#i-ok"/></svg><span><b>Promoções</b> que valem para você, com o seu clube e o seu cartão.</span></li>
+        <li><svg><use href="#i-ok"/></svg><span><b>Os mesmos dados</b> no computador, no tablet e no celular, sem fazer nada.</span></li>
+      </ul>
+      <div class="ct-pe">Acesso individual por conta.<br>Os dados ficam guardados na sua conta, com segurança.</div>
+    </div>
+    <form class="ct-form" id="ctForm" novalidate>
+      <h2>${esc(m.t)}</h2>
+      <p class="ct-sub">${esc(m.s)}</p>
+      <p class="ct-ok" id="ctOk">${aviso ? esc(aviso) : ''}</p>
+      ${modo !== 'novaSenha' ? `<label class="ct-rot" for="ctEmail">E-mail</label>
+      <div class="ct-campo"><input type="email" id="ctEmail" autocomplete="${modo === 'criar' ? 'email' : 'username'}" inputmode="email" autocapitalize="none" spellcheck="false" value="${esc(localStorage.getItem('torre-conta-ultimo-email') || '')}"></div>` : ''}
+      ${modo === 'entrar' || modo === 'criar' || modo === 'novaSenha' ? `<label class="ct-rot" for="ctSenha">${modo === 'novaSenha' ? 'Senha nova' : 'Senha'}</label>
+      <div class="ct-campo com-olho"><input type="password" id="ctSenha" autocomplete="${modo === 'entrar' ? 'current-password' : 'new-password'}">${olho('ctSenha')}</div>` : ''}
+      ${modo === 'criar' || modo === 'novaSenha' ? `<label class="ct-rot" for="ctSenha2">Repita a senha</label>
+      <div class="ct-campo com-olho"><input type="password" id="ctSenha2" autocomplete="new-password">${olho('ctSenha2')}</div>` : ''}
+      <p class="ct-erro" id="ctErro" role="alert"></p>
+      <button type="submit" class="bt primario ct-entrar" id="ctBotao">${esc(m.b)}</button>
+      <div class="ct-links">
+        ${modo === 'entrar' ? `<button type="button" class="ct-link" data-ir="esqueci">Esqueci minha senha</button><button type="button" class="ct-link" data-ir="criar">Criar conta</button>` : ''}
+        ${modo === 'criar' || modo === 'esqueci' ? `<button type="button" class="ct-link" data-ir="entrar">Já tenho conta: entrar</button>` : ''}
+      </div>
+    </form></div>`;
+  el.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => {
+    const em = el.querySelector('#ctEmail'); if (em && em.value.trim()) try { localStorage.setItem('torre-conta-ultimo-email', em.value.trim()); } catch(_){}
+    contaTela(b.dataset.ir);
+  });
+  el.querySelectorAll('[data-olho]').forEach(b => b.onclick = () => { const i = el.querySelector('#' + b.dataset.olho); i.type = i.type === 'password' ? 'text' : 'password'; });
+  const erro = el.querySelector('#ctErro'), ok = el.querySelector('#ctOk'), bt = el.querySelector('#ctBotao');
+  const ocupado = (sim, txt) => { bt.disabled = sim; bt.textContent = sim ? txt : m.b; };
+  el.querySelector('#ctForm').onsubmit = async ev => {
+    ev.preventDefault(); erro.textContent = '';
+    const email = (el.querySelector('#ctEmail') || {}).value ? el.querySelector('#ctEmail').value.trim().toLowerCase() : '';
+    const senha = (el.querySelector('#ctSenha') || {}).value || '', senha2 = (el.querySelector('#ctSenha2') || {}).value || '';
+    if (modo !== 'novaSenha' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { erro.textContent = 'Digite um e-mail válido.'; return; }
+    if ((modo === 'entrar') && !senha){ erro.textContent = 'Digite a senha.'; return; }
+    if ((modo === 'criar' || modo === 'novaSenha') && senha.length < 6){ erro.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+    if ((modo === 'criar' || modo === 'novaSenha') && senha !== senha2){ erro.textContent = 'As duas senhas não estão iguais.'; return; }
+    if (email) try { localStorage.setItem('torre-conta-ultimo-email', email); } catch(_){}
+    try {
+      if (modo === 'entrar'){
+        ocupado(true, 'Entrando...');
+        const r = await contaApi('/auth/v1/token?grant_type=password', {method:'POST', corpo:{email, password:senha}});
+        if (!r.ok){
+          const t = contaTraduz(r);
+          if (t === 'confirmar'){
+            erro.innerHTML = `Falta confirmar o e-mail. Abra a mensagem que enviamos para <b>${esc(email)}</b> e toque no link. <button type="button" class="ct-link" id="ctReenviar">Reenviar o e-mail</button>`;
+            el.querySelector('#ctReenviar').onclick = async () => {
+              const rr = await contaApi('/auth/v1/resend?redirect_to=' + encodeURIComponent(contaVolta()), {method:'POST', corpo:{type:'signup', email}});
+              if (rr.ok){ erro.textContent = ''; ok.textContent = 'E-mail reenviado. Confira também a caixa de spam.'; } else erro.textContent = contaTraduz(rr);
+            };
+          } else erro.textContent = t;
+          ocupado(false); return;
+        }
+        contaGuardar(contaSessaoDe(r.j));
+        contaEntrou();
+      } else if (modo === 'criar'){
+        ocupado(true, 'Criando...');
+        const r = await contaApi('/auth/v1/signup?redirect_to=' + encodeURIComponent(contaVolta()), {method:'POST', corpo:{email, password:senha}});
+        if (!r.ok){ erro.textContent = contaTraduz(r); ocupado(false); return; }
+        if (r.j && r.j.access_token){ contaGuardar(contaSessaoDe(r.j)); contaEntrou(); return; }
+        /* Por segurança o servidor não diz se o e-mail já existia: responde igual. */
+        contaTela('entrar', `Conta criada. Enviamos um link para ${email}: abra o e-mail, toque no link para confirmar e depois entre aqui. Confira também a caixa de spam.`);
+      } else if (modo === 'esqueci'){
+        ocupado(true, 'Enviando...');
+        const r = await contaApi('/auth/v1/recover?redirect_to=' + encodeURIComponent(contaVolta()), {method:'POST', corpo:{email}});
+        if (!r.ok){ erro.textContent = contaTraduz(r); ocupado(false); return; }
+        contaTela('entrar', `Se existir uma conta com ${email}, o link para criar a senha nova já foi enviado. Abra o e-mail neste aparelho e toque no link. Confira também a caixa de spam.`);
+      } else if (modo === 'novaSenha'){
+        ocupado(true, 'Salvando...');
+        const r = await contaApi('/auth/v1/user', {method:'PUT', corpo:{password:senha}, token:await contaToken()});
+        if (!r.ok){ erro.textContent = contaTraduz(r); ocupado(false); return; }
+        contaEntrou('Senha nova salva. Ela já vale em todos os seus aparelhos.');
+      }
+    } catch(e){
+      erro.textContent = e.semRede ? 'Sem conexão com a internet. Confira o Wi-Fi ou os dados móveis e tente de novo.' : (e.message || 'Não deu certo.');
+      ocupado(false);
+    }
+  };
+  setTimeout(() => { const f = el.querySelector(modo === 'novaSenha' ? '#ctSenha' : (el.querySelector('#ctEmail') && el.querySelector('#ctEmail').value ? '#ctSenha' : '#ctEmail')) || el.querySelector('#ctEmail'); if (f) f.focus(); }, 60);
+}
+
+function contaFecharTela(){
+  const el = document.getElementById('contaTela'); if (el) el.remove();
+  document.documentElement.classList.remove('conta-fora');
+}
+
+/* Entrou (pela tela ou pelo link do e-mail). */
+function contaEntrou(aviso){
+  const s = contaSessao(); if (!s) return;
+  const dono = localStorage.getItem(CONTA_DONO);
+  if (dono && dono !== s.user.id){
+    /* Outra pessoa usava este aparelho: os dados dela saem daqui (estão na conta
+       dela) e os desta conta chegam da nuvem. */
+    window.__contaSaindo = true; try { clearTimeout(salvarPendente); } catch(_){}
+    localStorage.removeItem(CHAVE); localStorage.setItem(CONTA_DONO, s.user.id); localStorage.setItem(CONTA_TRAZER, '1');
+    location.reload(); return;
+  }
+  contaFecharTela();
+  if (aviso) setTimeout(() => avisar(aviso, 'ok', 5000), 400);
+  contaPronta();
+}
+
+/* Conta em uso: prepara este aparelho e começa a sincronizar. */
+let _contaRelogio = null;
+function contaPronta(){
+  if (typeof DB !== 'object' || !DB || (typeof COFRE === 'object' && COFRE.trancado)){ setTimeout(contaPronta, 300); return; }
+  const s = contaSessao(); if (!s) return;
+  if (!localStorage.getItem(CONTA_DONO)){
+    localStorage.setItem(CONTA_DONO, s.user.id);
+    if (contaBancoSemUso(DB)) localStorage.setItem(CONTA_TRAZER, '1');
+  }
+  const c = nuvemCfg();
+  if (c.modo !== 'conta:' + s.user.id){ c.sha = null; c.marca = null; c.ultima = null; c.modo = 'conta:' + s.user.id; salvar(); }
+  /* Com a conta, o cofre deixa de ser necessário: uma senha só, a da conta. */
+  if (typeof COFRE === 'object' && COFRE.dek){
+    Promise.resolve(typeof _cofreFila !== 'undefined' ? _cofreFila : null).then(() => {
+      COFRE.dek = null; COFRE.env = null;
+      try { localStorage.setItem(CHAVE, JSON.stringify(DB)); } catch(_){}
+      try { cofreLembrarApagar(); } catch(_){}
+      c.remotoCofre = false;
+      try { renderCofreCartao(); } catch(_){}
+    });
+  }
+  contaCartao();
+  const bs = document.getElementById('btSair'); if (bs) bs.onclick = () => sairDaConta();
+  nuvemSincronizar(false);
+  clearInterval(_contaRelogio);
+  _contaRelogio = setInterval(contaChecar, 60000);
+}
+/* Confere se outro aparelho gravou algo: pergunta só o número da versão, que é
+   leve; os dados só vêm quando mudou. */
+async function contaChecar(){
+  if (!contaAtiva() || nuvemOcupada || document.visibilityState === 'hidden') return;
+  try {
+    const v = await contaVersaoRemota();
+    const mudouAqui = nuvemCfg().marca && assinaturaDados(DB) !== nuvemCfg().marca;
+    if (v !== (nuvemCfg().sha || null) || mudouAqui) nuvemSincronizar(false);
+  } catch(e){ if (!e.semRede) console.warn(e); }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') contaChecar(); });
+addEventListener('online', () => { if (contaAtiva()) nuvemSincronizar(false); });
+
+/* ── sair da conta ─────────────────────────────────────────────────────────── */
+async function contaSair(){
+  confirmar('Sair da conta?', 'Seus dados continuam guardados na sua conta. Neste aparelho, eles saem até você entrar de novo.', async () => {
+    if (nuvemCfg().marca !== assinaturaDados(DB) || !nuvemCfg().sha){
+      await nuvemSincronizar(false);
+      if (nuvemCfg().marca !== assinaturaDados(DB)){ avisar('Ainda há alterações que não foram para a sua conta. Conecte à internet e tente sair de novo.', 'erro', 7000); return; }
+    }
+    window.__contaSaindo = true;
+    try { clearTimeout(salvarPendente); } catch(_){}
+    try { /* scope=local: sai só deste aparelho; os outros continuam conectados */
+    await contaApi('/auth/v1/logout?scope=local', {method:'POST', token:(contaSessao() || {}).access_token}); } catch(_){}
+    ['torre-cofre-lembrar', CONTA_SESSAO, CONTA_DONO, CONTA_TRAZER, CHAVE].forEach(k => { try { localStorage.removeItem(k); } catch(_){} });
+    location.reload();
+  }, 'Sair');
+}
+/* os botões "Sair" que já existiam (barra lateral, menu do celular, perfil) passam a sair da conta */
+(function(){ const _o = sairDaConta; sairDaConta = function(){ return contaAtiva() ? contaSair() : _o.apply(this, arguments); }; })();
+/* salvar não grava nada enquanto sai (senão os dados voltariam ao aparelho) */
+(function(){ const _s = salvar; salvar = function(){ if (window.__contaSaindo) return; return _s.apply(this, arguments); }; })();
+
+function contaTrocarSenha(){
+  abrirFolha({titulo:'Trocar a senha', corpo:`<p class="fraco" style="margin:0 0 12px">A senha nova passa a valer em todos os seus aparelhos.</p>
+    <div class="campo"><label>Senha nova</label><input type="password" id="ctTroca1" autocomplete="new-password"></div>
+    <div class="campo"><label>Repita a senha nova</label><input type="password" id="ctTroca2" autocomplete="new-password"></div><p class="cf-erro" id="ctTrocaErro"></p>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="ctTrocaOk">Salvar a senha nova</button>`});
+  $('#ctTrocaOk').onclick = async () => {
+    const a = $('#ctTroca1').value, b = $('#ctTroca2').value, e = $('#ctTrocaErro');
+    if (a.length < 6) return e.textContent = 'A senha precisa ter pelo menos 6 caracteres.';
+    if (a !== b) return e.textContent = 'As duas senhas não estão iguais.';
+    try {
+      const r = await contaApi('/auth/v1/user', {method:'PUT', corpo:{password:a}, token:await contaToken()});
+      if (!r.ok) return e.textContent = contaTraduz(r);
+      fecharFolha(); avisar('Senha trocada.', 'ok');
+    } catch(x){ e.textContent = x.semRede ? 'Sem conexão com a internet.' : x.message; }
+  };
+}
+
+/* ── o cartão "Sua conta" em Ajustes → Dados ───────────────────────────────── */
+function contaCartao(){
+  const est = document.getElementById('nuvemEstado'); if (!est) return;
+  const cartao = est.closest('.cartao'); if (!cartao) return;
+  const s = contaSessao();
+  if (!contaAtiva() || !s){ cartao.classList.remove('nv-conta'); const v = document.getElementById('contaCartao'); if (v) v.remove(); return; }
+  cartao.classList.add('nv-conta');
+  const cab = cartao.querySelector('.cartao-cab');
+  /* esconde só as partes do GitHub; os avisos de emissão e saldo do cartão ficam */
+  [...cartao.children].forEach(f => {
+    if (f === cab || f.id === 'nuvemErro' || f.id === 'emissoesSemBaixa' || f.id === 'saldoDivergente' || f.id === 'contaCartao') return;
+    if (f.matches('label.ck, .grade') || f.querySelector('#btNvAgora')) f.classList.add('nv-github');
+  });
+  const h3 = cab.querySelector('h3');
+  if (h3 && !h3.dataset.conta){ h3.dataset.conta = '1';
+    h3.innerHTML = `<svg style="width:17px;height:17px;fill:none;stroke:var(--anil-claro);stroke-width:1.8"><use href="#i-nuvem"/></svg> Sua conta
+      <div class="sub">Seus dados ficam guardados na sua conta e aparecem iguais em todos os aparelhos onde você entrar. Cada alteração é enviada sozinha em poucos segundos.</div>`; }
+  let box = document.getElementById('contaCartao');
+  if (!box){ box = document.createElement('div'); box.id = 'contaCartao'; cab.after(box); }
+  box.innerHTML = `<div class="cf-linhas"><div class="cf-linha"><div><span class="ct-email">${esc(s.user.email)}</span>
+      <small>Conectado neste aparelho. Para usar em outro aparelho, é só entrar com este e-mail e a mesma senha.</small></div>
+      <div class="cf-bts"><button type="button" class="bt p fantasma" id="ctAgora"><svg><use href="#i-atualizar"/></svg>Sincronizar agora</button>
+      <button type="button" class="bt p fantasma" onclick="contaTrocarSenha()"><svg><use href="#i-chave"/></svg>Trocar a senha</button>
+      <button type="button" class="bt p fantasma" onclick="contaSair()"><svg><use href="#i-sair"/></svg>Sair da conta</button></div></div></div>`;
+  box.querySelector('#ctAgora').onclick = () => nuvemSincronizar(true);
+}
+/* No cartão Segurança, a linha do cofre dá lugar à proteção da conta. */
+(function(){
+  const _r = renderCofreCartao;
+  renderCofreCartao = function(){
+    const v = _r.apply(this, arguments);
+    if (contaAtiva()){
+      const l = document.querySelector('#cfCartao .cf-linha');
+      if (l && !COFRE.dek) l.innerHTML = `<div><b>Acesso com e-mail e senha <span class="etq jade">ligado</span></b><small>Só entra quem tem a senha da sua conta. Os dados são guardados na conta, separados dos de qualquer outra pessoa.</small></div>`;
+    }
+    return v;
+  };
+})();
+
+/* ── início ─────────────────────────────────────────────────────────────────── */
+(function(){
+  if (!contaLigada()) return;
+  const ir = async () => {
+    const v = window.__contaVolta; window.__contaVolta = null;
+    if (v && (v.error_code || v.error)){
+      const exp = /expired|otp_expired/i.test((v.error_code || '') + (v.error_description || ''));
+      contaTela(v.type === 'recovery' || exp ? 'esqueci' : 'entrar', exp ? 'Esse link já expirou ou já foi usado. Peça outro abaixo.' : 'Não deu para abrir o link. Peça outro.');
+      return;
+    }
+    if (v && v.access_token){
+      try {
+        const r = await contaApi('/auth/v1/user', {token:v.access_token});
+        if (!r.ok) throw new Error('link');
+        contaGuardar(contaSessaoDe({access_token:v.access_token, refresh_token:v.refresh_token, expires_at:Number(v.expires_at) || 0, expires_in:v.expires_in, user:r.j}));
+        if (v.type === 'recovery'){ contaTela('novaSenha'); return; }
+        contaEntrou(v.type === 'signup' ? 'E-mail confirmado. Bem-vindo à Torre de Controle!' : null); return;
+      } catch(e){ contaTela('entrar', e.semRede ? 'Sem internet para abrir o link. Conecte e toque no link de novo.' : 'Esse link não vale mais. Entre com o e-mail e a senha, ou peça outro link.'); return; }
+    }
+    if (!contaAtiva()){ contaTela('entrar'); return; }
+    contaPronta();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ir); else ir();
+})();
+</script>
+
 </body>
 </html>
