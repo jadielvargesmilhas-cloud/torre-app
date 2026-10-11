@@ -11773,7 +11773,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 08:20';
+const BUILD = '2026-10-11 08:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -53066,6 +53066,12 @@ function contaTela(modo, aviso){
         const r = await contaApi('/auth/v1/signup?redirect_to=' + encodeURIComponent(contaVolta()), {method:'POST', corpo:{email, password:senha}});
         if (!r.ok){ erro.textContent = contaTraduz(r); ocupado(false); return; }
         if (r.j && r.j.access_token){ contaGuardar(contaSessaoDe(r.j)); contaEntrou(); return; }
+        /* e-mail que já tem conta: o servidor responde "ok" sem enviar nada (para não
+           revelar quem é cliente). A lista de identidades vazia é o sinal. */
+        if (r.j && Array.isArray(r.j.identities) && r.j.identities.length === 0){
+          contaTela('entrar', `O e-mail ${email} já tem conta, então nenhum e-mail de confirmação é enviado. Entre com a sua senha; se não lembrar, toque em "Esqueci minha senha".`);
+          return;
+        }
         /* Por segurança o servidor não diz se o e-mail já existia: responde igual. */
         contaTela('entrar', `Conta criada. Enviamos um link para ${email}: abra o e-mail, toque no link para confirmar e depois entre aqui. Confira também a caixa de spam.`);
       } else if (modo === 'esqueci'){
