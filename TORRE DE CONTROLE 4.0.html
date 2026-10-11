@@ -11773,7 +11773,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 08:45';
+const BUILD = '2026-10-11 09:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -52711,7 +52711,14 @@ html body > div#contaTela:not(script):not(.x){ visibility:visible !important; }
 .ct-link{ border:0; background:none; color:var(--ouro); font:600 calc(13.5px * var(--esc, 1)) var(--f-b, inherit); cursor:pointer; padding:6px 0; text-decoration:underline; text-underline-offset:3px; }
 .ct-erro{ margin:0; min-height:1.2em; color:var(--brasa); font-size:calc(13.5px * var(--esc, 1)); line-height:1.45; }
 .ct-ok{ margin:0; padding:12px 14px; border-radius:12px; color:var(--giz); background:color-mix(in srgb, var(--jade) 12%, transparent); border:1px solid color-mix(in srgb, var(--jade) 40%, transparent); font-size:calc(13.5px * var(--esc, 1)); line-height:1.5; }
-.ct-ok:empty{ display:none; } .ct-erro:empty{ display:none; }
+.ct-ok:empty{ display:none; }
+.ct-vem{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:4px; }
+.ct-vem img{ width:min(190px, 60vw); height:auto; display:block; filter:drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
+.ct-vem span{ font:700 calc(11.5px * var(--esc, 1)) var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:#9CC2F7; text-align:center; }
+#cofreTela .cf-campo{ position:relative; }
+#cofreTela .cf-campo.com-olho input{ padding-left:56px; padding-right:56px; }
+#cofreTela .ct-olho{ position:absolute; right:8px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:10px; border:1px solid var(--fio); background:var(--sup-0, transparent); display:grid; place-items:center; cursor:pointer; padding:0; }
+#cofreTela .ct-olho svg{ width:18px; height:18px; fill:none; stroke:var(--grafite); stroke-width:1.8; } .ct-erro:empty{ display:none; }
 @media (max-width:760px){ .ct-caixa{ grid-template-columns:1fr; } .ct-marca{ border-right:0; border-bottom:1px solid var(--fio); padding:26px 22px; } .ct-marca ul, .ct-pe{ display:none; } .ct-form{ padding:26px 22px; } }
 /* cartão da conta em Ajustes → Dados */
 .nv-conta .nv-github{ display:none !important; }
@@ -53001,7 +53008,7 @@ function contaTela(modo, aviso){
   const olho = id => `<button type="button" class="ct-olho" data-olho="${id}" aria-label="Mostrar a senha" title="Mostrar a senha"><svg><use href="#i-olho"/></svg></button>`;
   el.innerHTML = `<div class="ct-caixa">
     <div class="ct-marca">
-      <div class="ct-logo"><svg><use href="#i-escudo"/></svg></div>
+      ${contaLogoVem() ? `<div class="ct-vem">${contaLogoVem()}</div>` : `<div class="ct-logo"><svg><use href="#i-escudo"/></svg></div>`}
       <h1>Torre de Controle</h1>
       <p class="ct-lema">Suas milhas sob controle.</p>
       <ul>
@@ -53111,7 +53118,60 @@ function contaEntrou(aviso){
   }
   contaFecharTela();
   if (aviso) setTimeout(() => avisar(aviso, 'ok', 5000), 400);
+  if (typeof COFRE === 'object' && COFRE.trancado && window.__cofreEnv) contaPularCofre(window.__cofreEnv);
   contaPronta();
+}
+
+/* ── uma senha só ──────────────────────────────────────────────────────────────
+   Com a conta, a senha antiga do cofre não é mais pedida: se a conta já guarda os
+   dados, este aparelho os traz de lá. A cópia cifrada antiga não é apagada: fica
+   guardada à parte neste aparelho, por segurança. A senha antiga só é pedida se a
+   conta ainda estiver vazia, porque aí os dados existem apenas aqui, cifrados. */
+const COFRE_GUARDADO = 'torre-cofre-guardado';
+async function contaPularCofre(env){
+  if (!contaAtiva()) return false;
+  try {
+    const r = await contaLer();
+    if (r.vazio) return false;
+    try { localStorage.setItem(COFRE_GUARDADO, JSON.stringify(env)); } catch(_){}
+    window.__contaSaindo = true; try { clearTimeout(salvarPendente); } catch(_){}
+    localStorage.removeItem(CHAVE); localStorage.setItem(CONTA_TRAZER, '1');
+    try { cofreLembrarApagar(); } catch(_){}
+    location.reload();
+    return true;
+  } catch(e){ return false; }
+}
+(function(){
+  const _tela = telaCofre;
+  telaCofre = function(env){
+    window.__cofreEnv = env;
+    const v = _tela.apply(this, arguments);
+    const el = document.getElementById('cofreTela'); if (!el) return v;
+    /* a marca VEM no lugar do escudo */
+    const ic = el.querySelector('.cf-ic');
+    if (ic){ const logo = contaLogoVem(); if (logo){ ic.outerHTML = `<div class="ct-vem">${logo}</div>`; } }
+    /* olhinho para conferir o que foi digitado */
+    el.querySelectorAll('#cfSenha, #cfRec').forEach(inp => {
+      const caixa = inp.parentElement; caixa.classList.add('com-olho');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ct-olho'; b.setAttribute('aria-label', 'Mostrar a senha'); b.title = 'Mostrar a senha';
+      b.innerHTML = '<svg><use href="#i-olho"/></svg>';
+      b.onclick = () => { inp.type = inp.type === 'password' ? 'text' : 'password'; inp.focus(); };
+      caixa.appendChild(b);
+    });
+    if (contaLigada()){
+      const sub = el.querySelector('.cf-sub');
+      if (sub) sub.textContent = 'Esta é a senha ANTIGA do cofre, pedida uma única vez para trazer os dados deste aparelho para a sua conta. Depois, só a senha da conta vale.';
+      /* já conectado e a conta tem dados: nem mostra esta tela */
+      if (contaAtiva()) contaPularCofre(env);
+    }
+    return v;
+  };
+})();
+function contaLogoVem(){
+  let src = '';
+  try { if (window.VEM && VEM.assets && VEM.assets.logo) src = 'data:image/webp;base64,' + VEM.assets.logo; } catch(_){}
+  if (!src){ const i = document.querySelector('.selo-vem img, .marca img'); if (i) src = i.src; }
+  return src ? `<img src="${src}" alt="VEM"><span>Viagens &amp; Experiências com Milhas</span>` : '';
 }
 
 /* Conta em uso: prepara este aparelho e começa a sincronizar. */
