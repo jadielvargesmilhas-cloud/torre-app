@@ -9904,6 +9904,14 @@ html.cofre-trancado body > *:not(#cofreTela):not(script){ visibility:hidden !imp
 .cf-min{ margin-top:6px; display:flex; align-items:center; gap:8px; color:var(--grafite); font-size:calc(12.5px * var(--esc)); flex-wrap:wrap; }
 .cf-min{ display:flex !important; flex-direction:row !important; } .cf-min select{ width:auto !important; min-width:0 !important; display:inline-block !important; margin:0 !important; height:auto !important; padding:5px 8px; border-radius:8px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font:inherit; }
 </style>
+<style>
+.cf-lembrar{ display:flex !important; align-items:center; gap:8px; justify-content:center; color:var(--grafite); font-size:calc(13px * var(--esc, 1)); cursor:pointer; margin:2px 0; }
+.cf-lembrar input{ width:16px; height:16px; accent-color:var(--ouro); margin:0; }
+.folha .cf-lembrar{ justify-content:flex-start; margin-top:10px; }
+.cf-lembrado{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; color:var(--jade); font-size:calc(12.5px * var(--esc)); margin-top:6px; }
+.cf-lembrado svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.cf-lembrar-bt{ align-self:flex-start; margin:6px 0 0 !important; font-size:calc(12.5px * var(--esc)); }
+</style>
 </head>
 <body>
 <script>
@@ -11765,7 +11773,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 23:50';
+const BUILD = '2026-10-16 00:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -52346,6 +52354,7 @@ function cofreGravarAgora(){
 })();
 /* cópia da nuvem: cifrada quando o cofre está ligado; ao ler, decifra */
 nuvemGravar = async function(sha){
+  if (!COFRE.dek && nuvemCfg().remotoCofre) throw new Error('a cópia da nuvem está protegida com senha. Em Ajustes → Dados → Segurança, toque em "Já liguei em outro aparelho" e digite a mesma senha');
   const limpo = semSegredos(DB);
   const conteudo = COFRE.dek ? await cofreEnvelope(limpo) : limpo;
   const corpo = {message:`Torre ${hojeISO()} ${new Date().toTimeString().slice(0,5)}`, content:paraBase64(JSON.stringify(conteudo, null, 2))};
@@ -52360,7 +52369,15 @@ nuvemGravar = async function(sha){
   const _ler = nuvemLer;
   nuvemLer = async function(){
     const r = await _ler.apply(this, arguments);
-    if (r && r.dados && r.dados.cofre) r.dados = JSON.parse(await cofreAbrirQualquer(r.dados, 'A cópia da nuvem está protegida com senha'));
+    try { nuvemCfg().remotoCofre = !!(r && r.dados && r.dados.cofre); } catch(_){}
+    /* cofre ligado aqui, mas a cópia da nuvem ainda sem proteção (cofre ligado
+       numa versão anterior): envia a cópia protegida logo depois */
+    if (COFRE.dek && r && !r.vazio && r.dados && !r.dados.cofre){ clearTimeout(window._cofreEnvT); window._cofreEnvT = setTimeout(cofreEnviarAgora, 3000); }
+    if (r && r.dados && r.dados.cofre){
+      const antes = !!COFRE.dek;
+      r.dados = JSON.parse(await cofreAbrirQualquer(r.dados, 'A cópia da nuvem está protegida com senha'));
+      if (!antes && COFRE.dek){ try { renderCofreCartao(); avisar('Pronto: este aparelho agora usa o mesmo cofre e a mesma senha do outro aparelho.', 'ok', 6000); } catch(_){} }
+    }
     return r;
   };
 })();
@@ -52375,10 +52392,11 @@ async function cofreAbrirQualquer(env, motivo){
 function pedirSenhaEnvelope(env, motivo){
   return new Promise((ok, falha) => {
     abrirFolha({titulo:esc(motivo || 'Dados protegidos com senha'), corpo:`<p class="fraco" style="margin:0 0 12px">Digite a senha do cofre que protegeu estes dados.</p>
-      <div class="campo"><label>Senha</label><input type="password" id="cfSenhaEnv" autocomplete="current-password"></div><p class="cf-erro" id="cfErroEnv"></p>`,
+      <div class="campo"><label>Senha</label><input type="password" id="cfSenhaEnv" autocomplete="current-password"></div>
+      <label class="cf-lembrar"><input type="checkbox" id="cfLembrarEnv"> Lembrar neste aparelho (não pedir a senha aqui)</label><p class="cf-erro" id="cfErroEnv"></p>`,
       pe:`<button type="button" class="bt perigo" id="cfEnvCancela">Fechar</button><button type="button" class="bt primario" id="cfEnvOk">Abrir</button>`});
     const tentar = async () => {
-      try { const dek = await _abreDek(env.ws, $('#cfSenhaEnv').value); fecharFolha(); ok(dek); }
+      try { const dek = await _abreDek(env.ws, $('#cfSenhaEnv').value); const lembrar = $('#cfLembrarEnv').checked; fecharFolha(); if (lembrar) cofreLembrarGuardar(dek, env.id); ok(dek); }
       catch(e){ $('#cfErroEnv').textContent = 'Senha incorreta.'; }
     };
     $('#cfEnvOk').onclick = tentar; $('#cfSenhaEnv').onkeydown = e => { if (e.key === 'Enter') tentar(); };
@@ -52421,6 +52439,7 @@ function telaCofre(env){
       <input type="text" name="username" value="torre-de-controle" autocomplete="username" hidden>
       <div class="cf-campo"><input type="password" id="cfSenha" placeholder="Senha" autocomplete="current-password" aria-label="Senha"></div>
       <div class="cf-campo cf-rec" hidden><input type="text" id="cfRec" placeholder="Chave de recuperação (XXXX-XXXX-...)" autocomplete="off" aria-label="Chave de recuperação"></div>
+      <label class="cf-lembrar"><input type="checkbox" id="cfLembrar"> Lembrar neste aparelho</label>
       <p class="cf-erro" id="cfErro" role="alert"></p>
       <button type="submit" class="bt primario cf-entrar" id="cfEntrar">Entrar</button>
       <button type="button" class="cf-link" id="cfTroca">Esqueci a senha</button>
@@ -52442,6 +52461,7 @@ function telaCofre(env){
       const dek = modoRec ? await _abreDek(env.rec, _normRec(rec.value)) : await _abreDek(env.ws, senha.value);
       const texto = await cofreAbrirEnvelope(env, dek);
       COFRE.dek = dek; COFRE.env = {id:env.id, ws:env.ws, rec:env.rec}; COFRE.trancado = false; COFRE.ultimoUso = Date.now();
+      if (el.querySelector('#cfLembrar').checked) await cofreLembrarGuardar(dek, env.id);
       window.__cofreTexto = texto;
       el.remove(); document.documentElement.classList.remove('cofre-trancado');
       arrancar();
@@ -52461,20 +52481,31 @@ function telaCofre(env){
   if (!env) return;
   COFRE.trancado = true;
   document.removeEventListener('DOMContentLoaded', arrancar);
-  const ir = () => telaCofre(env);
+  const ir = async () => {
+    const dek = await cofreLembrarLer(env.id);
+    if (dek){
+      try {
+        window.__cofreTexto = await cofreAbrirEnvelope(env, dek);
+        COFRE.dek = dek; COFRE.env = {id:env.id, ws:env.ws, rec:env.rec}; COFRE.trancado = false; COFRE.ultimoUso = Date.now();
+        arrancar(); setTimeout(posDesbloqueio, 1100); return;
+      } catch(e){ cofreLembrarApagar(); }
+    }
+    telaCofre(env);
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ir); else ir();
 })();
 /* ── trancar por inatividade ─────────────────────────────────────────────────── */
 ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => addEventListener(t, () => { COFRE.ultimoUso = Date.now(); }, {passive:true, capture:true}));
 async function cofreTrancar(){
   if (!COFRE.dek) return;
+  cofreLembrarApagar();
   clearTimeout(salvarPendente); await cofreGravarAgora();
   COFRE.trancado = true; COFRE.dek = null;
   location.reload();
 }
 setInterval(() => {
   if (!COFRE.dek || COFRE.trancado || typeof DB === 'undefined' || !DB) return;
-  const min = Number((DB.cfg || {}).cofreMin); if (!(min > 0)) return;
+  const min = Number((DB.cfg || {}).cofreMin); if (!(min > 0) || cofreLembrado()) return;
   if (Date.now() - COFRE.ultimoUso > min * 60000) cofreTrancar();
 }, 20000);
 /* ── ligar, trocar a senha, desligar ─────────────────────────────────────────── */
@@ -52522,6 +52553,7 @@ function abrirLigarCofre(){
         if (!JSON.parse(teste).cfg) throw new Error('conferência');
         if (typeof nuvemMarcarPendente === 'function') nuvemMarcarPendente();
         fecharFolha(); renderCofreCartao(); avisar('Cofre ligado. A partir de agora, a Torre pede a senha ao abrir.', 'ok', 6000);
+        cofreEnviarAgora();
       } catch(e){ console.error(e); COFRE.dek = null; COFRE.env = null; avisar('Não deu para ligar o cofre. Nada foi alterado.', 'erro'); fecharFolha(); }
     };
   };
@@ -52552,7 +52584,9 @@ function abrirDesligarCofre(){
     try { await _abreDek(COFRE.env.ws, $('#cfDesl').value); } catch(_){ return $('#cfErroD').textContent = 'Senha incorreta.'; }
     await _cofreFila; COFRE.dek = null; COFRE.env = null;
     localStorage.setItem(CHAVE, JSON.stringify(DB)); if (typeof nuvemMarcarPendente === 'function') nuvemMarcarPendente();
+    nuvemCfg().remotoCofre = false;
     fecharFolha(); renderCofreCartao(); avisar('Cofre desligado.', 'ok');
+    cofreLembrarApagar(); cofreEnviarAgora();
   };
 }
 /* ── o cartão em Ajustes → Dados: cofre, agenda e limpeza do site ─────────── */
@@ -52566,10 +52600,12 @@ function renderCofreCartao(){
       <div class="sub">Proteção dos dados, lembretes na agenda do celular e limpeza do site de cotações.</div></h3></div>
     <div class="cf-linhas">
       <div class="cf-linha"><div><b>Cofre com senha ${ligado ? '<span class="etq jade">ligado</span>' : '<span class="etq">desligado</span>'}</b>
-        <small>${ligado ? 'Os dados ficam cifrados neste aparelho, na nuvem e nas cópias. A Torre pede a senha ao abrir.' : 'Cifra os seus dados e os dos clientes. Recomendado antes de cadastrar CPF e passaporte.'}</small>
-        ${ligado ? `<label class="cf-min">Trancar sozinha depois de <select id="cfMin">${[[5, '5 minutos'], [15, '15 minutos'], [30, '30 minutos'], [60, '1 hora'], [0, 'nunca']].map(([v, n]) => `<option value="${v}"${v === min ? ' selected' : ''}>${n}</option>`).join('')}</select> sem uso</label>` : ''}</div>
+        <small>${ligado ? (cofreLembrado() ? 'Os dados ficam cifrados neste aparelho, na nuvem e nas cópias. Os outros aparelhos pedem a senha ao abrir.' : 'Os dados ficam cifrados neste aparelho, na nuvem e nas cópias. A Torre pede a senha ao abrir.') : 'Cifra os seus dados e os dos clientes. Recomendado antes de cadastrar CPF e passaporte.'}</small>
+        ${ligado && cofreLembrado() ? `<span class="cf-lembrado"><svg><use href="#i-ok"/></svg>Lembrado neste aparelho: abre sem pedir a senha. <button type="button" class="link-reconsiderar" onclick="cofreLembrarApagar();renderCofreCartao();avisar('Este aparelho volta a pedir a senha.','ok')">Esquecer neste aparelho</button></span>` : ''}
+        ${ligado && !cofreLembrado() ? `<button type="button" class="link-reconsiderar cf-lembrar-bt" onclick="cofreLembrarGuardar(COFRE.dek, COFRE.env.id).then(()=>{renderCofreCartao();avisar('Pronto: este aparelho não vai mais pedir a senha.','ok')})">Lembrar neste aparelho</button>` : ''}
+        ${ligado && !cofreLembrado() ? `<label class="cf-min">Trancar sozinha depois de <select id="cfMin">${[[5, '5 minutos'], [15, '15 minutos'], [30, '30 minutos'], [60, '1 hora'], [0, 'nunca']].map(([v, n]) => `<option value="${v}"${v === min ? ' selected' : ''}>${n}</option>`).join('')}</select> sem uso</label>` : ''}</div>
         <div class="cf-bts">${ligado ? `<button type="button" class="bt p fantasma" onclick="cofreTrancar()"><svg><use href="#i-escudo"/></svg>Trancar agora</button><button type="button" class="bt p fantasma" onclick="abrirTrocaSenha()">Trocar a senha</button><button type="button" class="bt p perigo" onclick="abrirDesligarCofre()">Desligar</button>`
-          : `<button type="button" class="bt p primario" onclick="abrirLigarCofre()"><svg><use href="#i-escudo"/></svg>Proteger com senha</button>`}</div></div>
+          : `${typeof nuvemPronta === 'function' && nuvemPronta() ? `<button type="button" class="bt p fantasma" onclick="cofreDeOutroAparelho()">Já liguei em outro aparelho</button>` : ''}<button type="button" class="bt p primario" onclick="abrirLigarCofre()"><svg><use href="#i-escudo"/></svg>Proteger com senha</button>`}</div></div>
       <div class="cf-linha"><div><b>Agenda do celular</b><small>Vencimentos, voos, fim de campanhas e DARFs, com lembretes, mesmo com a Torre fechada.</small></div>
         <div class="cf-bts"><button type="button" class="bt p fantasma" onclick="abrirAgenda()"><svg><use href="#i-calendario"/></svg>Levar para a agenda</button></div></div>
       <div class="cf-linha"><div><b>Site de cotações</b><small>Apaga do site público as páginas antigas que têm o nome do cliente no endereço.</small></div>
@@ -52596,6 +52632,48 @@ function posDesbloqueio(){
   try { prMaisDetalhes(); prBarraCampanhas(); } catch(e){}
   try { if (typeof rsBotao === 'function') rsBotao(); } catch(e){}
   try { if (!window.__SEM_RESUMO && DB.cfg.resumoAuto !== false && DB.cfg.resumoVisto !== hojeISO() && !document.querySelector('#veu.aberto')) setTimeout(abrirResumoDia, 700); } catch(e){}
+}
+</script>
+
+<script>
+/* o cofre foi ligado no computador: o tablet busca a cópia protegida da nuvem e
+   pede a mesma senha (não cria um cofre novo) */
+async function cofreDeOutroAparelho(){
+  if (COFRE.dek){ avisar('Este aparelho já está com o cofre ligado.', 'ok'); return; }
+  try {
+    avisar('Buscando a cópia da nuvem...', 'ok', 2500);
+    const r = await nuvemLer();
+    if (!COFRE.dek){
+      avisar('A cópia da nuvem ainda não está protegida. No aparelho onde você ligou o cofre, abra a Torre e toque em Sincronizar agora; depois volte aqui e tente de novo.', 'alerta', 9000);
+      return;
+    }
+    if (r && r.dados && !r.vazio){
+      DB = comSegredosLocais(r.dados); nuvemCfg().sha = r.sha;
+      salvar(); aplicarTudo();
+    }
+    renderCofreCartao();
+  } catch(e){ avisar('Não deu: ' + e.message + '.', 'erro', 6000); }
+}
+</script>
+
+<script>
+/* "Lembrar neste aparelho" (10/10/2026, pedido do Jadiel): a chave dos dados
+   fica guardada só neste navegador, e a Torre abre sem pedir a senha aqui. Os
+   outros aparelhos e a cópia da nuvem continuam protegidos. "Trancar agora"
+   esquece este aparelho. */
+const COFRE_LEMBRAR = 'torre-cofre-lembrar';
+function cofreLembrado(){ try { const j = JSON.parse(localStorage.getItem(COFRE_LEMBRAR) || 'null'); return !!(j && COFRE.env && j.id === COFRE.env.id); } catch(_){ return false; } }
+async function cofreLembrarGuardar(dek, id){ try { const raw = await crypto.subtle.exportKey('raw', dek); localStorage.setItem(COFRE_LEMBRAR, JSON.stringify({id, k:_b64(raw)})); } catch(e){ console.error(e); } }
+async function cofreLembrarLer(id){ try { const j = JSON.parse(localStorage.getItem(COFRE_LEMBRAR) || 'null'); if (!j || j.id !== id) return null; return await crypto.subtle.importKey('raw', _deB64(j.k), {name:'AES-GCM'}, true, ['encrypt', 'decrypt']); } catch(_){ return null; } }
+function cofreLembrarApagar(){ try { localStorage.removeItem(COFRE_LEMBRAR); } catch(_){} }
+/* envia a cópia já no novo estado do cofre, mesmo sem dado novo */
+async function cofreEnviarAgora(){
+  if (typeof nuvemPronta !== 'function' || !nuvemPronta()) return;
+  try {
+    let g = await nuvemGravar(nuvemCfg().sha);
+    if (g && g.conflito){ await nuvemSincronizar(true); g = await nuvemGravar(nuvemCfg().sha); }
+    if (g && g.sha){ nuvemCfg().sha = g.sha; nuvemCfg().remotoCofre = !!COFRE.dek; try { nuvemCfg().marca = assinaturaDados(DB); } catch(_){} salvar(); try { nuvemEstado('ok'); } catch(_){} }
+  } catch(e){ console.error(e); try { avisar('A cópia da nuvem será atualizada na próxima sincronização.', 'alerta', 5000); } catch(_){} }
 }
 </script>
 </body>
