@@ -11774,7 +11774,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 23:55';
+const BUILD = '2026-10-12 10:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25685,6 +25685,7 @@ function renderClubes(){
       <div class="item-corpo">
         <div class="item-tit"><span class="termo-marca" style="background:${prog(a.prog).cor}"></span>${esc(prog(a.prog).n)} · ${esc(pl ? pl.n : a.planoId)}
           ${a.status !== 'ativa' ? '<span class="etq">cancelada</span>' : ''}
+          ${a.status === 'ativa' && a.mudanca && a.mudanca.planoId ? `<span class="etq ouro" data-dica="Mudança lida no print do clube. No dia, a Torre encerra este plano e abre o novo sozinha.">muda para ${esc(((cat && cat.planos.find(x => x.id === a.mudanca.planoId)) || {}).n || a.mudanca.planoId)} em ${dataCurta(a.mudanca.em)}</span>` : ''}
           ${presa ? `<span class="etq brasa" data-dica="Cancelar antes disso gera multa ou perda do bônus">carência até ${dataCurta(fimFid)}</span>` : ''}
         </div>
         <div class="item-sub">${esc(nomeConta(a.contaId))} · ${MODALIDADES[a.modalidade] || a.modalidade} · ${brl2(a.valor)}${a.cartao ? ' · ' + esc(a.cartao) : ''}</div>
@@ -53325,6 +53326,270 @@ function contaCartao(){
     contaPronta();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ir); else ir();
+})();
+</script>
+
+<style>
+/* ══ leitura do print do clube ══ */
+.lc-conf{ display:flex; flex-direction:column; gap:14px; }
+.lc-print{ display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+.lc-print img{ max-width:min(320px, 100%); max-height:160px; border-radius:10px; border:1px solid var(--fio); object-fit:contain; background:#fff; }
+.lc-print .lc-lido{ flex:1 1 220px; min-width:0; color:var(--grafite); font-size:calc(13px * var(--esc)); line-height:1.5; }
+.lc-grade{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap:12px; }
+.lc-grade .campo label small{ font-weight:500; color:var(--grafite); margin-left:6px; text-transform:none; letter-spacing:0; }
+.lc-falta select, .lc-falta input{ border-color:var(--ouro) !important; box-shadow:0 0 0 3px color-mix(in srgb, var(--ouro) 18%, transparent); }
+.lc-mud{ border:1px solid color-mix(in srgb, var(--ouro) 45%, transparent); background:color-mix(in srgb, var(--ouro) 7%, transparent); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+.lc-mud b{ color:var(--giz); }
+.lc-resumo{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; font-size:calc(13.5px * var(--esc)); color:var(--giz); }
+.lc-resumo li{ display:flex; gap:8px; align-items:flex-start; }
+.lc-resumo li svg{ flex:0 0 16px; width:16px; height:16px; fill:none; stroke:var(--jade); stroke-width:2; margin-top:2px; }
+.lc-espera{ display:flex; align-items:center; gap:12px; padding:18px 4px; color:var(--grafite); }
+.lc-espera i{ width:18px; height:18px; border-radius:50%; border:2px solid var(--fio); border-top-color:var(--ouro); animation:lcGira .9s linear infinite; }
+@keyframes lcGira{ to{ transform:rotate(360deg); } }
+</style>
+<script>
+/* ══ PRINT DO CLUBE (12/10/2026, pedido do Jadiel) ═════════════════════════════
+   Manda o print da tela "Meu Clube" do programa e a Torre lê sozinha: programa,
+   plano, valor, tipo de assinatura, renovação, tempo de casa e, quando houver,
+   a mudança de plano já programada. Se o print traz o nome do titular, a conta
+   vem escolhida; se não traz, a Torre pergunta. Nada é gravado antes de você
+   conferir e tocar em "Lançar". A leitura roda no próprio navegador (o mesmo
+   leitor gratuito dos prints de voo). */
+function _lcSem(t){ return semAcento(String(t || '')).toLowerCase(); }
+function _lcNum(t){ return Number(String(t).replace(/\./g, '').replace(',', '.')); }
+function _lcData(d, m, a){ return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }
+
+/* Texto do print -> o que ele diz. Função pura, para poder ser testada. */
+function lerClubeDoTexto(texto, contas, hoje){
+  const t = String(texto || '');
+  const linhas = t.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const s = _lcSem(t);
+  const out = {prog:'', planoId:'', planoLido:'', qtd:0, tipo:'', valor:0, renova:'', tempo:null, inicio:'', contaId:'', nomeLido:'', mudanca:null, achados:[]};
+
+  /* programa: o que tem clube no catálogo e aparece no texto ("Clube Livelo",
+     "Clube Smiles", "Clube Azul"...). Com mais de um, vale o que vem junto de "clube". */
+  const progs = progsComCatalogo();
+  const chave = p => _lcSem(prog(p).n).split(/\s+/)[0].replace(/[^a-z0-9]/g, '');
+  const achou = progs.filter(p => { const k = chave(p); return k.length >= 3 && new RegExp('\\b' + k + '\\b').test(s); });
+  out.prog = achou.find(p => new RegExp('club[e]?\\s+' + chave(p)).test(s)) || achou[0] || '';
+
+  /* plano: pela quantidade de pontos (o leitor erra letras de logotipo, mas acerta
+     o "20.000"), e pelo nome quando a quantidade não aparece */
+  const cat = out.prog ? catalogoDe(out.prog) : null;
+  if (cat){
+    const semDinheiro = linhas.filter(l => !/r\$|\d{2}\/\d{2}\/\d{4}/i.test(l)).join('\n');
+    const nums = [...semDinheiro.matchAll(/\b(\d{1,2}[.,]\d{3}|\d{3,5})\b/g)].map(m => _lcNum(m[1]));
+    let pl = cat.planos.find(p => nums.includes(Number(p.qtd)));
+    if (!pl){
+      const nomes = cat.planos.slice().sort((a, b) => b.n.length - a.n.length);
+      pl = nomes.find(p => new RegExp('\\b' + _lcSem(p.n).replace(/[.+]/g, m => '\\' + m) + '\\b').test(s))
+        || nomes.find(p => { const u = _lcSem(p.n).split(/[\s·]+/).pop(); return u.length >= 3 && new RegExp('\\b' + u + '\\b').test(s); });
+    }
+    if (pl){ out.planoId = pl.id; out.planoLido = pl.n; out.qtd = pl.qtd; }
+  }
+
+  /* tipo de assinatura e valor */
+  if (/\banual\b/.test(s)) out.tipo = 'anual'; else if (/\bmensal\b/.test(s)) out.tipo = 'mensal';
+  const din = t.match(/R\$\s*([\d.]+,\d{2})/);
+  if (din) out.valor = _lcNum(din[1]);
+
+  /* datas: a da mudança está na frase da mudança; a de renovação é a outra */
+  const ehMud = l => /mudar|mudan[cç]a|altera[cç][aã]o|alterad|troca de plano|novo plano/i.test(semAcento(l)) || /mudar|mudanca|alteracao/.test(_lcSem(l));
+  const datasDe = l => [...l.matchAll(/\b(\d{2})\/(\d{2})\/(20\d{2})\b/g)].map(m => _lcData(m[1], m[2], m[3]));
+  let dMud = '';
+  linhas.forEach(l => { if (ehMud(l) && !dMud) dMud = datasDe(l)[0] || ''; });
+  const iRen = linhas.findIndex(l => /renova/i.test(_lcSem(l)));
+  let dRen = iRen >= 0 ? (datasDe(linhas[iRen])[0] || (linhas[iRen + 1] ? datasDe(linhas[iRen + 1])[0] : '') || '') : '';
+  if (!dRen) dRen = linhas.filter(l => !ehMud(l)).map(datasDe).flat()[0] || '';
+  out.renova = dRen;
+  const tm = s.match(/\b(\d{1,3})\s*mes(es)?\b/);
+  if (tm) out.tempo = Number(tm[1]);
+  if (/altera[cç][aã]o em andamento|plano em altera|vai mudar|mudanca de plano|mudanca programada/.test(s) || dMud){
+    out.mudanca = {em:dMud || dRen || '', planoId:''};
+    /* plano novo, quando o print diz ("para o Clube Mega", "para o plano 12.000") */
+    const para = s.match(/\bpara (?:o )?(?:clube |plano )?([a-z0-9.+ ]{3,30})/);
+    if (para && cat){
+      const alvo = para[1];
+      const pn = cat.planos.find(p => p.id !== out.planoId && (alvo.includes(_lcSem(p.n)) || alvo.includes(String(p.qtd)) || alvo.includes(nBR(p.qtd))));
+      if (pn) out.mudanca.planoId = pn.id;
+    }
+  }
+
+  /* início: pelo tempo de assinatura e pela renovação */
+  if (out.renova && out.tempo != null){
+    const meses = out.tipo === 'anual' ? 12 * Math.max(1, Math.ceil((out.tempo + 1) / 12)) : out.tempo + 1;
+    out.inicio = somaMeses(-meses, out.renova);
+  } else if (out.renova && out.tipo === 'anual') out.inicio = somaMeses(-12, out.renova);
+  else if (out.tempo != null) out.inicio = somaMeses(-out.tempo, hoje || hojeISO());
+
+  /* titular: o nome de uma conta aparece no print? (nome e sobrenome, ou só o
+     primeiro nome quando ele é único entre as contas) */
+  const cs = (contas || []).filter(c => c && c.nome);
+  const tok = c => _lcSem(c.nome).split(/\s+/).filter(x => x.length >= 3);
+  let conta = cs.find(c => { const k = tok(c); return k.length >= 2 && new RegExp('\\b' + k[0] + '\\b').test(s) && new RegExp('\\b' + k[k.length - 1] + '\\b').test(s); });
+  if (!conta){
+    const porPrimeiro = cs.filter(c => { const k = tok(c); return k[0] && new RegExp('\\b' + k[0] + '\\b').test(s); });
+    if (porPrimeiro.length === 1) conta = porPrimeiro[0];
+  }
+  if (conta){ out.contaId = conta.id; out.nomeLido = conta.nome; }
+  return out;
+}
+
+/* modalidade e valor como a assinatura guarda (cobrança de cada vez) */
+function _lcModalidade(d, pl){
+  if (d.tipo === 'mensal') return {mod:'mensal', valor:d.valor || (pl && pl.precos.mensal) || 0, parcelas:1};
+  /* anual: o print mostra o total do ano; sem dizer se foi à vista ou parcelado,
+     fica parcelado em 12x, que é como os clubes cobram o anual por padrão */
+  const total = d.valor || (pl && pl.precos.anual_parcelado ? pl.precos.anual_parcelado * 12 : 0);
+  return {mod:'anual_parcelado', valor:Math.round(total / 12 * 100) / 100, parcelas:12, total};
+}
+
+let _lcEstado = null;
+function abrirLeituraClube(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => { if (inp.files[0]) lerPrintClube(inp.files[0]); };
+  inp.click();
+}
+async function lerPrintClube(arquivo){
+  if (!arquivo || !String(arquivo.type || '').startsWith('image/')){ avisar('Escolha uma imagem (PNG, JPG ou WEBP).', 'alerta'); return; }
+  const url = URL.createObjectURL(arquivo);
+  abrirFolha({titulo:'Leitura do print do clube', largura:'larga', tipo:'formulario',
+    corpo:`<div id="lcCorpo"><div class="lc-print"><img src="${url}" alt="Print do clube"><div class="lc-espera"><i></i><span id="lcMsg">Preparando o leitor…</span></div></div></div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="lcOk" disabled>Lançar</button>`});
+  try {
+    /* sem internet o leitor pode ficar esperando para sempre: depois de 2 minutos, avisa */
+    const limite = new Promise((_, nao) => setTimeout(() => nao(new Error('o leitor demorou demais para carregar. Confira a internet e tente de novo')), 120000));
+    const w = await Promise.race([limite, prepararLeitorOCR(m => { const e = $('#lcMsg'); if (e && m.status) e.textContent = /recogniz/.test(m.status) ? `Lendo o print… ${Math.round((m.progress || 0) * 100)}%` : 'Preparando o leitor…'; })]);
+    const {data} = await w.recognize(arquivo);
+    const d = lerClubeDoTexto(data.text, DB.contas, hojeISO());
+    _lcEstado = {d, url, texto:data.text};
+    renderConferirClube();
+  } catch(e){
+    const c = $('#lcCorpo'); if (c) c.innerHTML = `<div class="nota brasa"><svg><use href="#i-alerta"/></svg><div>Não deu para ler o print: ${esc(e.message || 'erro desconhecido')}</div></div>`;
+  }
+}
+
+function renderConferirClube(){
+  const c = $('#lcCorpo'); if (!c || !_lcEstado) return;
+  const d = _lcEstado.d;
+  const progs = progsComCatalogo();
+  const cat = d.prog ? catalogoDe(d.prog) : null, pl = cat && cat.planos.find(p => p.id === d.planoId);
+  const m = _lcModalidade(d, pl);
+  const lidos = [d.prog ? prog(d.prog).n : null, pl ? `plano ${pl.n} (${nBR(pl.qtd)} por mês)` : null,
+    d.valor ? `${brl2(d.valor)}${d.tipo === 'anual' ? ' no ano' : d.tipo === 'mensal' ? ' por mês' : ''}` : null,
+    d.renova ? `renova em ${dataBR(d.renova)}` : null, d.tempo != null ? `${d.tempo} ${d.tempo === 1 ? 'mês' : 'meses'} de assinatura` : null,
+    d.mudanca ? `mudança de plano a partir de ${d.mudanca.em ? dataBR(d.mudanca.em) : 'data não lida'}` : null].filter(Boolean);
+  const opPlano = (sel, excluir) => (cat ? cat.planos : []).filter(p => p.id !== excluir).map(p => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.n)} · ${nBR(p.qtd)}/mês</option>`).join('');
+  c.innerHTML = `<div class="lc-conf">
+    <div class="lc-print"><img src="${_lcEstado.url}" alt="Print do clube">
+      <div class="lc-lido"><b style="color:var(--giz)">O que a Torre leu no print</b><br>${lidos.length ? esc(lidos.join(' · ')) + '.' : 'Nada reconhecível. Preencha abaixo.'}
+      ${!d.contaId ? '<br><span style="color:var(--ouro)">O print não mostra o nome do titular: escolha a conta.</span>' : `<br>Titular reconhecido pelo nome: <b style="color:var(--giz)">${esc(d.nomeLido)}</b>.`}</div></div>
+    <div class="lc-grade">
+      <div class="campo${d.contaId ? '' : ' lc-falta'}"><label>Titular</label><select id="lcConta"><option value="">escolha a conta</option>${(DB.contas || []).map(x => `<option value="${x.id}"${x.id === d.contaId ? ' selected' : ''}>${esc(nomeCurto(x.nome))}</option>`).join('')}</select></div>
+      <div class="campo${d.prog ? '' : ' lc-falta'}"><label>Clube</label><select id="lcProg"><option value="">escolha o clube</option>${progs.map(p => `<option value="${p}"${p === d.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo${pl ? '' : ' lc-falta'}"><label>Plano atual</label><select id="lcPlano"><option value="">escolha o plano</option>${opPlano(d.planoId)}</select></div>
+      <div class="campo"><label>Modalidade</label><select id="lcMod">${Object.entries(MODALIDADES).map(([k, v]) => `<option value="${k}"${k === m.mod ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="campo"><label>Valor ${d.tipo === 'anual' ? 'no ano' : 'por mês'} (R$)</label><input type="text" inputmode="decimal" data-moeda id="lcValor" value="${moedaTxt(d.tipo === 'anual' ? (m.total || 0) : m.valor)}"></div>
+      <div class="campo"><label>Início<small>${d.tempo != null ? `pelo tempo de ${d.tempo} meses` : ''}</small></label><input type="date" id="lcInicio" value="${d.inicio || hojeISO()}"></div>
+      <div class="campo${d.renova ? '' : ' lc-falta'}"><label>Próxima renovação</label><input type="date" id="lcRenova" value="${d.renova || ''}"></div>
+    </div>
+    ${d.mudanca ? `<div class="lc-mud"><div><b>Mudança de plano programada</b> a partir de <b>${d.mudanca.em ? dataBR(d.mudanca.em) : '?'}</b>. ${d.mudanca.planoId ? '' : 'O print não diz para qual plano: escolha abaixo.'}</div>
+      <div class="lc-grade">
+        <div class="campo${d.mudanca.planoId ? '' : ' lc-falta'}"><label>Novo plano</label><select id="lcNovo"><option value="">escolha o novo plano</option>${opPlano(d.mudanca.planoId, d.planoId)}</select></div>
+        <div class="campo"><label>A partir de</label><input type="date" id="lcMudaEm" value="${d.mudanca.em || ''}"></div>
+      </div></div>` : ''}
+    <label class="ck"><input type="checkbox" id="lcCreditos" checked> Lançar no livro os créditos mensais que já caíram desde o início</label>
+    <div id="lcAcao" class="fraco" style="font-size:calc(13px * var(--esc))"></div>
+  </div>`;
+  const reler = () => {
+    const p = $('#lcProg').value;
+    if (p !== d.prog){ d.prog = p; d.planoId = ''; if (d.mudanca) d.mudanca.planoId = ''; renderConferirClube(); return; }
+    const conta = $('#lcConta').value, existe = conta && p ? (DB.assinaturas || []).find(a => a.contaId === conta && a.prog === p && a.status === 'ativa') : null;
+    const plA = cat && cat.planos.find(x => x.id === $('#lcPlano').value), plN = cat && $('#lcNovo') ? cat.planos.find(x => x.id === $('#lcNovo').value) : null;
+    $('#lcAcao').innerHTML = !conta || !p || !plA ? 'Falta escolher o que está marcado em amarelo.'
+      : `${existe ? `Atualiza a assinatura já cadastrada de ${esc(nomeCurto(nomeConta(conta)))} (${esc(prog(p).n)} · ${esc(((cat.planos.find(x => x.id === existe.planoId)) || {}).n || existe.planoId)}).` : `Cria a assinatura ${esc(prog(p).n)} · ${esc(plA.n)} de ${esc(nomeCurto(nomeConta(conta)))}.`}`
+        + (plN ? ` Em ${dataBR($('#lcMudaEm').value)}, ela passa sozinha para o plano ${esc(plN.n)} (${nBR(plN.qtd)} por mês).` : '');
+    $('#lcOk').disabled = !conta || !p || !plA || !$('#lcRenova').value || ($('#lcNovo') && !$('#lcNovo').value);
+    ['lcConta', 'lcPlano', 'lcRenova', 'lcNovo'].forEach(id => { const e = $('#' + id); if (e) e.closest('.campo').classList.toggle('lc-falta', !e.value); });
+  };
+  c.querySelectorAll('select, input').forEach(e => { e.onchange = reler; e.oninput = reler; });
+  if (typeof prepararCamposData === 'function') try { prepararCamposData(); } catch(_){}
+  reler();
+  $('#lcOk').onclick = confirmarLeituraClube;
+}
+
+function confirmarLeituraClube(){
+  const p = $('#lcProg').value, conta = $('#lcConta').value, cat = catalogoDe(p);
+  const pl = cat && cat.planos.find(x => x.id === $('#lcPlano').value);
+  if (!p || !conta || !pl) return;
+  const mod = $('#lcMod').value, lido = moedaNum($('#lcValor').value), anualLido = _lcEstado.d.tipo === 'anual';
+  /* o campo mostra o que o print mostra; a assinatura guarda a cobrança */
+  const total = anualLido ? lido : lido * 12;
+  const valor = mod === 'mensal' ? (anualLido ? Math.round(lido / 12 * 100) / 100 : lido) : mod === 'anual_avista' ? total : Math.round(total / 12 * 100) / 100;
+  let a = (DB.assinaturas || []).find(x => x.contaId === conta && x.prog === p && x.status === 'ativa');
+  const novo = !a;
+  if (!a){ a = {id:uid(), contaId:conta, prog:p, fid:pl.fid || 0, status:'ativa', cartaoId:'', cartao:'', obs:'', cancelarAntes:0}; DB.assinaturas.push(a); }
+  Object.assign(a, {planoId:pl.id, modalidade:mod, valor, parcelas:mod === 'anual_parcelado' ? 12 : 1, renova:$('#lcRenova').value,
+    inicio:novo ? ($('#lcInicio').value || hojeISO()) : (a.inicio || $('#lcInicio').value)});
+  const nv = $('#lcNovo') && $('#lcNovo').value;
+  if (nv){
+    const plN = cat.planos.find(x => x.id === nv);
+    a.mudanca = {em:$('#lcMudaEm').value || a.renova, planoId:nv, modalidade:mod,
+      valor:valorCobranca(plN, mod, a.parcelas) || 0, lidaEm:hojeISO()};
+  }
+  let entraram = 0;
+  if ($('#lcCreditos').checked){
+    const cr = lancarCreditoInicial(a, pl); salvar();
+    entraram = (cr ? 1 : 0) + lancarCiclosClube(a.id, true);
+  }
+  salvar(); fecharFolha(); aplicarTudo();
+  if (typeof renderClubes === 'function') try { renderClubes(); } catch(_){}
+  avisar(`${novo ? 'Assinatura criada' : 'Assinatura atualizada'}: ${prog(p).n} · ${pl.n}.${a.mudanca ? ` Muda para ${((cat.planos.find(x => x.id === a.mudanca.planoId)) || {}).n} em ${dataBR(a.mudanca.em)}.` : ''}${entraram ? ` ${entraram} ${entraram > 1 ? 'créditos lançados' : 'crédito lançado'} no livro.` : ''}`, 'ok', 7000);
+  _lcEstado = null;
+}
+
+/* Chegou o dia: a assinatura antiga encerra e a do plano novo começa, com o
+   mesmo titular, cartão e modalidade. Roda ao abrir e uma vez por hora. */
+function aplicarMudancasClube(){
+  if (typeof DB !== 'object' || !DB || !Array.isArray(DB.assinaturas)) return 0;
+  let n = 0;
+  DB.assinaturas.filter(a => a.status === 'ativa' && a.mudanca && a.mudanca.planoId && a.mudanca.em && a.mudanca.em <= hojeISO()).forEach(a => {
+    const cat = catalogoDe(a.prog), plN = cat && cat.planos.find(x => x.id === a.mudanca.planoId);
+    if (!plN) return;
+    const m = a.mudanca;
+    const nova = {id:uid(), contaId:a.contaId, prog:a.prog, planoId:plN.id, modalidade:m.modalidade || a.modalidade,
+      valor:m.valor || valorCobranca(plN, m.modalidade || a.modalidade, a.parcelas) || 0, parcelas:a.parcelas,
+      inicio:m.em, renova:somaMeses(String(m.modalidade || a.modalidade).startsWith('anual') ? 12 : 1, m.em),
+      fid:plN.fid || 0, status:'ativa', cartaoId:a.cartaoId || '', cartao:a.cartao || '', cancelarAntes:0,
+      obs:`Veio da troca do plano ${((cat.planos.find(x => x.id === a.planoId)) || {}).n || a.planoId} em ${dataBR(m.em)}.`};
+    a.status = 'cancelada'; a.fim = m.em; delete a.mudanca;
+    a.obs = ((a.obs ? a.obs + ' ' : '') + `Trocou para o plano ${plN.n} em ${dataBR(m.em)}.`).trim();
+    DB.assinaturas.push(nova); n++;
+    try { lancarCiclosClube(nova.id, true); } catch(_){}
+  });
+  if (n){ salvar(); try { aplicarTudo(); } catch(_){} try { avisar(`${n > 1 ? n + ' mudanças de plano aplicadas' : 'Mudança de plano aplicada'} no clube.`, 'ok', 5000); } catch(_){} }
+  return n;
+}
+
+/* botão ao lado de "Nova Assinatura" e soltar a imagem sobre a lista */
+(function(){
+  const ligar = () => {
+    const nova = document.getElementById('btNovaAssinatura');
+    if (nova && !document.getElementById('btLerClube')){
+      const b = document.createElement('button'); b.className = 'bt fantasma'; b.id = 'btLerClube';
+      b.innerHTML = '<svg><use href="#i-imagem"/></svg>Ler Print do Clube';
+      b.onclick = abrirLeituraClube; nova.before(b);
+    }
+    const lista = document.getElementById('fbAssinaturas');
+    if (lista && !lista.dataset.lcSoltar){
+      lista.dataset.lcSoltar = '1';
+      lista.addEventListener('dragover', e => { if ([...(e.dataTransfer.items || [])].some(i => i.type.startsWith('image/'))) e.preventDefault(); });
+      lista.addEventListener('drop', e => { const f = [...(e.dataTransfer.files || [])].find(x => x.type.startsWith('image/')); if (f){ e.preventDefault(); lerPrintClube(f); } });
+    }
+    setTimeout(aplicarMudancasClube, 1500);
+    setInterval(aplicarMudancasClube, 3600 * 1000);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 50)); else setTimeout(ligar, 50);
 })();
 </script>
 
