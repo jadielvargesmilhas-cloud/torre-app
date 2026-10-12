@@ -11786,7 +11786,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 03:30';
+const BUILD = '2026-10-13 05:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14782,7 +14782,7 @@ function fecharFolha(){
    Quem decide se a ação é destrutiva é o rótulo do botão — apagar, remover,
    excluir. Assim toda chamada nova já nasce protegida sem precisar lembrar do
    parâmetro; e quando a inferência não servir, ele está aí para ser passado. */
-const ACAO_DESTRUTIVA = /apagar|remover|excluir/i;
+const ACAO_DESTRUTIVA = /apagar|remover|excluir|descartar|limpar|substituir/i;
 
 /* O parâmetro `extra` acrescenta uma pergunta à primeira folha — uma caixa de
    marcar, tipicamente — para os casos em que apagar não é uma decisão só. O que
@@ -14832,7 +14832,19 @@ function fichaParaApagar(colecao, id){
     `<div${c.largo ? ' class="largo"' : ''}><span>${esc(c.rot)}</span><b>${esc(String(c.val))}</b></div>`).join('')}</div></div>`;
 }
 
-function confirmar(titulo, texto, aoSim, rotulo = 'Confirmar', duplo = ACAO_DESTRUTIVA.test(rotulo), extra = null, ficha = ''){
+/* Regra do sistema (12/10/2026, Jadiel: "vale para 100% do sistema"): toda
+   exclusão pede duas confirmações. Antes, a segunda só vinha quando o botão
+   dizia apagar, remover ou excluir; quem chamava sem dizer o botão ("Apagar o
+   trecho" com o botão padrão "Confirmar") passava com uma só. Agora o título
+   também decide: título de exclusão ganha o botão com o verbo e a segunda
+   confirmação, sempre. */
+function confirmar(titulo, texto, aoSim, rotulo, duplo, extra = null, ficha = ''){
+  const tituloApaga = ACAO_DESTRUTIVA.test(String(titulo || ''));
+  if (rotulo == null){
+    const v = (String(titulo || '').match(ACAO_DESTRUTIVA) || [''])[0].toLowerCase();
+    rotulo = tituloApaga ? ({apagar:'Apagar', remover:'Remover', descartar:'Descartar'}[v] || 'Excluir') : 'Confirmar';
+  }
+  if (duplo == null) duplo = ACAO_DESTRUTIVA.test(rotulo) || tituloApaga;
   const paragrafo = t => `<p style="font-size:calc(14.5px * var(--esc));line-height:1.55;color:var(--giz-2)">${t}</p>`;
   /* O título da primeira folha já diz o que vai sumir; na segunda ele vira a
      primeira linha, afirmativa: sai o ponto de interrogação, que lá perguntava,
@@ -18670,10 +18682,12 @@ function registrarRota(){
 
     /* o lançamento é o que sustenta o milheiro; ele entra sempre */
     const idEntrada = uid();
-    DB.lancamentos.push({id:idEntrada, criadoEm:Date.now(), data, contaId:cont, prog:r.destino, tipo:tipoLanc,
+    const entrada = {id:idEntrada, criadoEm:Date.now(), data, contaId:cont, prog:r.destino, tipo:tipoLanc,
       qtd:entra, custo, cartaoId:'', parcelas:1,
       nota:`${r.via}${r.detalhe ? ' · ' + r.detalhe : ''}`,
-      origem:r.origem || '', saiu:r.origem ? sai : 0});
+      origem:r.origem || '', saiu:r.origem ? sai : 0};
+    if (!conferirAntesDeSalvar('lancamentos', entrada, 'um lançamento')) return;
+    DB.lancamentos.push(entrada);
 
     /* Transferência move ponto e move o dinheiro que o comprou. Sem a saída, o
        investido dobraria: o mesmo real apareceria na origem e no destino. */
@@ -19911,6 +19925,37 @@ function rotuloSugestao(sg){
   if (sg.tipo === 'compra') return `vira campanha de compra: ${prog(sg.para).n}${sg.desconto ? `, ${nBRdec(sg.desconto)}% de desconto` : ''}${sg.bonus ? `, ${nBRdec(sg.bonus)}% de bônus` : ''}${sg.carrinho ? `, milheiro ${brl2(sg.carrinho)}` : ''}`;
   return `vira campanha: ${prog(sg.de).n} → ${prog(sg.para).n}, ${nBRdec(sg.bonus)}%`;
 }
+/* ── anúncio repetido ──────────────────────────────────────────────────────────
+   O mesmo anúncio chega em mais de um grupo, e às vezes é colado duas vezes.
+   É o mesmo quando tem o mesmo título (sem emoji, pontuação e caixa) e o mesmo
+   prazo, ou o mesmo link (sem os rastreadores ?utm=) com o mesmo prazo e o
+   mesmo cupom. A Torre avisa já na prévia, antes de gravar, e não grava em dobro. */
+const normTitMural = t => SEM_EMOJI(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9%]+/g, ' ').trim();
+const normLinkMural = u => String(u || '').trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+function muralIgual(a, b){
+  if (!a || !b) return false;
+  const fa = a.fim || '', fb = b.fim || '';
+  if (fa !== fb) return false;
+  if (normTitMural(a.titulo) && normTitMural(a.titulo) === normTitMural(b.titulo)) return true;
+  const la = normLinkMural(a.link), lb = normLinkMural(b.link);
+  return !!(la && la === lb && (a.cupom || cupomDoMural(a)) && (a.cupom || cupomDoMural(a)) === (b.cupom || cupomDoMural(b)));
+}
+const muralJaTem = (a, ignorarId) => (DB.mural || []).find(m => m.id !== ignorarId && muralIgual(m, a)) || null;
+/* Repetidos que já estejam gravados (de antes desta conferência) viram um só:
+   fica o mais antigo, com o voto, a leitura e o que o outro tiver a mais. */
+function juntarMuralRepetido(){
+  const l = DB.mural || []; if (l.length < 2) return 0;
+  const fica = []; let n = 0;
+  l.forEach(m => {
+    const k = fica.find(x => muralIgual(x, m));
+    if (!k){ fica.push(m); return; }
+    n++;
+    k.lida = !!(k.lida || m.lida); k.voto = k.voto || m.voto || 0;
+    ['link', 'texto', 'pontuacao', 'imagem', 'cupom', 'magos', 'campId', 'sugestao'].forEach(c => { if (!k[c] && m[c]) k[c] = m[c]; });
+  });
+  if (n){ DB.mural = fica; salvar(); }
+  return n;
+}
 let anunciosLidos = [];
 function abrirColarMural(){
   anunciosLidos = [];
@@ -19932,11 +19977,13 @@ function previaAnuncios(){
   const ta = $('#mrColar'), box = $('#mrPrevias'), bt = $('#btGravarAnuncios');
   if (!ta || !box) return;
   anunciosLidos = lerAnuncios(ta.value);
+  anunciosLidos.forEach(a => { a.jaTem = muralJaTem(a); });
   if (!anunciosLidos.length){ box.innerHTML = ta.value.trim() ? '<p class="fraco">Não achei anúncio neste texto.</p>' : ''; if (bt) bt.disabled = true; return; }
   box.innerHTML = `<div class="olho anil" style="margin:6px 0 10px">${anunciosLidos.length} ${anunciosLidos.length === 1 ? 'anúncio encontrado' : 'anúncios encontrados'}</div>` +
-    anunciosLidos.map((a, i) => `<div class="mr-previa">
-      <label class="mr-inclui"><input type="checkbox" checked data-i="${i}"> Incluir</label>
+    anunciosLidos.map((a, i) => `<div class="mr-previa${a.jaTem ? ' repetido' : ''}">
+      <label class="mr-inclui"><input type="checkbox"${a.jaTem ? '' : ' checked'} data-i="${i}"> Incluir</label>
       <div class="mr-previa-corpo">
+        ${a.jaTem ? `<div class="mr-ja"><svg><use href="#i-alerta"/></svg><span><b>Já está no mural.</b> Este anúncio foi gravado${a.jaTem.criadoEm ? ' em ' + dataBR(String(a.jaTem.criadoEm).slice(0, 10)) : ''}${a.jaTem.lida ? ' e já foi lido' : ''}. Não será gravado de novo.</span></div>` : ''}
         <input type="text" class="mr-previa-tit" data-i="${i}" data-k="titulo" value="${esc(a.titulo)}" aria-label="Título">
         <div class="mr-previa-linha">
           <select data-i="${i}" data-k="cat" aria-label="Categoria">${Object.entries(CATEGORIAS_MURAL).map(([k, c]) => `<option value="${k}"${k === a.cat ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select>
@@ -19952,7 +19999,13 @@ function previaAnuncios(){
     </div>`).join('');
   box.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => { anunciosLidos[Number(el.dataset.i)][el.dataset.k] = el.value; }));
   box.querySelectorAll('select[data-k]').forEach(el => el.addEventListener('change', () => { anunciosLidos[Number(el.dataset.i)][el.dataset.k] = el.value; }));
-  if (bt){ bt.disabled = false; bt.innerHTML = `<svg><use href="#i-ok"/></svg>Gravar ${anunciosLidos.length}`; }
+  const contar = () => {
+    const n = [...box.querySelectorAll('.mr-inclui input')].filter(x => x.checked && !anunciosLidos[Number(x.dataset.i)].jaTem).length;
+    const todosRep = anunciosLidos.every(a => a.jaTem);
+    if (bt){ bt.disabled = !n; bt.innerHTML = todosRep ? `<svg><use href="#i-alerta"/></svg>${anunciosLidos.length === 1 ? 'Já está no mural' : 'Todos já estão no mural'}` : `<svg><use href="#i-ok"/></svg>Gravar ${n}`; }
+  };
+  box.querySelectorAll('.mr-inclui input').forEach(x => x.addEventListener('change', contar));
+  contar();
 }
 
 function gravarAnuncios(){
@@ -19964,7 +20017,7 @@ function gravarAnuncios(){
   marcados.forEach(i => {
     const a = anunciosLidos[i];
     /* O mesmo anúncio colado duas vezes não duplica: mesmo título e mesmo prazo. */
-    if (DB.mural.some(m => SEM_EMOJI(m.titulo).toLowerCase() === SEM_EMOJI(a.titulo).toLowerCase() && (m.fim || '') === (a.fim || ''))) { repetidos++; return; }
+    if (muralJaTem(a)) { repetidos++; return; }
     const m = {id:uid(), cat:a.cat, titulo:a.titulo, fim:a.fim, link:a.link, links:a.links, pontuacao:a.destaque,
       magos:a.magos, voto:0, texto:a.condicoes.join('\n'), imagem:'', lida:false, origem:'colado', criadoEm:agora, sugestao:a.sugestao, cupom:a.cupom || ''};
     DB.mural.push(m);
@@ -19976,6 +20029,7 @@ function gravarAnuncios(){
   if (novos) { catMural = alvoCat; }
   renderMural(); if (typeof renderMesa === 'function') renderMesa();
   if (nLojas && typeof renderLojasParceiras === 'function') try { renderLojasParceiras(); } catch(e){}
+  if (!novos && repetidos) return avisar(repetidos === 1 ? 'Este anúncio já está no mural. Nada foi gravado em dobro.' : `Esses ${repetidos} anúncios já estão no mural. Nada foi gravado em dobro.`, 'alerta', 7000);
   avisar(`${novos} ${novos === 1 ? 'oportunidade gravada' : 'oportunidades gravadas'} no mural.${nLojas ? ` ${nLojas === 1 ? 'Uma entrou' : nLojas + ' entraram'} também em Lojas parceiras.` : ''}${repetidos ? ` ${repetidos} já estava${repetidos > 1 ? 'm' : ''} lá.` : ''}`, 'ok', 6000);
 }
 /* anúncio de compra bonificada vira campanha com a companhia (sem duplicar:
@@ -20077,6 +20131,7 @@ function abrirQuentesMural(gatilho){
       <p class="dj-nota">Para ler, votar ou apagar uma oportunidade, use o cartão dela no Mural, abaixo do painel.</p>`)});
 }
 function renderMural(){
+  { const n = juntarMuralRepetido(); if (n) setTimeout(() => avisar(n === 1 ? 'Havia um anúncio repetido no mural: juntei os dois em um.' : `Havia ${n} anúncios repetidos no mural: juntei cada par em um.`, 'ok', 7000), 50); }
   renderHeroiMural();
   const alvo = $('#mrLista'); if (!alvo) return;
   if ($('#mrGuia') && !$('#mrGuia').innerHTML) $('#mrGuia').innerHTML = htmlGuia(GUIA_MURAL);
@@ -20185,6 +20240,8 @@ function editarMural(id){
       link:$('#mrLink').value.trim(), texto:$('#mrTexto').value.trim(),
       pontuacao:$('#mrPont').value.trim(), imagem:img, cupom:(($('#mrCupom') || {}).value || '').trim().toUpperCase()};
     DB.mural = DB.mural || [];
+    const igual = muralJaTem(novo, novo.id);
+    if (igual) return avisar(`Já existe no mural: "${SEM_EMOJI(igual.titulo)}", com o mesmo prazo. Mude o título ou o prazo, ou edite o anúncio que já está lá.`, 'alerta', 8000);
     const i = DB.mural.findIndex(x => x.id === novo.id);
     if (i >= 0) DB.mural[i] = novo; else DB.mural.push(novo);
     catMural = novo.cat;
@@ -28091,7 +28148,7 @@ function removerCreditosOrfaos(){
    Texto é comparado sem acento e sem diferença de maiúscula; número, com duas
    casas; quantidade de lançamento, sem o sinal, porque a saída é gravada com
    sinal de menos depois da conferência. */
-const CAMPOS_DA_TORRE = ['id', 'criadoEm', 'mexeuSaldo', 'saldoAntes', 'hist', 'ultimo', 'criado',
+const CAMPOS_DA_TORRE = ['id', 'criadoEm', 'quando', 'mexeuSaldo', 'saldoAntes', 'hist', 'ultimo', 'criado',
   'descontoBase', 'cartaoUsado', 'atualizadoEm', 'confirmouNome'];
 function digitalRegistro(r, colecao){
   const o = {};
@@ -28724,8 +28781,11 @@ function rgRenderMemoria(){
     rgRestaurar(el.dataset.id);
   });
   $$('[data-x]', host).forEach(b => b.onclick = () => {
-    DB.simulacoes = (DB.simulacoes || []).filter(s => s.id !== b.dataset.x);
-    salvar(); rgRenderMemoria();
+    const sm = (DB.simulacoes || []).find(s => s.id === b.dataset.x);
+    confirmar('Excluir esta simulação?', `${esc((sm && (sm.rot || sm.nome)) || 'A simulação')} sai da memória.`, () => {
+      DB.simulacoes = (DB.simulacoes || []).filter(s => s.id !== b.dataset.x);
+      salvar(); rgRenderMemoria();
+    }, 'Excluir');
   });
 }
 
@@ -33305,6 +33365,7 @@ function editarPlanoViagem(id){
       inicio:ini, fim, pax:Number($('#pvPax').value) || 1, moeda:$('#pvMoeda').value, fx,
       prazos:prazos.filter(z => z.quando), paradas:p.paradas || []};
     DB.planos = DB.planos || [];
+    if (!conferirAntesDeSalvar('planos', novo, 'uma jornada')) return;
     if (id) DB.planos[DB.planos.findIndex(x => x.id === id)] = novo; else DB.planos.unshift(novo);
     /* A meta da jornada: programa, milhas e aeroporto vêm daqui. */
     let mm = novo.metaId ? (DB.metas || []).find(x => x.id === novo.metaId) : null;
@@ -33426,8 +33487,11 @@ function editarParada(id){
 }
 function removerParada(id){
   const p = P(); if (!p) return;
-  p.paradas = (p.paradas || []).filter(x => x.id !== id);
-  salvar(); fecharFolha(); renderRota(); renderFita();
+  const pr = (p.paradas || []).find(x => x.id === id);
+  confirmar('Remover esta parada?', `${esc((pr && pr.titulo) || 'A parada')} sai do roteiro.`, () => {
+    p.paradas = (p.paradas || []).filter(x => x.id !== id);
+    salvar(); fecharFolha(); renderRota(); renderFita();
+  }, 'Remover');
 }
 /* Remover direto da linha pede confirmação; remover de dentro da folha, não —
    lá o botão está a dois cliques de distância e o contexto já é de edição. */
@@ -35077,9 +35141,11 @@ function pagarFatura(id){
   };
 }
 function desfazerPagamento(id){
+  confirmar('Excluir o pagamento registrado?', 'A fatura deste mês volta a aparecer como não paga.', () => {
   DB.pagamentos = (DB.pagamentos || []).filter(p => !(p.cartaoId === id && p.mes === mesFatura));
   salvar(); renderCartoes(); renderMesa();
   avisar('Pagamento desfeito.', 'ok');
+  }, 'Excluir');
 }
 
 /* ── catálogo ────────────────────────────────────────────────────────────────
@@ -43281,7 +43347,10 @@ function ligarEventos(){
   };
   $('#btSalvarCotacao').onclick = () => {
     if (!opcoesCotacao.length){ avisar('Some ao menos uma opção antes.', 'alerta'); return; }
-    DB.cotacoes.unshift({id:uid(), cliente:$('#ctCliente').value.trim() || 'Cliente', quando:new Date().toISOString(), opcoes:opcoesCotacao.slice()});
+    const nova = {id:uid(), cliente:$('#ctCliente').value.trim() || 'Cliente', quando:new Date().toISOString(), opcoes:opcoesCotacao.slice()};
+    DB.cotacoes = DB.cotacoes || [];
+    if (!conferirAntesDeSalvar('cotacoes', nova, 'uma cotação')) return;
+    DB.cotacoes.unshift(nova);
     DB.cotacoes = DB.cotacoes.slice(0, 40);
     salvar(); renderCotacoesSalvas(); avisar('Cotação salva.', 'ok');
   };
@@ -44169,6 +44238,10 @@ function cadastrarPromoLida(){
     .filter(x => x.cpm != null).sort((a, b) => a.cpm - b.cpm);
   const melhor = linhas[0];
 
+  DB.campanhas = DB.campanhas || [];
+  if (DB.campanhas.some(c => c.tipo === 'clube' && c.para === prg && (c.fim || '') === (d.fim || '') && semAcento(c.titulo || '') === semAcento(d.titulo || `Clube ${prog(prg).n}`))){
+    return avisar('Essa campanha de clube já está cadastrada. Nada foi gravado em dobro.', 'alerta', 7000);
+  }
   DB.campanhas.push({
     id:uid(), tipo:'clube', de:'', para:prg, bonus:0, desconto:0,
     fim:d.fim || '', limite:0,
@@ -44336,6 +44409,13 @@ function renderVigia(){
 function aprovarPendente(id){
   const a = (DB.pendentes || []).find(x => x.id === id); if (!a) return;
   const prg = PROGRAMAS[a.programa] ? a.programa : '';
+  DB.campanhas = DB.campanhas || [];
+  const jaTem = DB.campanhas.find(c => (c.tipo || 'transferencia') === (a.tipo || 'transferencia') && c.para === (prg || 'azul') && (c.fim || '') === (a.fim || '')
+    && (semAcento(c.titulo || '') === semAcento(a.titulo || '') || (Number(c.bonus) || 0) === (Number(a.bonus) || 0) && !!a.bonus));
+  if (jaTem){
+    DB.pendentes = (DB.pendentes || []).filter(x => x.id !== id); salvar(); renderVigia();
+    return avisar(`Essa campanha já está cadastrada ("${jaTem.titulo || prog(jaTem.para).n}"). Tirei da fila sem gravar em dobro.`, 'alerta', 7000);
+  }
   DB.campanhas.push({id:uid(), tipo:a.tipo || 'transferencia', de:'', para:prg || 'azul',
     bonus:Number(a.bonus) || 0, desconto:0, fim:a.fim || '', limite:0,
     titulo:a.titulo, regra:`${a.resumo || ''} Conferido na fonte: ${a.fonte}`.trim(), link:a.fonte || ''});
@@ -44344,8 +44424,11 @@ function aprovarPendente(id){
   avisar('Campanha cadastrada. Abra e complete a origem e o limite por CPF.', 'ok');
 }
 function descartarPendente(id){
-  DB.pendentes = (DB.pendentes || []).filter(x => x.id !== id);
-  salvar(); renderVigia();
+  const a = (DB.pendentes || []).find(x => x.id === id);
+  confirmar('Descartar esta campanha encontrada?', `${esc((a && a.titulo) || 'A campanha')} sai da fila de conferência.`, () => {
+    DB.pendentes = (DB.pendentes || []).filter(x => x.id !== id);
+    salvar(); renderVigia();
+  }, 'Descartar');
 }
 function atualizarEtqVigia(){
   const e = $('#etqVigia'); if (!e) return;
@@ -45120,6 +45203,7 @@ function formCompraPendente({desejo, compra, cands}){
       mult:num('#lcMult'), pts, previsto:$('#lcPrev').value, contaId:$('#lcConta').value, pedido:$('#lcPedido').value.trim(),
       status:c0.status || 'pendente', item:c0.item || (desejo ? desejo.n : ''), desejoId:c0.desejoId || (desejo ? desejo.id : '')};
     DB.compras = DB.compras || [];
+    if (!conferirAntesDeSalvar('compras', reg, 'uma compra')) return;
     if (compra) DB.compras[DB.compras.findIndex(y => y.id === compra.id)] = reg;
     else {
       DB.compras.push(reg);
@@ -45147,6 +45231,7 @@ function creditarCompra(id){
     const pts = qtdNum($('#crPts').value); if (!(pts > 0)) return erroNoCampo($('#crPts'), 'Informe os pontos que entraram.');
     const lanc = {id:uid(), criadoEm:Date.now(), data:$('#crData').value || hojeISO(), contaId:$('#crConta').value || c.contaId || (DB.contas[0] || {}).id, prog:c.prog,
       tipo:'organico', qtd:pts, custo:0, nota:`${c.item ? c.item + ' · ' : ''}compra bonificada em ${nomeLojaCompra(c)}`};
+    if (!conferirAntesDeSalvar('lancamentos', lanc, 'um lançamento')) return;
     DB.lancamentos.push(lanc);
     if (typeof acertarSaldoDe === 'function' && lanc.contaId) try{ acertarSaldoDe(lanc.contaId, c.prog); }catch(e){}
     const dif = pts - (Number(c.pts) || 0);
@@ -45535,8 +45620,11 @@ function aprovarVitrine(id){
   avisar(atual ? 'Multiplicador atualizado.' : 'Loja cadastrada no radar.', 'ok');
 }
 function descartarVitrine(id){
-  DB.vitrines = (DB.vitrines || []).filter(x => x.id !== id);
-  salvar(); renderFilaVitrine();
+  const v = (DB.vitrines || []).find(x => x.id === id);
+  confirmar('Descartar esta loja encontrada?', `${esc((v && v.loja) || 'A loja')} sai da fila de conferência.`, () => {
+    DB.vitrines = (DB.vitrines || []).filter(x => x.id !== id);
+    salvar(); renderFilaVitrine();
+  }, 'Descartar');
 }
 function atualizarEtqVitrine(){
   const e = $('#etqVitrine'); if (!e) return;
@@ -46891,7 +46979,9 @@ function registrarEmissao(contaId, prg){
       $('#emCpf').focus(); return;
     }
     DB.cpfs = DB.cpfs || [];
-    DB.cpfs.push({id:uid(), contaId, prog:prg, nome, cpf:formatarCPF(cpfPax), data:$('#emData').value || hojeISO()});
+    const novoCpf = {id:uid(), contaId, prog:prg, nome, cpf:formatarCPF(cpfPax), data:$('#emData').value || hojeISO()};
+    if (!conferirAntesDeSalvar('cpfs', novoCpf, 'este passageiro nesta data')) return;
+    DB.cpfs.push(novoCpf);
     salvar(); fecharFolha(); renderVender(); renderFita();
     const resta = pol.limite ? pol.limite - cpfsUsados(contaId, prg).length : null;
     avisar(resta === null ? 'Emissão registrada.'
@@ -46901,8 +46991,11 @@ function registrarEmissao(contaId, prg){
   };
 }
 function removerCPF(id, contaId, prg){
-  DB.cpfs = (DB.cpfs || []).filter(x => x.id !== id);
-  salvar(); fecharFolha(); registrarEmissao(contaId, prg); renderVender();
+  const r = (DB.cpfs || []).find(x => x.id === id);
+  confirmar('Remover este passageiro da cota?', `${esc((r && r.nome) || 'O passageiro')} sai da contagem de CPFs de ${esc(prog(prg).n)}.`, () => {
+    DB.cpfs = (DB.cpfs || []).filter(x => x.id !== id);
+    salvar(); fecharFolha(); registrarEmissao(contaId, prg); renderVender();
+  }, 'Remover');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -48746,7 +48839,8 @@ function vemLigar(){
       const [oi, sentido] = k.split('.'); const lista = vemEst.ops[+oi][sentido]; const ult = lista[lista.length - 1];
       lista.push(vemNovoTrecho(ult.para, '', ult.cia)); vemGuardarRascunho(); renderVem();
     } else if (a === 'tirar-voo'){
-      const [oi, sentido, j] = k.split('.'); vemEst.ops[+oi][sentido].splice(+j, 1); vemGuardarRascunho(); renderVem();
+      const [oi, sentido, j] = k.split('.');
+      confirmar('Excluir este voo da opção?', 'O trecho sai desta opção da cotação.', () => { vemEst.ops[+oi][sentido].splice(+j, 1); vemGuardarRascunho(); renderVem(); }, 'Excluir');
     } else if (a === 'mais-opcao'){
       const base = JSON.parse(JSON.stringify(vemEst.ops[vemEst.ops.length - 1]));
       vemEst.ops.push(base); vemGuardarRascunho(); renderVem();
@@ -49752,7 +49846,9 @@ function cqLigar(){
     const ab = ev.target.closest('[data-cq-abrir]'); if (ab){ cqAbrir(ab.dataset.cqAbrir); return; }
     const ap = ev.target.closest('[data-cq-aprovar]'); if (ap){ cqAprovar(+ap.dataset.cqAprovar); return; }
     const ti = ev.target.closest('[data-cq-tirar]');
-    if (ti){ ev.preventDefault(); vemEst.achados = (vemEst.achados || []).filter(a => a.id !== ti.dataset.cqTirar); cqSalvarAgora(); cqRenderAchados(); cqRenderTrilho(); return; }
+    if (ti){ ev.preventDefault(); const idT = ti.dataset.cqTirar;
+      confirmar('Excluir este achado?', 'Ele sai da lista de achados desta cotação.', () => { vemEst.achados = (vemEst.achados || []).filter(a => a.id !== idT); cqSalvarAgora(); cqRenderAchados(); cqRenderTrilho(); }, 'Excluir');
+      return; }
     const cp = ev.target.closest('[data-vem-acao-cq="copiar"]');
     if (cp){ copiarParaAreaDeTransferencia(cp.dataset.url).then(ok => avisar(ok ? 'Link copiado.' : 'Não deu para copiar.', ok ? 'ok' : 'erro')); return; }
     const b = ev.target.closest('[data-cq]'); if (!b) return;
@@ -51813,8 +51909,11 @@ function qcLigar(raiz){
   out.addEventListener('click', e => {
     const b = e.target.closest('[data-qc]'); if (!b) return;
     const r = qcLer(inp.value); if (!r || !r.valor) return;
-    const d = {...qcDesejoTemp(r), id:uid()};
-    DB.desejos = DB.desejos || []; DB.desejos.push(d); salvar();
+    DB.desejos = DB.desejos || [];
+    /* o mesmo item, ainda não comprado, já está na lista: usa o que existe */
+    const ja = DB.desejos.find(x => !x.feito && semAcento(x.n || '') === semAcento(r.n || ''));
+    const d = ja || {...qcDesejoTemp(r), id:uid()};
+    if (ja) avisar(`${r.n} já está na lista. Não foi colocado em dobro.`, 'alerta', 5000); else { DB.desejos.push(d); salvar(); }
     qcTexto = ''; inp.value = ''; out.innerHTML = '';
     if (b.dataset.qc === 'comprei'){ prRedesenharTudoSeguro(); comprarDesejoNaOferta(d.id, b.dataset.loja); return; }
     prRedesenharTudoSeguro();
@@ -54515,6 +54614,10 @@ function exControles(){
 .pv-contas-prog em{ font-style:normal; font-family:var(--f-m, inherit); white-space:nowrap; }
 .pv-acoes{ display:flex; justify-content:flex-end; margin-top:-4px; }
 /* cupom do anúncio: o código em destaque, um toque copia */
+.mr-previa.repetido{ border-color:color-mix(in srgb, var(--ouro) 60%, var(--fio)) !important; background:color-mix(in srgb, var(--ouro) 6%, transparent); }
+.mr-ja{ display:flex; gap:8px; align-items:flex-start; padding:8px 10px; margin-bottom:8px; border-radius:10px; background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 12%, transparent)); color:var(--giz); font-size:calc(13px * var(--esc)); }
+.mr-ja svg{ width:16px; height:16px; flex:0 0 16px; fill:none; stroke:var(--ouro); stroke-width:1.8; margin-top:1px; }
+.mr-ja b{ color:var(--ouro); }
 .mr-cupom{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:7px; padding:4px 6px 4px 10px; border-radius:9px;
   border:1px dashed color-mix(in srgb, var(--ouro) 70%, var(--fio)); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 10%, transparent)); color:var(--ouro); transition:.15s var(--ease, ease); }
 .mr-cupom span{ font:600 calc(10.5px * var(--esc)) var(--f-b, inherit); text-transform:uppercase; letter-spacing:.06em; color:var(--grafite); }
