@@ -11784,7 +11784,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 22:30';
+const BUILD = '2026-10-13 00:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -54391,13 +54391,41 @@ function exControles(){
 .pv-topo small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pv-topo .etq{ margin:0; flex-shrink:0; }
 .pv-qtd{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.pv-qtd button{ all:unset; cursor:pointer; color:var(--giz); font:700 calc(34px * var(--esc)) var(--f-m, inherit); letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
+.pv-qtd button{ all:unset; cursor:pointer; color:var(--giz); font:700 calc(25px * var(--esc)) var(--f-m, inherit); letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; }
 .pv-qtd button:hover{ color:var(--ouro); }
 .pv-qtd button:focus-visible{ outline:2px solid var(--ouro); outline-offset:3px; border-radius:6px; }
 .pv-qtd small{ color:var(--grafite); font-size:calc(13px * var(--esc)); }
-.pv-precos{ display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); align-items:stretch; gap:8px; }
+.pv-precos{ display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); align-items:stretch; gap:8px; container-type:inline-size; }
+/* conta escolhida: Custo Hoje → Meta de Venda | Últimas Vendas */
+.pv-precos.tres{ grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap:6px; }
+.pv-precos.tres .pv-preco{ padding:9px 10px; }
+.pv-precos.tres .pv-seta svg{ width:15px; height:15px; }
+.pv-precos.tres .pv-div{ margin:4px 1px; }
+.pv-val{ display:flex; align-items:baseline; gap:3px; }
+.pv-val span, .pv-meta span{ font:600 calc(11.5px * var(--esc)) var(--f-m, inherit); color:var(--grafite); }
+.pv-precos.tres .pv-val, .pv-precos.tres .pv-meta input{ font-size:calc(min(19px, 5.4cqi) * var(--esc)); }
+.pv-precos.tres .pv-nada{ font-size:calc(min(15px, 4.2cqi) * var(--esc)); white-space:normal; line-height:1.2; }
+.pv-precos.tres em{ white-space:normal; line-height:1.25; }
+/* cartão estreito: o rótulo quebra em duas linhas, sempre com a mesma altura
+   nos três retângulos, para os números ficarem na mesma linha */
+/* Os três retângulos dividem as mesmas três linhas (rótulo, valor, nota): se
+   um rótulo quebra em duas linhas, os outros acompanham e os números ficam
+   sempre alinhados, sem espaço vazio quando tudo cabe numa linha só. */
+.pv-precos.tres{ grid-template-rows:auto auto auto; row-gap:0; }
+.pv-precos.tres > *{ grid-row:1 / span 3; }
+.pv-precos.tres .pv-preco{ display:grid; grid-template-rows:subgrid; align-content:start; row-gap:2px; }
+.pv-precos.tres .pv-preco small{ white-space:normal; line-height:1.15; align-self:start; }
+.pv-precos.tres .pv-preco > b, .pv-precos.tres .pv-meta{ align-self:center; }
+@container (max-width:340px){
+  .pv-precos.tres .pv-preco{ padding:8px; }
+  .pv-precos.tres .pv-val, .pv-precos.tres .pv-meta input{ font-size:calc(min(19px, 5cqi) * var(--esc)); }
+  .pv-precos.tres .pv-val span, .pv-precos.tres .pv-meta span{ font-size:calc(10.5px * var(--esc)); }
+  .pv-precos.tres .pv-meta, .pv-precos.tres .pv-val{ gap:2px; }
+}
+}
+.pv-preco em .jade{ color:var(--jade); font-weight:600; } .pv-preco em .brasa{ color:var(--brasa); font-weight:600; }
 .pv-preco{ border:1px solid var(--fio); border-radius:13px; padding:9px 11px; display:flex; flex-direction:column; gap:2px; min-width:0; background:var(--sup-0, transparent); }
-.pv-preco small{ color:var(--grafite); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.pv-preco small{ color:var(--grafite); font:600 calc(12px * var(--esc)) var(--f-b, inherit); letter-spacing:.01em; white-space:nowrap; }
 .pv-preco b{ font:700 calc(19px * var(--esc)) var(--f-m, inherit); letter-spacing:-.02em; white-space:nowrap; }
 .pv-preco em{ font-style:normal; color:var(--grafite); font-size:calc(11.5px * var(--esc)); line-height:1.25; }
 .pv-preco.meta{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, var(--sup-0, transparent)); }
@@ -54470,10 +54498,19 @@ function exControles(){
 .sm-bloco{ border:1px solid var(--fio); border-radius:16px; padding:15px; margin-bottom:12px; background:var(--sup-1, transparent); }
 .sm-tit{ display:flex; align-items:center; gap:8px; color:var(--giz); font:650 calc(14px * var(--esc)) var(--f-b, inherit); margin-bottom:11px; }
 .sm-tit i{ width:22px; height:22px; border-radius:7px; display:grid; place-items:center; font-style:normal; background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 14%, transparent)); color:var(--ouro); font:700 calc(12px * var(--esc)) var(--f-m, inherit); }
+.sm-tit-linha{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:11px; }
+.sm-tit-linha .sm-tit{ margin:0; }
+.sm-modo button{ min-width:96px; }
+.sm-shop-nota{ font-size:calc(12.5px * var(--esc)); margin:10px 0 0; }
+.sm-prog:disabled{ opacity:.45; cursor:not-allowed; }
+.sm-porque{ grid-column:1 / -1; margin:-4px 0 0; color:var(--giz-2, var(--giz)); font-size:calc(13px * var(--esc)); }
+.sm-lucro b.ouro{ color:var(--ouro); }
+.sm-m b.jade{ color:var(--jade); }
+.sm-parada{ display:inline-block; margin-top:3px; padding:1px 7px; border-radius:99px; font:600 calc(10.5px * var(--esc)) var(--f-b, inherit); color:var(--ouro); border:1px solid color-mix(in srgb, var(--ouro) 50%, var(--fio)); white-space:nowrap; }
 .sm-progs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 185px), 1fr)); gap:8px; }
 .sm-prog{ all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0, transparent); min-width:0; transition:.15s var(--ease, ease); }
 .sm-prog > span:last-child{ display:flex; flex-direction:column; min-width:0; line-height:1.25; }
-.sm-prog b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sm-prog b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .sm-prog small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .sm-prog:hover{ border-color:color-mix(in srgb, var(--marca, var(--ouro)) 55%, var(--fio)); }
 .sm-prog.on{ border-color:var(--marca, var(--ouro)); background:color-mix(in srgb, var(--marca, var(--ouro)) 13%, var(--sup-0, transparent)); box-shadow:0 0 0 1px var(--marca, var(--ouro)) inset; }
@@ -54521,7 +54558,7 @@ function exControles(){
 .sm-lucro span{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
 .sm-metricas{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:1px; background:var(--fio); border:1px solid var(--fio); border-radius:12px; overflow:hidden; }
 .sm-m{ background:var(--sup-0, #111); padding:9px 11px; display:flex; flex-direction:column; gap:2px; min-width:0; }
-.sm-m small{ color:var(--grafite); font-size:calc(10.5px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+.sm-m small{ color:var(--grafite); font-size:calc(10.5px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; line-height:1.25; }
 .sm-m b{ color:var(--giz); font:650 calc(13.5px * var(--esc)) var(--f-m, inherit); display:flex; flex-direction:column; gap:1px; }
 .sm-m b.ouro{ color:var(--ouro); }
 .sm-m b em{ font:500 calc(11px * var(--esc)) var(--f-b, inherit); font-style:normal; color:var(--grafite); }
@@ -54597,7 +54634,7 @@ function exControles(){
 @media (max-width:980px){ .pv-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){
   .pv-vitrine{ padding:14px; border-radius:18px; }
-  .pv-qtd button{ font-size:calc(30px * var(--esc)); }
+  .pv-qtd button{ font-size:calc(23px * var(--esc)); }
   .pv-kpi b{ font-size:calc(17px * var(--esc)); }
   .pv-contas{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
   .pv-contas::-webkit-scrollbar{ display:none; }
@@ -54728,13 +54765,18 @@ const PRODUTOS_VIAGENS = [
    ic:'<rect x="3.5" y="7" width="17" height="13" rx="2.2"/><path d="M8.5 7V5.2c0-.9.7-1.7 1.7-1.7h3.6c1 0 1.7.8 1.7 1.7V7M3.5 12.5h17"/>'},
   {id:'hotel', n:'Hotel', d:'só a hospedagem', tipo:'hospedagem', pax:false, acao:'Reservar agora',
    ic:'<path d="M3 19.5V6.5M3 15h18v4.5M21 15v-3.2c0-1.5-1.2-2.8-2.8-2.8H11v6"/><circle cx="7" cy="11.2" r="2"/>'}];
-let ptSm = {prog:'', canal:'', produto:'', mi:0, pax:0, base:'meta'}, ptSmLista = [], ptSmPronto = false;
+let ptSm = {modo:'programa', prog:'', canal:'', produto:'', mi:0, pax:0, base:'meta'}, ptSmLista = [], ptSmPronto = false;
+/* Shopping: o resgate de produto na loja do próprio programa, com os mesmos
+   pontos. Não consome CPF. Por enquanto, três lojas. */
+const SHOPPINGS = [{id:'azul', n:'Shopping Azul'}, {id:'latampass', n:'Shopping LATAM Pass'}, {id:'smiles', n:'Shopping Smiles'}];
+const ptSmShop = () => ptSm.modo === 'shopping';
 try { if (localStorage.getItem('torre-simular-base') === 'vendas') ptSm.base = 'vendas'; } catch(_){}
 const ptSmProduto = () => PRODUTOS_VIAGENS.find(p => p.id === ptSm.produto) || null;
-const ptSmPedePax = () => !(ptSm.prog === 'azul' && ptSm.canal === 'viagens' && ptSm.produto === 'hotel');
+const ptSmPedePax = () => !ptSmShop() && !(ptSm.prog === 'azul' && ptSm.canal === 'viagens' && ptSm.produto === 'hotel');
 function ptSmFaltam(){
   const f = [];
-  if (!ptSm.prog) f.push('escolher o programa');
+  if (!ptSm.prog) f.push(ptSmShop() ? 'escolher o shopping' : 'escolher o programa');
+  else if (ptSmShop()) {}
   else if (ptSm.prog === 'azul' && !ptSm.canal) f.push('escolher Fidelidade, Pelo Mundo ou Viagens');
   else if (ptSm.prog === 'azul' && ptSm.canal === 'viagens' && !ptSm.produto) f.push('dizer se é passagem, pacote ou hotel');
   if (!(ptSm.mi > 0)) f.push('informar as milhas');
@@ -54776,22 +54818,29 @@ function ptSmAcaoDe(){
 const SM_IC_CHAVE = '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>';
 function ptSmPassos(){
   const st = [
-    {n:1, t:'Programa', ok:!!ptSm.prog && (ptSm.prog !== 'azul' || (!!ptSm.canal && (ptSm.canal !== 'viagens' || !!ptSm.produto)))},
+    {n:1, t:ptSmShop() ? 'Shopping' : 'Programa', ok:!!ptSm.prog && (ptSmShop() || ptSm.prog !== 'azul' || (!!ptSm.canal && (ptSm.canal !== 'viagens' || !!ptSm.produto)))},
     {n:2, t:'Milhas', ok:ptSm.mi > 0},
     {n:3, t:'Passageiros', ok:!ptSmPedePax() || ptSm.pax > 0, dis:!ptSmPedePax()}];
   const el = $('#smPassos'); if (!el) return;
   el.innerHTML = st.map(p => `<div class="sm-p${p.ok ? ' ok' : ''}${p.dis ? ' dis' : ''}"><i>${p.ok ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : p.n}</i><span>${p.t}${p.dis ? ' <small>dispensado</small>' : ''}</span></div>`).join('<b class="sm-trilho"></b>');
 }
 function ptSmDesenharPrograma(){
-  document.querySelectorAll('#smProgs [data-sm-prog]').forEach(b => { const on = b.dataset.smProg === ptSm.prog; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  const shop = ptSmShop();
+  document.querySelectorAll('#smModo [data-sm-modo]').forEach(b => { const on = b.dataset.smModo === ptSm.modo; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  if ($('#smProgs')) $('#smProgs').hidden = shop;
+  if ($('#smShops')) $('#smShops').hidden = !shop;
+  if ($('#smShopNota')) $('#smShopNota').hidden = !shop;
+  document.querySelectorAll('#smProgs [data-sm-prog]').forEach(b => { const on = !shop && b.dataset.smProg === ptSm.prog; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  document.querySelectorAll('#smShops [data-sm-shop]').forEach(b => { const on = shop && b.dataset.smShop === ptSm.prog; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const az = $('#smAzul'), vi = $('#smViagens');
-  if (az) az.hidden = ptSm.prog !== 'azul';
-  if (vi) vi.hidden = !(ptSm.prog === 'azul' && ptSm.canal === 'viagens');
+  if (az) az.hidden = shop || ptSm.prog !== 'azul';
+  if (vi) vi.hidden = shop || !(ptSm.prog === 'azul' && ptSm.canal === 'viagens');
   document.querySelectorAll('#smAzul [data-sm-canal]').forEach(b => { const on = b.dataset.smCanal === ptSm.canal; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   document.querySelectorAll('#smViagens [data-sm-produto]').forEach(b => { const on = b.dataset.smProduto === ptSm.produto; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const px = $('#smPaxBox'); if (px) px.classList.toggle('dis', !ptSmPedePax());
   const pi = $('#simPax'); if (pi) pi.disabled = !ptSmPedePax();
-  const rot = $('#smMiRot'); if (rot) rot.textContent = ptSm.prog === 'azul' && ptSm.canal === 'viagens' && ptSm.produto && ptSm.produto !== 'passagem' ? 'Milhas da reserva' : 'Milhas da emissão';
+  const rot = $('#smMiRot'); if (rot) rot.textContent = shop ? 'Milhas do resgate' : ptSm.prog === 'azul' && ptSm.canal === 'viagens' && ptSm.produto && ptSm.produto !== 'passagem' ? 'Milhas da reserva' : 'Milhas da emissão';
+  const dh = $('#smPaxBox .sm-dica-hotel'); if (dh) dh.textContent = shop ? 'Shopping não leva passageiro nem consome CPF: este passo fica dispensado.' : 'Hotel não leva passageiro: este passo fica dispensado.';
 }
 function ptSimRender(){
   ptSmPassos(); ptSmDesenharPrograma();
@@ -54805,6 +54854,7 @@ function ptSimRender(){
   /* a missão acabou de ser cumprida: leva o olho até a resposta, uma vez só */
   const acabou = !ptSmPronto; ptSmPronto = true;
   if (acabou) setTimeout(() => { const r = $('#simRes'); if (r && r.scrollIntoView) r.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 40);
+  if (ptSmShop()){ ptSmRenderShop(alvo); return; }
   const pax = ptSmPedePax() ? ptSm.pax : 0;
   const todos = ptSm.prog === '*';
   const lista = ptSmLista = ptCandidatos(ptSm.mi, pax, ptSm.base, todos ? null : {prog:ptSm.prog, canal:ptSm.prog === 'azul' ? ptSm.canal : ''});
@@ -54854,11 +54904,72 @@ function ptSimRender(){
     <p class="fraco sm-nota">O lucro é o preço do milheiro menos o seu custo real, vezes as milhas. Cada passageiro conta como pessoa nova na conta: se ele já voou por ela no período, na Smiles e na Azul Fidelidade a vaga não é gasta de novo.</p>`;
   ptSmLigar();
 }
+/* ── Shopping: qual conta resgata ─────────────────────────────────────────────
+   Resgate de produto não dá lucro de venda: é custo. A ordem é:
+   1. conta com saldo para o resgate inteiro;
+   2. antes de todas, a conta que já não tem vaga de CPF: as milhas dela não
+      viram mais passagem, então o shopping é por onde elas rendem;
+   3. depois, o menor custo do milheiro, que é o resgate mais barato;
+   4. empatou, a de saldo menor, para não quebrar a conta grande. */
+function ptSmCandShop(mi){
+  return posicoesDeVenda().filter(l => l.prog === ptSm.prog).map(l => {
+    const zerada = !!l.pol.limite && l.resta === 0;
+    /* custo de oportunidade: o que essas milhas renderiam vendidas pela meta.
+       Na conta sem vaga de CPF, isso não sai hoje, e o resgate é quase de graça. */
+    return {l, zerada, abreMao:mi / 1000 * ptMeta(l, l.prog === 'azul' ? 'fidelidade' : '').v, custo:mi / 1000 * l.cpm, depois:l.qtd - mi, ok:l.qtd >= mi, motivo:l.qtd < mi ? `faltam ${nBR(mi - l.qtd)} milhas` : '',
+      nome:(SHOPPINGS.find(x => x.id === l.prog) || {}).n || prog(l.prog).n};
+  }).sort((a, b) => (b.ok - a.ok) || (b.zerada - a.zerada) || (a.l.cpm - b.l.cpm) || (a.l.qtd - b.l.qtd)
+    || String(a.l.conta.nome).localeCompare(String(b.l.conta.nome), 'pt-BR'));
+}
+const ptCpfShopTxt = x => !x.l.pol.limite ? 'sem teto de CPF' : x.zerada ? `CPF zerado (0 de ${x.l.pol.limite})` : `${x.l.resta} de ${x.l.pol.limite} vagas livres`;
+function ptSmRenderShop(alvo){
+  const lista = ptSmLista = ptSmCandShop(ptSm.mi).map(x => Object.assign(x, {shop:true}));
+  const bons = lista.filter(x => x.ok), fora = lista.filter(x => !x.ok);
+  const nomeShop = (SHOPPINGS.find(x => x.id === ptSm.prog) || {}).n || '';
+  const quem = x => esc(x.l.conta.nome);
+  if (!bons.length){
+    alvo.innerHTML = `<div class="sm-res-cab"><div class="olho" style="margin:0">Resultado</div></div>
+      <div class="sm-espera alerta"><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5h.01"/></svg><div><b>Nenhuma conta tem ${nBR(ptSm.mi)} milhas para este resgate</b><span>${lista.length ? 'Veja quanto falta em cada uma abaixo.' : 'Nenhuma conta tem milhas neste programa.'}</span></div></div>
+      ${ptSmFora(fora, quem)}`;
+    ptSmLigar(); return;
+  }
+  const m = bons[0];
+  const porque = m.zerada ? 'Esta conta já não tem vaga de CPF: as milhas dela não viram mais passagem, então o shopping é o melhor destino para elas.'
+    : bons.length > 1 ? 'Menor custo do milheiro entre as contas com saldo para este resgate.' : 'É a única conta com saldo para este resgate.';
+  const metr = (rot, val, cls) => `<div class="sm-m"><small>${rot}</small><b${cls ? ` class="${cls}"` : ''}>${val}</b></div>`;
+  alvo.innerHTML = `<div class="sm-res-cab"><div class="olho jade" style="margin:0">Missão cumprida: a melhor conta</div></div>
+    <article class="sm-melhor" style="--marca:${prog(m.l.prog).cor}" id="simMelhor">
+      <div class="sm-selo"><span>1º</span>Melhor opção</div>
+      <div class="sm-quem">${discoProg(m.l.prog)}<div><b>${esc(m.l.conta.nome)}</b><small>${esc(nomeShop)} · ${nBR(ptSm.mi)} milhas</small></div></div>
+      <div class="sm-lucro"><small>Custo do resgate</small><b class="ouro">${brl(m.custo)}</b><span>${brl2(m.l.cpm)} o milheiro</span></div>
+      <p class="sm-porque">${porque}</p>
+      <div class="sm-metricas">
+        ${metr('Custo do milheiro', brl2(m.l.cpm))}
+        ${metr('Custo do resgate', brl(m.custo))}
+        ${metr('CPF', esc(ptCpfShopTxt(m)), 'txt' + (m.zerada ? ' ouro' : ''))}
+        ${metr('Deixa de vender', brl(m.abreMao) + `<em>${m.zerada ? 'sem vaga, não venderia hoje' : 'pela meta de venda'}</em>`, m.zerada ? 'jade' : '')}
+        ${metr('Saldo depois', nBR(m.depois))}
+      </div>
+      <div class="sm-acao"><span class="sm-aviso" style="color:var(--grafite)">Shopping não consome CPF.</span>
+        <button type="button" class="bt primario sm-ir" data-sm-ir="0"><svg><use href="#i-sacola"/></svg>Resgatar agora</button></div>
+    </article>
+    ${bons.length > 1 ? `<div class="sm-outras"><div class="sm-sub">Outras contas, em ordem</div>${bons.slice(1).map((x, i) => {
+      const d = x.custo - m.custo;
+      return `<div class="sm-linha">
+        <span class="sm-pos">${i + 2}º</span><span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>
+        <div class="sm-nome"><b>${quem(x)}</b><small>${brl2(x.l.cpm)} o milheiro · ${esc(ptCpfShopTxt(x))} · ${nBR(x.l.qtd)} milhas</small></div>
+        <div class="sm-val"><b>${brl(x.custo)}</b><small>${Math.abs(d) < .005 ? 'mesmo custo' : `${brl(Math.abs(d))} ${d > 0 ? 'a mais' : 'a menos'}${d < 0 && m.zerada && !x.zerada ? ', mas tem vaga de CPF' : ''}`}</small></div>
+        <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="Resgatar por ${esc(x.l.conta.nome)}">Resgatar</button>
+      </div>`; }).join('')}</div>` : ''}
+    ${ptSmFora(fora, quem)}
+    <p class="fraco sm-nota">A ordem: primeiro a conta que já não tem vaga de CPF (as milhas dela não viram mais passagem); depois o menor custo do milheiro; no empate, a de saldo menor, para preservar a conta grande.</p>`;
+  ptSmLigar();
+}
 function ptSmFora(fora, quem){
   if (!fora.length) return '';
   return `<details class="sm-fora"><summary>Sem condição agora (${fora.length})</summary>${fora.map(x => `
     <div class="sm-linha fora"><span class="sm-pos"></span><span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>
-      <div class="sm-nome"><b>${quem(x)}</b><small>${nBR(x.l.qtd)} milhas · ${esc(ptCpfTxt(x))}</small></div>
+      <div class="sm-nome"><b>${quem(x)}</b><small>${nBR(x.l.qtd)} milhas · ${esc(x.shop ? ptCpfShopTxt(x) : ptCpfTxt(x))}</small></div>
       <div class="sm-val"><b class="brasa">${esc(x.motivo)}</b></div><span></span></div>`).join('')}</details>`;
 }
 function ptSmLigar(){
@@ -54872,6 +54983,11 @@ function ptSmLigar(){
    milhas e o valor a cobrar (sem as taxas, que entram na hora). */
 function ptSmIr(i){
   const x = ptSmLista[i]; if (!x || !x.ok) return;
+  if (x.shop){
+    fecharFolha();
+    setTimeout(() => editarLancamento(null, {prog:x.l.prog, tipo:'resgateProd', contaId:x.l.conta.id, qtd:ptSm.mi, nota:x.nome}), 60);
+    return;
+  }
   const ac = x.l.prog === 'azul' && x.canal === 'viagens' ? ptSmAcaoDe() : {tipo:'voo', id:'passagem'};
   const desc = ac.id === 'hotel' ? 'Hotel · Azul Viagens' : ac.id === 'pacote' ? 'Pacote · Azul Viagens' : '';
   fecharFolha();
@@ -54879,17 +54995,27 @@ function ptSmIr(i){
     milhas:ptSm.mi, taxas:0, cobrado:Math.round(x.receita * 100) / 100, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO()}), 60);
 }
 function ptSimular(){
-  ptSm = {prog:'', canal:'', produto:'', mi:0, pax:0, base:ptSm.base}; ptSmPronto = false;
+  ptSm = {modo:'programa', prog:'', canal:'', produto:'', mi:0, pax:0, base:ptSm.base}; ptSmPronto = false;
   /* só os programas com milhas em alguma conta, em ordem alfabética */
   const porP = {};
   posicoesDeVenda().forEach(l => { (porP[l.prog] = porP[l.prog] || {q:0, c:new Set()}); porP[l.prog].q += l.qtd; porP[l.prog].c.add(l.conta.id); });
   const progs = Object.keys(porP).sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR'));
+  /* milhas paradas: contas com teto de CPF e nenhuma vaga sobrando */
+  const paradas = {};
+  posicoesDeVenda().forEach(l => { if (l.pol.limite && l.resta === 0) paradas[l.prog] = (paradas[l.prog] || 0) + l.qtd; });
   const tile = p => `<button type="button" class="sm-prog" data-sm-prog="${p}" aria-pressed="false" style="--marca:${prog(p).cor}">${discoProg(p)}
       <span><b>${p === 'azul' ? 'Azul' : esc(prog(p).n)}</b><small>${milCurto(porP[p].q)} · ${porP[p].c.size} ${porP[p].c.size === 1 ? 'conta' : 'contas'}</small></span></button>`;
-  abrirFolha({titulo:'Simular a Próxima Venda', largura:'larga',
+  abrirFolha({titulo:'Simular o Próximo Resgate', largura:'larga',
     corpo:`<div class="sm-passos" id="smPassos"></div>
       <section class="sm-bloco">
-        <div class="sm-tit"><i>1</i>Programa</div>
+        <div class="sm-tit-linha"><div class="sm-tit"><i>1</i>Onde resgatar</div>
+          <div class="seg sm-modo" id="smModo" role="tablist" aria-label="Programa ou shopping">
+            <button type="button" role="tab" data-sm-modo="programa" class="on" aria-selected="true">Programa</button>
+            <button type="button" role="tab" data-sm-modo="shopping" aria-selected="false">Shopping</button></div></div>
+        <div class="sm-progs" id="smShops" hidden>${SHOPPINGS.map(x => { const t = porP[x.id], par = paradas[x.id] || 0;
+          return `<button type="button" class="sm-prog" data-sm-shop="${x.id}" aria-pressed="false" style="--marca:${prog(x.id).cor}"${t ? '' : ' disabled'}>${discoProg(x.id)}
+            <span><b>${esc(x.n)}</b><small>${t ? `${milCurto(t.q)} · ${t.c.size} ${t.c.size === 1 ? 'conta' : 'contas'}` : 'sem saldo'}</small>${par ? `<i class="sm-parada" data-dica="Milhas em contas sem vaga de CPF: não viram mais passagem e encontram no shopping o melhor destino.">${milCurto(par)} sem vaga de CPF</i>` : ''}</span></button>`; }).join('')}</div>
+        <p class="fraco sm-shop-nota" id="smShopNota" hidden>Produto na loja do programa, com as mesmas milhas. Não consome CPF: a Torre prefere a conta que já zerou as vagas e, depois, a de milheiro mais barato.</p>
         <div class="sm-progs" id="smProgs">${progs.map(tile).join('')}
           <button type="button" class="sm-prog todos" data-sm-prog="*" aria-pressed="false"><span class="sm-todos-ic"><svg viewBox="0 0 24 24"><path d="M4 18V9M10 18V5M16 18v-6M22 18H2"/></svg></span>
             <span><b>Comparar todos</b><small>o mais lucrativo</small></span></button></div>
@@ -54899,7 +55025,7 @@ function ptSimular(){
           <div class="sm-opcoes">${PRODUTOS_VIAGENS.map(p => `<button type="button" data-sm-produto="${p.id}" aria-pressed="false"><svg viewBox="0 0 24 24">${p.ic}</svg><b>${p.n}</b><small>${p.d}</small></button>`).join('')}</div></div>
       </section>
       <section class="sm-bloco sm-numeros">
-        <div class="campo"><label class="sm-tit"><i>2</i><span id="smMiRot">Milhas da emissão</span></label><input type="text" inputmode="numeric" data-milhar id="simMi" placeholder="Ex.: 50.000" autocomplete="off"></div>
+        <div class="campo"><label class="sm-tit"><i>2</i><span id="smMiRot">Milhas da emissão</span></label><input type="text" inputmode="numeric" data-milhar id="simMi" data-vazio="sim" placeholder="Ex.: 50.000" autocomplete="off"></div>
         <div class="campo" id="smPaxBox"><label class="sm-tit"><i>3</i>Passageiros</label>
           <div class="sm-cont"><button type="button" data-sm-pax="-1" aria-label="Menos um passageiro">−</button><input type="number" min="1" max="9" step="1" id="simPax" placeholder="0" inputmode="numeric"><button type="button" data-sm-pax="1" aria-label="Mais um passageiro">+</button></div>
           <div class="dica sm-dica-hotel">Hotel não leva passageiro: este passo fica dispensado.</div></div>
@@ -54909,6 +55035,14 @@ function ptSimular(){
   document.querySelectorAll('#smProgs [data-sm-prog]').forEach(b => b.onclick = () => {
     const p = b.dataset.smProg; if (ptSm.prog !== p){ ptSm.canal = ''; ptSm.produto = ''; } ptSm.prog = p; ptSimRender();
     if (p !== 'azul') setTimeout(() => { const i = $('#simMi'); if (i && !i.value) i.focus(); }, 30);
+  });
+  document.querySelectorAll('#smModo [data-sm-modo]').forEach(b => b.onclick = () => {
+    if (ptSm.modo === b.dataset.smModo) return;
+    ptSm.modo = b.dataset.smModo; ptSm.prog = ''; ptSm.canal = ''; ptSm.produto = ''; ptSimRender();
+  });
+  document.querySelectorAll('#smShops [data-sm-shop]').forEach(b => b.onclick = () => {
+    ptSm.prog = b.dataset.smShop; ptSimRender();
+    setTimeout(() => { const i = $('#simMi'); if (i && !i.value) i.focus(); }, 30);
   });
   document.querySelectorAll('#smAzul [data-sm-canal]').forEach(b => b.onclick = () => { ptSm.canal = b.dataset.smCanal; if (ptSm.canal !== 'viagens') ptSm.produto = ''; ptSimRender(); });
   document.querySelectorAll('#smViagens [data-sm-produto]').forEach(b => b.onclick = () => { ptSm.produto = b.dataset.smProduto; ptSimRender(); });
@@ -54945,12 +55079,24 @@ function ptBlocos(lista){
 
 /* Grupo todo: no alto só o que é do grupo inteiro, o custo real do milheiro e
    a média das últimas vendas. A meta é de cada conta e fica na lista de baixo. */
+/* valor do milheiro com o "R$" miúdo, como no campo da meta: os três
+   retângulos cabem lado a lado e o número continua grande */
+const ptValor = (v, cor) => `<b class="pv-val"${cor ? ` style="color:var(--${cor})"` : ''}><span>R$</span>${(Number(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</b>`;
+function ptCaixaVendas(b, vd, nomeP){
+  const dif = vd.v != null && b.meta && b.metas.length === 1 ? (vd.v - b.meta) / b.meta * 100 : null;
+  const quando = vd.ultima ? dataBR(String(vd.ultima).slice(0, 10)) : '';
+  const dica = vd.n ? `Média do milheiro ${vd.n === 1 ? 'na última venda' : 'nas ' + vd.n + ' últimas vendas'}${b.p === 'azul' ? ' de ' + esc(nomeP) : ''}${quando ? ' (a mais recente em ' + quando + ')' : ''}: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.${vd.total > vd.n ? '&#10;São ' + vd.total + ' vendas ao todo; a média usa as ' + vd.n + ' mais recentes.' : ''}&#10;Na régua, é o losango.`
+    : 'Ainda não há venda registrada aqui. A média aparece na primeira venda registrada no Balcão.';
+  return `<div class="pv-preco vendido" data-dica="${dica}">
+        <small>Últimas Vendas</small>${vd.v != null ? ptValor(vd.v) : '<b class="pv-nada">a apurar</b>'}
+        <em>${dif != null ? `<span class="${dif >= 0 ? 'jade' : 'brasa'}">${dif >= 0 ? '+' : '−'}${Math.abs(dif).toLocaleString('pt-BR', {maximumFractionDigits:1})}% da meta</span>` : vd.n ? (vd.n === 1 ? '1 venda' : 'média de ' + vd.n) : 'sem venda ainda'}</em></div>`;
+}
 function ptPrecosGrupo(b, z, f, vd){
   return `<div class="pv-preco custo" data-dica="Custo real do milheiro no grupo, ponderado pelo saldo de cada conta.&#10;Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}.">
-        <small>Custo real</small><b style="color:var(--${z})">${brl2(b.cpm)}</b><em>por milheiro</em></div>
+        <small>Custo Hoje</small>${ptValor(b.cpm, z)}<em>por milheiro</em></div>
       <div class="pv-div" aria-hidden="true"></div>
       <div class="pv-preco vendido" data-dica="${vd.n ? `Média do milheiro nas ${vd.n === 1 ? 'última venda' : vd.n + ' últimas vendas'} do grupo: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.` : 'Ainda não há venda registrada. A média aparece na primeira venda.'}">
-        <small>Últimas vendas</small>${vd.v != null ? `<b>${brl2(vd.v)}</b>` : '<b class="pv-nada">a apurar</b>'}<em>${vd.n ? (vd.n === 1 ? '1 venda' : 'média de ' + vd.n + ' vendas') : 'sem venda ainda'}</em></div>`;
+        <small>Últimas Vendas</small>${vd.v != null ? ptValor(vd.v) : '<b class="pv-nada">a apurar</b>'}<em>${vd.n ? (vd.n === 1 ? '1 venda' : 'média de ' + vd.n + ' vendas') : 'sem venda ainda'}</em></div>`;
 }
 function ptCartao(b, grupo){
   const f = faixasDe(b.p), z = b.cpm <= f.alvo ? 'jade' : b.cpm <= f.razoavel ? 'ouro' : 'brasa';
@@ -54983,16 +55129,18 @@ function ptCartao(b, grupo){
     <div class="pv-qtd">${!grupo
       ? `<button type="button" onclick="editarSaldo('${l.saldoId}')" data-dica="Ajustar o saldo">${nBR(b.qtd)}</button>`
       : `<button type="button" tabindex="-1" style="cursor:default">${nBR(b.qtd)}</button>`}<small>milhas</small></div>
-    <div class="pv-precos">${grupo ? ptPrecosGrupo(b, z, f, vd) : `
+    <div class="pv-precos${grupo ? '' : ' tres'}">${grupo ? ptPrecosGrupo(b, z, f, vd) : `
       <div class="pv-preco custo" data-dica="Quanto cada mil milhas custou, pelo custo médio dos lançamentos.&#10;Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}.">
-        <small>Custo hoje</small><b style="color:var(--${z})">${brl2(b.cpm)}</b><em>por milheiro</em></div>
+        <small>Custo Hoje</small>${ptValor(b.cpm, z)}<em>por milheiro</em></div>
       <div class="pv-seta" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div>
       <div class="pv-preco meta${minha ? ' minha' : ''}" data-dica="${dicaMeta}">
-        <small>Meta de venda</small>
+        <small>Meta de Venda</small>
         ${grupo ? `<b style="color:var(--jade)">${brl2(b.meta)}</b>`
           : `<label class="pv-meta"><span>R$</span><input type="text" inputmode="decimal" class="pv-meta-in" aria-label="Meta de venda de ${esc(nomeP)}"
               value="${moedaTxt(Math.round(b.meta * 100) / 100)}" data-prog="${esc(b.p)}" data-conta="${esc(l.conta.id)}" data-canal="${esc(b.canal || '')}"></label>`}
-        <em>${esc(origem)}</em></div>`}
+        <em>${esc(origem)}</em></div>
+      <div class="pv-div" aria-hidden="true"></div>
+      ${ptCaixaVendas(b, vd, nomeP)}`}
     </div>
     ${grupo && vd.v == null ? '' : `<div class="pv-regua" data-dica="${grupo ? 'Do custo (ponto claro) até a média das últimas vendas (losango).' : `Do custo (ponto claro) até a meta (ponto ${minha ? 'dourado' : 'verde'}): é o que sobra por milheiro.`}${merc ? '&#10;O risco azul é a mediana do mercado: ' + brl2(merc.faixa.mediana) + '.' : ''}">
       <i class="t"></i>${grupo ? `<i class="g${vd.v < b.cpm ? ' neg' : ''}" style="left:${pc(Math.min(b.cpm, vd.v))}%;width:${(pc(Math.max(b.cpm, vd.v)) - pc(Math.min(b.cpm, vd.v))).toFixed(1)}%"></i>`
@@ -55000,10 +55148,6 @@ function ptCartao(b, grupo){
       ${merc ? `<i class="k" style="left:${pc(merc.faixa.mediana)}%"></i>` : ''}
       ${vd.v != null ? `<i class="v" style="left:${pc(vd.v)}%"></i>` : ''}
       <i class="p c" style="left:${pc(b.cpm)}%"></i>${grupo ? '' : `<i class="p m" style="left:${pc(b.meta)}%"></i>`}</div>`}
-    ${grupo ? '' : `<div class="pv-vendas" data-dica="${vd.n ? `Média do milheiro nas ${vd.n === 1 ? 'última venda' : vd.n + ' últimas vendas'}${b.p === 'azul' ? ' de ' + esc(nomeP) : ''}: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.${vd.total > vd.n ? '&#10;São ' + vd.total + ' vendas ao todo; a média usa as ' + vd.n + ' mais recentes.' : ''}&#10;Na régua, é o losango.` : 'Ainda não há venda registrada aqui. A média aparece na primeira venda registrada no Balcão.'}">
-      <small>Últimas vendas</small><em>${vd.n ? `${vd.n === 1 ? '1 venda' : 'média de ' + vd.n + ' vendas'}${quando ? ' · última em ' + quando : ''}` : 'sem venda ainda'}</em>
-      ${dif != null ? `<span class="dif ${dif >= 0 ? 'jade' : 'brasa'}">${dif >= 0 ? '+' : '−'}${Math.abs(dif).toLocaleString('pt-BR', {maximumFractionDigits:1})}% da meta</span>` : ''}
-      ${vd.v != null ? `<b>${brl2(vd.v)}</b>` : '<b class="pv-nada">a apurar</b>'}</div>`}
     ${grupo ? `<div class="pv-contas-prog"><div class="pv-cp-cab"><span>Conta</span><em>Milhas</em><em>Custo real</em><em>Meta</em></div>${b.metas.map(x => `<div data-dica="${esc(x.l.conta.nome)}: o milheiro custou ${brl2(x.l.cpm)} e a meta é vender a ${brl2(x.m.v)}${x.m.fonte === 'minha' ? ' (meta sua)' : ' (sugestão)'}."><span>${esc(x.l.conta.nome)}</span><em>${nBR(x.l.qtd)}</em><em class="c">${brl2(x.l.cpm)}</em><em class="m" style="color:var(--${x.m.fonte === 'minha' ? 'ouro' : 'jade'})">${brl2(x.m.v)}</em></div>`).join('')}</div>` : ''}
     <div class="pv-pe">
       <div><small>Lucro na meta</small><b class="${lucro >= 0 ? 'jade' : 'brasa'}">${lucro >= 0 ? '+' : '−'}${brl(Math.abs(lucro))}</b></div>
@@ -55033,8 +55177,8 @@ function ptRenderVitrine(){
     + ptContasDisp.map(c => chip(c.id, esc(iniciaisDe(c.nome)), c.nome, milCurto(totConta(c.id)) + ' milhas')).join('');
   cx.innerHTML = `<div class="pv-cab">
       <div class="pv-tit"><div class="pv-tit-linha"><div class="olho ouro" style="margin:0">Vitrine de venda</div>
-          <button type="button" class="pv-sim" id="ptSimular" aria-label="Simular a próxima venda" data-dica="Simular a próxima venda: qual conta e programa dão mais lucro, sem estourar as vagas de CPF.">
-            <svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg><span>Simular venda</span></button></div>
+          <button type="button" class="pv-sim" id="ptSimular" aria-label="Simular o próximo resgate" data-dica="Simular o próximo resgate: qual conta e programa dão mais lucro, sem estourar as vagas de CPF.">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg><span>Simular resgate</span></button></div>
         <p>${grupo ? 'Todas as contas juntas, um cartão por programa. No alto, o custo real e as últimas vendas; embaixo, o custo e a meta de cada conta.' : 'Só as milhas desta conta, um cartão por programa. Quanto tem, quanto custou cada milheiro e por quanto você quer vender. Toque na meta para mudar.'}</p></div>
       <div class="pv-contas" role="group" aria-label="Escolher a conta">${chips}</div>
     </div>
