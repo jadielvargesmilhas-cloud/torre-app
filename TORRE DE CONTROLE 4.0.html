@@ -10166,8 +10166,16 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
         <div class="painel-aba" id="p-ms-vender">
           <div class="pilha" style="gap:18px">
             <section class="heroi" id="ptHeroi"></section>
+            <!-- Duas abas: a vitrine (cartões) abre por padrão; as tabelas ficam na
+                 segunda. Uma de cada vez na tela. -->
+            <div class="pv-abas" id="ptAbas" role="tablist" aria-label="O que ver na prateleira">
+              <button type="button" role="tab" data-pt-aba="vitrine" class="on" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7.5" height="7" rx="1.6"/><rect x="13.5" y="4" width="7.5" height="7" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7" rx="1.6"/></svg>Vitrine de venda</button>
+              <button type="button" role="tab" data-pt-aba="tabelas" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.8h18M9 9.5V20"/></svg>Tabelas</button>
+            </div>
             <section class="pv-vitrine" id="ptVitrine" hidden></section>
             <div class="grade g4" id="prateleiraResumo" hidden></div>
+            <div class="pilha" style="gap:18px" id="ptTabelas" hidden>
+            <div class="pv-contas pv-contas-tab" id="ptContasTab" role="group" aria-label="Escolher a conta"></div>
             <!-- O cartão "Preço de mercado" saiu da tela a pedido. A leitura do Rota 360
                  continua: o favorito segue importando, e a venda sugerida usa os preços. -->
             <div class="cartao" style="padding:0;overflow:hidden">
@@ -10187,6 +10195,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="rolo" style="margin:0;padding:0" id="vdPrateleira"></div>
             </div>
             <div id="vdPontos"></div>
+            </div>
           </div>
         </div>
 
@@ -11775,7 +11784,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 18:00';
+const BUILD = '2026-10-12 21:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12559,6 +12568,17 @@ function lotesEmRisco(dias){
 function politicaCPF(p){
   return (DB.politicas && DB.politicas[p]) || POLITICA_CPF[p] || {limite:0, janela:'civil', nota:''};
 }
+/* As milhas Azul são um saldo só, com o mesmo custo, mas saem por três portas:
+   Azul Fidelidade (voos Azul, consome vaga de beneficiário), Azul Pelo Mundo
+   (companhias parceiras) e Azul Viagens (pacotes, hotel, carro). Pelo Mundo e
+   Viagens não usam CPF. Emissão antiga sem canal é Fidelidade. */
+const CANAIS_AZUL = [
+  {id:'fidelidade', n:'Azul Fidelidade', curto:'Fidelidade', cpf:true},
+  {id:'pelomundo',  n:'Azul Pelo Mundo', curto:'Pelo Mundo', cpf:false},
+  {id:'viagens',    n:'Azul Viagens',    curto:'Viagens',    cpf:false}];
+const canalAzul = id => CANAIS_AZUL.find(c => c.id === id) || CANAIS_AZUL[0];
+const canalUsaCPF = id => canalAzul(id).cpf;
+const nomeCanalAzul = id => canalAzul(id).n;
 const PROG_PONTOS = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'pontos');
 const PROG_HOTEL  = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'hotel');
 
@@ -35661,6 +35681,7 @@ function ligarEmissoesAoCpf(){
   (DB.reservas || []).forEach(r => {
     if (r.status === 'cancelada' || !r.contaId) return;
     if (!(politicaCPF(r.prog) || {}).limite) return;
+    if (r.prog === 'azul' && !canalUsaCPF(r.canal)) return;
     if ((DB.cpfs || []).some(x => x.reservaId === r.id)) return;
     sincCpfDaEmissao(r);
     mexeu = true;
@@ -36679,7 +36700,9 @@ function editarReserva(id, rascunho){
         </div>
         <div id="rsPaxLista"></div>
       </div>
-      <div class="campo"><label>Programa</label><select id="rsProg"><option value="">na pagante</option>${PROG_MILHAS.concat(r.prog && !PROG_MILHAS.includes(r.prog) && PROGRAMAS[r.prog] ? [r.prog] : []).map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Programa</label><select id="rsProg"><option value="">na pagante</option>${PROG_MILHAS.concat(r.prog && !PROG_MILHAS.includes(r.prog) && PROGRAMAS[r.prog] ? [r.prog] : []).map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select>
+        <select id="rsCanal" class="rs-canal" aria-label="Onde as milhas Azul foram usadas"${r.prog === 'azul' ? '' : ' hidden'}>${
+          CANAIS_AZUL.map(c => `<option value="${c.id}"${c.id === (r.canal || 'fidelidade') ? ' selected' : ''}>${c.n}</option>`).join('')}</select></div>
       <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="rsMilhas" value="${qtdTxt(r.milhas)}"></div>
       <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="rsTaxas" value="${moedaTxt(r.taxas)}"></div>
       <div class="campo"><label>Cartão (pagamento/taxas)</label><select id="rsCartao"><option value="">não informado</option>${
@@ -36859,6 +36882,8 @@ function editarReserva(id, rascunho){
   };
   ['#rsProg','#rsMilhas','#rsTaxas','#rsExtra','#rsCobrado','#rsQuem'].forEach(s => { $(s).oninput = previa; $(s).onchange = previa; });
   $('#rsQuem').addEventListener('change', sincPagto);
+  /* Azul: Fidelidade, Pelo Mundo ou Viagens. Só aparece quando o programa é Azul. */
+  $('#rsProg').addEventListener('change', () => { const cn = $('#rsCanal'); if (cn) cn.hidden = $('#rsProg').value !== 'azul'; });
   sincPagto();
   previa();
   /* Lido o itinerário, descrição e data se preenchem sozinhas quando ainda
@@ -36888,7 +36913,7 @@ function editarReserva(id, rascunho){
     if (pg && !(qtdNum($('#rsMilhas').value) > 0)) faltam.push({sel:'#rsMilhas', msg:`Informe quantas milhas ${prog(pg).n} saíram nesta emissão.`});
     /* Programa com teto por CPF precisa saber de qual CPF saiu a emissão, senão
        a vaga é consumida na vida real e não aparece no controle. */
-    if (pg && !$('#rsConta').value && (politicaCPF(pg) || {}).limite) faltam.push({sel:'#rsConta', msg:`${prog(pg).n} tem limite de CPFs por conta: informe a conta que emitiu.`});
+    if (pg && !$('#rsConta').value && (politicaCPF(pg) || {}).limite) faltam.push({sel:'#rsConta', msg: pg === 'azul' && !canalUsaCPF(($('#rsCanal') || {}).value) ? `Informe de qual conta saíram as milhas da ${nomeCanalAzul(($('#rsCanal') || {}).value)}.` : `${prog(pg).n} tem limite de CPFs por conta: informe a conta que emitiu.`});
     /* Venda precisa do cliente: é dele o resultado e a cobrança. */
     if ($('#rsQuem').value === 'terceiro' && !$('#rsCliente').value.trim()) faltam.push({sel:'#rsCliente', msg:'Venda precisa do cliente: busque no cadastro.'});
     /* Toda emissão precisa do localizador: é ele que acha a reserva na companhia. */
@@ -36902,6 +36927,7 @@ function editarReserva(id, rascunho){
       desc:$('#rsDesc').value.trim() || 'Reserva', loc:$('#rsLoc').value.trim().toUpperCase(), data:$('#rsData').value, hora:$('#rsHora').value,
       dataVolta:($('#rsDataVolta') || {}).value || '', horaVolta:($('#rsHoraVolta') || {}).value || '',
       criadaHora:($('#rsCriadaHora') || {}).value || '', prog:$('#rsProg').value,
+      canal:$('#rsProg').value === 'azul' ? (($('#rsCanal') || {}).value || 'fidelidade') : '',
       milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value), cartaoId:$('#rsCartao').value,
       cobrado:moedaNum($('#rsCobrado').value), contaId:$('#rsConta').value, creditoEm:$('#rsCredito').value, custoExtra:moedaNum($('#rsExtra').value),
       trajeto:$('#rsTrajeto').value,
@@ -45526,6 +45552,8 @@ function compararContas(a, b){
 function sincCpfDaEmissao(r){
   DB.cpfs = (DB.cpfs || []).filter(x => x.reservaId !== r.id);
   if (!(politicaCPF(r.prog) || {}).limite) return;
+  /* Azul Pelo Mundo e Azul Viagens não ocupam vaga de beneficiário: só a Azul Fidelidade. */
+  if (r.prog === 'azul' && !canalUsaCPF(r.canal)) return;
   if (!r.contaId || r.status === 'cancelada') return;
 
   /* Um registro por passageiro, com o CPF de cada um: é assim que a companhia
@@ -54325,7 +54353,12 @@ function exControles(){
                    radial-gradient(90% 80% at 100% 100%, color-mix(in srgb, var(--jade) 7%, transparent), transparent 60%); }
 .pv-cab{ display:flex; gap:16px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; margin-bottom:16px; }
 .pv-tit{ min-width:0; flex:1 1 280px; }
-.pv-tit p{ margin:6px 0 0; color:var(--grafite); font-size:calc(13px * var(--esc)); max-width:560px; }
+.pv-tit p{ margin:6px 0 0; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+/* O texto de apresentação cabe numa linha só: com espaço de computador (820px ou
+   mais), a letra encolhe um pouco, no máximo até 11,5px, para a frase inteira caber.
+   Em tablet e celular não há largura para isso sem ficar ilegível, e ela quebra. */
+.pv-tit{ container-type:inline-size; }
+@container (min-width:820px){ .pv-tit p{ white-space:nowrap; font-size:calc(clamp(11.5px, 1.385cqi, 13px) * var(--esc)); } }
 .pv-contas{ display:flex; flex-wrap:wrap; gap:7px; flex:1 1 100%; }
 .pv-conta{ display:inline-flex; align-items:center; gap:9px; padding:5px 14px 5px 5px; border-radius:99px; cursor:pointer;
   border:1px solid var(--fio); background:var(--sup-1, transparent); color:var(--grafite); text-align:left; transition:.16s var(--ease, ease); max-width:100%; }
@@ -54366,7 +54399,7 @@ function exControles(){
 .pv-preco{ border:1px solid var(--fio); border-radius:13px; padding:9px 11px; display:flex; flex-direction:column; gap:2px; min-width:0; background:var(--sup-0, transparent); }
 .pv-preco small{ color:var(--grafite); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
 .pv-preco b{ font:700 calc(19px * var(--esc)) var(--f-m, inherit); letter-spacing:-.02em; white-space:nowrap; }
-.pv-preco em{ font-style:normal; color:var(--grafite); font-size:calc(11.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pv-preco em{ font-style:normal; color:var(--grafite); font-size:calc(11.5px * var(--esc)); line-height:1.25; }
 .pv-preco.meta{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, var(--sup-0, transparent)); }
 .pv-preco.meta.minha{ border-color:color-mix(in srgb, var(--ouro) 55%, var(--fio)); background:color-mix(in srgb, var(--ouro) 7%, var(--sup-0, transparent)); }
 .pv-preco.meta.minha em{ color:var(--ouro); }
@@ -54398,6 +54431,75 @@ function exControles(){
 .pv-contas-prog span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--giz-2, var(--giz)); }
 .pv-contas-prog em{ font-style:normal; font-family:var(--f-m, inherit); white-space:nowrap; }
 .pv-acoes{ display:flex; justify-content:flex-end; margin-top:-4px; }
+/* rodapé do cartão preso embaixo: lucro, margem e "vendendo tudo" ficam na mesma
+   altura em todos os cartões da linha, com o fio separador junto */
+.pv-pe{ margin-top:auto; }
+.pv-tit-linha{ display:flex; align-items:center; gap:12px; }
+.pv-abas{ display:inline-flex; gap:4px; padding:4px; border:1px solid var(--fio); border-radius:14px; background:var(--sup-1, transparent); align-self:flex-start; max-width:100%; }
+.pv-abas button{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border-radius:10px; color:var(--grafite);
+  font:600 calc(13.5px * var(--esc)) var(--f-b, inherit); white-space:nowrap; transition:.16s var(--ease, ease); }
+.pv-abas button svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linejoin:round; }
+.pv-abas button:hover{ color:var(--giz); }
+.pv-abas button.on{ color:var(--giz); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 12%, transparent)); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ouro) 60%, transparent); }
+.pv-abas button.on svg{ color:var(--ouro); }
+.pv-abas button:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
+.pv-contas-tab:empty{ display:none; }
+@media (max-width:560px){ .pv-abas{ display:flex; } .pv-abas button{ flex:1; justify-content:center; padding:9px 10px; } }
+.pv-tit-linha .olho{ flex:1; min-width:0; }
+.pv-sim{ display:inline-flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer; padding:7px 14px 7px 9px; border-radius:99px;
+  border:1px solid color-mix(in srgb, var(--ouro) 55%, var(--fio)); color:var(--ouro); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 10%, transparent));
+  font:600 calc(12.5px * var(--esc)) var(--f-b, inherit); transition:.16s var(--ease, ease); }
+.pv-sim:hover{ background:color-mix(in srgb, var(--ouro) 20%, transparent); box-shadow:0 6px 20px color-mix(in srgb, var(--ouro) 18%, transparent); }
+.pv-sim:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
+.pv-sim svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.pv-sep-contas{ width:1px; align-self:stretch; margin:4px 5px; background:var(--fio); flex-shrink:0; }
+.pv-div{ width:1px; align-self:stretch; margin:6px 2px; background:var(--fio); }
+.pv-preco.vendido b{ color:var(--lilas, var(--anil)); }
+.pv-preco.vendido b.pv-nada{ color:var(--grafite); font-size:calc(15px * var(--esc)); font-weight:600; }
+.pv-contas-prog .pv-cp-cab{ color:var(--grafite); font-size:calc(10.5px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; padding-bottom:3px; border-bottom:1px solid var(--fio-suave, var(--fio)); }
+.pv-contas-prog div{ grid-template-columns:minmax(0, 1fr) auto auto auto !important; }
+.pv-contas-prog em.c{ color:var(--giz); } .pv-contas-prog em.m{ font-weight:700; }
+/* simulador da próxima venda */
+.sim-grade{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
+.sim-top{ border:1px solid color-mix(in srgb, var(--jade) 50%, var(--fio)); border-radius:16px; padding:16px; display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:14px; align-items:center;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--jade) 10%, transparent), transparent 60%); margin-bottom:10px; }
+.sim-top .sim-selo{ grid-column:1 / -1; font:600 calc(11px * var(--esc)) var(--f-b, inherit); text-transform:uppercase; letter-spacing:.07em; color:var(--jade); }
+.sim-top b.n{ font:700 calc(24px * var(--esc)) var(--f-m, inherit); color:var(--jade); white-space:nowrap; }
+.sim-top .q{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.sim-top .q strong{ color:var(--giz); font-size:calc(15px * var(--esc)); }
+.sim-top .q span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.sim-alt{ border:1px dashed var(--fio); border-radius:14px; padding:11px 14px; margin-bottom:14px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.sim-alt b{ color:var(--giz); }
+.sim-aviso{ color:var(--ouro); }
+.sim-tab{ width:100%; border-collapse:collapse; font-size:calc(13px * var(--esc)); }
+.sim-tab th{ text-align:left; color:var(--grafite); font-weight:600; font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; padding:6px 8px; border-bottom:1px solid var(--fio); white-space:nowrap; }
+.sim-tab td{ padding:8px; border-bottom:1px solid var(--fio-suave, var(--fio)); white-space:nowrap; }
+.sim-tab td.n, .sim-tab th.n{ text-align:right; font-family:var(--f-m, inherit); }
+.sim-tab tr.fora td{ opacity:.5; }
+.sim-tab tr.melhor td{ background:color-mix(in srgb, var(--jade) 8%, transparent); }
+.sim-tab .pg{ display:flex; align-items:center; gap:8px; }
+.sim-rolar{ overflow-x:auto; }
+@media (max-width:700px){ .sim-grade{ grid-template-columns:minmax(0, 1fr); } .sim-top{ grid-template-columns:auto minmax(0, 1fr); } .sim-top b.n{ grid-column:1 / -1; } }
+.rs-canal{ margin-top:6px; }
+.rs-canal[hidden]{ display:none !important; }
+/* Azul: três portas para o mesmo saldo */
+.pv-canais{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:3px; padding:3px; border:1px solid var(--fio); border-radius:12px; background:var(--sup-0, transparent); margin-top:-4px; }
+.pv-canais button{ all:unset; box-sizing:border-box; cursor:pointer; text-align:center; padding:7px 6px; border-radius:9px; color:var(--grafite);
+  font:600 calc(12.5px * var(--esc)) var(--f-b, inherit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:.15s var(--ease, ease); }
+.pv-canais button:hover{ color:var(--giz); }
+.pv-canais button.on{ background:color-mix(in srgb, var(--marca) 22%, transparent); color:var(--giz); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--marca) 60%, transparent); }
+.pv-canais button:focus-visible{ outline:2px solid var(--marca); outline-offset:1px; }
+/* últimas vendas: abaixo do custo e da meta, separado por um fio */
+.pv-vendas{ display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:'r v' 'e d'; align-items:center; column-gap:12px; row-gap:4px; padding-top:12px; border-top:1px dashed var(--fio); margin-top:-2px; min-width:0; }
+.pv-vendas small{ grid-area:r; } .pv-vendas b{ grid-area:v; text-align:right; } .pv-vendas em{ grid-area:e; } .pv-vendas .dif{ grid-area:d; justify-self:end; }
+.pv-vendas small{ color:var(--grafite); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.pv-vendas em{ font-style:normal; color:var(--grafite); font-size:calc(11.5px * var(--esc)); line-height:1.3; }
+.pv-vendas b{ font:700 calc(19px * var(--esc)) var(--f-m, inherit); letter-spacing:-.02em; white-space:nowrap; color:var(--lilas, var(--anil)); }
+.pv-vendas b.pv-nada{ color:var(--grafite); font-size:calc(15px * var(--esc)); font-weight:600; }
+.pv-vendas .dif{ font:600 calc(11.5px * var(--esc)) var(--f-m, inherit); padding:3px 8px; border-radius:99px; white-space:nowrap; border:1px solid var(--fio); color:var(--grafite); }
+.pv-vendas .dif.jade{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+.pv-vendas .dif.brasa{ color:var(--brasa); border-color:color-mix(in srgb, var(--brasa) 45%, var(--fio)); }
+.pv-regua .v{ position:absolute; top:6px; width:10px; height:10px; transform:translateX(-50%) rotate(45deg); background:var(--lilas, var(--anil)); border-radius:2px; box-shadow:0 0 0 2px var(--sup-1, #111); }
 @media (max-width:980px){ .pv-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){
   .pv-vitrine{ padding:14px; border-radius:18px; }
@@ -54406,8 +54508,10 @@ function exControles(){
   .pv-contas{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
   .pv-contas::-webkit-scrollbar{ display:none; }
   .pv-conta{ flex-shrink:0; }
-  .pv-preco em, .pv-pe small{ white-space:normal; overflow:visible; line-height:1.25; }
-  .pv-pe{ align-items:end; }
+  .pv-sim span{ display:none; } .pv-sim{ padding:8px; }
+  /* no celular o rodapé vira três linhas: rótulo à esquerda, valor à direita */
+  .pv-pe{ grid-template-columns:minmax(0, 1fr); gap:7px; }
+  .pv-pe div{ flex-direction:row; justify-content:space-between; align-items:baseline; gap:10px; }
 }
 </style>
 <script>
@@ -54423,6 +54527,48 @@ function exControles(){
 const PV_CHAVE = 'torre-prateleira-conta';
 let ptSel = null, ptContasDisp = [], ptUltimas = [];
 try { ptSel = localStorage.getItem(PV_CHAVE); } catch(_){}
+/* qual porta da Azul está aberta no cartão (Fidelidade, Pelo Mundo, Viagens) */
+const PV_ABA = 'torre-prateleira-aba';
+let ptAba = 'vitrine';
+try { if (localStorage.getItem(PV_ABA) === 'tabelas') ptAba = 'tabelas'; } catch(_){}
+function ptAplicarAba(){
+  const v = $('#ptVitrine'), t = $('#ptTabelas'); if (!t) return;
+  const temContas = ptContasDisp.length > 0;
+  if (v) v.hidden = ptAba !== 'vitrine' || !temContas;
+  t.hidden = ptAba !== 'tabelas';
+  document.querySelectorAll('#ptAbas [data-pt-aba]').forEach(b => { const on = b.dataset.ptAba === ptAba; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+}
+function ptEscolherAba(a){
+  ptAba = a === 'tabelas' ? 'tabelas' : 'vitrine'; try { localStorage.setItem(PV_ABA, ptAba); } catch(_){}
+  ptAplicarAba();
+}
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#ptAbas [data-pt-aba]'); if (b) ptEscolherAba(b.dataset.ptAba); });
+const PV_CANAL = 'torre-prateleira-canal-azul';
+let ptCanal = 'fidelidade';
+try { const c = localStorage.getItem(PV_CANAL); if (CANAIS_AZUL.some(x => x.id === c)) ptCanal = c; } catch(_){}
+const ptCanalDe = prg => prg === 'azul' ? ptCanal : '';
+/* A meta da Azul Fidelidade fica na chave de sempre (conta|azul), e a tabela
+   da prateleira continua lendo a mesma. Pelo Mundo e Viagens ganham a sua. */
+const ptChaveMeta = (contaId, prg, canal) => `${contaId || '-'}|${prg}` + (canal && canal !== 'fidelidade' ? '@' + canal : '');
+function ptEscolherCanal(id){
+  ptCanal = canalAzul(id).id; try { localStorage.setItem(PV_CANAL, ptCanal); } catch(_){}
+  ptRenderVitrine();
+}
+/* Preço médio do milheiro nas últimas vendas: o que o cliente pagou, menos as
+   taxas e despesas que saíram do seu bolso, dividido pelas milhas. Das cinco
+   mais recentes, pesando pelo tamanho de cada uma. Sem venda, não há número. */
+const PV_ULTIMAS = 5;
+function ptVendas(contaIds, prg, canal){
+  const todas = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && r.prog === prg
+    && (Number(r.milhas) || 0) > 0 && (Number(r.cobrado) || 0) > 0
+    && (contaIds ? contaIds.includes(r.contaId) : true)
+    && (prg !== 'azul' || (r.canal || 'fidelidade') === (canal || 'fidelidade')))
+    .sort((a, b) => String(b.criada || b.data || '').localeCompare(String(a.criada || a.data || '')));
+  const l = todas.slice(0, PV_ULTIMAS);
+  const mi = soma(l.map(r => Number(r.milhas) || 0));
+  const liq = soma(l.map(r => (Number(r.cobrado) || 0) - (Number(r.taxas) || 0) - (Number(r.custoExtra) || 0)));
+  return {n:l.length, total:todas.length, v:mi ? liq / mi * 1000 : null, ultima:l[0] ? (l[0].criada || l[0].data) : ''};
+}
 
 function ptFiltrarPosicoes(todas){
   const ids = [...new Set(todas.map(l => l.conta.id))];
@@ -54442,24 +54588,110 @@ const ptRotuloConta = () => ptSel && ptSel !== '*' && ptContasDisp.length > 1
 /* A mesma regra da coluna "Venda sugerida": o preço que você fixou para a conta,
    depois o antigo gravado só pelo programa, depois a mediana do mercado na faixa
    da posição e, sem nada disso, o custo mais a margem padrão. */
-function ptMeta(l){
+function ptMeta(l, canal){
   const mapa = DB.precoVenda || {};
-  const k = `${l.conta.id || '-'}|${l.prog}`;
+  const k = ptChaveMeta(l.conta.id, l.prog, canal);
   if (mapa[k] != null) return {v:Number(mapa[k]), fonte:'minha'};
-  if (mapa[l.prog] != null) return {v:Number(mapa[l.prog]), fonte:'minha'};
+  if ((!canal || canal === 'fidelidade') && mapa[l.prog] != null) return {v:Number(mapa[l.prog]), fonte:'minha'};
   let ref = null;
   try { ref = typeof referenciaMercado === 'function' ? referenciaMercado(l.prog, l.qtd) : null; } catch(_){}
   if (ref) return {v:ref.faixa.mediana, fonte:'mercado', ref};
   return {v:(Number(l.cpm) || 0) * 1.35, fonte:'sugestao'};
 }
-function ptDefinirMeta(prg, contaId, valor){
+function ptDefinirMeta(prg, contaId, valor, canal){
   DB.precoVenda = DB.precoVenda || {};
-  const v = Number(valor) || 0, k = `${contaId || '-'}|${prg}`;
+  const v = Number(valor) || 0, k = ptChaveMeta(contaId, prg, canal);
   const antes = DB.precoVenda[k];
   if (v > 0){ if (antes === v) return; DB.precoVenda[k] = v; }
-  else { delete DB.precoVenda[k]; delete DB.precoVenda[prg]; }
+  else { delete DB.precoVenda[k]; if (!canal || canal === 'fidelidade') delete DB.precoVenda[prg]; }
   salvar(); renderVender();
-  avisar(v > 0 ? `Meta de ${prog(prg).n} guardada: ${brl2(v)} o milheiro.` : `Meta de ${prog(prg).n} apagada. Volta a valer a sugestão.`, 'ok');
+  const nome = prg === 'azul' ? nomeCanalAzul(canal) : prog(prg).n;
+  avisar(v > 0 ? `Meta de ${nome} guardada: ${brl2(v)} o milheiro.` : `Meta de ${nome} apagada. Volta a valer a sugestão.`, 'ok');
+}
+/* Pelo Mundo e Viagens não passam pelo controle de CPF: o botão abre direto o
+   registro da venda, já com a conta, o programa e a opção da Azul escolhidos. */
+function ptRegistrarVenda(contaId, prg, canal){
+  editarReserva(null, {tipo:'voo', quem:'terceiro', cliente:'', desc:'', data:hojeISO(), prog:prg, canal:canal || '', contaId,
+    milhas:0, taxas:0, cobrado:0, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO()});
+}
+/* ══ SIMULAR A PRÓXIMA VENDA ═══════════════════════════════════════════════════
+   Para uma venda de X milhas com N passageiros, compara todas as contas e
+   programas (a Azul nas suas três opções) e diz onde ela rende mais.
+
+   O lucro é o preço do milheiro (a meta, ou a média das últimas vendas) menos o
+   custo real, vezes as milhas. O CPF entra de duas formas: quem não tem saldo
+   ou vaga suficiente sai da disputa, e quando a melhor opção gasta vaga de CPF,
+   a simulação mostra também a melhor que não gasta, e quanto se deixa de ganhar
+   para poupar a vaga. Passageiro é contado como pessoa nova na conta: se ele já
+   voou por ela no período, na Smiles e na Azul a vaga não é gasta de novo. */
+let ptSimEstado = {mi:50000, pax:1, base:'meta'};
+function ptCandidatos(mi, pax, base){
+  const out = [];
+  posicoesDeVenda().forEach(l => {
+    const canais = l.prog === 'azul' ? CANAIS_AZUL.map(c => c.id) : [''];
+    canais.forEach(canal => {
+      const usaCPF = l.prog !== 'azul' || canalUsaCPF(canal);
+      const teto = usaCPF && l.pol.limite ? l.resta : Infinity;
+      const meta = ptMeta(l, canal).v;
+      const vd = ptVendas([l.conta.id], l.prog, canal);
+      const usarVd = base === 'vendas' && vd.v != null;
+      const preco = usarVd ? vd.v : meta;
+      const gasta = usaCPF && l.pol.limite ? pax : 0;
+      const motivo = l.qtd < mi ? `faltam ${nBR(mi - l.qtd)} milhas` : teto < pax ? (teto === 0 ? 'sem vaga de CPF' : `só ${teto} ${teto === 1 ? 'vaga' : 'vagas'} de CPF`) : '';
+      out.push({l, canal, usaCPF, semTeto:usaCPF && !l.pol.limite, preco, fontePreco:usarVd ? 'vendas' : 'meta', semVenda:base === 'vendas' && vd.v == null,
+        lucro:mi / 1000 * (preco - l.cpm), receita:mi / 1000 * preco, gasta, sobra:usaCPF && l.pol.limite ? l.resta - pax : null, limite:l.pol.limite,
+        nome:l.prog === 'azul' ? nomeCanalAzul(canal) : prog(l.prog).n, ok:!motivo, motivo});
+    });
+  });
+  return out.sort((a, b) => (b.ok - a.ok) || (b.lucro - a.lucro) || (a.gasta - b.gasta) || ((b.sobra ?? 99) - (a.sobra ?? 99))
+    || String(a.l.conta.nome).localeCompare(String(b.l.conta.nome), 'pt-BR'));
+}
+function ptCpfTxt(x){
+  if (!x.usaCPF) return 'não consome CPF';
+  if (x.semTeto) return 'sem teto de CPF';
+  return `usa ${x.gasta} · sobram ${Math.max(0, x.sobra)} de ${x.limite}`;
+}
+function ptSimRender(){
+  const alvo = $('#simRes'); if (!alvo) return;
+  const {mi, pax, base} = ptSimEstado;
+  if (!(mi > 0) || !(pax > 0)){ alvo.innerHTML = '<p class="fraco">Informe as milhas da venda e quantos passageiros.</p>'; return; }
+  const lista = ptCandidatos(mi, pax, base);
+  const bons = lista.filter(x => x.ok);
+  const lc = v => `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`;
+  let topo = '';
+  if (!bons.length){
+    topo = `<div class="sim-alt"><b>Nenhuma conta comporta esta venda.</b> Ou falta saldo, ou faltam vagas de CPF. Veja o motivo de cada uma na lista.</div>`;
+  } else {
+    const m = bons[0];
+    const poupa = m.gasta ? bons.find(x => !x.gasta) : null;
+    topo = `<div class="sim-top" id="simMelhor"><div class="sim-selo">Mais vantajosa</div>${discoProg(m.l.prog)}
+        <div class="q"><strong>${esc(m.nome)} · ${esc(m.l.conta.nome)}</strong>
+          <span>${brl2(m.preco)} o milheiro (${m.fontePreco === 'vendas' ? 'média das últimas vendas' : 'meta'}) contra ${brl2(m.l.cpm)} de custo · ${esc(ptCpfTxt(m))}</span></div>
+        <b class="n">${lc(m.lucro)}</b></div>
+      ${poupa ? `<div class="sim-alt" id="simPoupa">Para <b>não gastar vaga de CPF</b>: <b>${esc(poupa.nome)} · ${esc(poupa.l.conta.nome)}</b>, lucro de <b>${lc(poupa.lucro)}</b>, ${brl(Math.abs(m.lucro - poupa.lucro))} ${poupa.lucro <= m.lucro ? 'a menos' : 'a mais'}.${m.sobra === 0 ? ' <span class="sim-aviso">A mais vantajosa usa as últimas vagas desta conta.</span>' : ''}</div>`
+        : m.sobra === 0 ? `<div class="sim-alt"><span class="sim-aviso">Atenção: a mais vantajosa usa as últimas vagas de CPF de ${esc(m.l.conta.nome)} em ${esc(prog(m.l.prog).n)}.</span></div>` : ''}`;
+  }
+  alvo.innerHTML = topo + `<div class="sim-rolar"><table class="sim-tab"><thead><tr><th></th><th>Programa</th><th>Conta</th><th class="n">Preço</th><th class="n">Custo</th><th class="n">Lucro</th><th>CPF</th></tr></thead><tbody>${
+    lista.map((x, i) => `<tr class="${!x.ok ? 'fora' : i === 0 ? 'melhor' : ''}"><td class="n">${x.ok ? i + 1 + 'º' : ''}</td>
+      <td><span class="pg">${discoProg(x.l.prog)}${esc(x.nome)}</span></td><td>${esc(x.l.conta.nome)}</td>
+      <td class="n">${brl2(x.preco)}${x.semVenda ? ' <small class="fraco">meta</small>' : ''}</td><td class="n">${brl2(x.l.cpm)}</td>
+      <td class="n" style="color:var(--${!x.ok ? 'grafite' : x.lucro >= 0 ? 'jade' : 'brasa'})">${lc(x.lucro)}</td>
+      <td>${x.ok ? esc(ptCpfTxt(x)) : `<span style="color:var(--brasa)">${esc(x.motivo)}</span>`}</td></tr>`).join('')}</tbody></table></div>
+    <p class="fraco" style="font-size:calc(12px * var(--esc));margin:12px 0 0">Cada passageiro conta como pessoa nova na conta. Se ele já voou por ela no período, na Smiles e na Azul Fidelidade a vaga não é gasta de novo. Na LATAM Pass cada emissão gasta uma vaga.</p>`;
+}
+function ptSimular(){
+  abrirFolha({titulo:'Simular a Próxima Venda', largura:'larga',
+    corpo:`<div class="sim-grade">
+        <div class="campo"><label>Milhas da venda</label><input type="text" inputmode="numeric" data-milhar id="simMi" value="${qtdTxt(ptSimEstado.mi)}"></div>
+        <div class="campo"><label>Passageiros (CPFs)</label><input type="number" min="1" max="9" step="1" id="simPax" value="${ptSimEstado.pax}"></div>
+        <div class="campo"><label>Preço do milheiro</label><select id="simBase" data-ordem="natural">
+          <option value="meta"${ptSimEstado.base === 'meta' ? ' selected' : ''}>Pela meta de venda</option>
+          <option value="vendas"${ptSimEstado.base === 'vendas' ? ' selected' : ''}>Pela média das últimas vendas</option></select></div>
+      </div><div id="simRes"></div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+  const ler = () => { ptSimEstado = {mi:qtdNum($('#simMi').value), pax:Math.max(0, Math.round(Number($('#simPax').value) || 0)), base:$('#simBase').value}; ptSimRender(); };
+  ['#simMi', '#simPax', '#simBase'].forEach(sel => { $(sel).addEventListener('input', ler); $(sel).addEventListener('change', ler); });
+  ptSimRender();
 }
 function ptEscolherConta(id){
   ptSel = id; try { localStorage.setItem(PV_CHAVE, id); } catch(_){}
@@ -54473,65 +54705,91 @@ function ptBlocos(lista){
   return Object.keys(porP).sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR')).map(p => {
     const g = porP[p].sort((a, b) => String(a.conta.nome || '').localeCompare(String(b.conta.nome || ''), 'pt-BR'));
     const qtd = soma(g.map(l => l.qtd)), custo = soma(g.map(l => l.custo));
-    const metas = g.map(l => ({l, m:ptMeta(l)}));
+    const canal = ptCanalDe(p), usaCPF = p !== 'azul' || canalUsaCPF(canal);
+    const metas = g.map(l => ({l, m:ptMeta(l, canal)}));
     const receita = soma(metas.map(x => x.l.qtd / 1000 * x.m.v));
-    return {p, g, metas, qtd, custo, cpm:qtd ? custo / qtd * 1000 : 0, meta:qtd ? receita / qtd * 1000 : 0, receita,
-            travada:g.every(l => l.resta === 0), vagas:g.reduce((a, l) => a + (l.pol.limite ? l.resta : 0), 0), semTeto:g.some(l => !l.pol.limite)};
+    return {p, g, canal, usaCPF, metas, qtd, custo, cpm:qtd ? custo / qtd * 1000 : 0, meta:qtd ? receita / qtd * 1000 : 0, receita,
+            vendas:ptVendas(ptSel === '*' ? null : g.map(l => l.conta.id), p, canal),
+            travada:usaCPF && g.every(l => l.resta === 0), vagas:g.reduce((a, l) => a + (l.pol.limite ? l.resta : 0), 0), semTeto:g.some(l => !l.pol.limite)};
   });
 }
 
+/* Grupo todo: no alto só o que é do grupo inteiro, o custo real do milheiro e
+   a média das últimas vendas. A meta é de cada conta e fica na lista de baixo. */
+function ptPrecosGrupo(b, z, f, vd){
+  return `<div class="pv-preco custo" data-dica="Custo real do milheiro no grupo, ponderado pelo saldo de cada conta.&#10;Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}.">
+        <small>Custo real</small><b style="color:var(--${z})">${brl2(b.cpm)}</b><em>por milheiro</em></div>
+      <div class="pv-div" aria-hidden="true"></div>
+      <div class="pv-preco vendido" data-dica="${vd.n ? `Média do milheiro nas ${vd.n === 1 ? 'última venda' : vd.n + ' últimas vendas'} do grupo: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.` : 'Ainda não há venda registrada. A média aparece na primeira venda.'}">
+        <small>Últimas vendas</small>${vd.v != null ? `<b>${brl2(vd.v)}</b>` : '<b class="pv-nada">a apurar</b>'}<em>${vd.n ? (vd.n === 1 ? '1 venda' : 'média de ' + vd.n + ' vendas') : 'sem venda ainda'}</em></div>`;
+}
 function ptCartao(b, grupo){
   const f = faixasDe(b.p), z = b.cpm <= f.alvo ? 'jade' : b.cpm <= f.razoavel ? 'ouro' : 'brasa';
   const um = !grupo ? b.metas[0] : null, l = um ? um.l : null, m = um ? um.m : null;
   const lucro = b.receita - b.custo, mg = b.cpm ? (b.meta - b.cpm) / b.cpm * 100 : 0;
   let merc = null;
   try { merc = typeof referenciaMercado === 'function' ? referenciaMercado(b.p, b.qtd) : null; } catch(_){}
-  const topo = Math.max(b.cpm, b.meta, merc ? merc.faixa.mediana : 0, 1) * 1.22;
+  const vd = b.vendas || {n:0};
+  const topo = Math.max(b.cpm, b.meta, merc ? merc.faixa.mediana : 0, vd.v || 0, 1) * 1.22;
   const pc = v => Math.min(100, Math.max(0, v / topo * 100)).toFixed(1);
   const lo = Math.min(b.cpm, b.meta), hi = Math.max(b.cpm, b.meta);
   const minha = m && m.fonte === 'minha';
   const origem = grupo ? `média de ${b.g.length} conta${b.g.length > 1 ? 's' : ''}`
     : minha ? 'sua meta' : m.fonte === 'mercado' ? 'mediana do mercado' : 'sugestão: custo + 35%';
-  const vagasTxt = b.semTeto ? 'sem teto de CPF' : b.travada ? 'sem vaga de CPF' : `${b.vagas} ${b.vagas === 1 ? 'vaga' : 'vagas'} de CPF`;
+  const vagasTxt = !b.usaCPF ? 'não consome CPF' : b.semTeto ? 'sem teto de CPF' : b.travada ? 'sem vaga de CPF' : `${b.vagas} ${b.vagas === 1 ? 'vaga' : 'vagas'} de CPF`;
+  const nomeP = b.p === 'azul' ? nomeCanalAzul(b.canal) : prog(b.p).n;
+  const ca = b.canal ? `,'${b.canal}'` : '';
+  const dif = vd.v != null && b.meta ? (vd.v - b.meta) / b.meta * 100 : null;
+  const quando = vd.ultima ? dataBR(String(vd.ultima).slice(0, 10)) : '';
   const sub = grupo ? `${b.g.length} conta${b.g.length > 1 ? 's' : ''} · ${vagasTxt}` : [l.nivel, vagasTxt].filter(Boolean).join(' · ');
   const dicaMeta = grupo ? 'Média das metas das contas, ponderada pelo saldo. Para mudar, escolha a conta no seletor acima.'
     : minha ? 'Meta que você definiu para esta conta. Apague o número para voltar à sugestão.'
     : m.fonte === 'mercado' ? `Mediana do mercado para lotes de ${esc(m.ref.faixa.rot)}, lida do Rota 360. Digite para fixar a sua meta.`
     : 'Sugestão: o seu custo mais 35% de margem. Digite para fixar a sua meta.';
-  return `<article class="pv-card${b.travada ? ' travada' : ''}${minha ? ' minha' : ''}" style="--marca:${prog(b.p).cor}" data-pv-prog="${esc(b.p)}">
-    <div class="pv-topo">${discoProg(b.p)}<div><b>${esc(prog(b.p).n)}</b><small>${esc(sub)}</small></div>
+  return `<article class="pv-card${b.travada ? ' travada' : ''}${minha ? ' minha' : ''}" style="--marca:${prog(b.p).cor}" data-pv-prog="${esc(b.p)}"${b.canal ? ` data-pv-canal="${b.canal}"` : ''}>
+    <div class="pv-topo">${discoProg(b.p)}<div><b>${esc(nomeP)}</b><small>${esc(sub)}</small></div>
       ${b.travada ? '<span class="etq brasa">bloqueada</span>' : ''}</div>
+    ${b.p === 'azul' ? `<div class="pv-canais" role="tablist" aria-label="Onde vender as milhas Azul">${CANAIS_AZUL.map(c =>
+      `<button type="button" role="tab" data-pt-canal="${c.id}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : ''}
     <div class="pv-qtd">${!grupo
       ? `<button type="button" onclick="editarSaldo('${l.saldoId}')" data-dica="Ajustar o saldo">${nBR(b.qtd)}</button>`
       : `<button type="button" tabindex="-1" style="cursor:default">${nBR(b.qtd)}</button>`}<small>milhas</small></div>
-    <div class="pv-precos">
+    <div class="pv-precos">${grupo ? ptPrecosGrupo(b, z, f, vd) : `
       <div class="pv-preco custo" data-dica="Quanto cada mil milhas custou, pelo custo médio dos lançamentos.&#10;Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}.">
         <small>Custo hoje</small><b style="color:var(--${z})">${brl2(b.cpm)}</b><em>por milheiro</em></div>
       <div class="pv-seta" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div>
       <div class="pv-preco meta${minha ? ' minha' : ''}" data-dica="${dicaMeta}">
         <small>Meta de venda</small>
         ${grupo ? `<b style="color:var(--jade)">${brl2(b.meta)}</b>`
-          : `<label class="pv-meta"><span>R$</span><input type="text" inputmode="decimal" class="pv-meta-in" aria-label="Meta de venda de ${esc(prog(b.p).n)}"
-              value="${moedaTxt(Math.round(b.meta * 100) / 100)}" data-prog="${esc(b.p)}" data-conta="${esc(l.conta.id)}"></label>`}
-        <em>${esc(origem)}</em></div>
+          : `<label class="pv-meta"><span>R$</span><input type="text" inputmode="decimal" class="pv-meta-in" aria-label="Meta de venda de ${esc(nomeP)}"
+              value="${moedaTxt(Math.round(b.meta * 100) / 100)}" data-prog="${esc(b.p)}" data-conta="${esc(l.conta.id)}" data-canal="${esc(b.canal || '')}"></label>`}
+        <em>${esc(origem)}</em></div>`}
     </div>
-    <div class="pv-regua" data-dica="Do custo (ponto claro) até a meta (ponto ${minha ? 'dourado' : 'verde'}): é o que sobra por milheiro.${merc ? '&#10;O risco azul é a mediana do mercado: ' + brl2(merc.faixa.mediana) + '.' : ''}">
-      <i class="t"></i><i class="g${b.meta < b.cpm ? ' neg' : ''}" style="left:${pc(lo)}%;width:${(pc(hi) - pc(lo)).toFixed(1)}%"></i>
+    ${grupo && vd.v == null ? '' : `<div class="pv-regua" data-dica="${grupo ? 'Do custo (ponto claro) até a média das últimas vendas (losango).' : `Do custo (ponto claro) até a meta (ponto ${minha ? 'dourado' : 'verde'}): é o que sobra por milheiro.`}${merc ? '&#10;O risco azul é a mediana do mercado: ' + brl2(merc.faixa.mediana) + '.' : ''}">
+      <i class="t"></i>${grupo ? `<i class="g${vd.v < b.cpm ? ' neg' : ''}" style="left:${pc(Math.min(b.cpm, vd.v))}%;width:${(pc(Math.max(b.cpm, vd.v)) - pc(Math.min(b.cpm, vd.v))).toFixed(1)}%"></i>`
+        : `<i class="g${b.meta < b.cpm ? ' neg' : ''}" style="left:${pc(lo)}%;width:${(pc(hi) - pc(lo)).toFixed(1)}%"></i>`}
       ${merc ? `<i class="k" style="left:${pc(merc.faixa.mediana)}%"></i>` : ''}
-      <i class="p c" style="left:${pc(b.cpm)}%"></i><i class="p m" style="left:${pc(b.meta)}%"></i></div>
-    ${grupo ? `<div class="pv-contas-prog">${b.metas.map(x => `<div><span>${esc(x.l.conta.nome)}</span><em>${nBR(x.l.qtd)}</em><em>${brl2(x.l.cpm)} → <b style="color:var(--${x.m.fonte === 'minha' ? 'ouro' : 'jade'})">${brl2(x.m.v)}</b></em></div>`).join('')}</div>` : ''}
+      ${vd.v != null ? `<i class="v" style="left:${pc(vd.v)}%"></i>` : ''}
+      <i class="p c" style="left:${pc(b.cpm)}%"></i>${grupo ? '' : `<i class="p m" style="left:${pc(b.meta)}%"></i>`}</div>`}
+    ${grupo ? '' : `<div class="pv-vendas" data-dica="${vd.n ? `Média do milheiro nas ${vd.n === 1 ? 'última venda' : vd.n + ' últimas vendas'}${b.p === 'azul' ? ' de ' + esc(nomeP) : ''}: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.${vd.total > vd.n ? '&#10;São ' + vd.total + ' vendas ao todo; a média usa as ' + vd.n + ' mais recentes.' : ''}&#10;Na régua, é o losango.` : 'Ainda não há venda registrada aqui. A média aparece na primeira venda registrada no Balcão.'}">
+      <small>Últimas vendas</small><em>${vd.n ? `${vd.n === 1 ? '1 venda' : 'média de ' + vd.n + ' vendas'}${quando ? ' · última em ' + quando : ''}` : 'sem venda ainda'}</em>
+      ${dif != null ? `<span class="dif ${dif >= 0 ? 'jade' : 'brasa'}">${dif >= 0 ? '+' : '−'}${Math.abs(dif).toLocaleString('pt-BR', {maximumFractionDigits:1})}% da meta</span>` : ''}
+      ${vd.v != null ? `<b>${brl2(vd.v)}</b>` : '<b class="pv-nada">a apurar</b>'}</div>`}
+    ${grupo ? `<div class="pv-contas-prog"><div class="pv-cp-cab"><span>Conta</span><em>Milhas</em><em>Custo real</em><em>Meta</em></div>${b.metas.map(x => `<div data-dica="${esc(x.l.conta.nome)}: o milheiro custou ${brl2(x.l.cpm)} e a meta é vender a ${brl2(x.m.v)}${x.m.fonte === 'minha' ? ' (meta sua)' : ' (sugestão)'}."><span>${esc(x.l.conta.nome)}</span><em>${nBR(x.l.qtd)}</em><em class="c">${brl2(x.l.cpm)}</em><em class="m" style="color:var(--${x.m.fonte === 'minha' ? 'ouro' : 'jade'})">${brl2(x.m.v)}</em></div>`).join('')}</div>` : ''}
     <div class="pv-pe">
       <div><small>Lucro na meta</small><b class="${lucro >= 0 ? 'jade' : 'brasa'}">${lucro >= 0 ? '+' : '−'}${brl(Math.abs(lucro))}</b></div>
       <div><small>Margem</small><b class="${mg >= 0 ? 'jade' : 'brasa'}">${mg >= 0 ? '+' : '−'}${Math.abs(mg).toLocaleString('pt-BR', {maximumFractionDigits:1})}%</b></div>
       <div><small>Vendendo tudo</small><b>${brl(b.receita)}</b></div>
     </div>
-    ${!grupo && !b.travada ? `<div class="pv-acoes"><button class="bt p fantasma" onclick="registrarEmissao('${l.conta.id}','${b.p}')"><svg><use href="#i-mais"/></svg>Emitir para</button></div>` : ''}
+    ${!grupo && b.travada ? `<div class="pv-acoes"><button class="bt p fantasma" disabled><svg><use href="#i-alerta"/></svg>Sem vaga de CPF</button></div>` : ''}
+    ${!grupo && !b.travada ? `<div class="pv-acoes"><button class="bt p fantasma" onclick="${b.usaCPF ? `registrarEmissao('${l.conta.id}','${b.p}')` : `ptRegistrarVenda('${l.conta.id}','${b.p}'${ca})`}"><svg><use href="#i-mais"/></svg>${b.usaCPF ? 'Emitir para' : 'Registrar venda'}</button></div>` : ''}
   </article>`;
 }
 
 function ptRenderVitrine(){
   const cx = $('#ptVitrine'); if (!cx) return;
-  if (!ptContasDisp.length){ cx.hidden = true; cx.innerHTML = ''; return; }
+  const ct = $('#ptContasTab');
+  if (!ptContasDisp.length){ cx.hidden = true; cx.innerHTML = ''; if (ct) ct.innerHTML = ''; ptAplicarAba(); return; }
   const grupo = ptSel === '*';
   const blocos = ptBlocos(ptUltimas);
   const qtd = soma(blocos.map(b => b.qtd)), custo = soma(blocos.map(b => b.custo)), receita = soma(blocos.map(b => b.receita));
@@ -54539,12 +54797,16 @@ function ptRenderVitrine(){
   const totConta = id => soma((posicoesDeVenda() || []).filter(l => l.conta.id === id).map(l => l.qtd));
   const chip = (id, ini, nome, pe) => `<button type="button" class="pv-conta${ptSel === id ? ' on' : ''}" data-pt-conta="${esc(id)}" aria-pressed="${ptSel === id}">
       <span class="pv-ini">${ini}</span><span><b>${esc(nome)}</b><small>${pe}</small></span></button>`;
-  const chips = ptContasDisp.map(c => chip(c.id, esc(iniciaisDe(c.nome)), c.nome, milCurto(totConta(c.id)) + ' milhas')).join('')
-    + (ptContasDisp.length > 1 ? chip('*', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c2.6-.4 5 1 5.7 4.4"/></svg>', 'Grupo todo', milCurto(soma(ptContasDisp.map(c => totConta(c.id)))) + ' milhas') : '');
-  cx.hidden = false;
+  /* "Grupo todo" vem primeiro, separado das contas por um fio; as contas seguem
+     em ordem alfabética, sem fio entre elas. */
+  const chips = (ptContasDisp.length > 1 ? chip('*', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c2.6-.4 5 1 5.7 4.4"/></svg>', 'Grupo todo', milCurto(soma(ptContasDisp.map(c => totConta(c.id)))) + ' milhas')
+      + '<i class="pv-sep-contas" aria-hidden="true"></i>' : '')
+    + ptContasDisp.map(c => chip(c.id, esc(iniciaisDe(c.nome)), c.nome, milCurto(totConta(c.id)) + ' milhas')).join('');
   cx.innerHTML = `<div class="pv-cab">
-      <div class="pv-tit"><div class="olho ouro" style="margin:0">Vitrine de venda</div>
-        <p>${grupo ? 'Todas as contas juntas, por programa.' : 'Só as milhas desta conta, um cartão por programa.'} Quanto tem, quanto custou cada milheiro e por quanto você quer vender. Toque na meta para mudar.</p></div>
+      <div class="pv-tit"><div class="pv-tit-linha"><div class="olho ouro" style="margin:0">Vitrine de venda</div>
+          <button type="button" class="pv-sim" id="ptSimular" aria-label="Simular a próxima venda" data-dica="Simular a próxima venda: qual conta e programa dão mais lucro, sem estourar as vagas de CPF.">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg><span>Simular venda</span></button></div>
+        <p>${grupo ? 'Todas as contas juntas, um cartão por programa. No alto, o custo real e as últimas vendas; embaixo, o custo e a meta de cada conta.' : 'Só as milhas desta conta, um cartão por programa. Quanto tem, quanto custou cada milheiro e por quanto você quer vender. Toque na meta para mudar.'}</p></div>
       <div class="pv-contas" role="group" aria-label="Escolher a conta">${chips}</div>
     </div>
     <div class="pv-kpis">
@@ -54555,10 +54817,15 @@ function ptRenderVitrine(){
     </div>
     ${blocos.length ? `<div class="pv-cards">${blocos.map(b => ptCartao(b, grupo)).join('')}</div>`
       : '<div class="vazio" style="padding:22px;border:0"><p>Esta conta não tem milhas em programa aéreo.</p></div>'}`;
+  /* a aba Tabelas tem o mesmo seletor de conta, porque a tabela também filtra por ela */
+  if (ct){ ct.innerHTML = chips; ct.querySelectorAll('[data-pt-conta]').forEach(bt => bt.onclick = () => ptEscolherConta(bt.dataset.ptConta)); }
+  ptAplicarAba();
   cx.querySelectorAll('[data-pt-conta]').forEach(bt => bt.onclick = () => ptEscolherConta(bt.dataset.ptConta));
+  cx.querySelectorAll('[data-pt-canal]').forEach(bt => bt.onclick = () => ptEscolherCanal(bt.dataset.ptCanal));
+  const bs = cx.querySelector('#ptSimular'); if (bs) bs.onclick = () => ptSimular();
   cx.querySelectorAll('.pv-meta-in').forEach(el => {
     el.addEventListener('focus', () => el.select());
-    el.addEventListener('blur', () => { if (el.value.trim() === el.defaultValue.trim()) return; ptDefinirMeta(el.dataset.prog, el.dataset.conta, el.value.trim() ? moedaNum(el.value) : 0); });
+    el.addEventListener('blur', () => { if (el.value.trim() === el.defaultValue.trim()) return; ptDefinirMeta(el.dataset.prog, el.dataset.conta, el.value.trim() ? moedaNum(el.value) : 0, el.dataset.canal || ''); });
     el.addEventListener('keydown', e => { if (e.key === 'Enter') el.blur(); if (e.key === 'Escape'){ el.value = el.defaultValue; el.blur(); } });
   });
 }
