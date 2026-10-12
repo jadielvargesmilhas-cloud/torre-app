@@ -10218,8 +10218,8 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                    custo, e depois de um ano são centenas. Sem limite, abrir a aba
                    passa a ser esperar a tabela desenhar. -->
               <div class="campo"><label>Por página</label><select id="flLinhas" data-ordem="natural">
-                <option value="10" selected>10</option>
-                <option value="25">25</option>
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
                 <option value="0">Todas</option>
@@ -11774,7 +11774,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 15:30';
+const BUILD = '2026-10-12 16:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -26885,7 +26885,7 @@ function aplicarFiltroLanc(ls){
 /* Página e tamanho vivem fora da função porque precisam sobreviver ao redesenho:
    lançar algo novo redesenha a lista, e voltar para a página 1 a cada lançamento
    faria perder o lugar em quem tem livro grande. */
-let paginaLanc = 1, porPaginaLanc = 10;
+let paginaLanc = 1, porPaginaLanc = 25;   /* 25 ao abrir (pedido do Jadiel, 12/10/2026) */
 
 /* Painel dos lançamentos: logo abaixo do título, como em todas as páginas.
    As contas são pelo SALDO das linhas (entradas menos saídas): numa
@@ -54163,6 +54163,150 @@ function exLinhaDoTempo(){
       const modo = exVista();
       document.querySelectorAll('#exBarra [data-ex]').forEach(b => b.classList.toggle('on', b.dataset.ex === modo));
       if (modo === 'linha') exLinhaDoTempo();
+    } catch(e){ console.error(e); }
+    return v;
+  };
+})();
+</script>
+
+<style>
+/* ══ calendário de meses e programados no extrato ══ */
+.ex-cal{ position:relative; }
+.ex-chip{ display:inline-flex; align-items:center; gap:8px; padding:9px 13px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1, transparent); color:var(--giz); font:600 calc(13px * var(--esc)) var(--f-b, inherit); cursor:pointer; white-space:nowrap; }
+.ex-chip svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.ex-chip:hover{ border-color:var(--ouro); }
+.ex-chip.on{ border-color:var(--ouro); background:color-mix(in srgb, var(--ouro) 12%, transparent); color:var(--giz); }
+.ex-chip .ex-x{ margin-left:2px; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; background:color-mix(in srgb, var(--giz) 10%, transparent); font-size:12px; line-height:1; }
+.ex-chip .ex-num{ font:700 calc(11.5px * var(--esc)) var(--f-m, inherit); padding:1px 7px; border-radius:99px; background:color-mix(in srgb, var(--ouro) 22%, transparent); color:var(--ouro); }
+.ex-pop{ position:absolute; z-index:40; top:calc(100% + 8px); left:0; width:min(340px, calc(100vw - 32px)); padding:14px; border-radius:16px; border:1px solid var(--fio);
+  background:var(--sup-0, #111); box-shadow:0 18px 50px rgba(0,0,0,.35); display:none; }
+.ex-pop.aberto{ display:block; animation:exAbre .16s ease-out; }
+@keyframes exAbre{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+.ex-pop-cab{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.ex-pop-cab b{ font:700 calc(18px * var(--esc)) var(--f-m, inherit); color:var(--giz); }
+.ex-pop-cab button{ width:34px; height:34px; border-radius:10px; border:1px solid var(--fio); background:none; color:var(--giz); cursor:pointer; font-size:16px; }
+.ex-pop-cab button:disabled{ opacity:.3; cursor:default; }
+.ex-pop-sub{ color:var(--grafite); font-size:calc(12px * var(--esc)); text-align:center; margin:0 0 10px; }
+.ex-meses{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:7px; }
+.ex-m{ position:relative; border-radius:11px; border:1px solid var(--fio); padding:9px 6px 8px; cursor:pointer; text-align:center; color:var(--giz); font:600 calc(13px * var(--esc)) var(--f-b, inherit);
+  background:color-mix(in srgb, var(--jade) calc(var(--q, 0) * 34%), var(--sup-1, transparent)); display:flex; flex-direction:column; gap:2px; align-items:center; }
+.ex-m small{ color:var(--grafite); font:500 calc(10.5px * var(--esc)) var(--f-m, inherit); }
+.ex-m.vazio{ color:var(--grafite); opacity:.55; }
+.ex-m.atual{ outline:2px solid color-mix(in srgb, var(--anil) 70%, transparent); outline-offset:-2px; }
+.ex-m.sel{ border-color:var(--ouro); box-shadow:0 0 0 2px color-mix(in srgb, var(--ouro) 45%, transparent); }
+.ex-m.fut::after{ content:''; position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:var(--ouro); }
+.ex-m:hover{ border-color:var(--ouro); }
+.ex-pop-pe{ display:flex; justify-content:space-between; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.ex-pop-pe button{ border:0; background:none; color:var(--ouro); font:600 calc(12.5px * var(--esc)) var(--f-b, inherit); cursor:pointer; padding:4px 2px; }
+.ex-leg{ display:flex; gap:12px; flex-wrap:wrap; color:var(--grafite); font-size:calc(11px * var(--esc)); margin-top:10px; }
+.ex-leg i{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+</style>
+<script>
+/* ══ CALENDÁRIO DE MESES E PROGRAMADOS (12/10/2026, pedido do Jadiel) ══════════
+   Ao lado de "Linha do tempo | Tabela": um calendário de meses (o ano com setas
+   para trás e para frente, e os doze meses em quadrinhos). Cada quadrinho mostra
+   quantos lançamentos o mês tem e fica mais verde quanto mais pontos entraram,
+   como um mapa de calor; o mês de hoje tem contorno e os meses com lançamento
+   programado ganham um ponto dourado. Um toque mostra só aquele mês. Ao lado,
+   "Programados" mostra só o que ainda vai acontecer. Os dois valem para a linha
+   do tempo e para a tabela, e o "Limpar" desfaz tudo. */
+let exMes = '', exFuturos = false, exAnoCal = null;
+const EX_MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const exNomeMes = m => { const d = new Date(m + '-15T12:00:00'); if (isNaN(d)) return m; const t = d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}); return t.charAt(0).toUpperCase() + t.slice(1); };
+(function(){
+  const _f = aplicarFiltroLanc;
+  aplicarFiltroLanc = function(ls){
+    return _f.apply(this, arguments).filter(l =>
+      (!exMes || String(l.data || '').slice(0, 7) === exMes) && (!exFuturos || !jaAconteceu(l)));
+  };
+})();
+/* base do calendário: o que passa nos outros filtros, menos o mês e os programados */
+function exBaseCalendario(){
+  /* o período também fica de fora: escolher um mês substitui o "últimos 30 dias" */
+  const m = exMes, f = exFuturos, d = filtroLanc.dias; exMes = ''; exFuturos = false; filtroLanc.dias = 0;
+  try { return aplicarFiltroLanc(DB.lancamentos || []); } finally { exMes = m; exFuturos = f; filtroLanc.dias = d; }
+}
+function exPintarCalendario(){
+  const pop = document.getElementById('exPop'); if (!pop) return;
+  const base = exBaseCalendario();
+  const ano = exAnoCal || Number((exMes || hojeISO()).slice(0, 4));
+  const anos = [...new Set(base.map(l => Number(String(l.data || '').slice(0, 4))).filter(Boolean))];
+  const minA = Math.min(ano, ...anos), maxA = Math.max(ano, Number(hojeISO().slice(0, 4)) + 1, ...anos);
+  const porMes = {};
+  base.forEach(l => { const k = String(l.data || '').slice(0, 7); if (!k.startsWith(ano + '-')) return;
+    const x = porMes[k] = porMes[k] || {n:0, ent:0, fut:0}; x.n++; if (Number(l.qtd) > 0) x.ent += Number(l.qtd); if (!jaAconteceu(l)) x.fut++; });
+  const maxEnt = Math.max(1, ...Object.values(porMes).map(x => x.ent));
+  const hojeM = hojeISO().slice(0, 7);
+  const totAno = Object.values(porMes).reduce((s, x) => s + x.n, 0);
+  pop.innerHTML = `<div class="ex-pop-cab"><button type="button" data-ano="-1" ${ano <= minA ? 'disabled' : ''} aria-label="Ano anterior">‹</button><b>${ano}</b><button type="button" data-ano="1" ${ano >= maxA ? 'disabled' : ''} aria-label="Próximo ano">›</button></div>
+    <p class="ex-pop-sub">${totAno ? `${nBR(totAno)} ${totAno === 1 ? 'lançamento' : 'lançamentos'} em ${ano}` : `Nenhum lançamento em ${ano}`}</p>
+    <div class="ex-meses">${EX_MESES.map((nm, i) => {
+      const k = `${ano}-${String(i + 1).padStart(2, '0')}`, x = porMes[k];
+      return `<button type="button" class="ex-m${x ? '' : ' vazio'}${k === hojeM ? ' atual' : ''}${k === exMes ? ' sel' : ''}${x && x.fut ? ' fut' : ''}" data-mes="${k}" style="--q:${x ? (0.15 + 0.85 * x.ent / maxEnt).toFixed(2) : 0}"
+        aria-label="${esc(exNomeMes(k))}: ${x ? x.n : 0} lançamentos">${nm}<small>${x ? x.n : '–'}</small></button>`; }).join('')}</div>
+    <div class="ex-leg"><span><i style="background:color-mix(in srgb, var(--jade) 60%, transparent)"></i>mais pontos</span><span><i style="border-radius:50%;background:var(--ouro)"></i>tem programado</span><span><i style="outline:2px solid var(--anil);background:none"></i>mês atual</span></div>
+    <div class="ex-pop-pe"><button type="button" data-atalho="atual">Este mês</button><button type="button" data-atalho="passado">Mês passado</button><button type="button" data-atalho="todos">Todos os meses</button></div>`;
+  pop.querySelectorAll('[data-ano]').forEach(b => b.onclick = e => { e.stopPropagation(); exAnoCal = ano + Number(b.dataset.ano); exPintarCalendario(); });
+  pop.querySelectorAll('[data-mes]').forEach(b => b.onclick = () => exEscolherMes(b.dataset.mes));
+  pop.querySelectorAll('[data-atalho]').forEach(b => b.onclick = () => {
+    const a = b.dataset.atalho;
+    exEscolherMes(a === 'todos' ? '' : a === 'atual' ? hojeM : somaMeses(-1, hojeISO()).slice(0, 7));
+  });
+}
+function exEscolherMes(m){
+  exMes = m || ''; exAnoCal = null; exLimite = 0; paginaLanc = 1;
+  /* o mês escolhido manda: o período ("últimos 30 dias") sai do caminho */
+  if (exMes && filtroLanc.dias){ filtroLanc.dias = 0; const p = document.getElementById('flPeriodo'); if (p) p.value = '0'; }
+  exFecharCal(); renderLancamentos();
+}
+function exFecharCal(){ const p = document.getElementById('exPop'); if (p) p.classList.remove('aberto'); }
+function exControles(){
+  const barra = document.getElementById('exBarra'); if (!barra) return;
+  let box = document.getElementById('exCal');
+  if (!box){
+    box = document.createElement('div'); box.className = 'ex-cal'; box.id = 'exCal';
+    const busca = barra.querySelector('.ex-busca'); barra.insertBefore(box, busca);
+    const fut = document.createElement('button'); fut.type = 'button'; fut.className = 'ex-chip'; fut.id = 'exFut';
+    barra.insertBefore(fut, busca);
+    fut.onclick = () => { exFuturos = !exFuturos; exLimite = 0; paginaLanc = 1; renderLancamentos(); };
+    document.addEventListener('click', e => { if (!e.target.closest('#exCal')) exFecharCal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') exFecharCal(); });
+    const limpar = document.getElementById('btLimparFiltros');
+    if (limpar) limpar.addEventListener('click', () => { exMes = ''; exFuturos = false; exBusca = ''; const b = document.getElementById('exBusca'); if (b) b.value = ''; renderLancamentos(); });
+  }
+  const aberto = document.getElementById('exPop') && document.getElementById('exPop').classList.contains('aberto');
+  box.innerHTML = `<button type="button" class="ex-chip${exMes ? ' on' : ''}" id="exCalBt" aria-haspopup="dialog" aria-expanded="${aberto}">
+      <svg><use href="#i-calendario"/></svg>${exMes ? esc(exNomeMes(exMes)) : 'Todos os meses'}${exMes ? '<span class="ex-x" data-limpa-mes="1" role="button" aria-label="Tirar o mês">×</span>' : ''}</button>
+    <div class="ex-pop${aberto ? ' aberto' : ''}" id="exPop" role="dialog" aria-label="Escolher o mês"></div>`;
+  box.querySelector('#exCalBt').onclick = e => {
+    if (e.target.closest('[data-limpa-mes]')){ e.stopPropagation(); exEscolherMes(''); return; }
+    const p = document.getElementById('exPop'); const abrir = !p.classList.contains('aberto');
+    p.classList.toggle('aberto', abrir); if (abrir) exPintarCalendario();
+  };
+  if (aberto) exPintarCalendario();
+  const nFut = (DB.lancamentos || []).filter(l => !jaAconteceu(l)).length;
+  const fut = document.getElementById('exFut');
+  fut.className = 'ex-chip' + (exFuturos ? ' on' : '');
+  fut.innerHTML = `<svg><use href="#i-relogio"/></svg>Programados${nFut ? `<span class="ex-num">${nFut}</span>` : ''}`;
+  fut.setAttribute('aria-pressed', exFuturos ? 'true' : 'false');
+  /* com mês, programados ou busca ativos, o "Limpar" aparece */
+  const fl = document.getElementById('fbLancFiltros');
+  if (fl && (exMes || exFuturos || String(exBusca || '').trim())) fl.classList.remove('limpo');
+}
+/* com "Programados" ligado, os futuros aparecem na linha do tempo, não recolhidos */
+(function(){
+  const _r = renderLancamentos;
+  renderLancamentos = function(){
+    const v = _r.apply(this, arguments);
+    try {
+      exControles();
+      if (exFuturos && exVista() === 'linha'){
+        const d = document.querySelector('#fbLancamentos .ex-prog'); if (d) d.open = true;
+      }
+      if (exMes && !(document.querySelector('#fbLancamentos .ex-item, #fbLancamentos tr.lanc-l'))){
+        const alvo = document.getElementById('fbLancamentos');
+        if (alvo) alvo.innerHTML = `<div class="lanc-vazio"><p>Nenhum lançamento em ${esc(exNomeMes(exMes).toLowerCase())}.</p><p class="fraco" style="font-size:calc(13px * var(--esc));margin-top:5px">Escolha outro mês no calendário ou toque em "Todos os meses".</p></div>`;
+      }
     } catch(e){ console.error(e); }
     return v;
   };
