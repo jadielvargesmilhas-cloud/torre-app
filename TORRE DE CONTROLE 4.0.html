@@ -11786,7 +11786,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 03:00';
+const BUILD = '2026-10-13 03:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12628,6 +12628,7 @@ const CATEGORIAS_MURAL = {
   compras:   {n:'Compras bonificadas', ico:'i-sacola'},
   pontos:    {n:'Compra de pontos',    ico:'i-dinheiro'},
   passagens: {n:'Passagens aéreas',    ico:'i-aviao'},
+  resgate:   {n:'Descontos em resgate', ico:'i-etiqueta'},
   cashback:  {n:'Cashback',            ico:'i-dinheiro'}
 };
 
@@ -19774,6 +19775,31 @@ function lerAnuncios(texto){
   return out;
 }
 
+/* O código do cupom, quando o anúncio traz um: "Cupom *"FIDELIDADE20"*",
+   "use o código BLACK30", "código promocional: VIAGEM10". O código é a palavra
+   em maiúsculas logo depois da palavra cupom ou código, com ao menos uma letra. */
+function cupomDoTexto(texto){
+  const t = String(texto || '').replace(/[*_~]/g, '');
+  const re = /(?:\b[Cc]upo(?:m|ns)|\bC[ÓOóo]DIGO|\b[Cc][óo]digo)(?:\s+(?:promocional|de\s+desconto))?\s*[:=]?\s*["“”'‘’«]*\s*([A-Z0-9][A-Z0-9_-]{3,24})(?![a-z])/g;
+  let m;
+  while ((m = re.exec(t))){ if (/[A-Z]/.test(m[1]) && !/^(PARA|COM|NO|NA|DE|DO|DA)$/.test(m[1])) return m[1]; }
+  return '';
+}
+function copiarCupom(cod){
+  const ok = () => avisar(`Cupom ${cod} copiado. É só colar no site.`, 'ok');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(cod).then(ok, () => copiarCupomVelho(cod, ok)); return; }
+  } catch(_){}
+  copiarCupomVelho(cod, ok);
+}
+function copiarCupomVelho(cod, ok){
+  const ta = document.createElement('textarea'); ta.value = cod; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); ok(); } catch(_){ avisar(`Cupom: ${cod}`, 'info', 8000); }
+  ta.remove();
+}
+const cupomDoMural = m => (m && (m.cupom || cupomDoTexto((m.titulo || '') + '\n' + (m.texto || '')))) || '';
+const chipCupom = cod => cod ? `<button type="button" class="mr-cupom" onclick="copiarCupom('${esc(cod)}')" data-dica="Copiar o cupom"><span>Cupom</span><b>${esc(cod)}</b><svg><use href="#i-copiar"/></svg></button>` : '';
 function lerUmAnuncio(bloco){
   const brutas = bloco.map(l => l.trim()).filter(Boolean);
   if (!brutas.length) return null;
@@ -19800,6 +19826,9 @@ function lerUmAnuncio(bloco){
   const cat = /cashback/.test(baixo) ? 'cashback'
     : /compra\s+de\s+(pontos|milhas)|comprar\s+(pontos|milhas)|compre\s+pontos/.test(baixo) && !/(pontos|milhas)\s*por\s*real/.test(baixo) ? 'pontos'
     : /(milhas|pontos)\s*por\s*real|acumule|cr[eé]ditos?\s+uber|magalu|shopping|loja parceira/.test(baixo) ? 'compras'
+    /* desconto para gastar os pontos (hotel, carro, pacote, emissão), quase
+       sempre com cupom: não é compra de pontos nem passagem em oferta */
+    : /(desconto|cupom|% off)/.test(baixo) && /(hot[eé]is|hotel|hospedage|aluguel de carros?|locaç[ãa]o de carros?|pacotes?|resgates?|reservas?|emiss[ãa]o|emiss[õo]es)/.test(baixo) && /(pontos|milhas)/.test(baixo) ? 'resgate'
     : /passage(m|ns)\s+(a[eé]rea|para|a partir)|ida e volta|trechos?\s|voos?\s+(para|a partir)/.test(baixo) ? 'passagens' : 'alerta';
   /* Tira só o marcador do passo ("2️⃣ Cadastre-se") — um dígito solto no começo
      é conteúdo: "80% de bônus para assinantes" perdia o 80. E linha de prazo
@@ -19850,7 +19879,7 @@ function lerUmAnuncio(bloco){
   }
   /* o link principal é a página da oferta, não o PDF do regulamento */
   const link = links.find(u => !/\.pdf(\?|$)/i.test(u) && !/regulament/i.test(u)) || links[0] || '';
-  return {titulo, fim, links, link, magos, destaque, cat, condicoes, sugestao};
+  return {titulo, fim, links, link, magos, destaque, cat, condicoes, sugestao, cupom:cupomDoTexto(texto)};
 }
 
 const CAT_PARCEIRO = [[/netshoes|centauro|nike|adidas|decathlon|fila|new balance|track&field/i, 'esporte'], [/magalu|magazine|casas bahia|ponto|fast ?shop|americanas|kabum|samsung|apple/i, 'eletrônicos'],
@@ -19913,6 +19942,7 @@ function previaAnuncios(){
           <select data-i="${i}" data-k="cat" aria-label="Categoria">${Object.entries(CATEGORIAS_MURAL).map(([k, c]) => `<option value="${k}"${k === a.cat ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select>
           <span class="etq ${a.fim ? 'jade' : ''}">${a.fim ? 'até ' + dataBR(a.fim) : 'sem prazo'}</span>
           ${a.destaque ? `<span class="etq ouro">${esc(a.destaque)}</span>` : ''}
+          ${a.cupom ? `<span class="etq anil">cupom ${esc(a.cupom)}</span>` : ''}
           ${a.magos ? `<span class="mr-magos" title="Classificação do anúncio">${'🧙'.repeat(a.magos)}</span>` : ''}
           <span class="fraco">${a.condicoes.length} condições · ${a.links.length} link${a.links.length === 1 ? '' : 's'}</span>
           ${a.sugestao ? `<span class="etq anil">${esc(rotuloSugestao(a.sugestao))}</span>` : ''}
@@ -19936,7 +19966,7 @@ function gravarAnuncios(){
     /* O mesmo anúncio colado duas vezes não duplica: mesmo título e mesmo prazo. */
     if (DB.mural.some(m => SEM_EMOJI(m.titulo).toLowerCase() === SEM_EMOJI(a.titulo).toLowerCase() && (m.fim || '') === (a.fim || ''))) { repetidos++; return; }
     const m = {id:uid(), cat:a.cat, titulo:a.titulo, fim:a.fim, link:a.link, links:a.links, pontuacao:a.destaque,
-      magos:a.magos, voto:0, texto:a.condicoes.join('\n'), imagem:'', lida:false, origem:'colado', criadoEm:agora, sugestao:a.sugestao};
+      magos:a.magos, voto:0, texto:a.condicoes.join('\n'), imagem:'', lida:false, origem:'colado', criadoEm:agora, sugestao:a.sugestao, cupom:a.cupom || ''};
     DB.mural.push(m);
     if (muralParaLojas(m)) nLojas++;
     novos++;
@@ -20090,6 +20120,7 @@ function renderMural(){
       <div class="mural-prazo">
         <span class="etq ${zPrazo}">${morta ? 'encerrada' : d === null ? 'sem prazo' : d === 0 ? 'termina hoje' : 'válida até ' + dataBR(m.fim)}</span>
         ${!morta && d !== null && d > 0 ? `<span class="fraco">${prazoTexto(d)}</span>` : ''}
+        ${chipCupom(cupomDoMural(m))}
         ${m.link ? `<a class="mural-link" href="${esc(m.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(String(m.link).replace(/^https?:\/\/(www\.)?/, '').slice(0, 46))}</a>` : ''}
       </div>
       ${(typeof vereditoHTML === 'function' && !morta) ? vereditoHTML(m) : ''}
@@ -20115,6 +20146,7 @@ function editarMural(id){
         <div class="campo"><label>Categoria</label><select id="mrCat">${Object.entries(CATEGORIAS_MURAL).map(([k, c]) => `<option value="${k}"${k === m.cat ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select></div>
         <div class="campo"><label>Válida até</label><input type="date" id="mrFim" value="${m.fim || ''}"></div>
         <div class="campo"><label>Destaque</label><input type="text" id="mrPont" value="${esc(m.pontuacao || '')}" placeholder="10 pontos por real"></div>
+        <div class="campo"><label>Cupom</label><input type="text" id="mrCupom" value="${esc(cupomDoMural(m))}" placeholder="FIDELIDADE20" autocomplete="off" spellcheck="false" style="text-transform:uppercase;font-family:var(--f-m)"></div>
       </div>
       <div class="campo rotulo-inteiro" style="margin-top:12px"><label>Link da promoção</label><input type="url" id="mrLink" value="${esc(m.link || '')}" placeholder="https://..."></div>
       <div class="campo rotulo-inteiro" style="margin-top:12px"><label>Imagem</label>
@@ -20151,7 +20183,7 @@ function editarMural(id){
     const novo = {...m, id:m.id || uid(), cat:$('#mrCat').value,
       titulo:$('#mrTitulo').value.trim() || 'Sem título', fim:$('#mrFim').value,
       link:$('#mrLink').value.trim(), texto:$('#mrTexto').value.trim(),
-      pontuacao:$('#mrPont').value.trim(), imagem:img};
+      pontuacao:$('#mrPont').value.trim(), imagem:img, cupom:(($('#mrCupom') || {}).value || '').trim().toUpperCase()};
     DB.mural = DB.mural || [];
     const i = DB.mural.findIndex(x => x.id === novo.id);
     if (i >= 0) DB.mural[i] = novo; else DB.mural.push(novo);
@@ -54482,6 +54514,14 @@ function exControles(){
 .pv-contas-prog span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--giz-2, var(--giz)); }
 .pv-contas-prog em{ font-style:normal; font-family:var(--f-m, inherit); white-space:nowrap; }
 .pv-acoes{ display:flex; justify-content:flex-end; margin-top:-4px; }
+/* cupom do anúncio: o código em destaque, um toque copia */
+.mr-cupom{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:7px; padding:4px 6px 4px 10px; border-radius:9px;
+  border:1px dashed color-mix(in srgb, var(--ouro) 70%, var(--fio)); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 10%, transparent)); color:var(--ouro); transition:.15s var(--ease, ease); }
+.mr-cupom span{ font:600 calc(10.5px * var(--esc)) var(--f-b, inherit); text-transform:uppercase; letter-spacing:.06em; color:var(--grafite); }
+.mr-cupom b{ font:700 calc(13.5px * var(--esc)) var(--f-m, inherit); letter-spacing:.04em; color:var(--giz); }
+.mr-cupom svg{ width:15px; height:15px; fill:none; stroke:var(--ouro); stroke-width:1.8; }
+.mr-cupom:hover{ border-style:solid; background:color-mix(in srgb, var(--ouro) 18%, transparent); }
+.mr-cupom:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
 .pv-pe{ grid-template-columns:minmax(0, 1.15fr) minmax(0, .8fr) minmax(0, 1.15fr) auto !important; align-items:end; }
 .pv-emitir, .pv-card-sim{ all:unset; box-sizing:border-box; cursor:pointer; width:36px; height:36px; flex:0 0 36px; display:grid; place-items:center; border-radius:11px;
   border:1px solid var(--fio); color:var(--giz); background:var(--sup-0, transparent); transition:.15s var(--ease, ease); }
