@@ -11790,7 +11790,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 02:00';
+const BUILD = '2026-10-13 02:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -54417,10 +54417,10 @@ function exControles(){
 .pv-topo small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pv-topo .etq{ margin:0; flex-shrink:0; }
 .pv-qtd{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.pv-qtd button{ all:unset; cursor:pointer; color:var(--giz); font:700 calc(25px * var(--esc)) var(--f-m, inherit); letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; }
+.pv-qtd button{ all:unset; cursor:pointer; color:var(--giz); font:700 calc(20px * var(--esc)) var(--f-m, inherit); letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; }
 .pv-qtd button:hover{ color:var(--ouro); }
 .pv-qtd button:focus-visible{ outline:2px solid var(--ouro); outline-offset:3px; border-radius:6px; }
-.pv-qtd small{ color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.pv-qtd small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
 .pv-precos{ display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); align-items:stretch; gap:8px; container-type:inline-size; }
 /* conta escolhida: Custo Hoje → Meta de Venda | Últimas Vendas */
 .pv-precos.tres{ grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap:6px; }
@@ -54486,6 +54486,15 @@ function exControles(){
 .pv-contas-prog span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--giz-2, var(--giz)); }
 .pv-contas-prog em{ font-style:normal; font-family:var(--f-m, inherit); white-space:nowrap; }
 .pv-acoes{ display:flex; justify-content:flex-end; margin-top:-4px; }
+.pv-pe{ grid-template-columns:minmax(0, 1.15fr) minmax(0, .8fr) minmax(0, 1.15fr) auto !important; align-items:end; }
+.pv-emitir, .pv-card-sim{ all:unset; box-sizing:border-box; cursor:pointer; width:36px; height:36px; flex:0 0 36px; display:grid; place-items:center; border-radius:11px;
+  border:1px solid var(--fio); color:var(--giz); background:var(--sup-0, transparent); transition:.15s var(--ease, ease); }
+.pv-emitir svg, .pv-card-sim svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.pv-emitir:hover{ border-color:var(--jade); color:var(--jade); }
+.pv-emitir:disabled{ opacity:.45; cursor:not-allowed; color:var(--brasa); }
+.pv-card-sim{ color:var(--ouro); border-color:color-mix(in srgb, var(--ouro) 50%, var(--fio)); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 10%, transparent)); margin-left:auto; }
+.pv-card-sim:hover{ background:color-mix(in srgb, var(--ouro) 20%, transparent); }
+.pv-emitir:focus-visible, .pv-card-sim:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
 /* rodapé do cartão preso embaixo: lucro, margem e "vendendo tudo" ficam na mesma
    altura em todos os cartões da linha, com o fio separador junto */
 .pv-pe{ margin-top:auto; }
@@ -54667,7 +54676,7 @@ function exControles(){
 @container (max-width:900px){ .pv-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){
   .pv-vitrine{ padding:14px; border-radius:18px; }
-  .pv-qtd button{ font-size:calc(23px * var(--esc)); }
+  .pv-qtd button{ font-size:calc(17px * var(--esc)); }
   .pv-kpi b{ font-size:calc(17px * var(--esc)); }
   .pv-contas{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
   .pv-contas::-webkit-scrollbar{ display:none; }
@@ -54676,6 +54685,7 @@ function exControles(){
   /* no celular o rodapé vira três linhas: rótulo à esquerda, valor à direita */
   .pv-pe{ grid-template-columns:minmax(0, 1fr); gap:7px; }
   .pv-pe div{ flex-direction:row; justify-content:space-between; align-items:baseline; gap:10px; }
+  .pv-pe{ grid-template-columns:minmax(0, 1fr) !important; } .pv-pe .pv-emitir{ justify-self:end; }
 }
 </style>
 <script>
@@ -55049,7 +55059,10 @@ function ptSmIr(i){
   setTimeout(() => editarReserva(null, {tipo:ac.tipo, quem:'terceiro', cliente:'', desc, data:hojeISO(), prog:x.l.prog, canal:x.canal || '', contaId:x.l.conta.id,
     milhas:ptSm.mi, taxas:0, cobrado:Math.round(x.receita * 100) / 100, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO()}), 60);
 }
-function ptSimular(){
+/* pre: {prog, canal} quando o simulador é aberto pelo botão de um cartão: o
+   passo 1 já vem com o programa (e a porta) do cartão, e o cursor vai direto
+   para as milhas. */
+function ptSimular(pre){
   ptSm = {modo:'programa', prog:'', canal:'', produto:'', mi:0, pax:0, base:ptSm.base}; ptSmPronto = false;
   /* só os programas com milhas em alguma conta, em ordem alfabética */
   const porP = {};
@@ -55108,7 +55121,12 @@ function ptSimular(){
   document.querySelectorAll('[data-sm-pax]').forEach(b => b.onclick = () => {
     const i = $('#simPax'); if (i.disabled) return; i.value = Math.max(1, Math.min(9, (Number(i.value) || 0) + Number(b.dataset.smPax))); ler();
   });
+  if (pre && pre.prog && document.querySelector(`#smProgs [data-sm-prog="${pre.prog}"]`)){
+    ptSm.prog = pre.prog;
+    if (canaisDe(pre.prog)) ptSm.canal = canalDe(pre.prog, pre.canal).id;
+  }
   ptSimRender();
+  if (pre && pre.prog) setTimeout(() => { const el = $('#simMi'); if (el) el.focus(); }, 60);
 }
 function ptEscolherConta(id){
   ptSel = id; try { localStorage.setItem(PV_CHAVE, id); } catch(_){}
@@ -55179,7 +55197,8 @@ function ptCartao(b, grupo){
     : 'Sugestão: o seu custo mais 35% de margem. Digite para fixar a sua meta.';
   return `<article class="pv-card${b.travada ? ' travada' : ''}${minha ? ' minha' : ''}" style="--marca:${prog(b.p).cor}" data-pv-prog="${esc(b.p)}"${b.canal ? ` data-pv-canal="${b.canal}"` : ''}>
     <div class="pv-topo">${discoProg(b.p)}<div><b>${esc(nomeP)}</b><small>${esc(sub)}</small></div>
-      ${b.travada ? '<span class="etq brasa">bloqueada</span>' : ''}</div>
+      ${b.travada ? '<span class="etq brasa">bloqueada</span>' : ''}
+      <button type="button" class="pv-card-sim" aria-label="Simular o próximo resgate em ${esc(nomeP)}" data-dica="Simular o próximo resgate: a melhor conta para ${esc(nomeP)}" onclick="ptSimular({prog:'${b.p}', canal:'${b.canal || ''}'})"><svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg></button></div>
     ${canaisDe(b.p) ? `<div class="pv-canais" role="tablist" aria-label="Por onde vender as milhas ${esc(prog(b.p).n)}" style="--n:${canaisDe(b.p).length}">${canaisDe(b.p).map(c =>
       `<button type="button" role="tab" data-pt-canal="${c.id}" data-pt-cprog="${b.p}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : `<div class="pv-canais um" role="tablist" aria-label="Programa"><button type="button" role="tab" class="on" aria-selected="true" tabindex="-1" data-dica="${esc(prog(b.p).n)}: um saldo só, uma meta só.">${esc(PV_NOME_OFICIAL[b.p] || prog(b.p).n)}</button></div>`}
     <div class="pv-qtd">${!grupo
@@ -55209,9 +55228,10 @@ function ptCartao(b, grupo){
       <div><small>Lucro na meta</small><b class="${lucro >= 0 ? 'jade' : 'brasa'}">${lucro >= 0 ? '+' : '−'}${brl(Math.abs(lucro))}</b></div>
       <div><small>Margem</small><b class="${mg >= 0 ? 'jade' : 'brasa'}">${mg >= 0 ? '+' : '−'}${Math.abs(mg).toLocaleString('pt-BR', {maximumFractionDigits:1})}%</b></div>
       <div><small>Vendendo tudo</small><b>${brl(b.receita)}</b></div>
+      ${grupo ? '' : b.travada
+        ? `<button type="button" class="pv-emitir" disabled aria-label="Sem vaga de CPF" data-dica="Sem vaga de CPF nesta conta: não dá para emitir por aqui."><svg><use href="#i-alerta"/></svg></button>`
+        : `<button type="button" class="pv-emitir" aria-label="${b.usaCPF ? 'Emitir para' : 'Registrar venda'}" data-dica="${b.usaCPF ? 'Emitir para: registra o passageiro e a vaga de CPF desta conta' : 'Registrar venda pela ' + esc(nomeP)}" onclick="${b.usaCPF ? `registrarEmissao('${l.conta.id}','${b.p}')` : `ptRegistrarVenda('${l.conta.id}','${b.p}'${ca})`}"><svg><use href="#i-mais"/></svg></button>`}
     </div>
-    ${!grupo && b.travada ? `<div class="pv-acoes"><button class="bt p fantasma" disabled><svg><use href="#i-alerta"/></svg>Sem vaga de CPF</button></div>` : ''}
-    ${!grupo && !b.travada ? `<div class="pv-acoes"><button class="bt p fantasma" onclick="${b.usaCPF ? `registrarEmissao('${l.conta.id}','${b.p}')` : `ptRegistrarVenda('${l.conta.id}','${b.p}'${ca})`}"><svg><use href="#i-mais"/></svg>${b.usaCPF ? 'Emitir para' : 'Registrar venda'}</button></div>` : ''}
   </article>`;
 }
 
