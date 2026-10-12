@@ -11774,7 +11774,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 11:00';
+const BUILD = '2026-10-12 14:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -25644,17 +25644,18 @@ function renderClubes(){
   $('#contClubes').textContent = ativas.length;
 
   const mensal = soma(ativas.map(a => valorMensalAssin(a)));
-  const ptsMes = soma(ativas.map(a => {
+  /* com o bônus das campanhas, na média do ano (12/10/2026): é o que o clube
+     rende de fato, e o mesmo número que a carteira de clubes mostra abaixo */
+  const ptsMes = Math.round(soma(ativas.map(a => typeof ccPtsMes === 'function' ? ccPtsMes(a) : (() => {
     const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(p => p.id === a.planoId);
-    return pl ? pl.qtd : 0;
-  }));
+    return pl ? pl.qtd : 0; })())));
   const cpmMedio = ptsMes > 0 ? (mensal / ptsMes) * 1000 : null;
   const proxima = ativas.map(a => diasAte(a.renova)).filter(d => d !== null && d >= 0).sort((x, y) => x - y)[0];
 
   $('#fbClubesResumo').innerHTML = `
     ${metrica('Custo mensal', brl(mensal), `${ativas.length} assinatura${ativas.length !== 1 ? 's' : ''} ativa${ativas.length !== 1 ? 's' : ''}`, 'rotulo-forte')}
-    ${metrica('Pontos por mês', nBR(ptsMes), 'Somando todos os planos', '')}
-    ${metrica('Milheiro médio dos clubes', cpmMedio ? brl2(cpmMedio) : 'n/d', 'Só a mensalidade, sem bônus de adesão', cpmMedio && cpmMedio < 20 ? 'jade' : 'ouro')}
+    ${metrica('Pontos por mês', nBR(ptsMes), 'Planos e bônus, na média', '')}
+    ${metrica('Milheiro médio dos clubes', cpmMedio ? brl2(cpmMedio) : 'n/d', 'Real: com o bônus das campanhas', cpmMedio && cpmMedio < 20 ? 'jade' : 'ouro')}
     ${metrica('Próxima cobrança', proxima !== undefined ? prazoTexto(proxima) : 'n/d', proxima !== undefined ? 'Confira o cartão antes' : 'Nenhuma renovação marcada', proxima !== undefined && proxima <= 3 ? 'brasa' : '')}`;
   if ($('#mcHeroi')){
     const porP = {}; ativas.forEach(a => { const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(p => p.id === a.planoId); if (pl) porP[a.prog] = (porP[a.prog] || 0) + pl.qtd; });
@@ -25663,7 +25664,7 @@ function renderClubes(){
     montarHeroi($('#mcHeroi'), DB.assinaturas.length ? {
       rot:'Pontos por mês nos seus clubes', valor:`${nBR(ptsMes)}<small> pontos</small>`,
       linha:`<span>Custo mensal <b>${brl(mensal)}</b></span>${cpmMedio ? `<span class="heroi-chip ${cpmMedio < 20 ? 'sobe' : ''}">milheiro de ${brl2(cpmMedio)}</span>` : ''}`,
-      numeros:[[nBR(ativas.length), ativas.length === 1 ? 'clube ativo' : 'clubes ativos', 'clubes'], [cpmMedio ? brl2(cpmMedio) : 'n/d', 'milheiro médio, só a mensalidade'], [proxima !== undefined ? prazoTexto(proxima) : 'n/d', 'próxima cobrança']],
+      numeros:[[nBR(ativas.length), ativas.length === 1 ? 'clube ativo' : 'clubes ativos', 'clubes'], [cpmMedio ? brl2(cpmMedio) : 'n/d', 'milheiro real, com bônus'], [proxima !== undefined ? prazoTexto(proxima) : 'n/d', 'próxima cobrança']],
       fatias:fatiasHeroi(Object.keys(porP).map(p => ({p, v:porP[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' pontos/mês', compRot:'Pontos por programa',
       dirRot:'Pontos de clube que entraram, mês a mês', dirSub:'Créditos lançados das assinaturas.',
       ult: serie.length ? {b:milCurto(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null, serie, fmtSerie:milCurto, semSerie:'A curva aparece a partir do segundo mês com crédito de clube lançado.'
@@ -53757,6 +53758,221 @@ function abrirBonusClube(id){
   };
   if ($('#bcTirar')) $('#bcTirar').onclick = () => { gravar(null); avisar('Bônus retirado: as linhas de bônus saíram do extrato.', 'ok'); };
 }
+</script>
+
+<style>
+/* ══ carteira de clubes (12/10/2026) ══ */
+.cc-barra{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px; }
+.cc-seg{ display:inline-flex; padding:3px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1, transparent); }
+.cc-seg button{ border:0; background:none; color:var(--grafite); font:600 calc(13px * var(--esc)) var(--f-b, inherit); padding:7px 14px; border-radius:9px; cursor:pointer; display:inline-flex; gap:7px; align-items:center; }
+.cc-seg button svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.cc-seg button.on{ background:var(--sup-0, #111); color:var(--giz); box-shadow:0 1px 0 rgba(255,255,255,.05), 0 4px 14px rgba(0,0,0,.25); }
+.cc-resumo{ margin-left:auto; color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.cc-resumo b{ color:var(--giz); font-family:var(--f-m, inherit); }
+
+.cc-grupo{ border:1px solid var(--fio); border-radius:18px; overflow:hidden; margin-bottom:14px; background:var(--sup-0, transparent);
+  background-image:linear-gradient(120deg, color-mix(in srgb, var(--marca, var(--anil)) 13%, transparent), transparent 42%); }
+.cc-cab{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:14px; align-items:center; padding:16px 18px; cursor:pointer; list-style:none; }
+.cc-cab::-webkit-details-marker{ display:none; }
+.cc-marca{ width:46px; height:46px; border-radius:14px; display:grid; place-items:center; background:color-mix(in srgb, var(--marca) 18%, transparent); border:1px solid color-mix(in srgb, var(--marca) 45%, transparent); }
+.cc-marca .disco-prog{ transform:scale(1.25); }
+.cc-ini{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; font:700 calc(15px * var(--esc)) var(--f-b, inherit); color:var(--giz); background:linear-gradient(135deg, color-mix(in srgb, var(--ouro) 35%, transparent), color-mix(in srgb, var(--anil) 30%, transparent)); border:1px solid var(--fio); }
+.cc-tit{ min-width:0; display:flex; flex-direction:column; gap:3px; }
+.cc-tit h4{ margin:0; font:700 calc(17px * var(--esc)) var(--f-d, inherit); color:var(--giz); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cc-tit small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.cc-seta{ width:30px; height:30px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--fio); transition:transform .25s; }
+.cc-seta svg{ width:14px; height:14px; fill:none; stroke:var(--grafite); stroke-width:2; }
+details[open] > .cc-cab .cc-seta{ transform:rotate(180deg); }
+.cc-kpis{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1px; background:var(--fio); border-top:1px solid var(--fio); }
+.cc-kpi{ background:var(--sup-0, #111); padding:11px 16px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.cc-kpi small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; }
+.cc-kpi b{ color:var(--giz); font:700 calc(16px * var(--esc)) var(--f-m, inherit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-kpi b.jade{ color:var(--jade); } .cc-kpi b.ouro{ color:var(--ouro); } .cc-kpi b.brasa{ color:var(--brasa); }
+.cc-kpi span{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-fatias{ display:flex; height:5px; gap:2px; padding:0 18px 12px; }
+.cc-fatias i{ display:block; border-radius:99px; min-width:4px; }
+
+.cc-linhas{ display:flex; flex-direction:column; }
+.cc-linha{ display:grid; grid-template-columns:minmax(170px, 1.2fr) minmax(170px, 1.2fr) minmax(170px, 1fr) minmax(150px, .9fr) auto; gap:16px; align-items:center; padding:14px 18px; border-top:1px solid var(--fio); }
+.cc-linha:hover{ background:color-mix(in srgb, var(--giz) 3%, transparent); }
+.cc-quem{ display:flex; gap:11px; align-items:center; min-width:0; }
+.cc-quem .cc-ini, .cc-quem .cc-marca{ width:36px; height:36px; flex:0 0 36px; font-size:calc(13px * var(--esc)); border-radius:50%; }
+.cc-quem .cc-marca{ border-radius:11px; } .cc-quem .cc-marca .disco-prog{ transform:none; }
+.cc-quem > div{ min-width:0; display:flex; flex-direction:column; gap:2px; }
+.cc-quem b{ color:var(--giz); font-size:calc(14.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-quem small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.cc-plano{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.cc-pilula{ align-self:flex-start; display:inline-flex; gap:6px; align-items:center; padding:4px 10px; border-radius:99px; font:700 calc(12.5px * var(--esc)) var(--f-b, inherit); color:var(--giz);
+  background:color-mix(in srgb, var(--marca) 16%, transparent); border:1px solid color-mix(in srgb, var(--marca) 45%, transparent); }
+.cc-pilula i{ font-style:normal; font-weight:500; color:var(--grafite); }
+.cc-plano small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.cc-chips{ display:flex; gap:5px; flex-wrap:wrap; }
+.cc-chips .etq{ margin:0; white-space:normal; text-align:left; line-height:1.35; max-width:100%; }
+.cc-pilula{ max-width:100%; flex-wrap:wrap; }
+.cc-plano small{ overflow-wrap:anywhere; }
+.cc-mil{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.cc-mil-num{ display:flex; align-items:baseline; column-gap:7px; row-gap:0; flex-wrap:wrap; }
+.cc-mil-num > *{ white-space:nowrap; }
+.cc-mil-num b{ font:700 calc(16px * var(--esc)) var(--f-m, inherit); }
+.cc-mil-num s{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.cc-mil-num small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.cc-regua{ position:relative; height:6px; border-radius:99px; background:linear-gradient(90deg, color-mix(in srgb, var(--jade) 55%, transparent) 0 var(--a), color-mix(in srgb, var(--ouro) 55%, transparent) var(--a) var(--r), color-mix(in srgb, var(--brasa) 55%, transparent) var(--r) 100%); opacity:.85; }
+.cc-regua i{ position:absolute; top:50%; width:12px; height:12px; border-radius:50%; background:var(--giz); border:2px solid var(--sup-0, #111); transform:translate(-50%, -50%); box-shadow:0 0 0 1px var(--fio); left:var(--p); }
+.cc-ren{ display:flex; align-items:center; gap:10px; min-width:0; }
+.cc-anel{ width:42px; height:42px; flex:0 0 42px; position:relative; }
+.cc-anel svg{ width:42px; height:42px; transform:rotate(-90deg); }
+.cc-anel circle{ fill:none; stroke-width:4; }
+.cc-anel .f{ stroke:var(--fio); } .cc-anel .p{ stroke-linecap:round; }
+.cc-anel b{ position:absolute; inset:0; display:grid; place-items:center; font:700 calc(11px * var(--esc)) var(--f-m, inherit); color:var(--giz); }
+.cc-ren > div{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.cc-ren b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); }
+.cc-ren small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.cc-acoes{ display:flex; gap:4px; }
+.cc-acoes .bt.icone{ width:34px; height:34px; }
+.cc-enc{ margin-top:6px; }
+.cc-enc > summary{ cursor:pointer; color:var(--grafite); font:600 calc(13px * var(--esc)) var(--f-b, inherit); padding:8px 2px; list-style:none; }
+.cc-enc > summary::-webkit-details-marker{ display:none; }
+.cc-enc .cc-linha{ opacity:.55; }
+@media (max-width:980px){
+  .cc-linha{ grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); row-gap:12px; }
+  .cc-acoes{ grid-column:1 / -1; justify-content:flex-end; }
+  .cc-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width:560px){
+  .cc-linha{ grid-template-columns:minmax(0, 1fr); }
+  .cc-cab{ padding:14px; gap:11px; } .cc-linha{ padding:14px; }
+  .cc-resumo{ margin-left:0; width:100%; }
+}
+</style>
+<script>
+/* ══ CARTEIRA DE CLUBES (12/10/2026, pedido do Jadiel) ═════════════════════════
+   As assinaturas deixam de ser uma lista corrida. Agrupadas por clube (ou por
+   titular, num toque), cada grupo abre com os números que decidem: pontos por
+   mês, custo, milheiro real (com bônus) e a próxima cobrança. Em cada linha, o
+   milheiro aparece numa régua com a faixa do programa, e a renovação num anel
+   que vai se fechando até o dia da cobrança. Encerradas ficam recolhidas. */
+const CC_VISTA = 'torre-clubes-vista';
+function ccVista(){ try { return localStorage.getItem(CC_VISTA) || 'clube'; } catch(_){ return 'clube'; } }
+function ccIniciais(nome){ const p = String(nome || '?').trim().split(/\s+/); return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase(); }
+function ccPlano(a){ const cat = catalogoDe(a.prog); return cat && cat.planos.find(p => p.id === a.planoId); }
+function ccPtsMes(a){
+  const pl = ccPlano(a); if (!pl) return 0;
+  const b = typeof bonusDaAssin === 'function' ? bonusDaAssin(a) : {porMes:0, meses:0, naAdesao:0};
+  return pl.qtd + (b.porMes * Math.min(b.meses, 12) + b.naAdesao) / 12;
+}
+function ccZona(cpm, f){ return cpm == null ? '' : cpm <= f.alvo ? 'jade' : cpm <= f.razoavel ? 'ouro' : 'brasa'; }
+function ccAnel(a){
+  const anual = String(a.modalidade || '').startsWith('anual');
+  const fim = a.renova, ini = fim ? somaMeses(anual ? -12 : -1, fim) : null;
+  const d = diasAte(fim);
+  if (!fim || d === null) return `<div class="cc-anel"><svg viewBox="0 0 42 42"><circle class="f" cx="21" cy="21" r="17"/></svg><b>?</b></div>`;
+  const total = Math.max(1, (new Date(fim + 'T12:00:00') - new Date(ini + 'T12:00:00')) / 864e5);
+  const pct = Math.min(1, Math.max(0, 1 - d / total));
+  const cor = d <= 3 ? 'var(--brasa)' : d <= 15 ? 'var(--ouro)' : 'var(--jade)';
+  const C = 2 * Math.PI * 17;
+  return `<div class="cc-anel" data-dica="${Math.round(pct * 100)}% do período já passou"><svg viewBox="0 0 42 42"><circle class="f" cx="21" cy="21" r="17"/><circle class="p" cx="21" cy="21" r="17" stroke="${cor}" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}"/></svg><b>${d < 0 ? '!' : d > 99 ? '99+' : d}</b></div>`;
+}
+function ccLinha(a, modo){
+  const pl = ccPlano(a), cpm = cpmAssinatura(a), f = faixasDe(a.prog), z = ccZona(cpm, f);
+  const semB = typeof temBonusAssin === 'function' && temBonusAssin(a) ? (() => { try { return cpmAssinatura({...a, bonus:null}); } catch(_){ return null; } })() : null;
+  const dias = diasAte(a.renova), ativa = a.status === 'ativa';
+  const fimFid = a.fid ? somaMeses(a.fid, a.inicio) : null, presa = fimFid && diasAte(fimFid) > 0;
+  const topo = Math.max(f.razoavel * 1.6, (cpm || 0) * 1.1, 1);
+  const pos = v => Math.min(100, Math.max(0, v / topo * 100)).toFixed(1) + '%';
+  const b = typeof bonusDaAssin === 'function' ? bonusDaAssin(a) : null;
+  const chips = [
+    !ativa ? '<span class="etq">cancelada</span>' : '',
+    presa ? `<span class="etq brasa" data-dica="Cancelar antes disso gera multa ou perda do bônus">carência até ${dataCurta(fimFid)}</span>` : '',
+    ativa && a.mudanca && a.mudanca.planoId ? `<span class="etq ouro" data-dica="Mudança lida no print do clube. No dia, a Torre encerra este plano e abre o novo sozinha.">muda para ${esc(((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId)} em ${dataCurta(a.mudanca.em)}</span>` : '',
+    a.cancelarAntes ? `<span class="etq" data-dica="Intenção de cancelar marcada">cancelar no ${a.cancelarAntes}º mês</span>` : ''
+  ].filter(Boolean).join('');
+  const quem = modo === 'clube'
+    ? `<div class="cc-ini">${esc(ccIniciais(nomeConta(a.contaId)))}</div><div><b>${esc(nomeCurtoConta(a.contaId))}</b><small>${esc(MODALIDADES[a.modalidade] || a.modalidade || '')} · ${brl2(a.valor)}${a.modalidade === 'anual_parcelado' && Number(a.parcelas) > 1 ? ` em ${a.parcelas}x` : ''}</small></div>`
+    : `<div class="cc-marca" style="--marca:${prog(a.prog).cor}">${discoProg(a.prog, 'p')}</div><div><b>${esc(prog(a.prog).n)}</b><small>${esc(MODALIDADES[a.modalidade] || a.modalidade || '')} · ${brl2(a.valor)}${a.modalidade === 'anual_parcelado' && Number(a.parcelas) > 1 ? ` em ${a.parcelas}x` : ''}</small></div>`;
+  return `<div class="cc-linha" style="--marca:${prog(a.prog).cor}" data-assin="${esc(a.id)}">
+    <div class="cc-quem">${quem}</div>
+    <div class="cc-plano"><span class="cc-pilula">${esc(pl ? pl.n : a.planoId)}${pl && !String(pl.n).includes(nBR(pl.qtd)) ? ` <i>${nBR(pl.qtd)}/mês</i>` : ''}</span>
+      ${b && (b.porMes || b.naAdesao) ? `<small style="color:var(--jade)">+ bônus ${[b.porMes ? `${nBR(b.porMes)} por mês por ${b.meses} ${b.meses === 1 ? 'mês' : 'meses'}` : '', b.naAdesao ? `${nBR(b.naAdesao)} na adesão` : ''].filter(Boolean).join(' e ')}</small>` : `<small>${a.cartao ? esc(a.cartao) : 'sem bônus registrado'}</small>`}
+      ${chips ? `<div class="cc-chips">${chips}</div>` : ''}</div>
+    <div class="cc-mil"><div class="cc-mil-num"><b style="color:var(--${z || 'grafite'})">${cpm == null ? 'n/d' : brl2(cpm)}</b>${semB ? `<s>${brl2(semB)}</s>` : ''}<small>o milheiro</small></div>
+      ${cpm == null ? '' : `<div class="cc-regua" style="--a:${pos(f.alvo)};--r:${pos(f.razoavel)};--p:${pos(cpm)}" data-dica="Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}"><i></i></div>`}</div>
+    <div class="cc-ren">${ccAnel(a)}<div><b>${!ativa ? 'encerrada' : dias === null ? 'sem data' : 'renova ' + prazoTexto(dias)}</b><small>${a.renova ? dataBR(a.renova) : ''}</small></div></div>
+    <div class="cc-acoes">
+      <button class="bt p fantasma icone" onclick="abrirBonusClube('${a.id}')" data-dica="Bônus da campanha"><svg><use href="#i-faisca"/></svg></button>
+      <button class="bt p fantasma icone" onclick="editarAssinatura('${a.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+      <button class="bt p fantasma icone" onclick="abrirFichaAssinatura('${a.id}')" data-dica="Detalhes"><svg><use href="#i-olho"/></svg></button>
+      <button class="bt p fantasma icone" onclick="apagar('assinaturas','${a.id}','a assinatura')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button>
+    </div></div>`;
+}
+function ccGrupo(chave, lista, modo){
+  const ativas = lista.filter(a => a.status === 'ativa');
+  const mensal = soma(ativas.map(a => valorMensalAssin(a)));
+  const pts = soma(ativas.map(ccPtsMes));
+  const cpm = pts > 0 ? mensal / pts * 1000 : null;
+  const prox = ativas.map(a => ({a, d:diasAte(a.renova)})).filter(x => x.d !== null && x.d >= 0).sort((x, y) => x.d - y.d)[0];
+  const ehClube = modo === 'clube';
+  const z = ehClube && cpm != null ? ccZona(cpm, faixasDe(chave)) : '';
+  const marca = ehClube ? prog(chave).cor : 'var(--ouro)';
+  const titulo = ehClube ? prog(chave).n : nomeConta(chave);
+  const pessoas = ehClube ? new Set(ativas.map(a => a.contaId)).size : new Set(ativas.map(a => a.prog)).size;
+  const fatias = ativas.map(a => ({a, v:ccPtsMes(a)})).filter(x => x.v > 0);
+  const tot = soma(fatias.map(x => x.v));
+  const coresConta = ['var(--ouro)', 'var(--anil)', 'var(--jade)', 'var(--brasa)', '#B48CFF', '#5FD3C6'];
+  const contasOrd = [...new Set(fatias.map(x => x.a.contaId))];
+  return `<details class="cc-grupo" open style="--marca:${marca}">
+    <summary class="cc-cab">
+      ${ehClube ? `<div class="cc-marca" style="--marca:${marca}">${discoProg(chave)}</div>` : `<div class="cc-ini">${esc(ccIniciais(titulo))}</div>`}
+      <div class="cc-tit"><h4>${esc(ehClube ? titulo : nomeCurto(titulo))}<span class="etq">${pessoas} ${ehClube ? (pessoas === 1 ? 'titular' : 'titulares') : (pessoas === 1 ? 'clube' : 'clubes')}</span></h4>
+        <small>${ativas.length} ${ativas.length === 1 ? 'assinatura ativa' : 'assinaturas ativas'}${lista.length > ativas.length ? ` · ${lista.length - ativas.length} encerrada${lista.length - ativas.length > 1 ? 's' : ''}` : ''}</small></div>
+      <span class="cc-seta"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+    </summary>
+    ${tot > 0 && fatias.length > 1 ? `<div class="cc-fatias">${fatias.map(x => `<i style="flex:${x.v.toFixed(0)};background:${ehClube ? coresConta[contasOrd.indexOf(x.a.contaId) % coresConta.length] : prog(x.a.prog).cor}" data-dica="${esc(ehClube ? nomeCurtoConta(x.a.contaId) : prog(x.a.prog).n)}: ${nBR(Math.round(x.v))} pontos por mês"></i>`).join('')}</div>` : ''}
+    <div class="cc-kpis">
+      <div class="cc-kpi"><small>Pontos por mês</small><b>${nBR(Math.round(pts))}</b><span>com bônus, na média</span></div>
+      <div class="cc-kpi"><small>Custo por mês</small><b>${brl(mensal)}</b><span>${brl(mensal * 12)} no ano</span></div>
+      <div class="cc-kpi"><small>Milheiro real</small><b class="${z}">${cpm == null ? 'n/d' : brl2(cpm)}</b><span>${ehClube ? `alvo ${brl2(faixasDe(chave).alvo)}` : 'média dos clubes'}</span></div>
+      <div class="cc-kpi"><small>Próxima cobrança</small><b class="${prox && prox.d <= 3 ? 'brasa' : prox && prox.d <= 15 ? 'ouro' : ''}">${prox ? prazoTexto(prox.d) : 'n/d'}</b><span>${prox ? `${dataBR(prox.a.renova)} · ${esc(ehClube ? nomeCurtoConta(prox.a.contaId) : prog(prox.a.prog).n)}` : 'nenhuma marcada'}</span></div>
+    </div>
+    <div class="cc-linhas">${lista.filter(a => a.status === 'ativa').map(a => ccLinha(a, modo)).join('')}</div>
+  </details>`;
+}
+function renderCarteiraClubes(orfas){
+  const alvo = $('#fbAssinaturas'); if (!alvo || !DB.assinaturas.length) return;
+  const modo = ccVista();
+  const ativas = DB.assinaturas.filter(a => a.status === 'ativa'), encerradas = DB.assinaturas.filter(a => a.status !== 'ativa');
+  const chaveDe = a => modo === 'clube' ? a.prog : a.contaId;
+  const grupos = {};
+  ativas.forEach(a => { (grupos[chaveDe(a)] = grupos[chaveDe(a)] || []).push(a); });
+  const pesoMes = k => soma(grupos[k].map(a => valorMensalAssin(a)));
+  const ordem = Object.keys(grupos).sort((x, y) => pesoMes(y) - pesoMes(x));
+  ordem.forEach(k => grupos[k].sort((x, y) => (diasAte(x.renova) ?? 9e9) - (diasAte(y.renova) ?? 9e9)));
+  const pts = soma(ativas.map(ccPtsMes)), mensal = soma(ativas.map(a => valorMensalAssin(a)));
+  alvo.innerHTML = (orfas || '') + `<div class="cc-barra">
+      <div class="cc-seg" role="tablist" aria-label="Organizar assinaturas">
+        <button type="button" role="tab" class="${modo === 'clube' ? 'on' : ''}" data-cc="clube"><svg><use href="#i-etiqueta"/></svg>Por clube</button>
+        <button type="button" role="tab" class="${modo === 'conta' ? 'on' : ''}" data-cc="conta"><svg><use href="#i-usuarios"/></svg>Por titular</button>
+      </div>
+      <div class="cc-resumo"><b>${ativas.length}</b> ${ativas.length === 1 ? 'assinatura' : 'assinaturas'} · <b>${nBR(Math.round(pts))}</b> pontos/mês · <b>${brl(mensal)}</b>/mês${pts ? ` · milheiro real <b>${brl2(mensal / pts * 1000)}</b>` : ''}</div>
+    </div>
+    ${ordem.map(k => ccGrupo(k, grupos[k], modo)).join('')}
+    ${encerradas.length ? `<details class="cc-enc"><summary>Encerradas (${encerradas.length}) ▾</summary><div class="cc-grupo" style="--marca:var(--grafite)"><div class="cc-linhas">${encerradas.map(a => ccLinha(a, 'conta')).join('')}</div></div></details>` : ''}`;
+  alvo.querySelectorAll('[data-cc]').forEach(b => b.onclick = () => { try { localStorage.setItem(CC_VISTA, b.dataset.cc); } catch(_){} renderCarteiraClubes(orfas); });
+  /* abrir e fechar um grupo não pode disparar nada além disso */
+  alvo.querySelectorAll('.cc-cab').forEach(s => s.addEventListener('click', e => { if (e.target.closest('button')) e.preventDefault(); }));
+}
+(function(){
+  const _r = renderClubes;
+  renderClubes = function(){
+    const v = _r.apply(this, arguments);
+    try {
+      if (DB.assinaturas && DB.assinaturas.length){
+        const orfas = typeof avisoCreditosOrfaos === 'function' ? avisoCreditosOrfaos() : '';
+        renderCarteiraClubes(orfas);
+      }
+    } catch(e){ console.error(e); }
+    return v;
+  };
+})();
 </script>
 
 </body>
