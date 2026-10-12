@@ -10173,10 +10173,6 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <button type="button" role="tab" data-pt-aba="vitrine" class="on" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7.5" height="7" rx="1.6"/><rect x="13.5" y="4" width="7.5" height="7" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7" rx="1.6"/></svg>Vitrine de venda</button>
               <button type="button" role="tab" data-pt-aba="tabelas" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.8h18M9 9.5V20"/></svg>Tabelas</button>
             </div>
-              <!-- Na aba Tabelas a vitrine some, e o botão de simular iria junto: aqui
-                   ele continua à mão, no mesmo canto direito. -->
-              <button type="button" class="pv-sim" id="ptSimularTab" hidden aria-label="Simular o próximo resgate" onclick="ptSimular()">
-                <svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg><span>Simular resgate</span></button>
             </div>
             <section class="pv-vitrine" id="ptVitrine" hidden></section>
             <div class="grade g4" id="prateleiraResumo" hidden></div>
@@ -11790,7 +11786,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 02:45';
+const BUILD = '2026-10-13 03:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -54710,7 +54706,6 @@ function ptAplicarAba(){
   const temContas = ptContasDisp.length > 0;
   if (v) v.hidden = ptAba !== 'vitrine' || !temContas;
   t.hidden = ptAba !== 'tabelas';
-  const st = $('#ptSimularTab'); if (st) st.hidden = ptAba !== 'tabelas' || !temContas;
   document.querySelectorAll('#ptAbas [data-pt-aba]').forEach(b => { const on = b.dataset.ptAba === ptAba; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
 }
 function ptEscolherAba(a){
@@ -55198,7 +55193,7 @@ function ptCartao(b, grupo){
   return `<article class="pv-card${b.travada ? ' travada' : ''}${minha ? ' minha' : ''}" style="--marca:${prog(b.p).cor}" data-pv-prog="${esc(b.p)}"${b.canal ? ` data-pv-canal="${b.canal}"` : ''}>
     <div class="pv-topo">${discoProg(b.p)}<div><b>${esc(nomeP)}</b><small>${esc(sub)}</small></div>
       ${b.travada ? '<span class="etq brasa">bloqueada</span>' : ''}
-      <button type="button" class="pv-card-sim" aria-label="Simular o próximo resgate em ${esc(nomeP)}" data-dica="Simular o próximo resgate: a melhor conta para ${esc(nomeP)}" onclick="ptSimular({prog:'${b.p}', canal:'${b.canal || ''}'})"><svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg></button></div>
+      ${grupo ? `<button type="button" class="pv-card-sim" aria-label="Simular o próximo resgate em ${esc(nomeP)}" data-dica="Simular o próximo resgate: a melhor conta para ${esc(nomeP)}" onclick="ptSimular({prog:'${b.p}', canal:'${b.canal || ''}'})"><svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg></button>` : ''}</div>
     ${canaisDe(b.p) ? `<div class="pv-canais" role="tablist" aria-label="Por onde vender as milhas ${esc(prog(b.p).n)}" style="--n:${canaisDe(b.p).length}">${canaisDe(b.p).map(c =>
       `<button type="button" role="tab" data-pt-canal="${c.id}" data-pt-cprog="${b.p}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : `<div class="pv-canais um" role="tablist" aria-label="Programa"><button type="button" role="tab" class="on" aria-selected="true" tabindex="-1" data-dica="${esc(prog(b.p).n)}: um saldo só, uma meta só.">${esc(PV_NOME_OFICIAL[b.p] || prog(b.p).n)}</button></div>`}
     <div class="pv-qtd">${!grupo
@@ -55248,13 +55243,11 @@ function ptRenderVitrine(){
       <span class="pv-ini">${ini}</span><span><b>${esc(id === '*' ? nome : nomeCurto(nome))}</b><small>${pe}</small></span></button>`;
   /* "Grupo todo" vem primeiro, separado das contas por um fio; as contas seguem
      em ordem alfabética, sem fio entre elas. */
-  const chips = (ptContasDisp.length > 1 ? chip('*', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c2.6-.4 5 1 5.7 4.4"/></svg>', 'Grupo todo', milCurto(soma(ptContasDisp.map(c => totConta(c.id)))) + ' milhas')
+  const chips = (ptContasDisp.length > 1 ? chip('*', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c2.6-.4 5 1 5.7 4.4"/></svg>', 'GRUPO TODO', milCurto(soma(ptContasDisp.map(c => totConta(c.id)))) + ' milhas')
       + '<i class="pv-sep-contas" aria-hidden="true"></i>' : '')
     + ptContasDisp.map(c => chip(c.id, esc(iniciaisDe(c.nome)), c.nome, milCurto(totConta(c.id)) + ' milhas')).join('');
   cx.innerHTML = `<div class="pv-cab">
-      <div class="pv-tit"><div class="pv-tit-linha"><div class="olho ouro" style="margin:0">Vitrine de venda</div>
-          <button type="button" class="pv-sim" id="ptSimular" aria-label="Simular o próximo resgate" data-dica="Simular o próximo resgate: qual conta e programa dão mais lucro, sem estourar as vagas de CPF.">
-            <svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg><span>Simular resgate</span></button></div>
+      <div class="pv-tit"><div class="pv-tit-linha"><div class="olho ouro" style="margin:0">Vitrine de venda</div></div>
         <p>${grupo ? 'Todas as contas juntas, um cartão por programa. No alto, o custo real e as últimas vendas; embaixo, o custo e a meta de cada conta.' : 'Só as milhas desta conta, um cartão por programa. Quanto tem, quanto custou cada milheiro e por quanto você quer vender. Toque na meta para mudar.'}</p></div>
       <div class="pv-contas" role="group" aria-label="Escolher a conta">${chips}</div>
     </div>
@@ -55271,7 +55264,6 @@ function ptRenderVitrine(){
   ptAplicarAba();
   cx.querySelectorAll('[data-pt-conta]').forEach(bt => bt.onclick = () => ptEscolherConta(bt.dataset.ptConta));
   cx.querySelectorAll('[data-pt-canal]').forEach(bt => bt.onclick = () => ptEscolherCanal(bt.dataset.ptCanal, bt.dataset.ptCprog));
-  const bs = cx.querySelector('#ptSimular'); if (bs) bs.onclick = () => ptSimular();
   cx.querySelectorAll('.pv-meta-in').forEach(el => {
     el.addEventListener('focus', () => el.select());
     el.addEventListener('blur', () => { if (el.value.trim() === el.defaultValue.trim()) return; ptDefinirMeta(el.dataset.prog, el.dataset.conta, el.value.trim() ? moedaNum(el.value) : 0, el.dataset.canal || ''); });
