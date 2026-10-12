@@ -11774,7 +11774,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-12 14:30';
+const BUILD = '2026-10-12 15:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -53943,9 +53943,14 @@ function renderCarteiraClubes(orfas){
   const chaveDe = a => modo === 'clube' ? a.prog : a.contaId;
   const grupos = {};
   ativas.forEach(a => { (grupos[chaveDe(a)] = grupos[chaveDe(a)] || []).push(a); });
-  const pesoMes = k => soma(grupos[k].map(a => valorMensalAssin(a)));
-  const ordem = Object.keys(grupos).sort((x, y) => pesoMes(y) - pesoMes(x));
-  ordem.forEach(k => grupos[k].sort((x, y) => (diasAte(x.renova) ?? 9e9) - (diasAte(y.renova) ?? 9e9)));
+  /* ordem alfabética sempre (pedido do Jadiel, 12/10/2026): clubes pelo nome,
+     titulares pelo nome; dentro do grupo, o outro critério também em A a Z */
+  const nomeClube = a => prog(a.prog).n, nomeTit = a => nomeConta(a.contaId);
+  const az = (x, y) => String(x).localeCompare(String(y), 'pt-BR', {sensitivity:'base'});
+  const rotulo = k => modo === 'clube' ? prog(k).n : nomeConta(k);
+  const ordem = Object.keys(grupos).sort((x, y) => az(rotulo(x), rotulo(y)));
+  ordem.forEach(k => grupos[k].sort((x, y) => modo === 'clube' ? az(nomeTit(x), nomeTit(y)) || az(nomeClube(x), nomeClube(y)) : az(nomeClube(x), nomeClube(y)) || az(nomeTit(x), nomeTit(y))));
+  encerradas.sort((x, y) => az(nomeClube(x), nomeClube(y)) || az(nomeTit(x), nomeTit(y)));
   const pts = soma(ativas.map(ccPtsMes)), mensal = soma(ativas.map(a => valorMensalAssin(a)));
   alvo.innerHTML = (orfas || '') + `<div class="cc-barra">
       <div class="cc-seg" role="tablist" aria-label="Organizar assinaturas">
@@ -53969,6 +53974,195 @@ function renderCarteiraClubes(orfas){
         const orfas = typeof avisoCreditosOrfaos === 'function' ? avisoCreditosOrfaos() : '';
         renderCarteiraClubes(orfas);
       }
+    } catch(e){ console.error(e); }
+    return v;
+  };
+})();
+</script>
+
+<style>
+/* ══ extrato em linha do tempo (12/10/2026) ══ */
+.ex-barra{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.ex-busca{ flex:1 1 240px; position:relative; min-width:0; }
+.ex-busca input{ width:100%; box-sizing:border-box; padding:10px 14px 10px 38px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1, transparent); color:var(--giz); font:500 calc(14px * var(--esc)) var(--f-b, inherit); }
+.ex-busca input:focus{ outline:none; border-color:var(--ouro); box-shadow:0 0 0 3px color-mix(in srgb, var(--ouro) 18%, transparent); }
+.ex-busca svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; fill:none; stroke:var(--grafite); stroke-width:1.8; }
+.ex-resumo{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1px; background:var(--fio); border-bottom:1px solid var(--fio); }
+.ex-resumo > div{ background:var(--sup-0, #111); padding:12px 16px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.ex-resumo small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; }
+.ex-resumo b{ color:var(--giz); font:700 calc(16px * var(--esc)) var(--f-m, inherit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ex-resumo b.jade{ color:var(--jade); } .ex-resumo b.brasa{ color:var(--brasa); }
+.ex-mes{ position:relative; }
+.ex-mes-cab{ position:sticky; top:0; z-index:2; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; padding:12px 18px; background:color-mix(in srgb, var(--sup-0, #111) 92%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--fio); }
+.ex-mes-cab h4{ margin:0; font:700 calc(15px * var(--esc)) var(--f-d, inherit); color:var(--giz); }
+.ex-mes-cab span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.ex-mes-cab span b{ color:var(--giz); font-family:var(--f-m, inherit); }
+.ex-dia{ display:grid; grid-template-columns:78px minmax(0, 1fr); border-bottom:1px solid var(--fio); }
+.ex-dia-rot{ padding:14px 0 14px 18px; display:flex; flex-direction:column; gap:1px; }
+.ex-dia-rot b{ font:700 calc(20px * var(--esc))/1 var(--f-m, inherit); color:var(--giz); }
+.ex-dia-rot small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; }
+.ex-itens{ display:flex; flex-direction:column; border-left:1px solid var(--fio); }
+.ex-item{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; gap:14px; align-items:center; padding:12px 16px; position:relative; }
+.ex-item + .ex-item{ border-top:1px dashed color-mix(in srgb, var(--fio) 80%, transparent); }
+.ex-item:hover{ background:color-mix(in srgb, var(--giz) 3%, transparent); }
+.ex-item.futuro{ opacity:.6; }
+.ex-txt{ min-width:0; display:flex; flex-direction:column; gap:2px; }
+.ex-txt b{ color:var(--giz); font-size:calc(14.5px * var(--esc)); display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.ex-txt small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ex-txt .etq{ margin:0; }
+.ex-val{ text-align:right; display:flex; flex-direction:column; gap:3px; align-items:flex-end; }
+.ex-val > b{ font:700 calc(16px * var(--esc)) var(--f-m, inherit); white-space:nowrap; }
+.ex-val > b.ent{ color:var(--jade); } .ex-val > b.sai{ color:var(--brasa); }
+.ex-val .ex-bonus{ color:var(--jade); font:600 calc(12px * var(--esc)) var(--f-m, inherit); white-space:nowrap; }
+.ex-val small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; }
+.ex-val small b{ font-family:var(--f-m, inherit); }
+.ex-val small b.jade{ color:var(--jade); } .ex-val small b.ouro{ color:var(--ouro); } .ex-val small b.brasa{ color:var(--brasa); }
+.ex-acoes{ display:flex; gap:2px; opacity:0; transition:opacity .15s; }
+.ex-item:hover .ex-acoes, .ex-item:focus-within .ex-acoes{ opacity:1; }
+.ex-acoes .bt.icone{ width:32px; height:32px; }
+.ex-mais{ display:flex; justify-content:center; padding:14px; }
+.ex-prog{ border-bottom:1px solid var(--fio); }
+.ex-prog > summary{ cursor:pointer; list-style:none; padding:12px 18px; color:var(--ouro); font:600 calc(13px * var(--esc)) var(--f-b, inherit); }
+.ex-prog > summary::-webkit-details-marker{ display:none; }
+@media (hover:none){ .ex-acoes{ opacity:1; } }
+@media (max-width:700px){
+  .ex-resumo{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .ex-dia{ grid-template-columns:minmax(0, 1fr); }
+  .ex-dia-rot{ flex-direction:row; align-items:baseline; gap:8px; padding:10px 16px 0; }
+  .ex-dia-rot b{ font-size:calc(15px * var(--esc)); }
+  .ex-itens{ border-left:0; }
+  .ex-item{ grid-template-columns:auto minmax(0, 1fr) auto; }
+  .ex-acoes{ grid-column:1 / -1; justify-content:flex-end; }
+  .ex-txt small{ white-space:normal; }
+  .ex-val small{ white-space:normal; text-align:right; }
+}
+</style>
+<script>
+/* ══ EXTRATO EM LINHA DO TEMPO (12/10/2026, pedido do Jadiel) ══════════════════
+   O jeito dos bancos digitais de hoje: mês com o resumo dele (o que entrou, o que
+   foi pago, o milheiro), dia com o número grande ao lado, e cada lançamento como
+   um cartão limpo: entrada em verde, saída em vermelho, custo e milheiro embaixo.
+   O crédito do clube vem junto com o bônus do mesmo mês, num item só. Busca por
+   qualquer coisa (programa, titular, nota) e programados separados no alto. A
+   tabela continua a um toque. */
+const EX_VISTA = 'torre-extrato-vista';
+let exBusca = '', exLimite = 0;
+function exVista(){ try { return localStorage.getItem(EX_VISTA) || 'linha'; } catch(_){ return 'linha'; } }
+function exBarra(){
+  const pilha = document.querySelector('#p-ms-lancamentos .pilha'), cartao = document.getElementById('fbLancamentos');
+  if (!pilha || !cartao || document.getElementById('exBarra')) return;
+  const el = document.createElement('div'); el.className = 'ex-barra'; el.id = 'exBarra';
+  el.innerHTML = `<div class="cc-seg" role="tablist" aria-label="Como ver o extrato">
+      <button type="button" role="tab" data-ex="linha"><svg><use href="#i-calendario"/></svg>Linha do tempo</button>
+      <button type="button" role="tab" data-ex="tabela"><svg><use href="#i-livro"/></svg>Tabela</button></div>
+    <label class="ex-busca"><svg><use href="#i-busca"/></svg><input type="search" id="exBusca" placeholder="Buscar no extrato: programa, titular, nota" autocomplete="off"></label>`;
+  cartao.closest('.cartao').before(el);
+  el.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => { try { localStorage.setItem(EX_VISTA, b.dataset.ex); } catch(_){} renderLancamentos(); });
+  const inp = el.querySelector('#exBusca');
+  inp.oninput = () => { clearTimeout(inp._t); inp._t = setTimeout(() => { exBusca = inp.value; exLimite = 0; paginaLanc = 1; renderLancamentos(); }, 220); };
+}
+function exPassaBusca(l){
+  /* tira só os acentos: a barra da data e a vírgula do valor fazem parte da busca */
+  const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const q = norm(exBusca).trim(); if (!q) return true;
+  const alvo = norm([prog(l.prog).n, nomeConta(l.contaId), nomeTipoLanc(l.tipo), l.nota, l.data ? dataBR(l.data) : ''].join(' '));
+  return q.split(/\s+/).every(p => alvo.includes(p));
+}
+/* a busca vale também para a tabela */
+(function(){ const _f = aplicarFiltroLanc; aplicarFiltroLanc = function(ls){ return _f.apply(this, arguments).filter(exPassaBusca); }; })();
+
+function exLinhaDoTempo(){
+  const alvo = document.getElementById('fbLancamentos'); if (!alvo) return;
+  const ls = DB.lancamentos.map((l, i) => ({l, i}))
+    .sort((x, y) => (y.l.data || '').localeCompare(x.l.data || '') || ((y.l.criadoEm || 0) - (x.l.criadoEm || 0)) || (y.i - x.i)).map(x => x.l);
+  if (!ls.length) return;
+  const filtrados = aplicarFiltroLanc(ls);
+  if (!filtrados.length) return;
+  const custosSaida = custosDasSaidas();
+  /* o bônus do clube vira parte do crédito do mesmo dia */
+  const bonusDe = l => l.assinaturaId && l.cicloClube !== undefined && !l.bonusClube
+    ? filtrados.filter(x => x.bonusClube && x.assinaturaId === l.assinaturaId && x.data === l.data) : [];
+  const engolidos = new Set();
+  filtrados.forEach(l => bonusDe(l).forEach(b => engolidos.add(b.id)));
+  const itens = filtrados.filter(l => !engolidos.has(l.id));
+  const futuros = itens.filter(l => !jaAconteceu(l)), passados = itens.filter(l => jaAconteceu(l));
+  const passo = porPaginaLanc || 50;
+  const limite = exLimite || passo;
+  const mostrar = porPaginaLanc ? passados.slice(0, limite) : passados;
+
+  /* resumo do recorte, com o bônus do clube no milheiro */
+  const ent = filtrados.filter(x => Number(x.qtd) > 0), sai = filtrados.filter(x => Number(x.qtd) < 0);
+  const pagos = ent.filter(x => Number(x.custo) > 0 || x.bonusClube);
+  const pago = soma(pagos.map(x => Number(x.custo) || 0)), qPago = soma(pagos.map(x => Number(x.qtd)));
+  const progs = [...new Set(filtrados.map(x => x.prog))];
+  const unid = progs.length === 1 ? (prog(progs[0]).tipo === 'pontos' ? 'pontos' : 'milhas') : '';
+  const mil = qPago > 0 ? pago / qPago * 1000 : null;
+
+  const zona = (cpm, p) => { const f = faixasDe(p); return cpm <= f.alvo ? 'jade' : cpm <= f.razoavel ? 'ouro' : 'brasa'; };
+  const item = l => {
+    const bs = bonusDe(l), qb = soma(bs.map(b => Number(b.qtd) || 0));
+    const saida = Number(l.qtd) < 0;
+    let rodape = '';
+    const cs = !l.custo && saida && custosSaida[l.id];
+    if (l.bonusClube) rodape = '<small>bônus, sem custo</small>';
+    else if (cs && cs.custo) rodape = `<small>custo médio <b class="${zona(cs.milheiro, l.prog)}">${brl2(cs.milheiro)}</b></small>`;
+    else if (Number(l.custo) > 0 && Number(l.qtd) > 0){
+      const real = l.custo / (Number(l.qtd) + qb) * 1000;
+      rodape = `<small>${brl(l.custo)} · milheiro <b class="${zona(real, l.prog)}"${qb ? ` data-dica="Com o bônus do mês. Sem ele seria ${brl2(l.custo / l.qtd * 1000)}."` : ''}>${brl2(real)}</b></small>`;
+    } else if (!saida) rodape = '<small>grátis</small>';
+    const titulo = saida && l.tipo === 'transferencia' ? 'Saída por transferência' : nomeTipoLanc(l.tipo);
+    return `<div class="ex-item${jaAconteceu(l) ? '' : ' futuro'}" data-lanc="${esc(l.id)}">
+      ${discoProg(l.prog, 'p', prog(l.prog).n)}
+      <div class="ex-txt"><b>${esc(titulo)}${l.bonusClube ? '<span class="etq etq-bonus">bônus</span>' : ''}${qb ? '<span class="etq etq-bonus">+ bônus</span>' : ''}${jaAconteceu(l) ? '' : '<span class="etq ouro">programado</span>'}</b>
+        <small>${esc(prog(l.prog).n)} · ${esc(nomeCurtoConta(l.contaId))}${l.nota ? ' · ' + esc(l.nota) : ''}</small></div>
+      <div class="ex-val"><b class="${saida ? 'sai' : 'ent'}">${saida ? '−' : '+'}${nBR(Math.abs(Number(l.qtd) || 0))}</b>${qb ? `<span class="ex-bonus">+${nBR(qb)} bônus</span>` : ''}${rodape}</div>
+      <div class="ex-acoes">
+        <button class="bt p fantasma icone" onclick="duplicarLancamento('${l.id}')" data-dica="Duplicar"><svg><use href="#i-copiar"/></svg></button>
+        <button class="bt p fantasma icone" onclick="editarLancamento('${l.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+        <button class="bt p fantasma icone" onclick="apagar('lancamentos','${l.id}','o lançamento')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button></div>
+    </div>`;
+  };
+  const SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const porMes = {};
+  mostrar.forEach(l => { const m = String(l.data || '').slice(0, 7); (porMes[m] = porMes[m] || []).push(l); });
+  const meses = Object.keys(porMes).sort().reverse();
+  const nomeMes = m => { const d = new Date(m + '-15T12:00:00'); if (isNaN(d)) return 'Sem data'; const t = d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const blocoMes = m => {
+    const doMes = filtrados.filter(x => String(x.data || '').slice(0, 7) === m && jaAconteceu(x));
+    const e = soma(doMes.filter(x => Number(x.qtd) > 0).map(x => Number(x.qtd)));
+    const pg = doMes.filter(x => Number(x.qtd) > 0 && (Number(x.custo) > 0 || x.bonusClube));
+    const cst = soma(pg.map(x => Number(x.custo) || 0)), q = soma(pg.map(x => Number(x.qtd)));
+    const dias = {};
+    porMes[m].forEach(l => { (dias[l.data] = dias[l.data] || []).push(l); });
+    return `<section class="ex-mes"><div class="ex-mes-cab"><h4>${esc(nomeMes(m))}</h4>
+        <span>${unid ? `entrou <b>${nBR(e)} ${unid}</b>` : (() => { const n = doMes.filter(x => Number(x.qtd) > 0).length; return `<b>${nBR(n)}</b> ${n === 1 ? 'entrada' : 'entradas'}`; })()}</span>
+        <span>pago <b>${brl(cst)}</b></span>${q > 0 && unid ? `<span>milheiro <b>${brl2(cst / q * 1000)}</b></span>` : ''}</div>
+      ${Object.keys(dias).sort().reverse().map(d => { const dt = new Date(d + 'T12:00:00'); return `<div class="ex-dia">
+        <div class="ex-dia-rot"><b>${isNaN(dt) ? '?' : String(dt.getDate()).padStart(2, '0')}</b><small>${isNaN(dt) ? '' : SEM[dt.getDay()]}</small></div>
+        <div class="ex-itens">${dias[d].map(item).join('')}</div></div>`; }).join('')}
+    </section>`;
+  };
+  alvo.innerHTML = `<div class="ex-resumo">
+      <div><small>No recorte</small><b>${nBR(filtrados.length)} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}</b></div>
+      <div><small>${unid ? `Entraram (${esc(prog(progs[0]).n)})` : 'Entradas'}</small><b class="jade">${unid ? '+' + nBR(soma(ent.map(x => Number(x.qtd)))) : nBR(ent.length)}</b></div>
+      <div><small>Pago nas compras</small><b>${brl(pago)}</b></div>
+      <div><small>Milheiro médio, com bônus</small><b>${mil != null ? brl2(mil) : 'n/d'}</b></div>
+    </div>
+    ${futuros.length ? `<details class="ex-prog"><summary>${futuros.length} ${futuros.length === 1 ? 'lançamento programado' : 'lançamentos programados'} ▾</summary><div class="ex-itens" style="border-left:0">${futuros.slice().reverse().map(item).join('')}</div></details>` : ''}
+    ${meses.map(blocoMes).join('')}
+    ${porPaginaLanc && passados.length > mostrar.length ? `<div class="ex-mais"><button type="button" class="bt fantasma" id="exMais">Mostrar mais ${nBR(Math.min(passo, passados.length - mostrar.length))} <span class="fraco">(${nBR(mostrar.length)} de ${nBR(passados.length)})</span></button></div>` : ''}`;
+  const mais = document.getElementById('exMais');
+  if (mais) mais.onclick = () => { exLimite = limite + passo; exLinhaDoTempo(); };
+}
+(function(){
+  const _r = renderLancamentos;
+  renderLancamentos = function(){
+    const v = _r.apply(this, arguments);
+    try {
+      exBarra();
+      const modo = exVista();
+      document.querySelectorAll('#exBarra [data-ex]').forEach(b => b.classList.toggle('on', b.dataset.ex === modo));
+      if (modo === 'linha') exLinhaDoTempo();
     } catch(e){ console.error(e); }
     return v;
   };
