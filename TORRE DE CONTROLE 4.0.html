@@ -10168,9 +10168,15 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <section class="heroi" id="ptHeroi"></section>
             <!-- Duas abas: a vitrine (cartões) abre por padrão; as tabelas ficam na
                  segunda. Uma de cada vez na tela. -->
+            <div class="pv-abas-linha">
             <div class="pv-abas" id="ptAbas" role="tablist" aria-label="O que ver na prateleira">
               <button type="button" role="tab" data-pt-aba="vitrine" class="on" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7.5" height="7" rx="1.6"/><rect x="13.5" y="4" width="7.5" height="7" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7" rx="1.6"/></svg>Vitrine de venda</button>
               <button type="button" role="tab" data-pt-aba="tabelas" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.8h18M9 9.5V20"/></svg>Tabelas</button>
+            </div>
+              <!-- Na aba Tabelas a vitrine some, e o botão de simular iria junto: aqui
+                   ele continua à mão, no mesmo canto direito. -->
+              <button type="button" class="pv-sim" id="ptSimularTab" hidden aria-label="Simular o próximo resgate" onclick="ptSimular()">
+                <svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.4"/><rect x="8" y="5.8" width="8" height="3.6" rx=".8"/><path d="M8.6 13h.01M12 13h.01M15.4 13h.01M8.6 16.6h.01M12 16.6h.01M15.4 16.6h.01"/></svg><span>Simular resgate</span></button>
             </div>
             <section class="pv-vitrine" id="ptVitrine" hidden></section>
             <div class="grade g4" id="prateleiraResumo" hidden></div>
@@ -11784,7 +11790,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 01:15';
+const BUILD = '2026-10-13 02:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -12572,13 +12578,26 @@ function politicaCPF(p){
    Azul Fidelidade (voos Azul, consome vaga de beneficiário), Azul Pelo Mundo
    (companhias parceiras) e Azul Viagens (pacotes, hotel, carro). Pelo Mundo e
    Viagens não usam CPF. Emissão antiga sem canal é Fidelidade. */
-const CANAIS_AZUL = [
-  {id:'fidelidade', n:'Azul Fidelidade', curto:'Fidelidade', cpf:true},
-  {id:'pelomundo',  n:'Azul Pelo Mundo', curto:'Pelo Mundo', cpf:false},
-  {id:'viagens',    n:'Azul Viagens',    curto:'Viagens',    cpf:false}];
-const canalAzul = id => CANAIS_AZUL.find(c => c.id === id) || CANAIS_AZUL[0];
-const canalUsaCPF = id => canalAzul(id).cpf;
-const nomeCanalAzul = id => canalAzul(id).n;
+/* Programas com mais de uma porta para o mesmo saldo. A primeira é a padrão
+   (emissão antiga sem porta registrada conta como ela) e guarda a meta na
+   chave de sempre. "produtos": vende passagem, pacote ou hotel. */
+const CANAIS_PROG = {
+  azul:[
+    {id:'fidelidade', n:'Azul Fidelidade', curto:'Fidelidade', cpf:true, d:'voos Azul · consome CPF'},
+    {id:'pelomundo',  n:'Azul Pelo Mundo', curto:'Pelo Mundo', cpf:false, d:'companhias parceiras · sem CPF'},
+    {id:'viagens',    n:'Azul Viagens',    curto:'Viagens',    cpf:false, produtos:true, d:'passagem, pacote ou hotel · sem CPF'}],
+  smiles:[
+    {id:'clube',   n:'Clube Smiles',   curto:'Clube Smiles',   cpf:true, d:'voos com milhas · consome CPF'},
+    {id:'viagens', n:'Smiles Viagens', curto:'Smiles Viagens', cpf:false, produtos:true, d:'passagem, pacote ou hotel · sem CPF'}]};
+const CANAIS_AZUL = CANAIS_PROG.azul;
+const canaisDe = p => CANAIS_PROG[p] || null;
+const canalDe = (p, id) => { const l = canaisDe(p); return l ? (l.find(c => c.id === id) || l[0]) : null; };
+const canalPadrao = p => { const l = canaisDe(p); return l ? l[0].id : ''; };
+const canalCPF = (p, id) => { const c = canalDe(p, id); return c ? c.cpf : true; };
+const nomeCanal = (p, id) => { const c = canalDe(p, id); return c ? c.n : prog(p).n; };
+const canalAzul = id => canalDe('azul', id);
+const canalUsaCPF = id => canalCPF('azul', id);
+const nomeCanalAzul = id => nomeCanal('azul', id);
 const PROG_PONTOS = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'pontos');
 const PROG_HOTEL  = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'hotel');
 
@@ -35681,7 +35700,7 @@ function ligarEmissoesAoCpf(){
   (DB.reservas || []).forEach(r => {
     if (r.status === 'cancelada' || !r.contaId) return;
     if (!(politicaCPF(r.prog) || {}).limite) return;
-    if (r.prog === 'azul' && !canalUsaCPF(r.canal)) return;
+    if (canaisDe(r.prog) && !canalCPF(r.prog, r.canal)) return;
     if ((DB.cpfs || []).some(x => x.reservaId === r.id)) return;
     sincCpfDaEmissao(r);
     mexeu = true;
@@ -36701,8 +36720,8 @@ function editarReserva(id, rascunho){
         <div id="rsPaxLista"></div>
       </div>
       <div class="campo"><label>Programa</label><select id="rsProg"><option value="">na pagante</option>${PROG_MILHAS.concat(r.prog && !PROG_MILHAS.includes(r.prog) && PROGRAMAS[r.prog] ? [r.prog] : []).map(p => `<option value="${p}"${p === r.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select>
-        <select id="rsCanal" class="rs-canal" aria-label="Onde as milhas Azul foram usadas"${r.prog === 'azul' ? '' : ' hidden'}>${
-          CANAIS_AZUL.map(c => `<option value="${c.id}"${c.id === (r.canal || 'fidelidade') ? ' selected' : ''}>${c.n}</option>`).join('')}</select></div>
+        <select id="rsCanal" class="rs-canal" data-ordem="natural" aria-label="Por onde as milhas saíram"${canaisDe(r.prog) ? '' : ' hidden'}>${
+          (canaisDe(r.prog) || []).map(c => `<option value="${c.id}"${c.id === (r.canal || canalPadrao(r.prog)) ? ' selected' : ''}>${c.n}</option>`).join('')}</select></div>
       <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="rsMilhas" value="${qtdTxt(r.milhas)}"></div>
       <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda id="rsTaxas" value="${moedaTxt(r.taxas)}"></div>
       <div class="campo"><label>Cartão (pagamento/taxas)</label><select id="rsCartao"><option value="">não informado</option>${
@@ -36883,7 +36902,14 @@ function editarReserva(id, rascunho){
   ['#rsProg','#rsMilhas','#rsTaxas','#rsExtra','#rsCobrado','#rsQuem'].forEach(s => { $(s).oninput = previa; $(s).onchange = previa; });
   $('#rsQuem').addEventListener('change', sincPagto);
   /* Azul: Fidelidade, Pelo Mundo ou Viagens. Só aparece quando o programa é Azul. */
-  $('#rsProg').addEventListener('change', () => { const cn = $('#rsCanal'); if (cn) cn.hidden = $('#rsProg').value !== 'azul'; });
+  $('#rsProg').addEventListener('change', () => {
+    const cn = $('#rsCanal'); if (!cn) return;
+    const cs = canaisDe($('#rsProg').value); cn.hidden = !cs;
+    /* troca de programa: a porta escolhida continua, se o novo programa também a tiver */
+    if (cs && cn.dataset.prog !== $('#rsProg').value){ const antes = cn.value; cn.innerHTML = cs.map(c => `<option value="${c.id}">${c.n}</option>`).join(''); if (cs.some(c => c.id === antes)) cn.value = antes; }
+    cn.dataset.prog = $('#rsProg').value;
+  });
+  if ($('#rsCanal')) $('#rsCanal').dataset.prog = $('#rsProg').value;
   sincPagto();
   previa();
   /* Lido o itinerário, descrição e data se preenchem sozinhas quando ainda
@@ -36913,7 +36939,7 @@ function editarReserva(id, rascunho){
     if (pg && !(qtdNum($('#rsMilhas').value) > 0)) faltam.push({sel:'#rsMilhas', msg:`Informe quantas milhas ${prog(pg).n} saíram nesta emissão.`});
     /* Programa com teto por CPF precisa saber de qual CPF saiu a emissão, senão
        a vaga é consumida na vida real e não aparece no controle. */
-    if (pg && !$('#rsConta').value && (politicaCPF(pg) || {}).limite) faltam.push({sel:'#rsConta', msg: pg === 'azul' && !canalUsaCPF(($('#rsCanal') || {}).value) ? `Informe de qual conta saíram as milhas da ${nomeCanalAzul(($('#rsCanal') || {}).value)}.` : `${prog(pg).n} tem limite de CPFs por conta: informe a conta que emitiu.`});
+    if (pg && !$('#rsConta').value && (politicaCPF(pg) || {}).limite) faltam.push({sel:'#rsConta', msg: canaisDe(pg) && !canalCPF(pg, ($('#rsCanal') || {}).value) ? `Informe de qual conta saíram as milhas da ${nomeCanal(pg, ($('#rsCanal') || {}).value)}.` : `${prog(pg).n} tem limite de CPFs por conta: informe a conta que emitiu.`});
     /* Venda precisa do cliente: é dele o resultado e a cobrança. */
     if ($('#rsQuem').value === 'terceiro' && !$('#rsCliente').value.trim()) faltam.push({sel:'#rsCliente', msg:'Venda precisa do cliente: busque no cadastro.'});
     /* Toda emissão precisa do localizador: é ele que acha a reserva na companhia. */
@@ -36927,7 +36953,7 @@ function editarReserva(id, rascunho){
       desc:$('#rsDesc').value.trim() || 'Reserva', loc:$('#rsLoc').value.trim().toUpperCase(), data:$('#rsData').value, hora:$('#rsHora').value,
       dataVolta:($('#rsDataVolta') || {}).value || '', horaVolta:($('#rsHoraVolta') || {}).value || '',
       criadaHora:($('#rsCriadaHora') || {}).value || '', prog:$('#rsProg').value,
-      canal:$('#rsProg').value === 'azul' ? (($('#rsCanal') || {}).value || 'fidelidade') : '',
+      canal:canaisDe($('#rsProg').value) ? (($('#rsCanal') || {}).value || canalPadrao($('#rsProg').value)) : '',
       milhas:qtdNum($('#rsMilhas').value), taxas:moedaNum($('#rsTaxas').value), cartaoId:$('#rsCartao').value,
       cobrado:moedaNum($('#rsCobrado').value), contaId:$('#rsConta').value, creditoEm:$('#rsCredito').value, custoExtra:moedaNum($('#rsExtra').value),
       trajeto:$('#rsTrajeto').value,
@@ -45553,7 +45579,7 @@ function sincCpfDaEmissao(r){
   DB.cpfs = (DB.cpfs || []).filter(x => x.reservaId !== r.id);
   if (!(politicaCPF(r.prog) || {}).limite) return;
   /* Azul Pelo Mundo e Azul Viagens não ocupam vaga de beneficiário: só a Azul Fidelidade. */
-  if (r.prog === 'azul' && !canalUsaCPF(r.canal)) return;
+  if (canaisDe(r.prog) && !canalCPF(r.prog, r.canal)) return;
   if (!r.contaId || r.status === 'cancelada') return;
 
   /* Um registro por passageiro, com o CPF de cada um: é assim que a companhia
@@ -54464,6 +54490,8 @@ function exControles(){
    altura em todos os cartões da linha, com o fio separador junto */
 .pv-pe{ margin-top:auto; }
 .pv-tit-linha{ display:flex; align-items:center; gap:12px; }
+.pv-abas-linha{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.pv-sim[hidden]{ display:none !important; }
 .pv-abas{ display:inline-flex; gap:4px; padding:4px; border:1px solid var(--fio); border-radius:14px; background:var(--sup-1, transparent); align-self:flex-start; max-width:100%; }
 .pv-abas button{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border-radius:10px; color:var(--grafite);
   font:600 calc(13.5px * var(--esc)) var(--f-b, inherit); white-space:nowrap; transition:.16s var(--ease, ease); }
@@ -54473,7 +54501,7 @@ function exControles(){
 .pv-abas button.on svg{ color:var(--ouro); }
 .pv-abas button:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
 .pv-contas-tab:empty{ display:none; }
-@media (max-width:560px){ .pv-abas{ display:flex; } .pv-abas button{ flex:1; justify-content:center; padding:9px 10px; } }
+@media (max-width:560px){ .pv-abas{ display:flex; flex:1 1 auto; } .pv-abas button{ flex:1; justify-content:center; padding:9px 10px; } .pv-abas-linha .pv-sim span{ display:none; } .pv-abas-linha .pv-sim{ padding:8px; } }
 .pv-tit-linha .olho{ flex:1; min-width:0; }
 .pv-sim{ display:inline-flex; align-items:center; gap:8px; flex-shrink:0; cursor:pointer; padding:7px 14px 7px 9px; border-radius:99px;
   border:1px solid color-mix(in srgb, var(--ouro) 55%, var(--fio)); color:var(--ouro); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 10%, transparent));
@@ -54521,7 +54549,7 @@ function exControles(){
 .sm-todos-ic svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 .sm-sub-passo{ margin-top:13px; padding-top:13px; border-top:1px dashed var(--fio); }
 .sm-sub{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
-.sm-opcoes{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.sm-opcoes{ display:grid; grid-template-columns:repeat(var(--n, 3), minmax(0, 1fr)); gap:8px; }
 .sm-opcoes button{ all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; gap:2px; padding:10px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0, transparent); min-width:0; transition:.15s var(--ease, ease); }
 .sm-opcoes button svg{ width:20px; height:20px; fill:none; stroke:var(--anil-claro, var(--anil)); stroke-width:1.7; stroke-linejoin:round; stroke-linecap:round; margin-bottom:4px; }
 .sm-opcoes button b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); }
@@ -54615,7 +54643,7 @@ function exControles(){
 .rs-canal{ margin-top:6px; }
 .rs-canal[hidden]{ display:none !important; }
 /* Azul: três portas para o mesmo saldo */
-.pv-canais{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:3px; padding:3px; border:1px solid var(--fio); border-radius:12px; background:var(--sup-0, transparent); margin-top:-4px; }
+.pv-canais{ display:grid; grid-template-columns:repeat(var(--n, 3), minmax(0, 1fr)); gap:3px; padding:3px; border:1px solid var(--fio); border-radius:12px; background:var(--sup-0, transparent); margin-top:-4px; }
 .pv-canais button{ all:unset; box-sizing:border-box; cursor:pointer; text-align:center; padding:7px 6px; border-radius:9px; color:var(--grafite);
   font:600 calc(12.5px * var(--esc)) var(--f-b, inherit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:.15s var(--ease, ease); }
 .pv-canais button:hover{ color:var(--giz); }
@@ -54634,7 +54662,9 @@ function exControles(){
 .pv-vendas .dif.jade{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
 .pv-vendas .dif.brasa{ color:var(--brasa); border-color:color-mix(in srgb, var(--brasa) 45%, var(--fio)); }
 .pv-regua .v{ position:absolute; top:6px; width:10px; height:10px; transform:translateX(-50%) rotate(45deg); background:var(--lilas, var(--anil)); border-radius:2px; box-shadow:0 0 0 2px var(--sup-1, #111); }
-@media (max-width:980px){ .pv-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+.pv-vitrine{ container-type:inline-size; }
+/* totais em duas colunas quando a vitrine fica estreita, para nenhum valor cortar */
+@container (max-width:900px){ .pv-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:560px){
   .pv-vitrine{ padding:14px; border-radius:18px; }
   .pv-qtd button{ font-size:calc(23px * var(--esc)); }
@@ -54670,6 +54700,7 @@ function ptAplicarAba(){
   const temContas = ptContasDisp.length > 0;
   if (v) v.hidden = ptAba !== 'vitrine' || !temContas;
   t.hidden = ptAba !== 'tabelas';
+  const st = $('#ptSimularTab'); if (st) st.hidden = ptAba !== 'tabelas' || !temContas;
   document.querySelectorAll('#ptAbas [data-pt-aba]').forEach(b => { const on = b.dataset.ptAba === ptAba; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
 }
 function ptEscolherAba(a){
@@ -54677,15 +54708,16 @@ function ptEscolherAba(a){
   ptAplicarAba();
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#ptAbas [data-pt-aba]'); if (b) ptEscolherAba(b.dataset.ptAba); });
-const PV_CANAL = 'torre-prateleira-canal-azul';
-let ptCanal = 'fidelidade';
-try { const c = localStorage.getItem(PV_CANAL); if (CANAIS_AZUL.some(x => x.id === c)) ptCanal = c; } catch(_){}
-const ptCanalDe = prg => prg === 'azul' ? ptCanal : '';
+const PV_CANAL = 'torre-prateleira-canais';
+let ptCanais = {};
+try { ptCanais = JSON.parse(localStorage.getItem(PV_CANAL) || '{}') || {}; const v = localStorage.getItem('torre-prateleira-canal-azul'); if (v && !ptCanais.azul) ptCanais.azul = v; } catch(_){ ptCanais = {}; }
+const ptCanalDe = prg => canaisDe(prg) ? canalDe(prg, ptCanais[prg]).id : '';
 /* A meta da Azul Fidelidade fica na chave de sempre (conta|azul), e a tabela
    da prateleira continua lendo a mesma. Pelo Mundo e Viagens ganham a sua. */
-const ptChaveMeta = (contaId, prg, canal) => `${contaId || '-'}|${prg}` + (canal && canal !== 'fidelidade' ? '@' + canal : '');
-function ptEscolherCanal(id){
-  ptCanal = canalAzul(id).id; try { localStorage.setItem(PV_CANAL, ptCanal); } catch(_){}
+const ptChaveMeta = (contaId, prg, canal) => `${contaId || '-'}|${prg}` + (canal && canal !== canalPadrao(prg) ? '@' + canal : '');
+function ptEscolherCanal(id, prg){
+  prg = prg || 'azul';
+  ptCanais[prg] = canalDe(prg, id).id; try { localStorage.setItem(PV_CANAL, JSON.stringify(ptCanais)); } catch(_){}
   ptRenderVitrine();
 }
 /* Preço médio do milheiro nas últimas vendas: o que o cliente pagou, menos as
@@ -54696,7 +54728,7 @@ function ptVendas(contaIds, prg, canal){
   const todas = (DB.reservas || []).filter(r => r.quem === 'terceiro' && r.status !== 'cancelada' && r.prog === prg
     && (Number(r.milhas) || 0) > 0 && (Number(r.cobrado) || 0) > 0
     && (contaIds ? contaIds.includes(r.contaId) : true)
-    && (prg !== 'azul' || (r.canal || 'fidelidade') === (canal || 'fidelidade')))
+    && (!canaisDe(prg) || (r.canal || canalPadrao(prg)) === (canal || canalPadrao(prg))))
     .sort((a, b) => String(b.criada || b.data || '').localeCompare(String(a.criada || a.data || '')));
   const l = todas.slice(0, PV_ULTIMAS);
   const mi = soma(l.map(r => Number(r.milhas) || 0));
@@ -54726,7 +54758,7 @@ function ptMeta(l, canal){
   const mapa = DB.precoVenda || {};
   const k = ptChaveMeta(l.conta.id, l.prog, canal);
   if (mapa[k] != null) return {v:Number(mapa[k]), fonte:'minha'};
-  if ((!canal || canal === 'fidelidade') && mapa[l.prog] != null) return {v:Number(mapa[l.prog]), fonte:'minha'};
+  if ((!canal || canal === canalPadrao(l.prog)) && mapa[l.prog] != null) return {v:Number(mapa[l.prog]), fonte:'minha'};
   let ref = null;
   try { ref = typeof referenciaMercado === 'function' ? referenciaMercado(l.prog, l.qtd) : null; } catch(_){}
   if (ref) return {v:ref.faixa.mediana, fonte:'mercado', ref};
@@ -54737,9 +54769,9 @@ function ptDefinirMeta(prg, contaId, valor, canal){
   const v = Number(valor) || 0, k = ptChaveMeta(contaId, prg, canal);
   const antes = DB.precoVenda[k];
   if (v > 0){ if (antes === v) return; DB.precoVenda[k] = v; }
-  else { delete DB.precoVenda[k]; if (!canal || canal === 'fidelidade') delete DB.precoVenda[prg]; }
+  else { delete DB.precoVenda[k]; if (!canal || canal === canalPadrao(prg)) delete DB.precoVenda[prg]; }
   salvar(); renderVender();
-  const nome = prg === 'azul' ? nomeCanalAzul(canal) : prog(prg).n;
+  const nome = canaisDe(prg) ? nomeCanal(prg, canal) : prog(prg).n;
   avisar(v > 0 ? `Meta de ${nome} guardada: ${brl2(v)} o milheiro.` : `Meta de ${nome} apagada. Volta a valer a sugestão.`, 'ok');
 }
 /* Pelo Mundo e Viagens não passam pelo controle de CPF: o botão abre direto o
@@ -54775,13 +54807,17 @@ const SHOPPINGS = [{id:'azul', n:'Shopping Azul'}, {id:'latampass', n:'Shopping 
 const ptSmShop = () => ptSm.modo === 'shopping';
 try { if (localStorage.getItem('torre-simular-base') === 'vendas') ptSm.base = 'vendas'; } catch(_){}
 const ptSmProduto = () => PRODUTOS_VIAGENS.find(p => p.id === ptSm.produto) || null;
-const ptSmPedePax = () => !ptSmShop() && !(ptSm.prog === 'azul' && ptSm.canal === 'viagens' && ptSm.produto === 'hotel');
+/* a porta escolhida no passo 1 (Azul e Smiles), ou nada */
+const ptSmCanal = () => !ptSmShop() && canaisDe(ptSm.prog) && ptSm.canal ? canalDe(ptSm.prog, ptSm.canal) : null;
+const ptSmVende = () => { const c = ptSmCanal(); return !!(c && c.produtos); };
+const listaOu = l => l.length > 1 ? l.slice(0, -1).join(', ') + ' ou ' + l[l.length - 1] : l[0];
+const ptSmPedePax = () => !ptSmShop() && !(ptSmVende() && ptSm.produto === 'hotel');
 function ptSmFaltam(){
   const f = [];
   if (!ptSm.prog) f.push(ptSmShop() ? 'escolher o shopping' : 'escolher o programa');
   else if (ptSmShop()) {}
-  else if (ptSm.prog === 'azul' && !ptSm.canal) f.push('escolher Fidelidade, Pelo Mundo ou Viagens');
-  else if (ptSm.prog === 'azul' && ptSm.canal === 'viagens' && !ptSm.produto) f.push('dizer se é passagem, pacote ou hotel');
+  else if (canaisDe(ptSm.prog) && !ptSm.canal) f.push('escolher ' + listaOu(canaisDe(ptSm.prog).map(c => c.curto)));
+  else if (ptSmVende() && !ptSm.produto) f.push('dizer se é passagem, pacote ou hotel');
   if (!(ptSm.mi > 0)) f.push('informar as milhas');
   if (ptSmPedePax() && !(ptSm.pax > 0)) f.push('informar os passageiros');
   return f;
@@ -54790,9 +54826,9 @@ function ptCandidatos(mi, pax, base, filtro){
   const out = [];
   posicoesDeVenda().forEach(l => {
     if (filtro && l.prog !== filtro.prog) return;
-    const canais = l.prog === 'azul' ? (filtro && filtro.canal ? [filtro.canal] : CANAIS_AZUL.map(c => c.id)) : [''];
+    const canais = canaisDe(l.prog) ? (filtro && filtro.canal ? [filtro.canal] : canaisDe(l.prog).map(c => c.id)) : [''];
     canais.forEach(canal => {
-      const usaCPF = l.prog !== 'azul' || canalUsaCPF(canal);
+      const usaCPF = !canaisDe(l.prog) || canalCPF(l.prog, canal);
       const teto = usaCPF && l.pol.limite ? l.resta : Infinity;
       const meta = ptMeta(l, canal).v;
       const vd = ptVendas([l.conta.id], l.prog, canal);
@@ -54802,7 +54838,7 @@ function ptCandidatos(mi, pax, base, filtro){
       const motivo = l.qtd < mi ? `faltam ${nBR(mi - l.qtd)} milhas` : teto < pax ? (teto === 0 ? 'sem vaga de CPF' : `só ${teto} ${teto === 1 ? 'vaga' : 'vagas'} de CPF`) : '';
       out.push({l, canal, usaCPF, semTeto:usaCPF && !l.pol.limite, preco, fontePreco:usarVd ? 'vendas' : 'meta', semVenda:base === 'vendas' && vd.v == null,
         lucro:mi / 1000 * (preco - l.cpm), receita:mi / 1000 * preco, gasta, sobra:usaCPF && l.pol.limite ? l.resta - pax : null, limite:l.pol.limite,
-        depois:l.qtd - mi, nome:l.prog === 'azul' ? nomeCanalAzul(canal) : prog(l.prog).n, ok:!motivo, motivo});
+        depois:l.qtd - mi, nome:canaisDe(l.prog) ? nomeCanal(l.prog, canal) : prog(l.prog).n, ok:!motivo, motivo});
     });
   });
   return out.sort((a, b) => (b.ok - a.ok) || (b.lucro - a.lucro) || (a.gasta - b.gasta) || ((b.sobra ?? 99) - (a.sobra ?? 99))
@@ -54815,13 +54851,13 @@ function ptCpfTxt(x){
 }
 /* o que o botão diz e o que a emissão vira: passagem emite, pacote e hotel reservam */
 function ptSmAcaoDe(){
-  const pr = ptSm.prog === 'azul' && ptSm.canal === 'viagens' ? ptSmProduto() : null;
+  const pr = ptSmVende() ? ptSmProduto() : null;
   return pr || {id:'passagem', tipo:'voo', acao:'Emitir agora', n:'Passagem'};
 }
 const SM_IC_CHAVE = '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>';
 function ptSmPassos(){
   const st = [
-    {n:1, t:ptSmShop() ? 'Shopping' : 'Programa', ok:!!ptSm.prog && (ptSmShop() || ptSm.prog !== 'azul' || (!!ptSm.canal && (ptSm.canal !== 'viagens' || !!ptSm.produto)))},
+    {n:1, t:ptSmShop() ? 'Shopping' : 'Programa', ok:!!ptSm.prog && (ptSmShop() || !canaisDe(ptSm.prog) || (!!ptSm.canal && (!ptSmVende() || !!ptSm.produto)))},
     {n:2, t:'Milhas', ok:ptSm.mi > 0},
     {n:3, t:'Passageiros', ok:!ptSmPedePax() || ptSm.pax > 0, dis:!ptSmPedePax()}];
   const el = $('#smPassos'); if (!el) return;
@@ -54836,13 +54872,28 @@ function ptSmDesenharPrograma(){
   document.querySelectorAll('#smProgs [data-sm-prog]').forEach(b => { const on = !shop && b.dataset.smProg === ptSm.prog; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   document.querySelectorAll('#smShops [data-sm-shop]').forEach(b => { const on = shop && b.dataset.smShop === ptSm.prog; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const az = $('#smAzul'), vi = $('#smViagens');
-  if (az) az.hidden = shop || ptSm.prog !== 'azul';
-  if (vi) vi.hidden = shop || !(ptSm.prog === 'azul' && ptSm.canal === 'viagens');
+  const cs = !shop && canaisDe(ptSm.prog);
+  if (az){
+    az.hidden = !cs;
+    /* as portas mudam com o programa: Azul tem três, Smiles tem duas */
+    if (cs && az.dataset.prog !== ptSm.prog){
+      az.dataset.prog = ptSm.prog;
+      az.querySelector('.sm-sub').textContent = `Por onde ${ptSm.prog === 'azul' ? 'a Azul' : ptSm.prog === 'smiles' ? 'a Smiles' : 'o programa'} vai sair`;
+      const op = az.querySelector('.sm-opcoes');
+      op.style.setProperty('--n', cs.length);
+      op.innerHTML = cs.map(c => `<button type="button" data-sm-canal="${c.id}" aria-pressed="false"><b>${esc(c.curto)}</b><small>${esc(c.d)}</small></button>`).join('');
+      op.querySelectorAll('[data-sm-canal]').forEach(b => b.onclick = () => { ptSm.canal = b.dataset.smCanal; if (!ptSmVende()) ptSm.produto = ''; ptSimRender(); });
+    }
+  }
+  if (vi){
+    vi.hidden = !ptSmVende();
+    if (ptSmVende()) vi.querySelector('.sm-sub').textContent = `O que vai vender na ${ptSmCanal().n}`;
+  }
   document.querySelectorAll('#smAzul [data-sm-canal]').forEach(b => { const on = b.dataset.smCanal === ptSm.canal; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   document.querySelectorAll('#smViagens [data-sm-produto]').forEach(b => { const on = b.dataset.smProduto === ptSm.produto; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const px = $('#smPaxBox'); if (px) px.classList.toggle('dis', !ptSmPedePax());
   const pi = $('#simPax'); if (pi) pi.disabled = !ptSmPedePax();
-  const rot = $('#smMiRot'); if (rot) rot.textContent = shop ? 'Milhas do resgate' : ptSm.prog === 'azul' && ptSm.canal === 'viagens' && ptSm.produto && ptSm.produto !== 'passagem' ? 'Milhas da reserva' : 'Milhas da emissão';
+  const rot = $('#smMiRot'); if (rot) rot.textContent = shop ? 'Milhas do resgate' : ptSmVende() && ptSm.produto && ptSm.produto !== 'passagem' ? 'Milhas da reserva' : 'Milhas da emissão';
   const dh = $('#smPaxBox .sm-dica-hotel'); if (dh) dh.textContent = shop ? 'Shopping não leva passageiro nem consome CPF: este passo fica dispensado.' : 'Hotel não leva passageiro: este passo fica dispensado.';
 }
 function ptSimRender(){
@@ -54860,7 +54911,7 @@ function ptSimRender(){
   if (ptSmShop()){ ptSmRenderShop(alvo); return; }
   const pax = ptSmPedePax() ? ptSm.pax : 0;
   const todos = ptSm.prog === '*';
-  const lista = ptSmLista = ptCandidatos(ptSm.mi, pax, ptSm.base, todos ? null : {prog:ptSm.prog, canal:ptSm.prog === 'azul' ? ptSm.canal : ''});
+  const lista = ptSmLista = ptCandidatos(ptSm.mi, pax, ptSm.base, todos ? null : {prog:ptSm.prog, canal:canaisDe(ptSm.prog) ? ptSm.canal : ''});
   const bons = lista.filter(x => x.ok), fora = lista.filter(x => !x.ok);
   const ac = ptSmAcaoDe();
   const lc = v => `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`;
@@ -54883,7 +54934,7 @@ function ptSimRender(){
   alvo.innerHTML = `<div class="sm-res-cab"><div class="olho jade" style="margin:0">Missão cumprida: a melhor conta</div>${seg}</div>
     <article class="sm-melhor" style="--marca:${prog(prgM).cor}" id="simMelhor">
       <div class="sm-selo"><span>1º</span>Melhor opção</div>
-      <div class="sm-quem">${discoProg(prgM)}<div><b>${esc(nomeCurto(m.l.conta.nome))}</b><small>${esc(m.nome)}${ptSm.canal === 'viagens' && !todos ? ' · ' + esc(ac.n.toLowerCase()) : ''} · ${nBR(ptSm.mi)} milhas${pax ? ` · ${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}` : ''}</small></div></div>
+      <div class="sm-quem">${discoProg(prgM)}<div><b>${esc(nomeCurto(m.l.conta.nome))}</b><small>${esc(m.nome)}${ptSmVende() && !todos ? ' · ' + esc(ac.n.toLowerCase()) : ''} · ${nBR(ptSm.mi)} milhas${pax ? ` · ${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}` : ''}</small></div></div>
       <div class="sm-lucro"><small>Lucro desta venda</small><b class="${m.lucro >= 0 ? 'jade' : 'brasa'}">${lc(m.lucro)}</b>
         <span>${m.l.cpm ? ((m.preco - m.l.cpm) / m.l.cpm * 100 >= 0 ? '+' : '−') + Math.abs((m.preco - m.l.cpm) / m.l.cpm * 100).toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% sobre o custo' : ''}</span></div>
       <div class="sm-metricas">
@@ -54919,7 +54970,7 @@ function ptSmCandShop(mi){
     const zerada = !!l.pol.limite && l.resta === 0;
     /* custo de oportunidade: o que essas milhas renderiam vendidas pela meta.
        Na conta sem vaga de CPF, isso não sai hoje, e o resgate é quase de graça. */
-    return {l, zerada, abreMao:mi / 1000 * ptMeta(l, l.prog === 'azul' ? 'fidelidade' : '').v, custo:mi / 1000 * l.cpm, depois:l.qtd - mi, ok:l.qtd >= mi, motivo:l.qtd < mi ? `faltam ${nBR(mi - l.qtd)} milhas` : '',
+    return {l, zerada, abreMao:mi / 1000 * ptMeta(l, canalPadrao(l.prog)).v, custo:mi / 1000 * l.cpm, depois:l.qtd - mi, ok:l.qtd >= mi, motivo:l.qtd < mi ? `faltam ${nBR(mi - l.qtd)} milhas` : '',
       nome:(SHOPPINGS.find(x => x.id === l.prog) || {}).n || prog(l.prog).n};
   }).sort((a, b) => (b.ok - a.ok) || (b.zerada - a.zerada) || (a.l.cpm - b.l.cpm) || (a.l.qtd - b.l.qtd)
     || String(a.l.conta.nome).localeCompare(String(b.l.conta.nome), 'pt-BR'));
@@ -54991,8 +55042,9 @@ function ptSmIr(i){
     setTimeout(() => editarLancamento(null, {prog:x.l.prog, tipo:'resgateProd', contaId:x.l.conta.id, qtd:ptSm.mi, nota:x.nome}), 60);
     return;
   }
-  const ac = x.l.prog === 'azul' && x.canal === 'viagens' ? ptSmAcaoDe() : {tipo:'voo', id:'passagem'};
-  const desc = ac.id === 'hotel' ? 'Hotel · Azul Viagens' : ac.id === 'pacote' ? 'Pacote · Azul Viagens' : '';
+  const cx = canalDe(x.l.prog, x.canal);
+  const ac = cx && cx.produtos ? ptSmAcaoDe() : {tipo:'voo', id:'passagem'};
+  const desc = ac.id === 'hotel' ? `Hotel · ${cx.n}` : ac.id === 'pacote' ? `Pacote · ${cx.n}` : '';
   fecharFolha();
   setTimeout(() => editarReserva(null, {tipo:ac.tipo, quem:'terceiro', cliente:'', desc, data:hojeISO(), prog:x.l.prog, canal:x.canal || '', contaId:x.l.conta.id,
     milhas:ptSm.mi, taxas:0, cobrado:Math.round(x.receita * 100) / 100, custoExtra:0, status:'emitida', trajeto:'ida', pax:[], criada:hojeISO()}), 60);
@@ -55023,7 +55075,7 @@ function ptSimular(){
           <button type="button" class="sm-prog todos" data-sm-prog="*" aria-pressed="false"><span class="sm-todos-ic"><svg viewBox="0 0 24 24"><path d="M4 18V9M10 18V5M16 18v-6M22 18H2"/></svg></span>
             <span><b>Comparar todos</b><small>o mais lucrativo</small></span></button></div>
         <div class="sm-sub-passo" id="smAzul" hidden><div class="sm-sub">Por onde a Azul vai sair</div>
-          <div class="sm-opcoes">${CANAIS_AZUL.map(c => `<button type="button" data-sm-canal="${c.id}" aria-pressed="false"><b>${c.curto}</b><small>${c.id === 'fidelidade' ? 'voos Azul · consome CPF' : c.id === 'pelomundo' ? 'companhias parceiras · sem CPF' : 'passagem, pacote ou hotel · sem CPF'}</small></button>`).join('')}</div></div>
+          <div class="sm-opcoes"></div></div>
         <div class="sm-sub-passo" id="smViagens" hidden><div class="sm-sub">O que vai vender na Azul Viagens</div>
           <div class="sm-opcoes">${PRODUTOS_VIAGENS.map(p => `<button type="button" data-sm-produto="${p.id}" aria-pressed="false"><svg viewBox="0 0 24 24">${p.ic}</svg><b>${p.n}</b><small>${p.d}</small></button>`).join('')}</div></div>
       </section>
@@ -55037,7 +55089,7 @@ function ptSimular(){
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
   document.querySelectorAll('#smProgs [data-sm-prog]').forEach(b => b.onclick = () => {
     const p = b.dataset.smProg; if (ptSm.prog !== p){ ptSm.canal = ''; ptSm.produto = ''; } ptSm.prog = p; ptSimRender();
-    if (p !== 'azul') setTimeout(() => { const i = $('#simMi'); if (i && !i.value) i.focus(); }, 30);
+    if (!canaisDe(p)) setTimeout(() => { const i = $('#simMi'); if (i && !i.value) i.focus(); }, 30);
   });
   document.querySelectorAll('#smModo [data-sm-modo]').forEach(b => b.onclick = () => {
     if (ptSm.modo === b.dataset.smModo) return;
@@ -55047,7 +55099,6 @@ function ptSimular(){
     ptSm.prog = b.dataset.smShop; ptSimRender();
     setTimeout(() => { const i = $('#simMi'); if (i && !i.value) i.focus(); }, 30);
   });
-  document.querySelectorAll('#smAzul [data-sm-canal]').forEach(b => b.onclick = () => { ptSm.canal = b.dataset.smCanal; if (ptSm.canal !== 'viagens') ptSm.produto = ''; ptSimRender(); });
   document.querySelectorAll('#smViagens [data-sm-produto]').forEach(b => b.onclick = () => { ptSm.produto = b.dataset.smProduto; ptSimRender(); });
   /* Só redesenha quando o número muda: ao sair do campo o navegador dispara
      "change" de novo, e redesenhar ali apagaria o botão no meio do toque. */
@@ -55071,7 +55122,7 @@ function ptBlocos(lista){
   return Object.keys(porP).sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR')).map(p => {
     const g = porP[p].sort((a, b) => String(a.conta.nome || '').localeCompare(String(b.conta.nome || ''), 'pt-BR'));
     const qtd = soma(g.map(l => l.qtd)), custo = soma(g.map(l => l.custo));
-    const canal = ptCanalDe(p), usaCPF = p !== 'azul' || canalUsaCPF(canal);
+    const canal = ptCanalDe(p), usaCPF = !canaisDe(p) || canalCPF(p, canal);
     const metas = g.map(l => ({l, m:ptMeta(l, canal)}));
     const receita = soma(metas.map(x => x.l.qtd / 1000 * x.m.v));
     return {p, g, canal, usaCPF, metas, qtd, custo, cpm:qtd ? custo / qtd * 1000 : 0, meta:qtd ? receita / qtd * 1000 : 0, receita,
@@ -55088,7 +55139,7 @@ const ptValor = (v, cor) => `<b class="pv-val"${cor ? ` style="color:var(--${cor
 function ptCaixaVendas(b, vd, nomeP){
   const dif = vd.v != null && b.meta && b.metas.length === 1 ? (vd.v - b.meta) / b.meta * 100 : null;
   const quando = vd.ultima ? dataBR(String(vd.ultima).slice(0, 10)) : '';
-  const dica = vd.n ? `Média do milheiro ${vd.n === 1 ? 'na última venda' : 'nas ' + vd.n + ' últimas vendas'}${b.p === 'azul' ? ' de ' + esc(nomeP) : ''}${quando ? ' (a mais recente em ' + quando + ')' : ''}: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.${vd.total > vd.n ? '&#10;São ' + vd.total + ' vendas ao todo; a média usa as ' + vd.n + ' mais recentes.' : ''}&#10;Na régua, é o losango.`
+  const dica = vd.n ? `Média do milheiro ${vd.n === 1 ? 'na última venda' : 'nas ' + vd.n + ' últimas vendas'}${canaisDe(b.p) ? ' de ' + esc(nomeP) : ''}${quando ? ' (a mais recente em ' + quando + ')' : ''}: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.${vd.total > vd.n ? '&#10;São ' + vd.total + ' vendas ao todo; a média usa as ' + vd.n + ' mais recentes.' : ''}&#10;Na régua, é o losango.`
     : 'Ainda não há venda registrada aqui. A média aparece na primeira venda registrada no Balcão.';
   return `<div class="pv-preco vendido" data-dica="${dica}">
         <small>Últimas Vendas</small>${vd.v != null ? ptValor(vd.v) : '<b class="pv-nada">a apurar</b>'}
@@ -55117,7 +55168,7 @@ function ptCartao(b, grupo){
   const origem = grupo ? `média de ${b.g.length} conta${b.g.length > 1 ? 's' : ''}`
     : minha ? 'sua meta' : m.fonte === 'mercado' ? 'mediana do mercado' : 'sugestão: custo + 35%';
   const vagasTxt = !b.usaCPF ? 'não consome CPF' : b.semTeto ? 'sem teto de CPF' : b.travada ? 'sem vaga de CPF' : `${b.vagas} ${b.vagas === 1 ? 'vaga' : 'vagas'} de CPF`;
-  const nomeP = b.p === 'azul' ? nomeCanalAzul(b.canal) : prog(b.p).n;
+  const nomeP = canaisDe(b.p) ? nomeCanal(b.p, b.canal) : prog(b.p).n;
   const ca = b.canal ? `,'${b.canal}'` : '';
   const dif = vd.v != null && b.meta ? (vd.v - b.meta) / b.meta * 100 : null;
   const quando = vd.ultima ? dataBR(String(vd.ultima).slice(0, 10)) : '';
@@ -55129,8 +55180,8 @@ function ptCartao(b, grupo){
   return `<article class="pv-card${b.travada ? ' travada' : ''}${minha ? ' minha' : ''}" style="--marca:${prog(b.p).cor}" data-pv-prog="${esc(b.p)}"${b.canal ? ` data-pv-canal="${b.canal}"` : ''}>
     <div class="pv-topo">${discoProg(b.p)}<div><b>${esc(nomeP)}</b><small>${esc(sub)}</small></div>
       ${b.travada ? '<span class="etq brasa">bloqueada</span>' : ''}</div>
-    ${b.p === 'azul' ? `<div class="pv-canais" role="tablist" aria-label="Onde vender as milhas Azul">${CANAIS_AZUL.map(c =>
-      `<button type="button" role="tab" data-pt-canal="${c.id}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : `<div class="pv-canais um" role="tablist" aria-label="Programa"><button type="button" role="tab" class="on" aria-selected="true" tabindex="-1" data-dica="${esc(prog(b.p).n)}: um saldo só, uma meta só.">${esc(PV_NOME_OFICIAL[b.p] || prog(b.p).n)}</button></div>`}
+    ${canaisDe(b.p) ? `<div class="pv-canais" role="tablist" aria-label="Por onde vender as milhas ${esc(prog(b.p).n)}" style="--n:${canaisDe(b.p).length}">${canaisDe(b.p).map(c =>
+      `<button type="button" role="tab" data-pt-canal="${c.id}" data-pt-cprog="${b.p}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : `<div class="pv-canais um" role="tablist" aria-label="Programa"><button type="button" role="tab" class="on" aria-selected="true" tabindex="-1" data-dica="${esc(prog(b.p).n)}: um saldo só, uma meta só.">${esc(PV_NOME_OFICIAL[b.p] || prog(b.p).n)}</button></div>`}
     <div class="pv-qtd">${!grupo
       ? `<button type="button" onclick="editarSaldo('${l.saldoId}')" data-dica="Ajustar o saldo">${nBR(b.qtd)}</button>`
       : `<button type="button" tabindex="-1" style="cursor:default">${nBR(b.qtd)}</button>`}<small>milhas</small></div>
@@ -55199,7 +55250,7 @@ function ptRenderVitrine(){
   if (ct){ ct.innerHTML = chips; ct.querySelectorAll('[data-pt-conta]').forEach(bt => bt.onclick = () => ptEscolherConta(bt.dataset.ptConta)); }
   ptAplicarAba();
   cx.querySelectorAll('[data-pt-conta]').forEach(bt => bt.onclick = () => ptEscolherConta(bt.dataset.ptConta));
-  cx.querySelectorAll('[data-pt-canal]').forEach(bt => bt.onclick = () => ptEscolherCanal(bt.dataset.ptCanal));
+  cx.querySelectorAll('[data-pt-canal]').forEach(bt => bt.onclick = () => ptEscolherCanal(bt.dataset.ptCanal, bt.dataset.ptCprog));
   const bs = cx.querySelector('#ptSimular'); if (bs) bs.onclick = () => ptSimular();
   cx.querySelectorAll('.pv-meta-in').forEach(el => {
     el.addEventListener('focus', () => el.select());
