@@ -11784,7 +11784,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 00:30';
+const BUILD = '2026-10-13 01:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -54400,7 +54400,8 @@ function exControles(){
 .pv-precos.tres{ grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap:6px; }
 .pv-precos.tres .pv-preco{ padding:9px 10px; }
 .pv-precos.tres .pv-seta svg{ width:15px; height:15px; }
-.pv-precos.tres .pv-div{ margin:4px 1px; }
+.pv-precos.tres .pv-div{ margin:4px 7px; }
+@container (max-width:340px){ .pv-precos.tres .pv-div{ margin:4px 3px; } }
 .pv-val{ display:flex; align-items:baseline; gap:3px; }
 .pv-val span, .pv-meta span{ font:600 calc(11.5px * var(--esc)) var(--f-m, inherit); color:var(--grafite); }
 .pv-precos.tres .pv-val, .pv-precos.tres .pv-meta input{ font-size:calc(min(19px, 5.4cqi) * var(--esc)); }
@@ -54618,6 +54619,8 @@ function exControles(){
 .pv-canais button{ all:unset; box-sizing:border-box; cursor:pointer; text-align:center; padding:7px 6px; border-radius:9px; color:var(--grafite);
   font:600 calc(12.5px * var(--esc)) var(--f-b, inherit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:.15s var(--ease, ease); }
 .pv-canais button:hover{ color:var(--giz); }
+.pv-canais.um{ grid-template-columns:minmax(0, 1fr); }
+.pv-canais.um button{ cursor:default; }
 .pv-canais button.on{ background:color-mix(in srgb, var(--marca) 22%, transparent); color:var(--giz); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--marca) 60%, transparent); }
 .pv-canais button:focus-visible{ outline:2px solid var(--marca); outline-offset:1px; }
 /* últimas vendas: abaixo do custo e da meta, separado por um fio */
@@ -54714,7 +54717,7 @@ function ptFiltrarPosicoes(todas){
 }
 const ptContaPassa = id => !ptSel || ptSel === '*' || !ptContasDisp.length || id === ptSel;
 const ptRotuloConta = () => ptSel && ptSel !== '*' && ptContasDisp.length > 1
-  ? ' · ' + ((ptContasDisp.find(c => c.id === ptSel) || {}).nome || '') : '';
+  ? ' · ' + nomeCurto((ptContasDisp.find(c => c.id === ptSel) || {}).nome || '') : '';
 
 /* A mesma regra da coluna "Venda sugerida": o preço que você fixou para a conta,
    depois o antigo gravado só pelo programa, depois a mediana do mercado na faixa
@@ -54861,7 +54864,7 @@ function ptSimRender(){
   const bons = lista.filter(x => x.ok), fora = lista.filter(x => !x.ok);
   const ac = ptSmAcaoDe();
   const lc = v => `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`;
-  const quem = x => todos ? `${esc(x.nome)} · ${esc(x.l.conta.nome)}` : esc(x.l.conta.nome);
+  const quem = x => todos ? `${esc(x.nome)} · ${esc(nomeCurto(x.l.conta.nome))}` : esc(nomeCurto(x.l.conta.nome));
   const seg = `<div class="seg sm-base" role="group" aria-label="Preço do milheiro">
       <button type="button" data-sm-base="meta" class="${ptSm.base === 'meta' ? 'on' : ''}">Pela meta</button>
       <button type="button" data-sm-base="vendas" class="${ptSm.base === 'vendas' ? 'on' : ''}">Pelas últimas vendas</button></div>`;
@@ -54880,7 +54883,7 @@ function ptSimRender(){
   alvo.innerHTML = `<div class="sm-res-cab"><div class="olho jade" style="margin:0">Missão cumprida: a melhor conta</div>${seg}</div>
     <article class="sm-melhor" style="--marca:${prog(prgM).cor}" id="simMelhor">
       <div class="sm-selo"><span>1º</span>Melhor opção</div>
-      <div class="sm-quem">${discoProg(prgM)}<div><b>${esc(m.l.conta.nome)}</b><small>${esc(m.nome)}${ptSm.canal === 'viagens' && !todos ? ' · ' + esc(ac.n.toLowerCase()) : ''} · ${nBR(ptSm.mi)} milhas${pax ? ` · ${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}` : ''}</small></div></div>
+      <div class="sm-quem">${discoProg(prgM)}<div><b>${esc(nomeCurto(m.l.conta.nome))}</b><small>${esc(m.nome)}${ptSm.canal === 'viagens' && !todos ? ' · ' + esc(ac.n.toLowerCase()) : ''} · ${nBR(ptSm.mi)} milhas${pax ? ` · ${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}` : ''}</small></div></div>
       <div class="sm-lucro"><small>Lucro desta venda</small><b class="${m.lucro >= 0 ? 'jade' : 'brasa'}">${lc(m.lucro)}</b>
         <span>${m.l.cpm ? ((m.preco - m.l.cpm) / m.l.cpm * 100 >= 0 ? '+' : '−') + Math.abs((m.preco - m.l.cpm) / m.l.cpm * 100).toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% sobre o custo' : ''}</span></div>
       <div class="sm-metricas">
@@ -54898,7 +54901,7 @@ function ptSimRender(){
         <span class="sm-pos">${i + 2}º</span>${todos ? discoProg(x.l.prog) : `<span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>`}
         <div class="sm-nome"><b>${quem(x)}</b><small>${brl2(x.preco)} contra ${brl2(x.l.cpm)} · ${esc(ptCpfTxt(x))}</small></div>
         <div class="sm-val"><b class="${x.lucro >= 0 ? 'jade' : 'brasa'}">${lc(x.lucro)}</b><small>${brl(Math.abs(m.lucro - x.lucro))} a menos</small></div>
-        <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="${ac.acao} por ${esc(x.l.conta.nome)}">${ac.id === 'passagem' ? 'Emitir' : 'Reservar'}</button>
+        <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="${ac.acao} por ${esc(nomeCurto(x.l.conta.nome))}">${ac.id === 'passagem' ? 'Emitir' : 'Reservar'}</button>
       </div>`).join('')}</div>` : ''}
     ${ptSmFora(fora, quem)}
     <p class="fraco sm-nota">O lucro é o preço do milheiro menos o seu custo real, vezes as milhas. Cada passageiro conta como pessoa nova na conta: se ele já voou por ela no período, na Smiles e na Azul Fidelidade a vaga não é gasta de novo.</p>`;
@@ -54926,7 +54929,7 @@ function ptSmRenderShop(alvo){
   const lista = ptSmLista = ptSmCandShop(ptSm.mi).map(x => Object.assign(x, {shop:true}));
   const bons = lista.filter(x => x.ok), fora = lista.filter(x => !x.ok);
   const nomeShop = (SHOPPINGS.find(x => x.id === ptSm.prog) || {}).n || '';
-  const quem = x => esc(x.l.conta.nome);
+  const quem = x => esc(nomeCurto(x.l.conta.nome));
   if (!bons.length){
     alvo.innerHTML = `<div class="sm-res-cab"><div class="olho" style="margin:0">Resultado</div></div>
       <div class="sm-espera alerta"><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5h.01"/></svg><div><b>Nenhuma conta tem ${nBR(ptSm.mi)} milhas para este resgate</b><span>${lista.length ? 'Veja quanto falta em cada uma abaixo.' : 'Nenhuma conta tem milhas neste programa.'}</span></div></div>
@@ -54940,7 +54943,7 @@ function ptSmRenderShop(alvo){
   alvo.innerHTML = `<div class="sm-res-cab"><div class="olho jade" style="margin:0">Missão cumprida: a melhor conta</div></div>
     <article class="sm-melhor" style="--marca:${prog(m.l.prog).cor}" id="simMelhor">
       <div class="sm-selo"><span>1º</span>Melhor opção</div>
-      <div class="sm-quem">${discoProg(m.l.prog)}<div><b>${esc(m.l.conta.nome)}</b><small>${esc(nomeShop)} · ${nBR(ptSm.mi)} milhas</small></div></div>
+      <div class="sm-quem">${discoProg(m.l.prog)}<div><b>${esc(nomeCurto(m.l.conta.nome))}</b><small>${esc(nomeShop)} · ${nBR(ptSm.mi)} milhas</small></div></div>
       <div class="sm-lucro"><small>Custo do resgate</small><b class="ouro">${brl(m.custo)}</b><span>${brl2(m.l.cpm)} o milheiro</span></div>
       <p class="sm-porque">${porque}</p>
       <div class="sm-metricas">
@@ -54959,7 +54962,7 @@ function ptSmRenderShop(alvo){
         <span class="sm-pos">${i + 2}º</span><span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>
         <div class="sm-nome"><b>${quem(x)}</b><small>${brl2(x.l.cpm)} o milheiro · ${esc(ptCpfShopTxt(x))} · ${nBR(x.l.qtd)} milhas</small></div>
         <div class="sm-val"><b>${brl(x.custo)}</b><small>${Math.abs(d) < .005 ? 'mesmo custo' : `${brl(Math.abs(d))} ${d > 0 ? 'a mais' : 'a menos'}${d < 0 && m.zerada && !x.zerada ? ', mas tem vaga de CPF' : ''}`}</small></div>
-        <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="Resgatar por ${esc(x.l.conta.nome)}">Resgatar</button>
+        <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="Resgatar por ${esc(nomeCurto(x.l.conta.nome))}">Resgatar</button>
       </div>`; }).join('')}</div>` : ''}
     ${ptSmFora(fora, quem)}
     <p class="fraco sm-nota">A ordem: primeiro a conta que já não tem vaga de CPF (as milhas dela não viram mais passagem); depois o menor custo do milheiro; no empate, a de saldo menor, para preservar a conta grande.</p>`;
@@ -55098,6 +55101,8 @@ function ptPrecosGrupo(b, z, f, vd){
       <div class="pv-preco vendido" data-dica="${vd.n ? `Média do milheiro nas ${vd.n === 1 ? 'última venda' : vd.n + ' últimas vendas'} do grupo: o que o cliente pagou, menos taxas e despesas, dividido pelas milhas.` : 'Ainda não há venda registrada. A média aparece na primeira venda.'}">
         <small>Últimas Vendas</small>${vd.v != null ? ptValor(vd.v) : '<b class="pv-nada">a apurar</b>'}<em>${vd.n ? (vd.n === 1 ? '1 venda' : 'média de ' + vd.n + ' vendas') : 'sem venda ainda'}</em></div>`;
 }
+/* Nome oficial que vai no botão único da barra do cartão (a Azul tem três). */
+const PV_NOME_OFICIAL = {suma:'SUMA', iberia:'AVIOS', latampass:'Clube LATAM Pass', smiles:'Clube Smiles', tap:'Clube Miles&Go', virgin:'Flying Club'};
 function ptCartao(b, grupo){
   const f = faixasDe(b.p), z = b.cpm <= f.alvo ? 'jade' : b.cpm <= f.razoavel ? 'ouro' : 'brasa';
   const um = !grupo ? b.metas[0] : null, l = um ? um.l : null, m = um ? um.m : null;
@@ -55125,7 +55130,7 @@ function ptCartao(b, grupo){
     <div class="pv-topo">${discoProg(b.p)}<div><b>${esc(nomeP)}</b><small>${esc(sub)}</small></div>
       ${b.travada ? '<span class="etq brasa">bloqueada</span>' : ''}</div>
     ${b.p === 'azul' ? `<div class="pv-canais" role="tablist" aria-label="Onde vender as milhas Azul">${CANAIS_AZUL.map(c =>
-      `<button type="button" role="tab" data-pt-canal="${c.id}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : ''}
+      `<button type="button" role="tab" data-pt-canal="${c.id}" class="${c.id === b.canal ? 'on' : ''}" aria-selected="${c.id === b.canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}. Saldo e custo são os mesmos; meta e vendas são desta opção.">${c.curto}</button>`).join('')}</div>` : `<div class="pv-canais um" role="tablist" aria-label="Programa"><button type="button" role="tab" class="on" aria-selected="true" tabindex="-1" data-dica="${esc(prog(b.p).n)}: um saldo só, uma meta só.">${esc(PV_NOME_OFICIAL[b.p] || prog(b.p).n)}</button></div>`}
     <div class="pv-qtd">${!grupo
       ? `<button type="button" onclick="editarSaldo('${l.saldoId}')" data-dica="Ajustar o saldo">${nBR(b.qtd)}</button>`
       : `<button type="button" tabindex="-1" style="cursor:default">${nBR(b.qtd)}</button>`}<small>milhas</small></div>
@@ -55148,7 +55153,7 @@ function ptCartao(b, grupo){
       ${merc ? `<i class="k" style="left:${pc(merc.faixa.mediana)}%"></i>` : ''}
       ${vd.v != null ? `<i class="v" style="left:${pc(vd.v)}%"></i>` : ''}
       <i class="p c" style="left:${pc(b.cpm)}%"></i>${grupo ? '' : `<i class="p m" style="left:${pc(b.meta)}%"></i>`}</div>`}
-    ${grupo ? `<div class="pv-contas-prog"><div class="pv-cp-cab"><span>Conta</span><em>Milhas</em><em>Custo real</em><em>Meta</em></div>${b.metas.map(x => `<div data-dica="${esc(x.l.conta.nome)}: o milheiro custou ${brl2(x.l.cpm)} e a meta é vender a ${brl2(x.m.v)}${x.m.fonte === 'minha' ? ' (meta sua)' : ' (sugestão)'}."><span>${esc(x.l.conta.nome)}</span><em>${nBR(x.l.qtd)}</em><em class="c">${brl2(x.l.cpm)}</em><em class="m" style="color:var(--${x.m.fonte === 'minha' ? 'ouro' : 'jade'})">${brl2(x.m.v)}</em></div>`).join('')}</div>` : ''}
+    ${grupo ? `<div class="pv-contas-prog"><div class="pv-cp-cab"><span>Conta</span><em>Milhas</em><em>Custo real</em><em>Meta</em></div>${b.metas.map(x => `<div data-dica="${esc(nomeCurto(x.l.conta.nome))}: o milheiro custou ${brl2(x.l.cpm)} e a meta é vender a ${brl2(x.m.v)}${x.m.fonte === 'minha' ? ' (meta sua)' : ' (sugestão)'}."><span>${esc(nomeCurto(x.l.conta.nome))}</span><em>${nBR(x.l.qtd)}</em><em class="c">${brl2(x.l.cpm)}</em><em class="m" style="color:var(--${x.m.fonte === 'minha' ? 'ouro' : 'jade'})">${brl2(x.m.v)}</em></div>`).join('')}</div>` : ''}
     <div class="pv-pe">
       <div><small>Lucro na meta</small><b class="${lucro >= 0 ? 'jade' : 'brasa'}">${lucro >= 0 ? '+' : '−'}${brl(Math.abs(lucro))}</b></div>
       <div><small>Margem</small><b class="${mg >= 0 ? 'jade' : 'brasa'}">${mg >= 0 ? '+' : '−'}${Math.abs(mg).toLocaleString('pt-BR', {maximumFractionDigits:1})}%</b></div>
@@ -55169,7 +55174,7 @@ function ptRenderVitrine(){
   const lucro = receita - custo;
   const totConta = id => soma((posicoesDeVenda() || []).filter(l => l.conta.id === id).map(l => l.qtd));
   const chip = (id, ini, nome, pe) => `<button type="button" class="pv-conta${ptSel === id ? ' on' : ''}" data-pt-conta="${esc(id)}" aria-pressed="${ptSel === id}">
-      <span class="pv-ini">${ini}</span><span><b>${esc(nome)}</b><small>${pe}</small></span></button>`;
+      <span class="pv-ini">${ini}</span><span><b>${esc(id === '*' ? nome : nomeCurto(nome))}</b><small>${pe}</small></span></button>`;
   /* "Grupo todo" vem primeiro, separado das contas por um fio; as contas seguem
      em ordem alfabética, sem fio entre elas. */
   const chips = (ptContasDisp.length > 1 ? chip('*', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c2.6-.4 5 1 5.7 4.4"/></svg>', 'Grupo todo', milCurto(soma(ptContasDisp.map(c => totConta(c.id)))) + ' milhas')
