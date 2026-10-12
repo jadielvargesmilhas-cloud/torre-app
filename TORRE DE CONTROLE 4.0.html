@@ -7777,6 +7777,7 @@ svg.gr .pt-halo{ opacity:.16; pointer-events:none; }
 .heroi-numeros{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin:22px 0 20px; }
 .heroi-numeros > div{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:11px 12px; min-width:0; }
 .heroi-numeros b{ display:block; font-family:var(--f-m); font-size:calc(16px * var(--esc)); color:var(--giz); font-weight:600; white-space:nowrap; letter-spacing:-.02em; }
+.heroi-numeros .hn-quem{ display:block; font-style:normal; }
 .heroi-numeros span{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); margin-top:3px; }
 .heroi-barra{ display:flex; height:10px; border-radius:99px; overflow:hidden; gap:3px; }
 .heroi-barra i{ display:block; min-width:4px; border-radius:99px; }
@@ -11773,7 +11774,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-11 09:10';
+const BUILD = '2026-10-11 23:55';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16522,6 +16523,17 @@ function fatiasHeroi(itens, nome){
   out.todos = v.map((x, i) => ({n:nome(x), v:x.v, cor:CORES_HEROI[Math.min(i, 4)]}));
   return out;
 }
+/* "fecha primeiro · Azul Fidelidade" em duas linhas (pedido do Jadiel, 11/10/2026):
+   o que é na primeira, de quem é na segunda. */
+/* Veredito com duas frases: uma por linha (pedido do Jadiel, 11/10/2026).
+   "Abaixo do típico (+55%)." em cima, "O melhor do período foi +75%." embaixo. */
+function vereditoEmLinhas(txt){
+  return String(txt == null ? '' : txt).split(/(?<=\.)\s+(?=[A-ZÀ-Ú])/).map(esc).join('<br>');
+}
+function rotuloHeroiLinhas(sp){
+  const t = String(sp == null ? '' : sp), i = t.indexOf(' · ');
+  return i < 0 ? esc(t) : `${esc(t.slice(0, i))}<i class="hn-quem" title="${esc(t.slice(i + 3))}">· ${esc(t.slice(i + 3))}</i>`;
+}
 function montarHeroi(alvo, o){
   if (!alvo) return;
   /* Sem dados, o painel continua com a cara de painel: o número zero à
@@ -16550,8 +16562,8 @@ function montarHeroi(alvo, o){
       <div class="heroi-valor">${o.valor}</div>
       <div class="heroi-linha">${o.linha || ''}</div>
       <div class="heroi-numeros">${o.numeros.map(([b, sp, det]) => det && DETALHES_HEROI[det]
-        ? `<button type="button" class="hn-det" data-det="${det}" aria-label="Ver detalhes: ${esc(sp)}"><b>${b}</b><span>${esc(sp)}</span><svg class="hn-seta"><use href="#i-seta-d"/></svg></button>`
-        : `<div><b>${b}</b><span>${esc(sp)}</span></div>`).join('')}</div>
+        ? `<button type="button" class="hn-det" data-det="${det}" aria-label="Ver detalhes: ${esc(sp)}"><b>${b}</b><span>${rotuloHeroiLinhas(sp)}</span><svg class="hn-seta"><use href="#i-seta-d"/></svg></button>`
+        : `<div><b>${b}</b><span>${rotuloHeroiLinhas(sp)}</span></div>`).join('')}</div>
       ${tot > 0 ? `<div class="heroi-comp" role="img" aria-label="${esc(o.compRot || 'Composição')}">
         <div class="heroi-barra">${o.fatias.map(f => `<i style="flex:${f.v.toFixed(2)};background:${f.cor}" data-dica="${esc(f.n)}: ${esc(o.fmtFatia ? o.fmtFatia(f.v) : nBR(f.v))} (${esc(pct(f.v / tot * 100, 1))})"></i>`).join('')}</div>
         <div class="heroi-leg">${o.fatias.map(f => `<span><i style="background:${f.cor}"></i>${esc(f.n)} <b>${pct(f.v / tot * 100, 0)}</b></span>`).join('')}</div>
@@ -19134,7 +19146,7 @@ function abrirDetalheRadar(p, tipo, gatilho){
     const tomV = ver && ver.tom ? ver.tom : 'neutro';
     const titV = tomV === 'topo' ? 'Vale a pena' : tomV === 'meio' ? 'Na média do período' : tomV === 'baixo' ? 'Abaixo do que já pagou' : 'Sem comparação';
     blocoAr = djSec('A campanha no ar vale a pena?', 'alvo', `<div class="dj-ver dj-v-${tomV}">
-      <b>${titV}</b><span>${esc(ver ? ver.txt : '')}</span>
+      <b>${titV}</b><span>${vereditoEmLinhas(ver ? ver.txt : '')}</span>
       ${topo != null && topo > aberta.v ? `<small>A base de ${fmt(aberta.v)} vale para quem tem o clube; o degrau mais alto, por tempo de assinatura, chega a ${fmt(topo)}.</small>` : ''}
     </div>`);
   }
@@ -19158,7 +19170,7 @@ function abrirDetalheRadar(p, tipo, gatilho){
       {de:ref.bom, ate:ref.otimo, cor:'bom', nome:'Bom', txt:`+${ref.bom}% a +${ref.otimo}%`},
       {de:ref.otimo, ate:teto, cor:'otimo', nome:'Ótimo', txt:`+${ref.otimo}% ou mais`}
     ], teto, aberta ? {v:aberta.v, rot:'No ar ' + fmt(aberta.v)} : {v:melhorV, rot:'Melhor ' + fmt(melhorV)})
-      + `<p class="dj-nota">${ref.semRef ? 'Sem referência de mercado publicada para este programa: a régua é neutra e serve para comparar com o próprio histórico.' : `Recorde conhecido: +${ref.recorde}%. Cada programa tem a sua régua: 25% é normal na LATAM Pass e fraco na Azul.`}</p>`;
+      + `<p class="dj-nota">${ref.semRef ? 'Sem referência de mercado publicada para este programa: a régua é neutra e serve para comparar com o próprio histórico.' : `Recorde conhecido: +${ref.recorde}%.<br>Cada programa tem a sua régua: 25% é normal na LATAM Pass e fraco na Azul.`}</p>`;
     if (ref.janela) janelaTxt = `<p class="dj-texto">${esc(ref.janela)}.</p>`;
   } else {
     const f = faixasDe(p);
@@ -19289,7 +19301,7 @@ function linhaNoArRadar(p, tipo, ver){
     <i class="ponto pulsa"></i><span>No ar ${oferta}${qtd}${prazo ? ' · ' + prazo : ''}</span>
     <span class="esticar"></span><button type="button" class="cp-olho" onclick="abrirRegras('${melhor.id}', this)"
       aria-label="Ver Campanha" data-dica="Ver Campanha"><svg><use href="#i-olho"/></svg></button>
-    ${ver ? `<span class="rn-ver">${esc(ver.txt)}</span>` : ''}</div>`;
+    ${ver ? `<span class="rn-ver">${vereditoEmLinhas(ver.txt)}</span>` : ''}</div>`;
 }
 
 function cartaoRadarBonus(p, janela){
@@ -21200,7 +21212,7 @@ function radarCampanhaCorpo(c, jan){
           <div class="rc-kpi"><span>${r.n >= 3 ? (r.nomeRef === 'mediana' ? 'Típico (mediana)' : 'Típico (média)') : 'Típico'}</span><b>${r.n >= 3 && r.mediana != null ? d.fmt(r.mediana) : 'n/d'}</b></div>
           <div class="rc-kpi"><span>Melhor do período</span><b>${r.melhor != null ? d.fmt(r.melhor) : 'n/d'}</b></div>
         </div>
-        <p class="rc-veredito cp-${tom}">${esc(veredito)}</p>
+        <p class="rc-veredito cp-${tom}">${vereditoEmLinhas(veredito)}</p>
 
         <div class="rc-mapa" role="img" aria-label="${esc(`Esta campanha é melhor que ${piores} de ${outras.length} campanhas do período`)}">
           <div class="rc-trilho"></div>
