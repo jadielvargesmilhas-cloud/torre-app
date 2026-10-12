@@ -10140,7 +10140,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <section class="heroi" id="mesaHeroi" aria-label="Sua carteira hoje"></section>
             <div class="pilha" style="gap:13px">
               <div class="linha" style="flex-wrap:wrap;gap:11px">
-                <div class="olho anil" style="margin:0;flex:0 0 auto">O que há no tanque</div>
+                <div class="olho anil" style="margin:0;flex:0 0 auto">Patrimônio em pontos e milhas</div>
                 <div class="filtro-contas" id="mesaFiltroConta"></div>
               </div>
               <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(360px,1fr))" id="mesaComposicao"></div>
@@ -11786,7 +11786,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 05:00';
+const BUILD = '2026-10-13 06:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17703,7 +17703,7 @@ function renderMesa(){
                       'Cada uma vale o alvo do próprio programa.',
                       'Ponto de banco não entra: ele ainda escolhe destino.'], linhas)
         : dicaFicha('Nenhuma milha em programa aéreo.',
-                    ['O que há no tanque ainda é ponto de banco, que precisa de uma transferência antes de emitir.']);
+                    ['O que há na carteira ainda é ponto de banco, que precisa de uma transferência antes de emitir.']);
       /* Leva a Emissões, não ao Tanque: o cartão fala do que já está pronto para
          virar passagem, e o passo seguinte é emitir. Ver o saldo de novo, numa
          outra tela, não é passo nenhum. */
@@ -55420,5 +55420,153 @@ function ptRenderVitrine(){
 }
 </script>
 
+
+<style>
+/* ══ patrimônio em pontos e milhas (13/10/2026) ══
+   Do jeito das carteiras de investimento: o total em destaque, quanto custou e
+   o milheiro médio logo abaixo, uma faixa que mostra a divisão por programa nas
+   cores de cada um, e uma linha por programa com o saldo, a fatia e o milheiro
+   com a cor da faixa (verde no alvo, amarelo razoável, vermelho caro). */
+.tq-cartao{ display:flex; flex-direction:column; gap:16px; position:relative; overflow:hidden; container-type:inline-size; }
+/* cartão estreito (duas colunas em tela média): o resumo vira três linhas */
+@container (max-width:520px){
+  .tq-resumo{ grid-template-columns:minmax(0, 1fr); }
+  .tq-resumo > div{ flex-direction:row; justify-content:space-between; align-items:baseline; gap:10px; padding:8px 12px; }
+}
+.tq-cartao::before{ content:''; position:absolute; inset:0 0 auto 0; height:120px; pointer-events:none;
+  background:radial-gradient(90% 100% at 0% 0%, color-mix(in srgb, var(--tq-cor) 14%, transparent), transparent 70%); }
+.tq-pontos{ --tq-cor:var(--anil); } .tq-milhas{ --tq-cor:var(--ouro); }
+.tq-cab{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; position:relative; }
+.tq-tipo{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.tq-chip{ align-self:flex-start; display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:99px; font:650 calc(13px * var(--esc)) var(--f-b, inherit);
+  color:var(--giz); background:color-mix(in srgb, var(--tq-cor) 16%, transparent); border:1px solid color-mix(in srgb, var(--tq-cor) 45%, var(--fio)); }
+.tq-chip svg{ width:15px; height:15px; fill:none; stroke:var(--tq-cor); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.tq-tipo small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.tq-total{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+.tq-total b{ font:700 calc(30px * var(--esc)) var(--f-m, inherit); letter-spacing:-.04em; color:var(--giz); line-height:1; font-variant-numeric:tabular-nums; }
+.tq-total span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.tq-resumo{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1px; background:var(--fio); border:1px solid var(--fio); border-radius:13px; overflow:hidden; position:relative; }
+.tq-resumo > div{ background:var(--sup-0, var(--sup-1)); padding:9px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.tq-resumo small{ color:var(--grafite); font-size:calc(10.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.tq-resumo b{ color:var(--giz); font:700 calc(15px * var(--esc)) var(--f-m, inherit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tq-resumo b.jade{ color:var(--jade); } .tq-resumo b.ouro{ color:var(--ouro); } .tq-resumo b.brasa{ color:var(--brasa); }
+.tq-faixa{ display:flex; gap:3px; height:12px; position:relative; }
+.tq-faixa i{ display:block; height:100%; border-radius:4px; background:var(--c); min-width:4px; transition:filter .15s, transform .15s; cursor:help; }
+.tq-faixa i:first-child{ border-radius:99px 4px 4px 99px; } .tq-faixa i:last-child{ border-radius:4px 99px 99px 4px; } .tq-faixa i:only-child{ border-radius:99px; }
+.tq-faixa i:hover{ filter:brightness(1.15); transform:scaleY(1.25); }
+.tq-lista{ display:flex; flex-direction:column; gap:2px; }
+.tq-linha{ all:unset; box-sizing:border-box; cursor:pointer; display:grid; grid-template-columns:minmax(0, 1fr) auto auto; align-items:center; gap:14px; padding:8px 10px; border-radius:11px; transition:background .15s; }
+.tq-linha:hover{ background:var(--sup-2); }
+.tq-linha:focus-visible{ outline:2px solid var(--anil-claro, var(--anil)); outline-offset:1px; }
+.tq-l-nome{ display:flex; align-items:center; gap:10px; min-width:0; }
+.tq-l-txt{ display:flex; flex-direction:column; gap:5px; min-width:0; flex:1; }
+.tq-l-nome b{ color:var(--giz); font-weight:600; font-size:calc(14px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tq-mini{ display:block; height:4px; border-radius:99px; background:var(--fio-suave, var(--fio)); overflow:hidden; }
+.tq-mini i{ display:block; height:100%; border-radius:99px; background:var(--c); transition:width .7s var(--mola, ease); }
+.tq-l-qtd{ display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+.tq-l-qtd b{ font:650 calc(14.5px * var(--esc)) var(--f-m, inherit); color:var(--giz); font-variant-numeric:tabular-nums; letter-spacing:-.02em; white-space:nowrap; }
+.tq-l-qtd small{ color:var(--grafite); font:500 calc(11.5px * var(--esc)) var(--f-m, inherit); }
+.tq-l-cpm{ min-width:84px; text-align:center; padding:4px 9px; border-radius:99px; font:650 calc(12px * var(--esc)) var(--f-m, inherit); white-space:nowrap;
+  border:1px solid var(--fio); color:var(--grafite); }
+.tq-l-cpm.jade{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 9%, transparent); }
+.tq-l-cpm.ouro{ color:var(--ouro); border-color:color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:color-mix(in srgb, var(--ouro) 9%, transparent); }
+.tq-l-cpm.brasa{ color:var(--brasa); border-color:color-mix(in srgb, var(--brasa) 45%, var(--fio)); background:color-mix(in srgb, var(--brasa) 9%, transparent); }
+.tq-cab-lista{ display:grid; grid-template-columns:minmax(0, 1fr) auto auto; gap:14px; padding:0 10px 4px; color:var(--grafite); font-size:calc(10.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; }
+.tq-cab-lista span:last-child{ min-width:84px; text-align:center; }
+.tq-cartao > .comp-rodape{ margin-top:auto; padding-top:12px; border-top:1px solid var(--fio-suave, var(--fio)); }
+@media (max-width:560px){
+  .tq-total b{ font-size:calc(24px * var(--esc)); }
+  .tq-linha, .tq-cab-lista{ grid-template-columns:minmax(0, 1fr) auto; }
+  .tq-l-cpm, .tq-cab-lista span:last-child{ grid-column:1 / -1; justify-self:start; }
+  .tq-l-cpm{ margin-left:42px; margin-top:-4px; }
+  .tq-cab-lista span:last-child{ display:none; }
+  .tq-resumo{ grid-template-columns:minmax(0, 1fr); }
+  .tq-resumo > div{ flex-direction:row; justify-content:space-between; align-items:baseline; gap:10px; padding:8px 12px; }
+  .tq-resumo b{ font-size:calc(13.5px * var(--esc)); }
+}
+</style>
+<script>
+/* Patrimônio em pontos e milhas: a mesma conta de antes (saldo, investido e
+   milheiro por programa, filtrados pela conta escolhida), com outro desenho. */
+renderComposicao = function(){
+  const alvo = $('#mesaComposicao'); if (!alvo) return;
+  const sal = saldoPorProgramaDe(filtroConta);
+  const inv = investidoPorProgramaDe(filtroConta);
+  const dono = filtroConta === 'grupo' ? null : DB.contas.find(c => c.id === filtroConta);
+  const ICO = {pontos:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>',
+               milhas:'<svg viewBox="0 0 24 24"><path d="M3 13.5l7.5-2.2L14 4.5c.5-1 1.8-1 2.1.1l-.9 6.2 4.6 1.4c.9.3.9 1.6 0 1.9l-4.6 1.4.9 4.2c.2.9-.9 1.5-1.6.9L11 18l-8-2.6z"/></svg>'};
+
+  const painel = (tipo, rot, nota) => {
+    const itens = PROG_IDS.filter(p => prog(p).tipo === tipo && (sal[p] || 0) > 0)
+      .map(p => ({p, qtd:sal[p], inv:inv[p] || 0}))
+      .sort((a, b) => b.qtd - a.qtd);
+    const total = soma(itens.map(i => i.qtd));
+    const totalInv = soma(itens.map(i => i.inv));
+    if (!itens.length){
+      const pre = [];
+      if (dono) pre.push(`contaId:'${dono.id}'`);
+      if (tipo === 'milhas') pre.push(`prog:'smiles'`);
+      const arg = pre.length ? `null,{${pre.join(',')}}` : '';
+      return `<div class="cartao tq-cartao tq-${tipo}"><div class="tq-cab"><div class="tq-tipo"><span class="tq-chip">${ICO[tipo]}${rot}</span><small>${nota}</small></div></div>
+        <div class="vazio" style="padding:18px;border:0">
+          <p>${dono ? esc(dono.nome) + ' não tem saldo em ' + rot.toLowerCase() + '.' : 'Nada lançado em ' + rot.toLowerCase() + ' ainda.'}</p>
+          <button class="etq leva" onclick="irPara('mesa');irParaAba('mesa','ms-lancamentos');editarLancamento(${arg})">Cadastrar lançamento<svg><use href="#i-seta-d"/></svg></button>
+        </div></div>`;
+    }
+    /* milheiro médio só com o que tem custo lançado: programa sem custo entraria
+       como de graça e puxaria a média para baixo */
+    const comCusto = itens.filter(i => i.inv > 0);
+    const qCusto = soma(comCusto.map(i => i.qtd));
+    const cpmMedio = qCusto ? soma(comCusto.map(i => i.inv)) / qCusto * 1000 : null;
+    const cor = p => prog(p).cor || 'var(--ouro)';
+    const faixa = itens.map(i => `<i style="--c:${cor(i.p)};flex:${Math.max(i.qtd / total, .015).toFixed(4)}" data-dica="${esc(prog(i.p).n)}: ${nBR(i.qtd)} (${pct(i.qtd / total * 100, 0)})"></i>`).join('');
+    const linhas = itens.map(i => {
+      const fatia = total ? i.qtd / total * 100 : 0;
+      const cpm = i.inv && i.qtd ? i.inv / i.qtd * 1000 : null;
+      const cl = cpm != null ? classeCPM(i.p, cpm) : {z:'', t:'sem custo'};
+      return `<button type="button" class="tq-linha comp-linha" style="--c:${cor(i.p)}" onclick="editarSaldoDe('${i.p}')"
+          aria-label="Ajustar o saldo de ${esc(prog(i.p).n)}"
+          data-dica-tabela="${esc(fichaTanque(i.p, i.qtd, fatia, i.inv, tipo))}" data-dica-lado="baixo">
+        <span class="tq-l-nome">${discoProg(i.p, 'p')}<span class="tq-l-txt"><b>${esc(prog(i.p).n)}</b><i class="tq-mini"><i style="width:${fatia.toFixed(1)}%"></i></i></span></span>
+        <span class="tq-l-qtd"><b>${nBR(i.qtd)}</b><small>${pct(fatia, fatia < 10 ? 1 : 0)}</small></span>
+        <span class="tq-l-cpm ${cl.z}" title="${esc(cl.t)}">${cpm != null ? brl2(cpm) : 'sem custo'}</span>
+      </button>`;
+    }).join('');
+    const zMed = cpmMedio == null ? '' : (() => { const zs = comCusto.map(i => classeCPM(i.p, i.inv / i.qtd * 1000).z); return zs.includes('brasa') && zs.filter(z => z === 'brasa').length > zs.length / 2 ? 'brasa' : zs.every(z => z === 'jade') ? 'jade' : 'ouro'; })();
+    const selo = `<button type="button" class="comp-selo" onclick="novoLancamentoDe('${tipo}')"><svg><use href="#i-mais"/></svg>Novo Programa de ${tipo === 'pontos' ? 'Pontos' : 'Milhas'}</button>`;
+    let rodape;
+    if (tipo !== 'pontos') rodape = `<div class="comp-rodape so-selo">${selo}</div>`;
+    else {
+      const vira = soma(itens.map(i => valorPrograma(i.p, i.qtd).milhas || 0));
+      const frase = !vira ? '' : `<span data-dica-tabela="${esc(dicaTabela(
+        ['Ponto ainda não é milha.', 'Saindo hoje pela melhor rota, viraria o que segue, em programas diferentes.'],
+        itens.map(i => { const v = valorPrograma(i.p, i.qtd);
+          return {disco:discoProg(i.p, 'p'), prog:prog(i.p).n, de:nBR(i.qtd) + ' pts', para:nBR(v.milhas || 0) + ' mi ' + curto(prog(v.destino).n), via:v.via}; })))}">
+        Saindo hoje pela <b class="rota-azul">melhor rota</b>, viram <b class="milhas-verde">${nBR(vira)} milhas</b>, em programas diferentes.</span>`;
+      rodape = `<div class="comp-rodape">${frase}${selo}</div>` + sugestoesDePontos(itens);
+    }
+    return `<div class="cartao tq-cartao tq-${tipo}">
+      <div class="tq-cab">
+        <div class="tq-tipo"><span class="tq-chip">${ICO[tipo]}${rot}</span><small>${nota}</small></div>
+        <div class="tq-total"><b>${nBR(total)}</b><span>${tipo === 'pontos' ? 'pontos' : 'milhas'} em ${itens.length} ${itens.length === 1 ? 'programa' : 'programas'}</span></div>
+      </div>
+      <div class="tq-resumo">
+        <div><small>Investido</small><b>${totalInv ? brl(totalInv) : 'R$ 0'}</b></div>
+        <div><small>Milheiro médio</small><b class="${zMed}">${cpmMedio != null ? brl2(cpmMedio) : 'sem custo'}</b></div>
+        <div><small>Maior fatia</small><b>${esc(curto(prog(itens[0].p).n))} ${pct(itens[0].qtd / total * 100, 0)}</b></div>
+      </div>
+      <div class="tq-faixa" role="img" aria-label="Divisão de ${rot.toLowerCase()} por programa">${faixa}</div>
+      <div>
+        <div class="tq-cab-lista"><span>Programa</span><span>Saldo</span><span>Milheiro</span></div>
+        <div class="tq-lista">${linhas}</div>
+      </div>
+      ${rodape}
+    </div>`;
+  };
+
+  alvo.innerHTML = painel('pontos', 'Pontos', 'Nos bancos, ainda a direcionar')
+                 + painel('milhas', 'Milhas', 'Nos programas aéreos, prontas para emitir');
+};
+</script>
 </body>
 </html>
