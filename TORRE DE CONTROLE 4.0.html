@@ -10833,6 +10833,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                      bônus" com bonificação quadrimestral é ambíguo: pode ser o do
                      quadrimestre ou o do ano, e a diferença é de quatro vezes. -->
                 <div class="campo"><label id="ccRotBonus">Pontos por bônus</label><input type="text" inputmode="numeric" id="ccQtdBonus" placeholder="Ex.: 1.000">
+                  <label class="ck-rotulo cc-bonus-ja" id="ccBonusJaBox" style="display:none;margin-top:6px;font-size:calc(12.5px * var(--esc))"><input type="checkbox" id="ccBonusJa"> O 1º bônus cai já na assinatura</label>
                   <div class="dica" id="ccDicaBonus"></div></div>
               </div>
 
@@ -11786,7 +11787,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-13 06:45';
+const BUILD = '2026-10-14 18:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -24807,6 +24808,13 @@ function editarCampanha(id, tipoPadrao){
         <div class="dica">Só para campanha de compra na hora da transferência. Zero quando não há.</div></div>
     </div>
     <div id="cpModelo"></div>
+    <!-- Campanha de clube que paga em pontos (17.000 a cada 3 meses, por
+         exemplo) e não em porcentagem: fica guardada aqui, e a assinatura
+         cadastrada depois puxa estes números com um toque. -->
+    <details class="as-bonus" id="cpBonusClube" style="display:none;margin-top:13px"${c.bonusPts || c.bonusAdesao || (c.bonusLista || []).length ? ' open' : ''}>
+      <summary><svg><use href="#i-faisca"/></svg>Bônus em pontos da campanha<small>para quem assinar o clube</small></summary>
+      ${camposBonusHTML('cpB', bonusDaAssin({bonus:{pontos:c.bonusPts || 0, cada:c.bonusCada != null ? c.bonusCada : 1, lista:c.bonusLista || [], primeiro:c.bonusPrim || 'inicio', meses:c.bonusMeses || 12, naAdesao:c.bonusAdesao || 0}}))}
+    </details>
     <div class="campo" style="margin-top:13px"><label>Título</label><input type="text" id="cpTit" value="${esc(c.titulo)}" placeholder="Até 110% de bônus na transferência para o Azul"></div>
     <div class="campo" style="margin-top:13px"><label>Regra que importa</label><textarea id="cpRegra" placeholder="Cadastro obrigatório antes de transferir. Crédito em até 15 dias úteis. Validade do bônus: 6 meses.">${esc(c.regra)}</textarea><div class="dica">Escreva a letra miúda que costuma custar caro esquecer: cadastro prévio, prazo de crédito, validade do bônus, exigência de clube ativo. Cada frase vira uma linha no cartão, então separe as condições com ponto.</div></div>
     <div class="campo" style="margin-top:13px"><label>Link</label><input type="url" id="cpLink" value="${esc(c.link)}" placeholder="https://"></div>`,
@@ -24819,6 +24827,7 @@ function editarCampanha(id, tipoPadrao){
     if (!box || !sel) return;
     const ehClube = $('#cpTipo').value === 'clube';
     box.style.display = ehClube ? '' : 'none';
+    const bxB = $('#cpBonusClube'); if (bxB) bxB.style.display = ehClube ? '' : 'none';
     if (!ehClube) return;
     const cat = catalogoDe($('#cpPara').value);
     const escolhido = sel.value || c.plano || '';
@@ -24829,6 +24838,7 @@ function editarCampanha(id, tipoPadrao){
   $('#cpTipo').addEventListener('change', sincCampPlano);
   $('#cpPara').addEventListener('change', sincCampPlano);
   sincCampPlano();
+  ligarCamposBonus('cpB', {});
 
   /* Bloco do clube: aparece quando o destino tem modelo e a campanha não é de
      assinatura. Na primeira vez que aparece numa campanha nova, preenche bônus e
@@ -24936,6 +24946,12 @@ function editarCampanha(id, tipoPadrao){
       titulo:$('#cpTit').value.trim() || 'Campanha sem título', regra:$('#cpRegra').value.trim(), link:$('#cpLink').value.trim()
     };
     delete novo.tempoClube; delete novo.planosClube; delete novo.bonusSemClube; delete novo.naoCumulativo;
+    ['bonusPts', 'bonusCada', 'bonusPrim', 'bonusMeses', 'bonusAdesao', 'bonusLista'].forEach(k => delete novo[k]);
+    if (novo.tipo === 'clube'){
+      const bnC = lerCamposBonus('cpB');
+      if (temBonusAssin({bonus:bnC})) Object.assign(novo, {bonusPts:bnC.pontos, bonusCada:bnC.cada, bonusPrim:bnC.primeiro, bonusMeses:bnC.meses, bonusAdesao:bnC.naAdesao},
+        bnC.cada === 0 ? {bonusLista:bnC.lista} : {});
+    }
     if ($('#cpSemClube')) novo.bonusSemClube = Number($('#cpSemClube').value) || 0;
     if (degrausForm && $('#cpSemClube'))
       novo.tempoClube = degrausForm.filter(d => d.meses > 0 && d.extra > 0).sort((x, y) => x.meses - y.meses);
@@ -25021,7 +25037,7 @@ function cpmAssinatura(a){
    resposta e é chute.
    ══════════════════════════════════════════════════════════════════════════════ */
 const calcCPM = {prog:'', plano:'', pagto:'mensal', qtd:0, valor:0,
-                 bonus:'', meses:12, qtdBonus:0, cancelar:false, permanencia:12};
+                 bonus:'', meses:12, qtdBonus:0, bonusJa:false, cancelar:false, permanencia:12};
 
 const MODALIDADES_CALC = {mensal:'Mensal', anual_parcelado:'Anual parcelado', anual_avista:'Anual à vista'};
 
@@ -25038,13 +25054,15 @@ const INTERVALO_BONUS = {
    virava 300.000 em vez de 75.000 — quatro vezes mais do que cai de verdade. O
    erro inflava o total e derrubava o milheiro, que é justamente o número que
    decide se o plano vale a pena. */
-function ocorrenciasBonus(tipo, horizonte){
+function ocorrenciasBonus(tipo, horizonte, jaNaAssinatura){
   const h = Math.max(0, Number(horizonte) || 0);
   if (!tipo || tipo === 'sem') return 0;
   /* Bônus de adesão cai uma vez só, desde que o período tenha começado. */
   if (tipo === 'assinatura') return h > 0 ? 1 : 0;
   const passo = INTERVALO_BONUS[tipo] || 1;
-  return Math.floor(h / passo);
+  /* Primeiro bônus já na assinatura: cai nos meses 1, 4, 7, 10 (trimestral em
+     doze meses), quatro vezes; ao completar o período, nos meses 3, 6, 9, 12. */
+  return jaNaAssinatura ? Math.ceil(h / passo) : Math.floor(h / passo);
 }
 
 function contaCalcCPM(){
@@ -25052,7 +25070,7 @@ function contaCalcCPM(){
   const pontos = (calcCPM.qtd || 0) * permanencia;
   /* Bônus só existe quando a bonificação foi escolhida e não é "sem bônus". */
   const temBonus = calcCPM.bonus && calcCPM.bonus !== 'sem';
-  const vezes = ocorrenciasBonus(calcCPM.bonus, calcCPM.meses);
+  const vezes = ocorrenciasBonus(calcCPM.bonus, calcCPM.meses, calcCPM.bonusJa);
   const bonus = temBonus ? (calcCPM.qtdBonus || 0) * vezes : 0;
   /* No anual à vista o valor digitado é o do ano inteiro: multiplicá-lo pelos
      meses daria doze anuidades. Cancelar antes do prazo não devolve nada do que
@@ -25362,7 +25380,7 @@ function abrirContaAbertaClube(){
     ['Pontos do plano', `${nBR(calcCPM.qtd)} × ${r.permanencia} = ${nBR(r.pontos)}`]
   ];
   if (temBonus) linhas.push(['Bônus da campanha',
-    `${nBR(calcCPM.qtdBonus)} × ${ocorrenciasBonus(calcCPM.bonus, calcCPM.meses)} = ${nBR(r.bonus)}`]);
+    `${nBR(calcCPM.qtdBonus)} × ${ocorrenciasBonus(calcCPM.bonus, calcCPM.meses, calcCPM.bonusJa)} = ${nBR(r.bonus)}`]);
   linhas.push(['Total acumulado', nBR(r.total), 'forte']);
   linhas.push(['Milheiro', r.cpm != null ? brl2(r.cpm) : 'n/d', 'fecho']);
 
@@ -25398,8 +25416,17 @@ function assinarPelaCalculadora(){
     planoId: calcCPM.plano || '',
     modalidade: calcCPM.pagto,
     valor: calcCPM.valor,
-    qtd: calcCPM.qtd
+    qtd: calcCPM.qtd,
+    /* O bônus simulado vai junto: antes ficava na calculadora, e a assinatura
+       nascia sem ele, com o milheiro errado e sem as linhas de bônus. */
+    bonus: bonusDaCalculadora()
   });
+}
+function bonusDaCalculadora(){
+  const t = calcCPM.bonus, q = Number(calcCPM.qtdBonus) || 0;
+  if (!t || t === 'sem' || !q) return null;
+  if (t === 'assinatura') return {naAdesao:q};
+  return {pontos:q, cada:INTERVALO_BONUS[t] || 1, primeiro:calcCPM.bonusJa || t === 'mensal' ? 'inicio' : 'fim', meses:Math.max(1, Number(calcCPM.meses) || 12)};
 }
 
 function sincCalcPlanos(){
@@ -25458,8 +25485,10 @@ function rotulosCalcCPM(){
   if (rotB) rotB.textContent = calcCPM.bonus && calcCPM.bonus !== 'sem'
     ? `Pontos de bônus ${NOME_PERIODO[calcCPM.bonus] || ''}`.trim()
     : 'Pontos por bônus';
+  const jaBox = $('#ccBonusJa') && $('#ccBonusJaBox');
+  if (jaBox){ const per = (INTERVALO_BONUS[calcCPM.bonus] || 0) > 1; jaBox.style.display = per ? '' : 'none'; $('#ccBonusJa').checked = !!calcCPM.bonusJa; }
   if (dicaB){
-    const v = ocorrenciasBonus(calcCPM.bonus, calcCPM.meses);
+    const v = ocorrenciasBonus(calcCPM.bonus, calcCPM.meses, calcCPM.bonusJa);
     dicaB.textContent = (calcCPM.bonus && calcCPM.bonus !== 'sem' && v > 0)
       ? `Cai ${v} ${v === 1 ? 'vez' : 'vezes'} em ${calcCPM.meses} ${calcCPM.meses === 1 ? 'mês' : 'meses'}.`
       : ' ';
@@ -25562,6 +25591,7 @@ function iniciarCalcCPM(){
   $('#ccValor').oninput = () => { calcCPM.valor = moedaNum($('#ccValor').value); renderCalcCPM(); };
   $('#ccValor').addEventListener('change', () => { calcCPM.valor = moedaNum($('#ccValor').value); renderCalcCPM(); });
   $('#ccBonus').onchange = () => { calcCPM.bonus = $('#ccBonus').value; renderCalcCPM(); };
+  if ($('#ccBonusJa')) $('#ccBonusJa').onchange = () => { calcCPM.bonusJa = $('#ccBonusJa').checked; renderCalcCPM(); };
   if ($('#btCcZerar')) $('#btCcZerar').onclick = () => { clubeFeitos = {}; pintarPassosClube(); };
   $('#ccMeses').oninput = () => { calcCPM.meses = Number($('#ccMeses').value) || 0; renderCalcCPM(); };
   sincCalcPlanos();
@@ -25816,7 +25846,7 @@ function renderClubes(){
         </div>
         <div class="item-sub">${esc(nomeConta(a.contaId))} · ${MODALIDADES[a.modalidade] || a.modalidade} · ${brl2(a.valor)}${a.cartao ? ' · ' + esc(a.cartao) : ''}</div>
         <div class="item-sub">${pl ? nBR(pl.qtd) + ' pontos por mês' : ''}${a.status === 'ativa' && dias !== null ? ' · renova ' + prazoTexto(dias) + ' (' + dataBR(a.renova) + ')' : ''}</div>
-        ${typeof temBonusAssin === 'function' && temBonusAssin(a) ? (() => { const bb = bonusDaAssin(a); return `<div class="item-sub" style="color:var(--jade)">+ bônus ${[bb.porMes ? `${nBR(bb.porMes)} por mês por ${bb.meses} ${bb.meses === 1 ? 'mês' : 'meses'}` : '', bb.naAdesao ? `${nBR(bb.naAdesao)} na adesão` : ''].filter(Boolean).join(' e ')}</div>`; })() : ''}
+        ${typeof temBonusAssin === 'function' && temBonusAssin(a) ? (() => { const bb = bonusDaAssin(a); return `<div class="item-sub" style="color:var(--jade)">+ bônus ${esc(textoBonusAssin(bb))}</div>`; })() : ''}
         ${a.obs ? `<div class="item-sub" style="margin-top:4px">${esc(a.obs)}</div>` : ''}
       </div>
       <div class="item-num" style="color:${cpm == null ? 'var(--grafite)' : cpm <= f.alvo ? 'var(--jade)' : cpm <= f.razoavel ? 'var(--ouro)' : 'var(--brasa)'}">${cpm == null ? 'n/d' : brl2(cpm)}<small>por milheiro</small></div>
@@ -26098,7 +26128,7 @@ function editarAssinatura(id, pre){
                     modalidade:(pre && pre.modalidade) || (ult && ult.modalidade) || (sug && sug.mod) || 'mensal',
                     valor:(pre && pre.valor) || 0, qtd:(pre && pre.qtd) || 0,
                     inicio:hojeISO(), renova:somaMeses(1), fid:0, status:'ativa',
-                    cartaoId:(ult && ult.cartaoId) || '', cartao:'', obs:'',
+                    cartaoId:(ult && ult.cartaoId) || '', cartao:'', obs:'', ...(pre && pre.bonus ? {bonus:pre.bonus} : {}),
                     _herdado: !!ult, _sugerido: sug || null};
                 })();
   const progsComClube = progsComCatalogo();
@@ -26176,6 +26206,14 @@ function editarAssinatura(id, pre){
         <label>O que a carência prende</label>
         <div class="nota" id="asCarencia"></div>
       </div>
+      <!-- O bônus da campanha mora no próprio cadastro: é ali que se sabe o que
+           a campanha prometeu. Antes ficava só num ícone na lista, e quem
+           simulava "trimestral" na calculadora perdia o bônus ao cadastrar. -->
+      <details class="as-bonus" id="asBonusBloco"${temBonusAssin(a) ? ' open' : ''}>
+        <summary><svg><use href="#i-faisca"/></svg>Bônus da campanha<small id="asBResumo"></small></summary>
+        <div class="bc-camps" id="asBCamps" style="margin-bottom:10px"></div>
+        ${camposBonusHTML('asB', bonusDaAssin(a))}
+      </details>
     </div>`,
     pe:`<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarAssinatura">Salvar</button>`
   });
@@ -26310,6 +26348,24 @@ function editarAssinatura(id, pre){
   };
   if (a.planoId) $('#asPlano').value = a.planoId;
   aplicarPreco(false, !!id);
+  const assinNaTela = () => ({...a, prog:$('#asProg').value, inicio:$('#asInicio').value});
+  const resumoBonus = () => { const r = $('#asBResumo'); if (!r) return; const bb = bonusDaAssin({bonus:lerCamposBonus('asB')}); r.textContent = temBonusAssin({bonus:bb}) ? textoBonusAssin(bb) : 'sem bônus'; };
+  const campsAs = () => {
+    const cx = $('#asBCamps'); if (!cx) return;
+    const p = $('#asProg').value, ini = $('#asInicio').value || hojeISO(), plId = $('#asPlano').value;
+    const lista = (DB.campanhas || []).filter(c => c.tipo === 'clube' && c.para === p && (c.bonusPts || c.bonusAdesao || (c.bonusLista || []).length || c.pontosExtrasAno)
+      && (!c.plano || c.plano === plId) && (!c.fim || c.fim >= somaDias(-10, ini))).slice(0, 4);
+    cx.innerHTML = lista.length ? `<div class="olho" style="margin:0 0 6px">Campanhas deste clube (toque para usar)</div>` + lista.map(c => `<button type="button" class="bc-camp" data-asc="${esc(c.id)}">${esc(c.titulo || 'Campanha de clube')}<small>${Number(c.bonusCada) === 0 ? 'mês a mês' : c.bonusPts ? `${nBR(c.bonusPts)} ${NOME_FREQ[c.bonusCada || 1]}` : ''}${c.bonusAdesao ? ` · ${nBR(c.bonusAdesao)} na adesão` : ''}${c.fim ? ` · até ${dataBR(c.fim)}` : ''}</small></button>`).join('') : '';
+    cx.querySelectorAll('[data-asc]').forEach(bt => bt.onclick = () => {
+      const c = DB.campanhas.find(x => x.id === bt.dataset.asc); if (!c) return;
+      aplicarCampanhaNosCampos('asB', c, (catalogoDe(p) || {planos:[]}).planos.find(x => x.id === plId)); pintarBonusAs();
+    });
+  };
+  const pintarBonusAs = ligarCamposBonus('asB', assinNaTela, () => { resumoBonus(); });
+  campsAs();
+  $('#asPlano').addEventListener('change', campsAs); $('#asProg').addEventListener('change', campsAs); $('#asInicio').addEventListener('change', campsAs);
+  $('#asInicio').addEventListener('change', pintarBonusAs);
+  $('#asProg').addEventListener('change', pintarBonusAs);
 
   /* ── altura fixa da folha ────────────────────────────────────────────────────
      A ficha do plano muda de tamanho conforme o clube: o Club Basic tem sete
@@ -26421,15 +26477,25 @@ function editarAssinatura(id, pre){
       avisar('Escolha o clube antes de salvar.', 'alerta');
       $('#asProg').focus(); return;
     }
-    const novo = { id:a.id || uid(), contaId:$('#asConta').value, prog:$('#asProg').value, planoId:$('#asPlano').value,
+    /* Parte da assinatura gravada: o bônus, a mudança de plano lida no print e
+       qualquer marca sem campo na tela ficavam para trás a cada edição. */
+    const guardado = {...a}; delete guardado._herdado; delete guardado._sugerido; delete guardado.qtd;
+    const novo = { ...guardado, id:a.id || uid(), contaId:$('#asConta').value, prog:$('#asProg').value, planoId:$('#asPlano').value,
       modalidade:$('#asMod').value, valor:moedaNum($('#asValor').value), inicio:$('#asInicio').value,
       renova:$('#asRenova').value, fid:Number($('#asFid').value) || 0, cartaoId:$('#asCartao').value,
       parcelas:$('#asParcelas').value, status:$('#asStatus').value,
       /* guarda o mês escolhido, ou vazio quando a intenção não está marcada */
       cancelarAntes: $('#asCancelarCk').checked ? Number($('#asCancelarMes').value) || 0 : 0,
       cartao:nomeCartao($('#asCartao').value) || '', obs:$('#asObs').value.trim() };
+    const bn = lerCamposBonus('asB');
+    if (bn.cada !== 0 && bn.pontos && !bn.meses){ avisar('Informe por quantos meses a campanha paga o bônus.', 'alerta'); $('#asBMeses').focus(); return; }
+    if (temBonusAssin({bonus:bn})){ novo.bonus = {...(a.bonus || {}), ...bn}; if (bn.cada !== 0) delete novo.bonus.lista; } else delete novo.bonus;
     if (!conferirAntesDeSalvar('assinaturas', novo, 'uma assinatura')) return;
-    if (id) DB.assinaturas[DB.assinaturas.findIndex(x => x.id === id)] = novo; else DB.assinaturas.push(novo);
+    /* titular trocado na assinatura: créditos e bônus vão junto, com os pontos */
+    const contaNova = novo.contaId;
+    if (id) DB.assinaturas[DB.assinaturas.findIndex(x => x.id === id)] = {...novo, contaId:a.contaId}; else DB.assinaturas.push(novo);
+    const movidos = id && a.contaId !== contaNova ? moverClubeDeTitular(novo.id, contaNova) : 0;
+    if (id && a.contaId === contaNova) DB.assinaturas[DB.assinaturas.findIndex(x => x.id === id)].contaId = contaNova;
 
     /* Salvar garante que o livro reflita a assinatura: o crédito de adesão, se
        ainda não existir, e todos os meses que já venceram desde o início. Nada é
@@ -26438,13 +26504,17 @@ function editarAssinatura(id, pre){
     const credito = lancarCreditoInicial(novo, pl);
     salvar();
     const ciclos = lancarCiclosClube(novo.id, true);
+    const gravada = DB.assinaturas.find(x => x.id === novo.id);
+    const bonusMexeu = gravada ? sincronizarBonusClube(gravada) : 0;
 
-    salvar(); fecharFolha(); aplicarTudo();
+    salvar(); fecharFolha(); aplicarTudo(); try { renderClubes(); } catch(_){}
     const partes = [];
+    if (bonusMexeu && gravada && temBonusAssin(gravada)) partes.push('o bônus da campanha já caído');
+    const moveuTxt = movidos ? ` O clube passou para ${nomeCurto(nomeConta(contaNova))} com ${movidos} ${movidos === 1 ? 'lançamento' : 'lançamentos'} e os pontos.` : '';
     if (credito) partes.push(`${nBR(credito.qtd)} ${prog(novo.prog).n} de ${credito.partes.join(' e ')}`);
     if (ciclos) partes.push(`${ciclos} ${ciclos > 1 ? 'créditos mensais' : 'crédito mensal'} já vencidos`);
-    avisar(partes.length ? `Assinatura salva. Entraram ${partes.join(', e mais ')}.` : 'Assinatura salva.',
-      'ok', partes.length ? 6000 : 3200);
+    avisar((partes.length ? `Assinatura salva. Entraram ${partes.join(', e mais ')}.` : 'Assinatura salva.') + moveuTxt,
+      'ok', partes.length || movidos ? 6000 : 3200);
   };
 }
 
@@ -27928,6 +27998,19 @@ function editarLancamento(id, pre){
     if (!conferirAntesDeSalvar('lancamentos', novo, 'um lançamento')) return;
     if (id) DB.lancamentos[DB.lancamentos.findIndex(x => x.id === id)] = novo; else DB.lancamentos.push(novo);
 
+    /* Lançamento de clube com titular trocado: o clube inteiro muda de dono.
+       A assinatura e os outros meses e bônus vão para o novo titular, e os
+       pontos mudam de carteira. Antes só esta linha mudava, e a lista de
+       clubes seguia com o nome antigo. */
+    let clubeMovido = null;
+    if (id && l && l.assinaturaId && l.contaId !== novo.contaId){
+      const aC = (DB.assinaturas || []).find(x => x.id === l.assinaturaId);
+      if (aC){
+        const n = moverClubeDeTitular(aC.id, novo.contaId, {qtd:l.qtd, mexeuSaldo:l.mexeuSaldo, contaIdAntigo:l.contaId});
+        clubeMovido = {n, prog:aC.prog};
+      }
+    }
+
     /* Editar uma transferência atualiza também a linha de saída: data, titular,
        origem, quantidade e custo acompanham a entrada. Se a origem foi retirada,
        a saída sai junto. O saldo das duas pontas é refeito pelo Diário logo
@@ -28021,7 +28104,9 @@ function editarLancamento(id, pre){
     }
 
     salvar(); fecharFolha(); renderLancamentos(); renderMesa(); renderFita(); renderSaldo(); renderVender();
-    avisar(origem ? `Lançado nas duas pontas: entrou em ${prog(novo.prog).n}, saiu de ${prog(origem).n}.` : 'Lançado. O termômetro já foi recalibrado.', 'ok', 5000);
+    if (clubeMovido){ try { renderClubes(); } catch(_){} try { aplicarTudo(); } catch(_){} }
+    avisar(clubeMovido ? `Titular corrigido no clube inteiro: a assinatura${clubeMovido.n ? ` e mais ${clubeMovido.n} ${clubeMovido.n === 1 ? 'lançamento' : 'lançamentos'} do clube` : ''} passaram para ${nomeCurto(nomeConta(novo.contaId))}, com os pontos.`
+      : origem ? `Lançado nas duas pontas: entrou em ${prog(novo.prog).n}, saiu de ${prog(origem).n}.` : 'Lançado. O termômetro já foi recalibrado.', 'ok', clubeMovido ? 7000 : 5000);
     /* Depois do aviso do lançamento, e não antes: quem veio de uma meta recebe
        primeiro a confirmação do que gravou e em seguida o efeito disso na meta,
        que é a ordem em que as duas coisas acontecem. */
@@ -53807,6 +53892,24 @@ function aplicarMudancasClube(){
 .bc-camp{ text-align:left; border:1px solid var(--fio); background:var(--sup-1, transparent); color:var(--giz); border-radius:10px; padding:9px 12px; cursor:pointer; font:inherit; }
 .bc-camp:hover{ border-color:var(--ouro); }
 .bc-camp small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:2px; }
+.bn-grade{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap:12px; }
+.bn-meses{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(112px, 100%), 1fr)); gap:8px; }
+.bn-mes{ display:flex; flex-direction:column; gap:3px; }
+.bn-mes span{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; }
+.bn-mes input{ width:100%; }
+.bn-agenda{ margin-top:12px; border:1px dashed color-mix(in srgb, var(--jade) 45%, var(--fio)); border-radius:12px; padding:10px 14px; color:var(--grafite); font-size:calc(13px * var(--esc)); line-height:1.5; }
+.bn-agenda b{ color:var(--jade); font-weight:600; }
+.bn-agenda .bn-datas{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.bn-agenda .bn-datas span{ border:1px solid var(--fio); border-radius:99px; padding:2px 9px; color:var(--giz); font-size:calc(12px * var(--esc)); }
+.bn-agenda .bn-datas span.ja{ border-color:color-mix(in srgb, var(--jade) 50%, transparent); color:var(--jade); }
+.as-bonus{ grid-column:1 / -1; border:1px solid var(--fio); border-radius:14px; padding:12px 14px; background:color-mix(in srgb, var(--jade) 5%, transparent); }
+.as-bonus > summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; font-weight:600; color:var(--giz); }
+.as-bonus > summary::-webkit-details-marker{ display:none; }
+.as-bonus > summary svg{ width:16px; height:16px; fill:none; stroke:var(--jade); stroke-width:1.8; }
+.as-bonus > summary small{ color:var(--grafite); font-weight:400; margin-left:auto; }
+.as-bonus[open] > summary{ margin-bottom:12px; }
+.cc-prox-bonus{ color:var(--grafite) !important; } .cc-prox-bonus b{ color:var(--jade); font-weight:600; }
+.cc-link-bonus{ border:0; background:none; padding:0; color:var(--anil-claro, var(--anil)); font:inherit; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; }
 </style>
 <script>
 /* ══ BÔNUS DE CAMPANHA NO CLUBE (12/10/2026, pedido do Jadiel) ═════════════════
@@ -53818,11 +53921,57 @@ function aplicarMudancasClube(){
    com o selo "bônus" e custo zero. Assim a carteira recebe os pontos, o milheiro
    médio do programa cai para o valor real, e o crédito do mês mostra o milheiro
    que aquele mês custou de fato. Cada mês novo que cai traz o seu bônus junto. */
+/* 14/10/2026: o bônus deixa de ser só mensal. Cada assinatura guarda os pontos
+   de cada bônus, de quantos em quantos meses ele cai (todo mês, trimestral,
+   semestral...), se o primeiro cai já na assinatura ou ao completar o primeiro
+   período, e por quantos meses a campanha paga. O formato antigo (porMes) é
+   lido como "todo mês, desde o primeiro". */
+const FREQ_BONUS = [[0, 'Mês a mês, valores diferentes'], [1, 'Todo mês'], [2, 'A cada 2 meses'], [3, 'A cada 3 meses (trimestral)'], [4, 'A cada 4 meses'], [6, 'A cada 6 meses (semestral)'], [12, 'Uma vez por ano']];
+const NOME_FREQ = {1:'mensal', 2:'bimestral', 3:'trimestral', 4:'quadrimestral', 6:'semestral', 12:'anual'};
 function bonusDaAssin(a){
   const b = (a && a.bonus) || {};
-  return {porMes:Math.max(0, Number(b.porMes) || 0), meses:Math.max(0, Number(b.meses) || 0), naAdesao:Math.max(0, Number(b.naAdesao) || 0), campanhaId:b.campanhaId || '', obs:b.obs || ''};
+  const pontos = Math.max(0, Number(b.pontos != null ? b.pontos : b.porMes) || 0);
+  const cada = [0, 1, 2, 3, 4, 6, 12].includes(Number(b.cada)) && b.cada !== '' && b.cada != null ? Number(b.cada) : 1;
+  /* Mês a mês: cada mês da campanha com o seu valor (2.000, 2.000, 2.000,
+     3.000, ...). A lista manda, e a duração é o tamanho dela. */
+  const lista = cada === 0 ? (Array.isArray(b.lista) ? b.lista : []).map(v => Math.max(0, Number(v) || 0)) : [];
+  return {pontos, porMes:pontos, cada, lista, primeiro:b.primeiro === 'fim' ? 'fim' : 'inicio',
+    meses:cada === 0 ? lista.length : Math.max(0, Number(b.meses) || 0), naAdesao:Math.max(0, Number(b.naAdesao) || 0), campanhaId:b.campanhaId || '', obs:b.obs || ''};
 }
-const temBonusAssin = a => { const b = bonusDaAssin(a); return b.naAdesao > 0 || (b.porMes > 0 && b.meses > 0); };
+/* Quanto cai de bônus no mês m. */
+const valorBonusMes = (b, m) => b.cada === 0 ? (b.lista[m - 1] || 0) : b.pontos;
+/* Os meses da assinatura (1 = o primeiro mês) em que cai um bônus. */
+function mesesDoBonus(b){
+  const r = [];
+  if (b.cada === 0){ b.lista.forEach((v, i) => { if (v > 0) r.push(i + 1); }); return r; }
+  if (!(b.pontos > 0) || !(b.meses > 0)) return r;
+  for (let m = b.primeiro === 'fim' ? b.cada : 1; m <= b.meses; m += b.cada) r.push(m);
+  return r;
+}
+/* A data em que cai o crédito do mês m da assinatura. */
+function dataDoMesClube(a, m){
+  return diaCreditoDe(a.prog) ? dataDoCiclo(a, m) : somaMeses(m - 1, a.inicio || hojeISO());
+}
+const bonusNoAno = b => b.naAdesao + mesesDoBonus(b).filter(m => m <= 12).reduce((t, m) => t + valorBonusMes(b, m), 0);
+const temBonusAssin = a => { const b = bonusDaAssin(a); return b.naAdesao > 0 || mesesDoBonus(b).length > 0; };
+/* Frase curta do bônus, para a lista de clubes. */
+function textoBonusAssin(b){
+  const ms = mesesDoBonus(b), partes = [];
+  if (ms.length && b.cada === 0){
+    const tot = ms.reduce((t, m) => t + valorBonusMes(b, m), 0);
+    partes.push(`mês a mês, ${ms.length} ${ms.length === 1 ? 'bônus' : 'bônus'} somando ${nBR(tot)}`);
+  } else if (ms.length) partes.push(b.cada === 1 ? `${nBR(b.pontos)} por mês por ${b.meses} ${b.meses === 1 ? 'mês' : 'meses'}`
+    : `${nBR(b.pontos)} ${NOME_FREQ[b.cada]} (${ms.length}x, ${b.primeiro === 'inicio' ? 'o 1º já na assinatura' : `o 1º no ${b.cada}º mês`})`);
+  if (b.naAdesao) partes.push(`${nBR(b.naAdesao)} na adesão`);
+  return partes.join(' e ');
+}
+/* Os bônus que ainda vão cair, com data: é o que a lista mostra como "próximo". */
+function proximosBonus(a){
+  const b = bonusDaAssin(a), diaFixo = diaCreditoDe(a.prog);
+  const caidos = new Set((DB.lancamentos || []).filter(l => l.assinaturaId === a.id && l.bonusClube).map(l => l.bonusChave));
+  return mesesDoBonus(b).filter(m => !caidos.has('mes' + m)).map(m => ({m, qtd:valorBonusMes(b, m), data:dataDoMesClube(a, m)}))
+    .filter(x => x.data >= hojeISO());
+}
 
 /* milheiro da assinatura com o bônus: custo do ano ÷ (pontos do ano + bônus do ano) */
 (function(){
@@ -53832,7 +53981,7 @@ const temBonusAssin = a => { const b = bonusDaAssin(a); return b.naAdesao > 0 ||
     const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(p => p.id === a.planoId);
     if (!pl || !pl.qtd) return null;
     const b = bonusDaAssin(a);
-    const pontosAno = pl.qtd * 12 + b.porMes * Math.min(b.meses, 12) + b.naAdesao;
+    const pontosAno = pl.qtd * 12 + bonusNoAno(b);
     return valorAnualAssin(a) / pontosAno * 1000;
   };
 })();
@@ -53847,8 +53996,10 @@ function sincronizarBonusClube(a){
     .sort((x, y) => String(x.data).localeCompare(String(y.data)) || Number(x.cicloClube) - Number(y.cicloClube));
   const quer = [];
   if (b.naAdesao > 0) quer.push({chave:'adesao', qtd:b.naAdesao, data:a.inicio || (base[0] || {}).data || hojeISO(), ciclo:0, nota:'Bônus da campanha · na adesão'});
-  if (b.porMes > 0) base.slice(0, b.meses).forEach((l, i) => quer.push({chave:'mes' + (i + 1), qtd:b.porMes, data:l.data, ciclo:Number(l.cicloClube), base:l.id,
-    nota:`Bônus da campanha · mês ${i + 1} de ${b.meses}`}));
+  const ms = mesesDoBonus(b);
+  ms.forEach((m, i) => { const l = base[m - 1]; if (!l) return;
+    quer.push({chave:'mes' + m, qtd:valorBonusMes(b, m), data:l.data, ciclo:Number(l.cicloClube), base:l.id,
+      nota:b.cada === 0 ? `Bônus da campanha · mês ${m} de ${b.meses}` : b.cada === 1 ? `Bônus da campanha · mês ${m} de ${b.meses}` : `Bônus ${NOME_FREQ[b.cada]} da campanha · ${i + 1}º de ${ms.length} (mês ${m})`}); });
   let mexeu = 0;
   const saldo = delta => {
     if (!delta) return;
@@ -53872,6 +54023,41 @@ function sincronizarBonusClube(a){
   });
   return mexeu;
 }
+/* ── trocar o titular de um clube (14/10/2026) ───────────────────────────────
+   Assinatura, créditos do mês e bônus são uma coisa só: o titular de um é o de
+   todos. Corrigir o titular num lançamento do clube, ou na assinatura, leva o
+   resto junto, e os pontos saem da carteira antiga e entram na nova. Sem isso a
+   lista de clubes seguia mostrando o titular errado, e a carteira dos dois ficava
+   torta. Devolve quantos lançamentos mudaram de dono.
+   `jaMovido`: um lançamento que a tela já mudou (o que acabou de ser editado),
+   cujos pontos ainda estão na carteira antiga. */
+function moverClubeDeTitular(assinId, novaConta, jaMovido){
+  const a = (DB.assinaturas || []).find(x => x.id === assinId);
+  if (!a || !novaConta) return 0;
+  const antiga = a.contaId, progA = a.prog;
+  const mover = (DB.lancamentos || []).filter(l => l.assinaturaId === assinId && l.contaId !== novaConta);
+  const pontos = l => l.mexeuSaldo === false ? 0 : (Number(l.qtd) || 0);
+  /* quanto sai de cada carteira antiga */
+  const sai = {};
+  mover.forEach(l => { sai[l.contaId] = (sai[l.contaId] || 0) + pontos(l); });
+  if (jaMovido){ const c0 = jaMovido.contaIdAntigo || antiga; if (c0 !== novaConta) sai[c0] = (sai[c0] || 0) + pontos(jaMovido); }
+  mover.forEach(l => { l.contaId = novaConta; });
+  a.contaId = novaConta;
+  let entra = 0;
+  Object.entries(sai).forEach(([c, q]) => {
+    if (!q) return;
+    const sal = DB.saldos.find(x => x.contaId === c && x.prog === progA);
+    if (sal) sal.qtd = Math.max(0, (Number(sal.qtd) || 0) - q);
+    entra += q;
+  });
+  if (entra){
+    const salN = DB.saldos.find(x => x.contaId === novaConta && x.prog === progA);
+    if (salN) salN.qtd = (Number(salN.qtd) || 0) + entra; else if (entra > 0) DB.saldos.push({id:uid(), contaId:novaConta, prog:progA, qtd:entra});
+  }
+  try { Object.keys(sai).forEach(c => acertarSaldoDe(c, progA)); acertarSaldoDe(novaConta, progA); } catch(_){}
+  return mover.length;
+}
+
 /* o bônus acompanha cada crédito mensal novo, sozinho */
 (function(){
   const _ciclos = lancarCiclosClube, _ini = lancarCreditoInicial;
@@ -53888,6 +54074,108 @@ function sincronizarBonusClube(a){
   };
 })();
 
+/* ── campos do bônus, iguais na folha do bônus e no cadastro da assinatura ───── */
+function camposBonusHTML(px, b){
+  return `<div class="bn-grade">
+      <div class="campo"><label>Pontos de cada bônus</label><input type="text" inputmode="numeric" id="${px}Pts" value="${b.pontos ? nBR(b.pontos) : ''}" placeholder="0"></div>
+      <div class="campo"><label>De quanto em quanto tempo</label><select id="${px}Cada" data-ordem="natural">${FREQ_BONUS.map(([v, t]) => `<option value="${v}"${v === b.cada ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="campo"><label>O primeiro bônus cai</label><select id="${px}Prim" data-ordem="natural">
+        <option value="inicio"${b.primeiro !== 'fim' ? ' selected' : ''}>Junto com o 1º mês</option>
+        <option value="fim"${b.primeiro === 'fim' ? ' selected' : ''}>No fim do 1º período</option></select></div>
+      <div class="campo"><label>A campanha paga por (meses)</label><input type="number" id="${px}Meses" min="0" max="36" value="${b.meses || 12}"></div>
+      <div class="campo"><label>Bônus único, na adesão</label><input type="text" inputmode="numeric" id="${px}Ades" value="${b.naAdesao ? nBR(b.naAdesao) : ''}" placeholder="0"></div>
+    </div>
+    <div class="bn-lista" id="${px}Lista" data-valores="${esc(JSON.stringify(b.lista || []))}"></div>
+    <div class="bn-agenda" id="${px}Agenda"></div>`;
+}
+function lerCamposBonus(px){
+  const num = i => Number(String(($('#' + px + i) || {}).value || '').replace(/\D/g, '')) || 0;
+  const cadaV = Number(($('#' + px + 'Cada') || {}).value);
+  const cada = Number.isFinite(cadaV) ? cadaV : 1;
+  const r = {pontos:num('Pts'), cada, primeiro:(($('#' + px + 'Prim') || {}).value) === 'fim' ? 'fim' : 'inicio',
+    meses:Number(($('#' + px + 'Meses') || {}).value) || 0, naAdesao:num('Ades')};
+  if (cada === 0){
+    r.lista = [...document.querySelectorAll('#' + px + 'Lista input[data-m]')].map(i => Number(String(i.value).replace(/\D/g, '')) || 0);
+    r.meses = r.lista.length;
+    r.pontos = 0;
+  }
+  return r;
+}
+/* A agenda escrita por extenso: quanto cai e em que datas. É a resposta para
+   "onde aparece o bônus": antes de salvar, a pessoa vê cada data. */
+function pintarAgendaBonus(px, a){
+  const cx = $('#' + px + 'Agenda'); if (!cx) return;
+  const b = bonusDaAssin({bonus:lerCamposBonus(px)}), ms = mesesDoBonus(b);
+  if (!ms.length && !b.naAdesao){ cx.innerHTML = 'Sem bônus. Preencha os pontos acima quando a campanha der bônus.'; return; }
+  if (b.cada === 0){
+    const tot = ms.reduce((t, m) => t + valorBonusMes(b, m), 0) + b.naAdesao;
+    cx.innerHTML = `Mês a mês: ${ms.length} ${ms.length === 1 ? 'bônus' : 'bônus'}${b.naAdesao ? `, mais <b>${nBR(b.naAdesao)}</b> na adesão` : ''}. No total, <b>${nBR(tot)}</b> pontos de bônus.
+      ${a.inicio && ms.length ? `<div class="bn-datas">${ms.map(m => { const d = dataDoMesClube(a, m); return `<span class="${d <= hojeISO() ? 'ja' : ''}">mês ${m} · +${nBR(valorBonusMes(b, m))} · ${dataBR(d)}</span>`; }).join('')}</div>` : ''}`;
+    return;
+  }
+  const hoje = hojeISO();
+  const datas = ms.map(m => ({m, d:a.inicio ? dataDoMesClube(a, m) : ''}));
+  const total = b.pontos * ms.length + b.naAdesao;
+  cx.innerHTML = `${ms.length ? `Cai <b>${nBR(b.pontos)}</b> ${ms.length === 1 ? 'uma vez' : `${ms.length} vezes`}${b.cada > 1 ? `, ${NOME_FREQ[b.cada]}` : ''}, ${b.primeiro === 'inicio' ? 'a primeira já junto com o 1º mês' : `a primeira no ${b.cada}º mês`}` : ''}${b.naAdesao ? `${ms.length ? ', e mais ' : 'Cai '}<b>${nBR(b.naAdesao)}</b> de uma vez na adesão` : ''}. No total, <b>${nBR(total)}</b> pontos de bônus.
+    ${datas.length && datas[0].d ? `<div class="bn-datas">${datas.map(x => `<span class="${x.d <= hoje ? 'ja' : ''}">mês ${x.m} · ${dataBR(x.d)}</span>`).join('')}</div>` : ''}`;
+}
+/* Grade "mês a mês": uma caixa por mês da campanha. Ao abrir, cada mês vem com
+   o valor de "Pontos de cada bônus", e se muda só o mês diferente. Mudar a
+   duração acrescenta ou tira meses no fim sem perder o que já foi digitado. */
+function montarListaBonus(px){
+  const cx = $('#' + px + 'Lista'); if (!cx) return;
+  const cada = Number(($('#' + px + 'Cada') || {}).value);
+  const esconder = (id, sim) => { const el = $('#' + px + id); if (el && el.closest('.campo')) el.closest('.campo').style.display = sim ? 'none' : ''; };
+  esconder('Prim', cada === 0);
+  const rot = $('#' + px + 'Pts') && $('#' + px + 'Pts').closest('.campo') && $('#' + px + 'Pts').closest('.campo').querySelector('label');
+  if (rot) rot.textContent = cada === 0 ? 'Valor para preencher os meses' : 'Pontos de cada bônus';
+  if (cada !== 0){ cx.innerHTML = ''; cx.style.display = 'none'; return; }
+  const n = Math.max(1, Math.min(36, Number(($('#' + px + 'Meses') || {}).value) || 12));
+  const atuais = [...cx.querySelectorAll('input[data-m]')].map(i => i.value);
+  /* Mesma quantidade de meses: nada a refazer. Refazer aqui destruía a caixa em
+     que a pessoa acabou de clicar (o "sair" da duração dispara a troca). */
+  if (atuais.length === n && cx.style.display !== 'none') return;
+  let guard = []; try { guard = JSON.parse(cx.dataset.valores || '[]'); } catch(_){}
+  const padrao = Number(String(($('#' + px + 'Pts') || {}).value || '').replace(/\D/g, '')) || 0;
+  const val = i => atuais[i] !== undefined ? atuais[i] : guard[i] !== undefined ? (Number(guard[i]) ? nBR(Number(guard[i])) : '') : (padrao ? nBR(padrao) : '');
+  cx.style.display = '';
+  cx.innerHTML = `<div class="olho" style="margin:12px 0 6px">Bônus de cada mês</div><div class="bn-meses">${Array.from({length:n}, (_, i) =>
+    `<label class="bn-mes"><span>mês ${i + 1}</span><input type="text" inputmode="numeric" data-m="${i + 1}" value="${esc(val(i))}" placeholder="0"></label>`).join('')}</div>`;
+  cx.dataset.valores = '[]';
+}
+function ligarCamposBonus(px, a, depois){
+  const f = () => { pintarAgendaBonus(px, typeof a === 'function' ? a() : a); if (depois) depois(); };
+  const lista = $('#' + px + 'Lista');
+  if (lista){
+    lista.addEventListener('input', f);
+    lista.addEventListener('focusout', e => { const el = e.target; if (el && el.dataset && el.dataset.m){ const n = Number(String(el.value).replace(/\D/g, '')) || 0; el.value = n ? nBR(n) : ''; } });
+  }
+  const remontar = () => { montarListaBonus(px); f(); };
+  ['Cada', 'Meses'].forEach(i => { const el = $('#' + px + i); if (el){ el.addEventListener('change', remontar); if (i === 'Meses') el.addEventListener('input', remontar); } });
+  montarListaBonus(px);
+  ['Pts', 'Meses', 'Ades'].forEach(i => { const el = $('#' + px + i); if (el) el.addEventListener('input', f); });
+  ['Pts', 'Ades'].forEach(i => { const el = $('#' + px + i); if (el) el.addEventListener('blur', () => { const n = Number(String(el.value).replace(/\D/g, '')) || 0; el.value = n ? nBR(n) : ''; }); });
+  ['Cada', 'Prim'].forEach(i => { const el = $('#' + px + i); if (el) el.addEventListener('change', f); });
+  f();
+  return f;
+}
+function aplicarCampanhaNosCampos(px, c, pl){
+  const tot = Number(c.pontosExtrasAno) || (Number(c.bonus) > 0 && pl ? Math.round(pl.qtd * 12 * Number(c.bonus) / 100) : 0);
+  if (Number(c.bonusCada) === 0 && (c.bonusLista || []).length){
+    $('#' + px + 'Pts').value = ''; $('#' + px + 'Cada').value = '0'; $('#' + px + 'Meses').value = c.bonusLista.length;
+    const lx = $('#' + px + 'Lista'); if (lx){ lx.innerHTML = ''; lx.dataset.valores = JSON.stringify(c.bonusLista); }
+    montarListaBonus(px);
+    $('#' + px + 'Ades').value = c.bonusAdesao ? nBR(c.bonusAdesao) : '';
+  } else if (c.bonusPts){
+    $('#' + px + 'Pts').value = nBR(c.bonusPts); $('#' + px + 'Cada').value = String(c.bonusCada || 1);
+    $('#' + px + 'Prim').value = c.bonusPrim === 'fim' ? 'fim' : 'inicio'; $('#' + px + 'Meses').value = c.bonusMeses || 12;
+    $('#' + px + 'Ades').value = c.bonusAdesao ? nBR(c.bonusAdesao) : '';
+  } else {
+    $('#' + px + 'Pts').value = tot ? nBR(Math.round(tot / 12)) : ''; $('#' + px + 'Cada').value = '1'; $('#' + px + 'Meses').value = 12;
+  }
+  montarListaBonus(px);
+}
+
 /* ── a folha "Bônus da campanha" ─────────────────────────────────────────────── */
 function abrirBonusClube(id){
   const a = (DB.assinaturas || []).find(x => x.id === id); if (!a) return;
@@ -53901,34 +54189,28 @@ function abrirBonusClube(id){
   abrirFolha({titulo:'Bônus da campanha', largura:'larga', tipo:'formulario', corpo:`
     <p class="fraco" style="margin:0 0 14px">${esc(prog(a.prog).n)} · ${esc(pl ? pl.n : a.planoId)} de ${esc(nomeCurto(nomeConta(a.contaId)))}, desde ${dataBR(ini)}. Informe o bônus que a campanha pagou: ele entra no extrato com o selo <span class="etq etq-bonus" style="margin:0">bônus</span> e o milheiro passa a ser o real.</p>
     ${perto.length ? `<div class="olho" style="margin:0 0 8px">Campanhas da época (toque para usar)</div><div class="bc-camps" style="margin-bottom:14px">${perto.slice(0, 5).map(c => `<button type="button" class="bc-camp" data-bc="${esc(c.id)}">${esc(c.titulo || 'Campanha de clube')}<small>até ${dataBR(c.fim)}${extrasAno(c) ? ` · ${nBR(extrasAno(c))} pontos extras no ano` : ''}</small></button>`).join('')}</div>` : ''}
-    <div class="bc-grade">
-      <div class="campo"><label>Pontos de bônus por mês</label><input type="text" inputmode="numeric" id="bcMes" value="${b.porMes ? nBR(b.porMes) : ''}" placeholder="0"></div>
-      <div class="campo"><label>Por quantos meses</label><input type="number" id="bcMeses" min="0" max="36" value="${b.meses || 12}"></div>
-      <div class="campo"><label>Bônus de uma vez, na adesão</label><input type="text" inputmode="numeric" id="bcAdesao" value="${b.naAdesao ? nBR(b.naAdesao) : ''}" placeholder="0"></div>
-    </div>
+    ${camposBonusHTML('bc', b)}
     <div class="campo" style="margin-top:12px"><label>Observação</label><input type="text" id="bcObs" value="${esc(b.obs)}" placeholder="Ex.: campanha de upgrade de outubro"></div>
     <div class="bc-conta" id="bcConta" style="margin-top:14px"></div>`,
     pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${temBonusAssin(a) ? '<button type="button" class="bt fantasma" id="bcTirar">Tirar o bônus</button>' : ''}<button type="button" class="bt primario" id="bcOk">Salvar e lançar no extrato</button>`});
-  const num = id2 => Number(String($('#' + id2).value || '').replace(/\D/g, '')) || 0;
   const conta = () => {
-    const pm = num('bcMes'), ms = Number($('#bcMeses').value) || 0, ad = num('bcAdesao');
+    const bn = lerCamposBonus('bc'), bb = bonusDaAssin({bonus:bn});
     const sem = cpmAssinatura({...a, bonus:null});
-    const com = cpmAssinatura({...a, bonus:{porMes:pm, meses:ms, naAdesao:ad}});
+    const com = cpmAssinatura({...a, bonus:bn});
     const caidos = DB.lancamentos.filter(l => l.assinaturaId === a.id && l.cicloClube !== undefined && !l.bonusClube && !(diaCreditoDe(a.prog) && Number(l.cicloClube) === 0)).length;
-    const agora = (pm ? pm * Math.min(ms, caidos) : 0) + ad;
+    const jaMeses = mesesDoBonus(bb).filter(m => m <= caidos), jaVezes = jaMeses.length;
+    const agora = jaMeses.reduce((t, m) => t + valorBonusMes(bb, m), 0) + bb.naAdesao;
     $('#bcConta').innerHTML = `<div><small>Milheiro sem bônus</small><b>${sem != null ? brl2(sem) : 'n/d'}</b></div>
       <div><small>Milheiro real, com bônus</small><b class="jade">${com != null ? brl2(com) : 'n/d'}</b></div>
-      <div><small>Bônus no ano</small><b>${nBR(pm * Math.min(ms, 12) + ad)}</b></div>
-      <div><small>Entra no extrato agora</small><b>${nBR(agora)}</b><small>${pm ? `${Math.min(ms, caidos)} ${Math.min(ms, caidos) === 1 ? 'mês já caído' : 'meses já caídos'}; os próximos entram junto com cada crédito` : ''}</small></div>`;
+      <div><small>Bônus no ano</small><b>${nBR(bonusNoAno(bb))}</b></div>
+      <div><small>Entra no extrato agora</small><b>${nBR(agora)}</b><small>${mesesDoBonus(bb).length ? `${jaVezes} ${jaVezes === 1 ? 'bônus já caído' : 'bônus já caídos'}; os próximos entram junto com o crédito do mês deles` : ''}</small></div>`;
   };
-  ['bcMes', 'bcMeses', 'bcAdesao'].forEach(i => { $('#' + i).oninput = conta; });
+  const pintar = ligarCamposBonus('bc', a, conta);
   document.querySelectorAll('[data-bc]').forEach(bt => bt.onclick = () => {
     const c = (DB.campanhas || []).find(x => x.id === bt.dataset.bc); if (!c) return;
-    const tot = extrasAno(c);
-    $('#bcMes').value = tot ? nBR(Math.round(tot / 12)) : ''; $('#bcMeses').value = 12; $('#bcObs').value = c.titulo || '';
-    conta();
+    aplicarCampanhaNosCampos('bc', c, pl); $('#bcObs').value = c.titulo || '';
+    pintar();
   });
-  conta();
   const gravar = bon => {
     a.bonus = bon;
     const n = sincronizarBonusClube(a);
@@ -53936,8 +54218,9 @@ function abrirBonusClube(id){
     return n;
   };
   $('#bcOk').onclick = () => {
-    const bon = {porMes:num('bcMes'), meses:Number($('#bcMeses').value) || 0, naAdesao:num('bcAdesao'), obs:$('#bcObs').value.trim()};
-    if (!bon.porMes && !bon.naAdesao){ avisar('Informe os pontos de bônus (por mês ou na adesão).', 'alerta'); return; }
+    const bon = {...lerCamposBonus('bc'), obs:$('#bcObs').value.trim()};
+    if (!temBonusAssin({bonus:bon})){ avisar('Informe os pontos do bônus (de cada bônus, de cada mês ou na adesão).', 'alerta'); return; }
+    if (bon.cada !== 0 && bon.pontos && !bon.meses){ avisar('Informe por quantos meses a campanha paga o bônus.', 'alerta'); return; }
     gravar(bon);
     const r = cpmAssinatura(a);
     avisar(`Bônus guardado. O extrato ganhou as linhas de bônus e o milheiro real desta assinatura é ${r != null ? brl2(r) : 'n/d'}.`, 'ok', 6000);
@@ -54043,8 +54326,7 @@ function ccIniciais(nome){ const p = String(nome || '?').trim().split(/\s+/); re
 function ccPlano(a){ const cat = catalogoDe(a.prog); return cat && cat.planos.find(p => p.id === a.planoId); }
 function ccPtsMes(a){
   const pl = ccPlano(a); if (!pl) return 0;
-  const b = typeof bonusDaAssin === 'function' ? bonusDaAssin(a) : {porMes:0, meses:0, naAdesao:0};
-  return pl.qtd + (b.porMes * Math.min(b.meses, 12) + b.naAdesao) / 12;
+  return pl.qtd + (typeof bonusDaAssin === 'function' ? bonusNoAno(bonusDaAssin(a)) : 0) / 12;
 }
 function ccZona(cpm, f){ return cpm == null ? '' : cpm <= f.alvo ? 'jade' : cpm <= f.razoavel ? 'ouro' : 'brasa'; }
 function ccAnel(a){
@@ -54078,7 +54360,7 @@ function ccLinha(a, modo){
   return `<div class="cc-linha" style="--marca:${prog(a.prog).cor}" data-assin="${esc(a.id)}">
     <div class="cc-quem">${quem}</div>
     <div class="cc-plano"><span class="cc-pilula">${esc(pl ? pl.n : a.planoId)}${pl && !String(pl.n).includes(nBR(pl.qtd)) ? ` <i>${nBR(pl.qtd)}/mês</i>` : ''}</span>
-      ${b && (b.porMes || b.naAdesao) ? `<small style="color:var(--jade)">+ bônus ${[b.porMes ? `${nBR(b.porMes)} por mês por ${b.meses} ${b.meses === 1 ? 'mês' : 'meses'}` : '', b.naAdesao ? `${nBR(b.naAdesao)} na adesão` : ''].filter(Boolean).join(' e ')}</small>` : `<small>${a.cartao ? esc(a.cartao) : 'sem bônus registrado'}</small>`}
+      ${b && temBonusAssin(a) ? `<small style="color:var(--jade)">+ bônus ${esc(textoBonusAssin(b))}</small>${(() => { const px = ativa ? proximosBonus(a)[0] : null; return px ? `<small class="cc-prox-bonus">próximo bônus: <b>+${nBR(px.qtd)}</b> em ${dataBR(px.data)}</small>` : ''; })()}` : `<small>${a.cartao ? esc(a.cartao) + ' · ' : ''}<button type="button" class="cc-link-bonus" onclick="abrirBonusClube('${a.id}')">sem bônus registrado: configurar</button></small>`}
       ${chips ? `<div class="cc-chips">${chips}</div>` : ''}</div>
     <div class="cc-mil"><div class="cc-mil-num"><b style="color:var(--${z || 'grafite'})">${cpm == null ? 'n/d' : brl2(cpm)}</b>${semB ? `<s>${brl2(semB)}</s>` : ''}<small>o milheiro</small></div>
       ${cpm == null ? '' : `<div class="cc-regua" style="--a:${pos(f.alvo)};--r:${pos(f.razoavel)};--p:${pos(cpm)}" data-dica="Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}"><i></i></div>`}</div>
