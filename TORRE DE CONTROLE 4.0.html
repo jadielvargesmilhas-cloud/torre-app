@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 23:00';
+const BUILD = '2026-10-15 23:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -58945,7 +58945,7 @@ function linhaLojaHTML(l){
     <span class="ljl-a">
       ${l.link ? `<a class="bt p fantasma icone" href="${esc(l.link)}" target="_blank" rel="noopener" data-dica="Abrir a loja pelo site do programa" aria-label="Abrir a loja"><svg><use href="#i-link"/></svg></a>` : `<span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-link"/></svg></span>`}
       <button type="button" class="bt p fantasma" data-ljl-vale="${esc(String(l.id))}">Vale a pena?</button>
-      ${l.origem === 'loja' ? `<button type="button" class="bt p fantasma icone" onclick="editarLoja('${l.id}')" data-dica="Editar" aria-label="Editar"><svg><use href="#i-lapis"/></svg></button>` : `<span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-lapis"/></svg></span>`}
+      ${l.origem === 'loja' ? `<button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();editarLoja('${l.id}')" data-dica="Editar" aria-label="Editar"><svg><use href="#i-lapis"/></svg></button>` : l.campId ? `<button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();editarCampanha('${l.campId}')" data-dica="Editar a campanha" aria-label="Editar a campanha"><svg><use href="#i-lapis"/></svg></button>` : `<span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-lapis"/></svg></span>`}
     </span>
   </div>`;
 }
@@ -59059,5 +59059,101 @@ function arrumarFiltrosLojas(){
   .topo .topo-titulo{ min-width:0; overflow:hidden; }
 }
 </style>
+<style id="bfe-css">
+.bfe{ display:grid; gap:14px; }
+.bfe-g3{ display:grid; gap:12px; grid-template-columns:repeat(3, minmax(0,1fr)); }
+.bfe-g2{ display:grid; gap:12px; grid-template-columns:180px minmax(0,1fr); }
+.bfe-l{ display:grid; grid-template-columns:minmax(0,1fr) 110px 36px; gap:8px; align-items:center; margin-bottom:8px; }
+.bfe-l input[data-k=v]{ text-align:right; font-variant-numeric:tabular-nums; }
+.bfe-res{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:10px 12px; border-radius:10px; background:color-mix(in srgb, var(--anil) 7%, transparent); min-height:44px; }
+#bfeMais{ width:auto !important; justify-self:start; align-self:flex-start; display:inline-flex; }
+@media (max-width:640px){ .bfe-g3, .bfe-g2{ grid-template-columns:minmax(0,1fr); } .bfe-l{ grid-template-columns:minmax(0,1fr) 76px 36px; } }
+</style>
+<script id="bfe-js">
+/* Compra bonificada (Smiles + Polishop, Azul + Magalu): editor próprio.
+   O formulário geral de campanha não tem loja, categoria nem pontos por real,
+   então o lápis abria uma tela onde o número que importa não podia ser mudado.
+   Aqui ficam só os campos dessa campanha, na ordem em que a pessoa lê o anúncio. */
+function editarBonificada(id){
+  const c0 = id ? (DB.campanhas || []).find(x => x.id === id) : null;
+  const c = c0 || {tipo:'bonificada', parceiro:'', para:'', cat:'geral', ptsPorReal:0, faixas:[], fim:'', link:'', regra:'', titulo:''};
+  let fx = (c.faixas || []).length ? c.faixas.map(f => ({...f})) : [{rot:'Todos os clientes', v:Number(c.ptsPorReal) || 0}];
+  const optP = PROG_IDS.map(p => `<option value="${p}"${p === c.para ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('');
+  const optC = CATEGORIAS_LOJA.map(k => `<option value="${k}"${k === (c.cat || 'geral') ? ' selected' : ''}>${esc(catRot(k))}</option>`).join('');
+  abrirFolha({
+    titulo: id ? 'Editar compra bonificada' : 'Nova compra bonificada', largura:'larga',
+    corpo:`<div class="bfe">
+      <div class="bfe-g3">
+        <div class="campo"><label for="bfeLoja">Loja</label><input type="text" id="bfeLoja" value="${esc(c.parceiro || '')}" placeholder="Polishop"></div>
+        <div class="campo"><label for="bfeProg">Programa que paga os pontos</label><select id="bfeProg">${optP}</select></div>
+        <div class="campo"><label for="bfeCat">O que a loja vende</label><select id="bfeCat">${optC}</select></div>
+      </div>
+      <div class="campo"><label>Pontos por real</label>
+        <div class="dica" style="margin:0 0 8px">Uma linha para cada público do anúncio. Ex.: "Clube Smiles" 24,5 e "Demais clientes" 10.</div>
+        <div id="bfeFx"></div>
+        <button type="button" class="bt p fantasma" id="bfeMais"><svg><use href="#i-mais"/></svg>Adicionar público</button>
+      </div>
+      <div class="bfe-res" id="bfeRes"></div>
+      <div class="bfe-g2">
+        <div class="campo"><label for="bfeFim">Termina em</label><input type="date" id="bfeFim" value="${c.fim || ''}"></div>
+        <div class="campo"><label for="bfeLink">Link da oferta</label><input type="url" id="bfeLink" value="${esc(c.link || '')}" placeholder="https://"></div>
+      </div>
+      <div class="campo"><label for="bfeRegra">Regra que importa</label><textarea id="bfeRegra" placeholder="Compre pelo link do programa. Pontos em até 30 dias.">${esc(c.regra || '')}</textarea></div>
+    </div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="bfeSalvar">Salvar</button>`
+  });
+  const ler = () => $$('#bfeFx .bfe-l').forEach((r, i) => { fx[i].rot = r.querySelector('[data-k=rot]').value; fx[i].v = rgNum(r.querySelector('[data-k=v]').value); });
+  const resumo = () => {
+    const top = Math.max(0, ...fx.map(f => Number(f.v) || 0));
+    const b = bussolaDe(top);
+    $('#bfeRes').innerHTML = top > 0 ? `<span>Maior oferta: <b>${nBRdec(top)} pontos por real</b></span>${bussolaHTML(b)}` : '<span class="fraco">Preencha os pontos por real para ver a Bússola ROTA.</span>';
+  };
+  const desenhar = () => {
+    $('#bfeFx').innerHTML = fx.map((f, i) => `<div class="bfe-l">
+      <input type="text" data-k="rot" value="${esc(f.rot || '')}" placeholder="Todos os clientes" aria-label="Quem ganha, linha ${i + 1}">
+      <input type="text" inputmode="decimal" data-k="v" value="${f.v ? String(f.v).replace('.', ',') : ''}" placeholder="0" aria-label="Pontos por real, linha ${i + 1}">
+      <button type="button" class="bt p fantasma icone" data-tira="${i}" aria-label="Remover linha"${fx.length < 2 ? ' disabled' : ''}><svg><use href="#i-x"/></svg></button></div>`).join('');
+    $$('#bfeFx input').forEach(inp => inp.addEventListener('input', () => { ler(); resumo(); }));
+    $$('#bfeFx [data-tira]').forEach(bt => bt.onclick = () => { ler(); fx.splice(Number(bt.dataset.tira), 1); desenhar(); });
+    resumo();
+  };
+  desenhar();
+  $('#bfeMais').onclick = () => { ler(); fx.push({rot:'', v:0}); desenhar(); const u = $$('#bfeFx [data-k=rot]').pop(); if (u) u.focus(); };
+  $('#bfeSalvar').onclick = () => {
+    ler();
+    const loja = $('#bfeLoja').value.trim();
+    const faixas = fx.filter(f => Number(f.v) > 0).map(f => ({...f, rot:String(f.rot || '').trim() || 'Todos os clientes', v:Number(f.v)})).sort((a, b) => b.v - a.v);
+    if (!loja){ avisar('Escreva o nome da loja.', 'erro'); $('#bfeLoja').focus(); return; }
+    if (!faixas.length){ avisar('Informe quantos pontos por real a loja dá.', 'erro'); const v = $('#bfeFx [data-k=v]'); if (v) v.focus(); return; }
+    const para = $('#bfeProg').value;
+    const novo = {...c, id:c.id || uid(), tipo:'bonificada', de:'', parceiro:loja, para, cat:$('#bfeCat').value,
+      ptsPorReal:faixas[0].v, faixas, fim:$('#bfeFim').value, link:$('#bfeLink').value.trim(), regra:$('#bfeRegra').value.trim(),
+      titulo: (c.titulo && c.parceiro === loja && c.para === para) ? c.titulo : `${loja} e ${prog(para).n}`,
+      bonus:c.bonus || 0, desconto:c.desconto || 0, limite:c.limite || 0};
+    if (typeof conferirAntesDeSalvar === 'function' && !conferirAntesDeSalvar('campanhas', novo, 'uma campanha')) return;
+    DB.campanhas = DB.campanhas || [];
+    const i = DB.campanhas.findIndex(x => x.id === novo.id);
+    if (i >= 0) DB.campanhas[i] = novo; else DB.campanhas.push(novo);
+    salvar(); fecharFolha();
+    try { renderCampanhas(); } catch(e){}
+    try { renderFita(); } catch(e){}
+    try { renderLojasParceiras(); } catch(e){}
+    avisar('Compra bonificada salva. A lista de lojas já foi atualizada.', 'ok');
+  };
+}
+/* Todo lápis de compra bonificada (Promoções, Lojas parceiras, busca) cai aqui. */
+(function(){
+  const orig = editarCampanha;
+  editarCampanha = function(id, tipoPadrao){
+    const c = id ? (DB.campanhas || []).find(x => x.id === id) : null;
+    const tipo = c ? c.tipo : (tipoPadrao || (typeof abaCampanha !== 'undefined' ? abaCampanha : ''));
+    if (tipo === 'bonificada') return editarBonificada(id || null);
+    const r = orig.apply(this, arguments);
+    const sel = document.getElementById('cpTipo');
+    if (sel) sel.addEventListener('change', () => { if (sel.value === 'bonificada' && !id){ fecharFolha(); setTimeout(() => editarBonificada(null), 60); } });
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
