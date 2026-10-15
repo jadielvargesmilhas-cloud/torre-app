@@ -10782,6 +10782,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                  tem antes de comparar o que se poderia ter é a ordem da decisão. -->
             <div class="linha">
               <div class="esticar"><div class="olho anil" style="margin-bottom:0">Assinaturas ativas</div></div>
+              <button class="bt fantasma" id="btCalcClube"><svg><use href="#i-grafico"/></svg>Calculadora</button>
               <button class="bt fantasma" id="btCatalogoClubes"><svg><use href="#i-livro"/></svg>Catálogo de Planos</button>
               <button class="bt primario" id="btNovaAssinatura"><svg><use href="#i-mais"/></svg>Nova Assinatura</button>
             </div>
@@ -10797,7 +10798,9 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
                  Acima dele ficam as assinaturas ativas, que são o que já existe;
                  daqui para baixo, o que se está avaliando. -->
-            <div class="olho anil" style="margin:20px 0 0">Simular um plano</div>
+            <!-- 15/10/2026: calculadora e catálogo saíram da página e abrem em
+                 janela suspensa (botões ao lado de Nova Assinatura). -->
+            <div id="mdCalcClube" class="md-clube">
 
             <!-- ── Calculadora de milheiro ──────────────────────────────────────
                  Simula um plano antes de assinar: quanto sai o milheiro no
@@ -10877,16 +10880,17 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <button class="bt fantasma" id="btCcSimular"><svg><use href="#i-alvo"/></svg>Ver a conta aberta</button>
               <button class="bt primario" id="btCcRegistrar"><svg><use href="#i-mais"/></svg>Cadastrar Assinatura</button>
             </div>
+            </div>
 
 
-            <div class="cartao">
+            <div id="mdCatalogoClubes" class="md-clube"><div class="cartao">
               <div class="cartao-cab"><h3 style="color:var(--anil-claro)">Comparador de planos<div class="sub">CPM efetivo de cada plano de clube, fora de campanha promocional. O bônus de adesão, quando existe, é diluído no prazo de carência.</div></h3></div>
               <div class="linha rotulo-forte" style="margin-bottom:14px">
                 <div class="campo" style="max-width:230px"><label>Programa</label><select id="cmpPrograma"></select></div>
                 <div class="campo" style="max-width:190px"><label>Modalidade</label><select id="cmpModalidade"><option value="mensal">Mensal</option><option value="anual_parcelado">Anual parcelado</option><option value="anual_avista">Anual à vista</option></select></div>
               </div>
               <div id="fbComparador"></div>
-            </div>
+            </div></div>
           </div>
         </div>
 
@@ -11791,7 +11795,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 05:00';
+const BUILD = '2026-10-15 09:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -43335,7 +43339,7 @@ function ligarEventos(){
   if ($('#catOrdem')) $('#catOrdem').onchange = e => { catFiltro.ordem = e.target.value; catRe(); };
   if ($('#catPorPag')) $('#catPorPag').onchange = e => { if (vistaCatalogo() === 'cartoes') catFiltro.porPagCartoes = Number(e.target.value) || 16; else catFiltro.porPag = Number(e.target.value) || 15; catPag = 1; catRe(); };
   $('#btNovaAssinatura').onclick = () => editarAssinatura();
-  $('#btCatalogoClubes').onclick = () => { irParaAba('fabrica', 'fb-clubes'); $('#cmpPrograma').scrollIntoView({behavior:'smooth', block:'center'}); };
+  $('#btCatalogoClubes').onclick = () => abrirCatalogoClubes();
   ['#cmpPrograma','#cmpModalidade'].forEach(s => $(s).onchange = renderComparador);
   if ($('#btNovaLoja')) $('#btNovaLoja').onclick = () => editarLoja();
   $('#btNovaCompra').onclick = novaCompra;
@@ -57610,6 +57614,67 @@ function mostrarAvisosRenovacao(){
 (function(){
   const iniciar = () => setTimeout(() => { try { mostrarAvisosRenovacao(); } catch(e){ console.error(e); } }, 2200);
   if (document.readyState === 'complete') iniciar(); else addEventListener('load', iniciar);
+})();
+</script>
+
+<style>
+/* ══ Calculadora e Catálogo de planos em janela suspensa (15/10/2026) ══ */
+#folhaMolde > .md-clube{ display:flex; flex-direction:column; gap:16px; }
+#folhaMolde > .md-clube > .cartao{ border:none; background:transparent; box-shadow:none; padding:0; }
+#folhaMolde > .md-clube > .cartao > .cartao-cab{ display:none; }
+#folhaMolde .calc-cpm > p.fraco{ display:none; }
+/* o cartão "Balcão do programa" encolhia até sumir: medida pelo próprio
+   container, a caixa sem largura fixa ficava com 30px e o valor com fonte 0 */
+.calc-rodape > .calc-kpi{ container-type:normal; min-width:170px; }
+.calc-rodape > .calc-kpi .val{ font-size:calc(21px * var(--esc)); }
+.md-topo{ display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--anil) 16%, transparent), color-mix(in srgb, var(--ouro) 8%, transparent));
+  border:1px solid color-mix(in srgb, var(--anil) 30%, transparent); }
+.md-topo .md-ic{ flex:0 0 42px; height:42px; border-radius:12px; display:grid; place-items:center;
+  background:color-mix(in srgb, var(--anil) 22%, transparent); }
+.md-topo .md-ic svg{ width:21px; height:21px; fill:none; stroke:var(--anil-claro); stroke-width:1.8; }
+.md-topo b{ display:block; color:var(--giz); font-size:calc(15px * var(--esc)); }
+.md-topo span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.45; }
+</style>
+<script>
+/* A calculadora (com o passo a passo da assinatura) e o comparador de planos
+   moravam no fim da página Meus Clubes. Agora a página mostra só o que já está
+   contratado, e as duas ferramentas abrem por cima, em janela suspensa, pelos
+   botões ao lado de "Nova Assinatura". O HTML é movido, não copiado, para os
+   campos manterem os mesmos ids e ouvintes. */
+(function(){
+  /* qualquer folha nova devolve antes os moldes ao esconderijo, senão
+     "Cadastrar Assinatura" (que abre outra folha) apagaria a calculadora */
+  const _af = abrirFolha;
+  abrirFolha = function(){ try { devolverMoldes(); } catch(_){} return _af.apply(this, arguments); };
+  const guardar = () => {
+    const casa = document.getElementById('moldesCT');
+    ['mdCalcClube', 'mdCatalogoClubes'].forEach(id => { const el = document.getElementById(id); if (casa && el && el.parentElement !== casa && !el.closest('#folhaMolde')) casa.appendChild(el); });
+  };
+  const topo = (ic, t, d) => `<div class="md-topo"><div class="md-ic"><svg><use href="#${ic}"/></svg></div><div><b>${t}</b><span>${d}</span></div></div>`;
+  const pe = `<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`;
+  window.abrirCalculadoraClube = function(){
+    guardar();
+    abrirEmFolha('mdCalcClube', 'Calculadora de milheiro', () => {
+      const el = document.getElementById('mdCalcClube');
+      if (el && !el.querySelector('.md-topo')) el.insertAdjacentHTML('afterbegin', topo('i-grafico', 'Quanto sai o milheiro de um plano', 'Escolha o programa e o plano, simule o bônus e o tempo de assinatura. Embaixo, o passo a passo para assinar.'));
+      try { if (typeof sincCalcPlanos === 'function') sincCalcPlanos(); } catch(_){}
+    }, pe, 'ampla');
+  };
+  window.abrirCatalogoClubes = function(){
+    guardar();
+    abrirEmFolha('mdCatalogoClubes', 'Catálogo de planos', () => {
+      const el = document.getElementById('mdCatalogoClubes');
+      if (el && !el.querySelector('.md-topo')) el.insertAdjacentHTML('afterbegin', topo('i-livro', 'Todos os planos de clube, lado a lado', 'Milheiro de cada plano fora de campanha. O bônus de adesão, quando existe, é diluído na carência. Troque o programa e a modalidade para comparar.'));
+      try { if (typeof renderComparador === 'function') renderComparador(); } catch(_){}
+    }, pe, 'larga');
+  };
+  const ligar = () => {
+    guardar();
+    const b = document.getElementById('btCalcClube'); if (b) b.onclick = abrirCalculadoraClube;
+    const c = document.getElementById('btCatalogoClubes'); if (c) c.onclick = abrirCatalogoClubes;
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 60)); else setTimeout(ligar, 60);
 })();
 </script>
 </body>
