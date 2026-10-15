@@ -11791,7 +11791,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 02:20';
+const BUILD = '2026-10-15 04:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -37105,7 +37105,7 @@ function editarReserva(id, rascunho){
     abrirSeletorPax(paxAtuais, escolhidos => {
       rascunho.pax = escolhidos;
       editarReserva(id, rascunho);
-    });
+    }, rascunho.clienteId || '', rascunho.cliente || '');
   };
   $('#rsData').addEventListener('change', desenharPax);
   desenharPax();
@@ -37739,7 +37739,7 @@ function textoFaixas(c){
    tem o que contar. O aviso é o mesmo nas três, com o caminho pronto — mandar
    procurar a aba certa é o que faz um cadastro vazio continuar vazio. */
 function avisoSemPassageiro(oQue){
-  if ((DB.pessoas || []).length) return '';
+  if ((DB.pessoas || []).some(p => typeof ehPassageiro === 'function' ? ehPassageiro(p) : true)) return '';
   /* Respiro maior acima: o aviso encosta no trilho de abas, e colado nele parece
      um pedaço da barra em vez de um recado sobre o conteúdo. */
   return `<div class="nota ouro" style="margin:10px 0 14px"><svg><use href="#i-usuarios"/></svg>
@@ -39750,7 +39750,7 @@ function pintarFaixaModulo(v){
     fabrica:  () => plural((DB.campanhas || []).length, 'campanha cadastrada', 'campanhas cadastradas'),
     emissoes: () => plural((DB.reservas || []).length, 'emissão registrada', 'emissões registradas'),
     vendas:   () => plural((DB.reservas || []).filter(r => r.quem === 'terceiro').length, 'emissão para cliente', 'emissões para cliente'),
-    clientes: () => plural((DB.pessoas || []).length, 'passageiro cadastrado', 'passageiros cadastrados'),
+    clientes: () => typeof contagemCadastro === 'function' ? contagemCadastro() : plural((DB.pessoas || []).length, 'passageiro cadastrado', 'passageiros cadastrados'),
     cartoes:  () => plural((DB.cartoes || []).length, 'cartão', 'cartões'),
     rota:     () => plural((DB.planos || []).length, 'jornada', 'jornadas'),
     radar:    () => plural((DB.monitores || []).length, 'monitor', 'monitores')
@@ -56906,6 +56906,554 @@ function regrasDoTexto(texto){
       avisar('Não deu para ler o print aqui: ' + (err.message || err), 'alerta', 6000);
     }
   };
+})();
+</script>
+
+<style>
+/* ══ clientes e passageiros (15/10/2026) ══ */
+.cp-seg{ display:inline-flex; padding:3px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1, transparent); }
+.cp-seg button{ border:0; background:none; color:var(--grafite); font:600 calc(13.5px * var(--esc)) var(--f-b, inherit); padding:8px 15px; border-radius:9px; cursor:pointer; display:inline-flex; gap:8px; align-items:center; }
+.cp-seg button.on{ background:var(--sup-0, #111); color:var(--giz); box-shadow:0 1px 0 rgba(255,255,255,.05), 0 4px 14px rgba(0,0,0,.18); }
+.cp-seg button span{ font-family:var(--f-m, inherit); font-weight:500; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.cp-lista{ display:flex; flex-direction:column; border:1px solid var(--fio); border-radius:18px; overflow:hidden; background:var(--sup-0, transparent); }
+.cp-linha{ display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .9fr) auto; gap:14px; align-items:center; padding:12px 16px; border-top:1px solid var(--fio); }
+.cp-linha:first-child{ border-top:0; }
+.cp-linha:hover{ background:color-mix(in srgb, var(--giz) 3%, transparent); }
+.cp-quem{ display:flex; gap:12px; align-items:center; min-width:0; cursor:pointer; text-align:left; border:0; background:none; padding:0; font:inherit; color:inherit; }
+.cp-av{ width:38px; height:38px; flex:0 0 38px; border-radius:50%; display:grid; place-items:center; font:700 calc(13px * var(--esc)) var(--f-b, inherit); color:var(--giz); border:1px solid var(--fio);
+  background:linear-gradient(135deg, color-mix(in srgb, var(--ouro) 32%, transparent), color-mix(in srgb, var(--anil) 28%, transparent)); }
+.cp-av.ag{ border-radius:11px; background:linear-gradient(135deg, color-mix(in srgb, var(--anil) 40%, transparent), color-mix(in srgb, var(--jade) 25%, transparent)); }
+.cp-av.mini{ width:26px; height:26px; flex:0 0 26px; font-size:calc(10.5px * var(--esc)); margin-left:-7px; border:2px solid var(--sup-0, #111); }
+.cp-av.mini:first-child{ margin-left:0; }
+.cp-nome{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.cp-nome b{ color:var(--giz); font-size:calc(14.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cp-nome small, .cp-col small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cp-chips{ display:flex; gap:5px; flex-wrap:wrap; }
+.cp-chips .etq{ margin:0; }
+.cp-col{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.cp-col b{ color:var(--giz); font:500 calc(14px * var(--esc)) var(--f-m, inherit); }
+.cp-pilha{ display:flex; align-items:center; }
+.cp-pilha em{ font-style:normal; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-left:8px; white-space:nowrap; }
+.cp-acoes{ display:flex; gap:6px; }
+.cp-vazio{ padding:34px 20px; text-align:center; color:var(--grafite); }
+@media (max-width:860px){ .cp-linha{ grid-template-columns:minmax(0, 1fr) auto; } .cp-col, .cp-linha > .cp-pilha{ display:none; } .cp-linha > .cp-col.cp-sempre{ display:flex; grid-column:1 / -1; } }
+/* ficha e formulário com abas */
+.cp-abas{ display:flex; gap:4px; border-bottom:1px solid var(--fio); margin:0 0 16px; overflow-x:auto; }
+.cp-abas button{ border:0; background:none; color:var(--grafite); font:600 calc(13.5px * var(--esc)) var(--f-b, inherit); padding:10px 14px; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; display:inline-flex; gap:7px; align-items:center; }
+.cp-abas button.on{ color:var(--giz); border-bottom-color:var(--ouro); }
+.cp-abas button[hidden]{ display:none; }
+.cp-abas button i{ font-style:normal; font-family:var(--f-m, inherit); font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.cp-painel[hidden]{ display:none !important; }
+.cp-papeis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap:10px; margin-bottom:16px; }
+.cp-papel{ display:flex; gap:11px; align-items:flex-start; border:1px solid var(--fio); border-radius:14px; padding:12px 14px; cursor:pointer; }
+.cp-papel:has(input:checked){ border-color:var(--ouro); background:color-mix(in srgb, var(--ouro) 8%, transparent); }
+.cp-papel input{ margin-top:3px; }
+.cp-papel b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
+.cp-papel small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.4; }
+.cp-tipos{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.cp-tipos label{ display:inline-flex; gap:7px; align-items:center; border:1px solid var(--fio); border-radius:99px; padding:7px 13px; cursor:pointer; font-size:calc(13px * var(--esc)); }
+.cp-tipos label:has(input:checked){ border-color:var(--anil); background:color-mix(in srgb, var(--anil) 10%, transparent); color:var(--giz); }
+.cp-tipos input{ margin:0; }
+.cp-vinc-busca{ margin-bottom:10px; }
+.cp-vinc{ display:flex; flex-direction:column; gap:6px; max-height:300px; overflow:auto; }
+.cp-vinc label{ display:flex; gap:11px; align-items:center; border:1px solid var(--fio); border-radius:12px; padding:8px 12px; cursor:pointer; }
+.cp-vinc label:has(input:checked){ border-color:var(--jade); background:color-mix(in srgb, var(--jade) 8%, transparent); }
+.cp-vinc label b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); }
+.cp-vinc label small{ color:var(--grafite); font-size:calc(12px * var(--esc)); display:block; }
+.cp-ficha-topo{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+.cp-ficha-topo .cp-av{ width:56px; height:56px; flex:0 0 56px; font-size:calc(18px * var(--esc)); }
+.cp-ficha-topo h3{ margin:0; color:var(--giz); font-size:calc(19px * var(--esc)); }
+.cp-ficha-acoes{ display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.cp-dados{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap:10px; }
+.cp-dados > div{ border:1px solid var(--fio); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:3px; min-width:0; }
+.cp-dados small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; }
+.cp-dados b{ color:var(--giz); font-weight:500; font-size:calc(14px * var(--esc)); overflow-wrap:anywhere; }
+.cp-hist{ display:flex; flex-direction:column; }
+.cp-hist > div{ display:flex; gap:12px; align-items:baseline; padding:9px 0; border-top:1px solid var(--fio); font-size:calc(13.5px * var(--esc)); }
+.cp-hist > div:first-child{ border-top:0; }
+.cp-hist span{ flex:1; min-width:0; color:var(--giz-2, var(--giz)); }
+.cp-hist small{ color:var(--grafite); white-space:nowrap; }
+.cp-hist b{ font-family:var(--f-m, inherit); font-weight:500; color:var(--giz); white-space:nowrap; }
+.pax-grupo-cab{ display:flex; align-items:center; gap:8px; margin:4px 0 6px; color:var(--grafite); font-size:calc(12px * var(--esc)); text-transform:uppercase; letter-spacing:.05em; }
+.pax-grupo-cab button{ margin-left:auto; text-transform:none; letter-spacing:0; }
+</style>
+<script>
+/* ══ CLIENTES E PASSAGEIROS (15/10/2026, pedido do Jadiel) ═══════════════════════
+   Como nos sistemas de agência (conta que paga e viajante que voa), o cadastro
+   passa a separar os dois papéis de cada pessoa:
+     · cliente: quem compra de você. Pode ser pessoa, agência (o agente que só
+       revende as emissões feitas com milha) ou empresa;
+     · passageiro: quem voa. É ele que entra na emissão e na cota de CPF.
+   Uma pessoa pode ter os dois papéis (quem compra a própria passagem) ou um só.
+   O cliente guarda os passageiros ligados a ele: na emissão, os passageiros do
+   cliente aparecem primeiro, com "Marcar todos". Quem viajou numa emissão do
+   cliente entra nessa lista sozinho.
+   Os cadastros antigos continuam valendo: todos são passageiros, e viram
+   clientes também se já foram cliente de alguma emissão. */
+const ehPassageiro = p => !!p && (p.papeis ? !!p.papeis.passageiro : true);
+function ehCliente(p){
+  if (!p) return false;
+  if (p.papeis) return !!p.papeis.cliente;
+  const n = semAcento(p.nome || '');
+  return (DB.reservas || []).some(r => r.clienteId === p.id || (r.quem === 'terceiro' && n && semAcento(r.cliente || '') === n));
+}
+const TIPO_CLIENTE = {pessoa:'Pessoa física', agencia:'Agência ou agente', empresa:'Empresa'};
+const emissoesDoCliente = p => (DB.reservas || []).filter(r => r.clienteId === p.id || (!r.clienteId && r.quem === 'terceiro' && semAcento(r.cliente || '') === semAcento(p.nome || '')));
+const emissoesDoPax = id => (DB.reservas || []).filter(r => (r.pax || []).includes(id));
+/* passageiros do cliente: os ligados à mão e os que já voaram em emissões dele */
+function passageirosDoCliente(p){
+  const ids = new Set((p.vinculos || []).filter(id => pessoa(id)));
+  const viajaram = new Set();
+  emissoesDoCliente(p).forEach(r => (r.pax || []).forEach(id => { if (pessoa(id)){ viajaram.add(id); ids.add(id); } }));
+  return [...ids].map(id => ({p:pessoa(id), viajou:viajaram.has(id), manual:(p.vinculos || []).includes(id)})).sort((a, b) => a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
+}
+const clientesDoPax = id => (DB.pessoas || []).filter(c => c.id !== id && ehCliente(c) && passageirosDoCliente(c).some(x => x.p.id === id));
+function contagemCadastro(){
+  const ps = DB.pessoas || [];
+  const c = ps.filter(ehCliente).length, x = ps.filter(ehPassageiro).length;
+  return `${plural(c, 'cliente', 'clientes')} · ${plural(x, 'passageiro', 'passageiros')}`;
+}
+function iniciaisPessoa(p){ const n = String((p && (p.tipo === 'agencia' || p.tipo === 'empresa') && p.empresa) || (p && p.nome) || '?').trim().split(/\s+/); return ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase(); }
+const avPessoa = (p, mini) => `<span class="cp-av${p && (p.tipo === 'agencia' || p.tipo === 'empresa') ? ' ag' : ''}${mini ? ' mini' : ''}" title="${esc(p ? p.nome : '')}">${esc(iniciaisPessoa(p))}</span>`;
+function docChip(p){
+  const docs = [['RG', p.docVal], ['Passaporte', p.passVal]].filter(([, v]) => v).map(([n, v]) => ({n, v, d:diasAte(v)})).sort((a, b) => a.d - b.d);
+  if (!docs.length) return '<span class="fraco" style="font-size:calc(12px * var(--esc))">sem documento</span>';
+  const x = docs[0], cor = x.d < 0 ? 'brasa' : x.d <= 180 ? 'ouro' : '';
+  return `<span class="etq ${cor}" data-dica="${esc(docs.map(y => y.n + ' até ' + dataBR(y.v)).join(' · '))}">${x.d < 0 ? x.n + ' vencido' : x.n + ' ' + dataBR(x.v)}</span>`;
+}
+
+/* ── a lista ──────────────────────────────────────────────────────────────── */
+let cpAba = (() => { try { return localStorage.getItem('torre-cp-aba') || 'clientes'; } catch(_){ return 'clientes'; } })();
+function cpTrocarAba(a){ cpAba = a; try { localStorage.setItem('torre-cp-aba', a); } catch(_){} paginaCl = 1; renderClientes(); }
+const _renderPassageirosAntigo = renderClientes;
+renderClientes = function(){
+  const alvo = $('#clLista'); if (!alvo) return;
+  const ps = DB.pessoas || [];
+  const nC = ps.filter(ehCliente).length, nP = ps.filter(ehPassageiro).length;
+  /* cabeçalho: abas Clientes | Passageiros e o botão certo para cada uma */
+  const tit = document.querySelector('#p-bl-clientes .olho.anil');
+  if (tit && !document.getElementById('cpSeg')){
+    tit.outerHTML = `<div class="cp-seg" id="cpSeg" role="tablist"></div>`;
+  }
+  const seg = document.getElementById('cpSeg');
+  if (seg) seg.innerHTML = `<button type="button" role="tab" class="${cpAba === 'clientes' ? 'on' : ''}" data-cp-aba="clientes">Clientes <span>${nC}</span></button><button type="button" role="tab" class="${cpAba === 'passageiros' ? 'on' : ''}" data-cp-aba="passageiros">Passageiros <span>${nP}</span></button>`;
+  const btn = $('#btNovoCliente');
+  if (btn){ btn.innerHTML = `<svg><use href="#i-mais"/></svg>${cpAba === 'clientes' ? 'Novo Cliente' : 'Novo Passageiro'}`; btn.onclick = () => editarPessoa(null, {papel:cpAba === 'clientes' ? 'cliente' : 'passageiro'}); }
+  const busca = $('#clBusca'); if (busca) busca.placeholder = cpAba === 'clientes' ? 'Buscar cliente, agência ou telefone' : 'Buscar por nome ou CPF';
+  if ($('#clFiltros')) $('#clFiltros').style.display = cpAba === 'passageiros' ? '' : 'none';
+  if ($('#contClientes')) $('#contClientes').textContent = ps.length;
+  if (vistaAtual === 'clientes' && typeof renderHeroiClientes === 'function') renderHeroiClientes();
+  if (cpAba === 'passageiros') return cpRenderPassageiros(alvo);
+  return cpRenderClientes(alvo);
+};
+function cpPaginar(alvo, lista, desenhar){
+  const paginas = porPaginaCl ? Math.max(1, Math.ceil(lista.length / porPaginaCl)) : 1;
+  if (paginaCl > paginas) paginaCl = paginas;
+  const l = porPaginaCl ? lista.slice((paginaCl - 1) * porPaginaCl, paginaCl * porPaginaCl) : lista;
+  alvo.innerHTML = desenhar(l);
+  if (porPaginaCl && paginas > 1){
+    const ini = (paginaCl - 1) * porPaginaCl + 1, fim = Math.min(paginaCl * porPaginaCl, lista.length);
+    const bt = (rot, pg, on, off) => `<button class="cl-pg${on ? ' on' : ''}" ${off ? 'disabled' : `onclick="paginaCl=${pg};renderClientes()"`}>${rot}</button>`;
+    const nums = [...new Set([1, paginaCl - 1, paginaCl, paginaCl + 1, paginas].filter(n => n >= 1 && n <= paginas))].sort((a, b) => a - b);
+    const fita = []; nums.forEach((n, i) => { if (i && n - nums[i - 1] > 1) fita.push('<span class="fraco">…</span>'); fita.push(bt(String(n), n, n === paginaCl)); });
+    alvo.insertAdjacentHTML('beforeend', `<div class="cl-paginas"><span>${nBR(ini)} a ${nBR(fim)} de ${nBR(lista.length)}</span><div class="esticar"></div>${bt('‹', paginaCl - 1, false, paginaCl === 1)}${fita.join('')}${bt('›', paginaCl + 1, false, paginaCl === paginas)}</div>`);
+  }
+}
+function cpRenderClientes(alvo){
+  const t = semAcento(buscaCliente).trim(), d = soDigitos(buscaCliente);
+  const lista = (DB.pessoas || []).filter(ehCliente).filter(p => !t || semAcento([p.nome, p.empresa, p.fone, p.email].join(' ')).includes(t) || (d && soDigitos([p.cpf, p.fone, p.cnpj].join(' ')).includes(d)))
+    .sort((a, b) => String(a.empresa || a.nome).localeCompare(String(b.empresa || b.nome), 'pt-BR'));
+  cpPaginar(alvo, lista, l => l.length ? `<div class="cp-lista">${l.map(p => {
+    const em = emissoesDoCliente(p), tot = soma(em.map(r => Number(r.cobrado) || 0));
+    const ult = em.map(r => r.data || r.criada || '').filter(Boolean).sort().pop();
+    const px = passageirosDoCliente(p);
+    const ag = p.tipo === 'agencia' || p.tipo === 'empresa';
+    return `<div class="cp-linha">
+      <button type="button" class="cp-quem" data-cp-ficha="${p.id}">${avPessoa(p)}<span class="cp-nome"><b>${esc(ag && p.empresa ? p.empresa : p.nome)}</b>
+        <span class="cp-chips"><span class="etq">${TIPO_CLIENTE[p.tipo || 'pessoa']}</span>${ag && p.empresa ? `<small>${esc(p.nome)}</small>` : ''}${ehPassageiro(p) ? '<span class="etq jade">também viaja</span>' : ''}</span></span></button>
+      <div class="cp-col"><small>Contato</small><span style="font-size:calc(13px * var(--esc))">${esc(p.fone || p.email || 'n/d')}</span></div>
+      <div class="cp-pilha">${px.length ? px.slice(0, 4).map(x => avPessoa(x.p, true)).join('') + `<em>${px.length} ${px.length === 1 ? 'passageiro' : 'passageiros'}</em>` : '<em style="margin:0">sem passageiros</em>'}</div>
+      <div class="cp-col cp-sempre"><b>${em.length ? brl(tot) : 'n/d'}</b><small>${em.length ? `${em.length} ${em.length === 1 ? 'emissão' : 'emissões'}${ult ? ' · última ' + dataBR(ult) : ''}` : 'nenhuma emissão ainda'}</small></div>
+      <div class="cp-acoes">
+        <button class="bt p fantasma icone" data-cp-emitir="${p.id}" data-dica="Nova emissão para este cliente"><svg><use href="#i-aviao"/></svg></button>
+        <button class="bt p fantasma icone" onclick="editarPessoa('${p.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+        <button class="bt p fantasma icone" onclick="apagarPessoa('${p.id}')" data-dica="Excluir"><svg><use href="#i-lixo"/></svg></button></div>
+    </div>`; }).join('')}</div>`
+    : `<div class="vazio"><svg><use href="#i-usuarios"/></svg><h4>${t ? 'Ninguém com essa busca' : 'Nenhum cliente cadastrado'}</h4>
+      <p>${t ? 'A busca procura no nome, na agência, no telefone e no e-mail.' : 'Cliente é quem compra de você: uma pessoa, uma agência ou uma empresa. Ele não precisa viajar, e pode ter os passageiros dele ligados.'}</p>
+      ${t ? '' : `<button class="bt primario" onclick="editarPessoa(null,{papel:'cliente'})">Novo Cliente</button>`}</div>`);
+}
+function cpRenderPassageiros(alvo){
+  const lista = passageirosFiltrados().filter(ehPassageiro);
+  cpPaginar(alvo, lista, l => l.length ? `<div class="cp-lista">${l.map(p => {
+    const f = faixaPax(p), i = idadeEm(p.nasc, hojeISO()), usos = emissoesDoPax(p.id).length, cl = clientesDoPax(p.id);
+    return `<div class="cp-linha">
+      <button type="button" class="cp-quem" data-cp-ficha="${p.id}">${avPessoa(p)}<span class="cp-nome"><b>${esc(p.nome)}</b>
+        <span class="cp-chips"><span class="etq" style="color:${FAIXAS_PAX[f].cor};border-color:color-mix(in oklab, ${FAIXAS_PAX[f].cor} 38%, transparent)">${FAIXAS_PAX[f].n}${i !== null ? ` · ${i}` : ''}</span>${p.cpf ? '' : '<span class="etq brasa">sem CPF</span>'}</span></span></button>
+      <div class="cp-col"><small>Documento</small><span>${docChip(p)}</span></div>
+      <div class="cp-col"><small>Cliente</small><span style="font-size:calc(13px * var(--esc))">${cl.length ? esc(cl.map(c => c.empresa || c.nome).slice(0, 2).join(', ')) + (cl.length > 2 ? ` +${cl.length - 2}` : '') : (ehCliente(p) ? 'ele mesmo' : 'n/d')}</span></div>
+      <div class="cp-col cp-sempre"><b>${usos || 'n/d'}</b><small>${usos === 1 ? 'emissão' : 'emissões'}</small></div>
+      <div class="cp-acoes">
+        <button class="bt p fantasma icone" onclick="editarPessoa('${p.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+        <button class="bt p fantasma icone" onclick="apagarPessoa('${p.id}')" data-dica="Excluir"><svg><use href="#i-lixo"/></svg></button></div>
+    </div>`; }).join('')}</div>`
+    : `<div class="vazio"><svg><use href="#i-usuarios"/></svg><h4>${(DB.pessoas || []).some(ehPassageiro) ? 'Ninguém com esse recorte' : 'Nenhum passageiro cadastrado'}</h4>
+      <p>Passageiro é quem voa: entra na emissão e na cota de CPF do programa.</p>
+      <button class="bt primario" onclick="editarPessoa(null,{papel:'passageiro'})">Novo Passageiro</button></div>`);
+}
+
+/* ── a ficha (abrir) ──────────────────────────────────────────────────────── */
+function abrirFichaPessoa(id, aba){
+  const p = pessoa(id); if (!p) return;
+  const cli = ehCliente(p), pax = ehPassageiro(p);
+  const em = cli ? emissoesDoCliente(p) : [], voos = pax ? emissoesDoPax(p.id) : [];
+  const px = cli ? passageirosDoCliente(p) : [];
+  const f = faixaPax(p), i = idadeEm(p.nasc, hojeISO());
+  const dado = (r, v) => v ? `<div><small>${r}</small><b>${v}</b></div>` : '';
+  const ag = p.tipo === 'agencia' || p.tipo === 'empresa';
+  const abas = [['resumo', 'Resumo'], ...(pax ? [['documentos', 'Documentos']] : []), ...(cli ? [['passageiros', `Passageiros <i>${px.length}</i>`]] : []), ['historico', `Histórico <i>${new Set(em.concat(voos)).size}</i>`]];
+  const ab = abas.some(a => a[0] === aba) ? aba : 'resumo';
+  const hist = [...new Set(em.concat(voos))].sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
+  abrirFolha({titulo:cli && !pax ? 'Ficha do cliente' : cli ? 'Ficha do cliente e passageiro' : 'Ficha do passageiro', largura:'larga', corpo:`
+    <div class="cp-ficha-topo">${avPessoa(p)}<div><h3>${esc(ag && p.empresa ? p.empresa : p.nome)}</h3>
+      <div class="cp-chips" style="margin-top:4px">${cli ? `<span class="etq ouro">cliente · ${esc(TIPO_CLIENTE[p.tipo || 'pessoa'].toLowerCase())}</span>` : ''}${pax ? `<span class="etq jade">passageiro · ${FAIXAS_PAX[f].n.toLowerCase()}${i !== null ? ', ' + i + ' anos' : ''}</span>` : ''}</div></div>
+      <div class="cp-ficha-acoes">${cli ? `<button type="button" class="bt p primario" data-cp-emitir="${p.id}"><svg><use href="#i-aviao"/></svg>Nova emissão</button>` : ''}
+        <button type="button" class="bt p fantasma" onclick="fecharFolha();setTimeout(()=>editarPessoa('${p.id}'),0)"><svg><use href="#i-lapis"/></svg>Editar</button></div></div>
+    <div class="cp-abas" role="tablist">${abas.map(([k, n]) => `<button type="button" class="${k === ab ? 'on' : ''}" data-cp-fa="${k}">${n}</button>`).join('')}</div>
+    <div class="cp-painel" data-cp-fp="resumo"${ab === 'resumo' ? '' : ' hidden'}><div class="cp-dados">
+      ${ag && p.empresa ? dado('Contato', esc(p.nome)) : ''}${dado('Telefone ou WhatsApp', esc(p.fone || ''))}${dado('E-mail', esc(p.email || ''))}
+      ${cli ? dado('Emissões compradas', em.length ? `${em.length} · ${brl(soma(em.map(r => Number(r.cobrado) || 0)))}` : 'nenhuma ainda') : ''}
+      ${cli && Number(p.milheiro) > 0 ? dado('Milheiro combinado', brl2(Number(p.milheiro))) : ''}
+      ${cli ? dado('Como chegou', esc(p.origem || '')) : ''}${cli ? dado('CNPJ', esc(p.cnpj || '')) : ''}
+      ${pax ? dado('Voou em', voos.length ? `${voos.length} ${voos.length === 1 ? 'emissão' : 'emissões'}` : 'nenhuma ainda') : ''}
+      ${pax ? dado('Documento', docChip(p)) : ''}${dado('Observação', esc(p.obs || ''))}
+    </div></div>
+    ${pax ? `<div class="cp-painel" data-cp-fp="documentos"${ab === 'documentos' ? '' : ' hidden'}><div class="cp-dados">
+      ${dado('Nome no documento', esc(p.nome))}${dado('Sexo', {F:'Feminino', M:'Masculino', X:'Outro'}[p.sexo] || '')}${dado('CPF', esc(p.cpf || 'sem CPF'))}
+      ${dado('Nascimento', p.nasc ? dataBR(p.nasc) + (i !== null ? ` · ${i} anos` : '') : '')}${dado('RG', esc(p.doc || '') + (p.docVal ? ' · até ' + dataBR(p.docVal) : ''))}
+      ${dado('Passaporte', esc(p.pass || '') + (p.passVal ? ' · até ' + dataBR(p.passVal) : ''))}
+    </div></div>` : ''}
+    ${cli ? `<div class="cp-painel" data-cp-fp="passageiros"${ab === 'passageiros' ? '' : ' hidden'}>
+      ${px.length ? `<div class="cp-hist">${px.map(x => { const fx = faixaPax(x.p), ix = idadeEm(x.p.nasc, hojeISO());
+        return `<div>${avPessoa(x.p)}<span><b style="font-family:inherit">${esc(x.p.nome)}</b><br><small>${FAIXAS_PAX[fx].n}${ix !== null ? ' · ' + ix + ' anos' : ''} · ${x.p.cpf ? esc(x.p.cpf) : 'sem CPF'}${x.viajou && !x.manual ? ' · ligado porque voou numa emissão dele' : ''}</small></span>${docChip(x.p)}</div>`; }).join('')}</div>`
+        : '<p class="fraco">Nenhum passageiro ligado ainda. Em Editar › Passageiros, marque quem viaja por este cliente.</p>'}
+    </div>` : ''}
+    <div class="cp-painel" data-cp-fp="historico"${ab === 'historico' ? '' : ' hidden'}>
+      ${hist.length ? `<div class="cp-hist">${hist.map(r => `<div><small>${r.data ? dataBR(r.data) : ''}</small><span>${esc(String(r.desc || 'Emissão').split(' · ')[0])}${(r.pax || []).length ? ` · ${(r.pax || []).map(nomePax).join(', ')}` : ''}${em.includes(r) && voos.includes(r) ? ' · comprou e voou' : em.includes(r) ? ' · comprou' : ' · voou'}</span><b>${Number(r.cobrado) ? brl(r.cobrado) : ''}</b></div>`).join('')}</div>` : '<p class="fraco">Nenhuma emissão ainda.</p>'}
+    </div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+  /* a folha não deixa o clique subir até a página: as ações ligam aqui */
+  $$('#folhaCorpo [data-cp-fa]').forEach(fa => fa.onclick = () => { $$('#folhaCorpo [data-cp-fa]').forEach(b => b.classList.toggle('on', b === fa)); $$('#folhaCorpo [data-cp-fp]').forEach(x => x.hidden = x.dataset.cpFp !== fa.dataset.cpFa); });
+  $$('#folhaCorpo [data-cp-emitir]').forEach(b => b.onclick = () => cpNovaEmissao(b.dataset.cpEmitir));
+}
+function cpNovaEmissao(id){
+  const c = pessoa(id); if (!c) return;
+  const ids = passageirosDoCliente(c).map(x => x.p.id);
+  if (ehPassageiro(c) && !ids.length) ids.push(c.id);
+  fecharFolha();
+  setTimeout(() => editarReserva(null, {tipo:'voo', quem:'terceiro', cliente:c.empresa || c.nome, clienteId:c.id, desc:'', data:hojeISO(), prog:'smiles', milhas:0, taxas:0, cobrado:0, custoExtra:0, status:'emitida', trajeto:'ida', pax:ids.length === 1 ? ids : [], criada:hojeISO()}), 0);
+}
+
+/* ── o cadastro, em abas ──────────────────────────────────────────────────── */
+editarPessoa = function(id, semente){
+  semente = semente || {};
+  const p0 = id ? partirNome((DB.pessoas || []).find(x => x.id === id) || {}) : partirNome({nome:semente.nome || '', cpf:semente.cpf || ''});
+  const papelCli = id ? ehCliente(p0) : semente.papel === 'cliente', papelPax = id ? ehPassageiro(p0) : semente.papel !== 'cliente';
+  const tipo = p0.tipo || 'pessoa';
+  let vinc = new Set(id ? passageirosDoCliente(p0).filter(x => x.manual).map(x => x.p.id) : []);
+  const auto = new Set(id ? passageirosDoCliente(p0).filter(x => !x.manual).map(x => x.p.id) : []);
+  abrirFolha({titulo: id ? 'Editar cadastro' : (semente.papel === 'cliente' ? 'Novo Cliente' : 'Novo Passageiro'), largura:'larga', corpo:`
+    <div class="cp-abas" role="tablist">
+      <button type="button" class="on" data-cp-a="basico">Básico</button>
+      <button type="button" data-cp-a="documentos">Documentos de viagem</button>
+      <button type="button" data-cp-a="comercial">Comercial</button>
+      <button type="button" data-cp-a="vinculos">Passageiros do cliente</button>
+    </div>
+    <div class="cp-painel" data-cp-p="basico">
+      <div class="cp-papeis">
+        <label class="cp-papel"><input type="checkbox" id="pePapCli"${papelCli ? ' checked' : ''}><span><b>É cliente</b><small>Compra de você. Pode ser pessoa, agência ou empresa, e não precisa viajar.</small></span></label>
+        <label class="cp-papel"><input type="checkbox" id="pePapPax"${papelPax ? ' checked' : ''}><span><b>É passageiro</b><small>Voa. Entra na emissão e na cota de CPF do programa.</small></span></label>
+      </div>
+      <div class="cp-tipos" id="peTipos">${Object.entries(TIPO_CLIENTE).map(([k, n]) => `<label><input type="radio" name="peTipo" value="${k}"${k === tipo ? ' checked' : ''}>${n}</label>`).join('')}</div>
+      <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))">
+        <div class="campo pe-emp"><label>Nome da agência ou empresa*</label><input type="text" id="peEmpresa" value="${esc(p0.empresa || '')}" placeholder="Viaje Bem Turismo"></div>
+        <div class="campo"><label id="peNomeRot">Nome*</label><input type="text" id="peNome" value="${esc(p0.primeiro || '')}" placeholder="KÁTIA"></div>
+        <div class="campo"><label id="peSobreRot">Sobrenome*</label><input type="text" id="peSobre" value="${esc(p0.sobrenome || '')}" placeholder="BARRETO DE SOUZA"></div>
+        <div class="campo"><label id="peFoneRot">Telefone ou WhatsApp</label><input type="text" inputmode="tel" id="peFone" value="${esc(p0.fone || '')}" placeholder="(71) 9 0000-0000"></div>
+        <div class="campo"><label>E-mail</label><input type="text" inputmode="email" id="peEmail" value="${esc(p0.email || '')}"></div>
+      </div>
+    </div>
+    <div class="cp-painel" data-cp-p="documentos" hidden>
+      <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr))">
+        <div class="campo"><label>Sexo*, no documento</label><select id="peSexo" data-ordem="natural">${[['', 'não informado'], ['F', 'Feminino'], ['M', 'Masculino'], ['X', 'Outro / não binário']].map(([v, n]) => `<option value="${v}"${v === (p0.sexo || '') ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="campo"><label>CPF*</label><input type="text" id="peCpf" value="${esc(p0.cpf || '')}" placeholder="000.000.000-00"></div>
+        <div class="campo"><label>Nascimento*</label><input type="date" id="peNasc" value="${esc(p0.nasc || '')}"></div>
+        <div class="nota" id="pePrevia" style="grid-column:1/-1;margin:0"></div>
+        <div class="campo"><label>RG</label><input type="text" id="peDoc" value="${esc(p0.doc || '')}" placeholder="00.000.000-0"></div>
+        <div class="campo"><label>Validade do RG</label><input type="date" id="peVal" value="${esc(p0.docVal || '')}"></div>
+        <div class="campo"><label>Passaporte</label><input type="text" id="pePass" value="${esc(p0.pass || '')}" placeholder="AB123456"></div>
+        <div class="campo"><label>Validade do passaporte</label><input type="date" id="pePassVal" value="${esc(p0.passVal || '')}"></div>
+      </div>
+      <p class="fraco" style="font-size:calc(12.5px * var(--esc));margin:10px 0 0">Para viagem internacional, inclua o passaporte. A Torre avisa quando faltar menos de 6 meses para vencer.</p>
+    </div>
+    <div class="cp-painel" data-cp-p="comercial" hidden>
+      <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))">
+        <div class="campo"><label>CNPJ <span class="fraco">opcional</span></label><input type="text" id="peCnpj" inputmode="numeric" value="${esc(p0.cnpj || '')}" placeholder="00.000.000/0001-00"></div>
+        <div class="campo"><label>Como chegou</label><select id="peOrigem" data-ordem="natural">${['', 'Indicação', 'Instagram', 'WhatsApp', 'Grupo de milhas', 'Mentoria', 'Site', 'Outro'].map(o => `<option value="${o}"${o === (p0.origem || '') ? ' selected' : ''}>${o || 'não informado'}</option>`).join('')}</select></div>
+        <div class="campo"><label>Milheiro combinado (R$ por mil) <span class="fraco">opcional</span></label><input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="peMilheiro" value="${Number(p0.milheiro) ? moedaTxt(Number(p0.milheiro)) : ''}" placeholder="ex.: 22,00">
+          <div class="dica">Preço de revenda acertado com este cliente (comum com agências). Na cotação, entra sozinho quando ele for o cliente.</div></div>
+      </div>
+    </div>
+    <div class="cp-painel" data-cp-p="vinculos" hidden>
+      <p class="fraco" style="margin:0 0 10px">Marque quem viaja por este cliente. Na emissão, eles aparecem primeiro, com "Marcar todos". Quem voar numa emissão dele entra aqui sozinho.</p>
+      <div class="campo cp-vinc-busca"><input type="text" id="peVincBusca" placeholder="Buscar passageiro por nome ou CPF" autocomplete="off"></div>
+      <div class="cp-vinc" id="peVinc"></div>
+      <div class="linha" style="margin-top:10px"><button type="button" class="bt p fantasma" id="peVincNovo"><svg><use href="#i-mais"/></svg>Cadastrar passageiro novo</button></div>
+    </div>
+    <div class="campo" style="margin-top:16px"><label>Observação</label><input type="text" id="peObs" value="${esc(p0.obs || '')}" placeholder="Preferência de assento, refeição, horário de contato..."></div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarPessoa">${id ? 'Salvar' : 'Salvar Cadastro'}</button>`});
+
+  const aba = k => { $$('#folhaCorpo [data-cp-a]').forEach(b => b.classList.toggle('on', b.dataset.cpA === k)); $$('#folhaCorpo [data-cp-p]').forEach(x => x.hidden = x.dataset.cpP !== k); };
+  $$('#folhaCorpo [data-cp-a]').forEach(b => b.onclick = () => aba(b.dataset.cpA));
+  const tipoAtual = () => (($('#folhaCorpo input[name="peTipo"]:checked') || {}).value) || 'pessoa';
+  const papeis = () => {
+    const cli = $('#pePapCli').checked, pax = $('#pePapPax').checked, t = tipoAtual(), emp = cli && t !== 'pessoa';
+    $('#peTipos').style.display = cli ? '' : 'none';
+    $('#folhaCorpo .pe-emp').style.display = emp ? '' : 'none';
+    $('#peNomeRot').textContent = emp ? 'Nome do contato*' : 'Nome*';
+    $('#peSobreRot').textContent = pax ? 'Sobrenome*' : 'Sobrenome';
+    $('#peFoneRot').textContent = cli ? 'Telefone ou WhatsApp*' : 'Telefone ou WhatsApp';
+    const vis = {documentos:pax, comercial:cli, vinculos:cli};
+    Object.entries(vis).forEach(([k, v]) => { const b = $(`#folhaCorpo [data-cp-a="${k}"]`); if (b) b.hidden = !v; });
+    const on = $('#folhaCorpo [data-cp-a].on'); if (on && on.hidden) aba('basico');
+  };
+  $('#pePapCli').onchange = papeis; $('#pePapPax').onchange = papeis;
+  $$('#folhaCorpo input[name="peTipo"]').forEach(r => r.onchange = papeis);
+  papeis();
+  ['#peNome', '#peSobre'].forEach(sel => { $(sel).oninput = () => { const c = $(sel), k = c.selectionStart, a = c.value.toUpperCase(); if (a !== c.value){ c.value = a; try { c.setSelectionRange(k, k); } catch(_){} } }; });
+  const previa = () => {
+    const i = idadeEm($('#peNasc').value, hojeISO()), f = faixaPax({nasc:$('#peNasc').value}, hojeISO()), cpf = $('#peCpf').value, partes = [];
+    partes.push(i !== null ? `<b style="color:${FAIXAS_PAX[f].cor}">${i} ano${i !== 1 ? 's' : ''}</b> hoje · <b style="color:${FAIXAS_PAX[f].cor}">${FAIXAS_PAX[f].n}</b>` : `Sem nascimento, entra como <b style="color:${FAIXAS_PAX.adulto.cor}">Adulto</b>`);
+    if (cpf.trim()) partes.push(cpfValido(cpf) ? '<b style="color:var(--jade)">CPF válido</b>' : '<b style="color:var(--brasa)">CPF inválido</b>');
+    [['RG', $('#peVal').value], ['Passaporte', $('#pePassVal').value]].forEach(([n, v]) => { if (!v) return; const d = diasAte(v); partes.push(d < 0 ? `<b style="color:var(--brasa)">${n} vencido</b>` : d <= 180 ? `<b style="color:var(--ouro)">${n} vence em ${d} dias</b>` : `${n} até ${dataBR(v)}`); });
+    $('#pePrevia').innerHTML = `<svg style="stroke:var(--ouro)"><use href="#i-info"/></svg><div>${partes.join(' · ')}.</div>`;
+  };
+  ['#peNasc', '#peVal', '#pePassVal'].forEach(sel => { $(sel).addEventListener('input', previa); $(sel).addEventListener('change', previa); });
+  $('#peCpf').oninput = () => { $('#peCpf').value = formatarCPF($('#peCpf').value); previa(); };
+  previa();
+  /* passageiros do cliente */
+  const desenharVinc = () => {
+    const t = $('#peVincBusca').value, cands = buscarPessoas(t).filter(x => ehPassageiro(x) && x.id !== id);
+    const ord = cands.sort((a, b) => (vinc.has(b.id) || auto.has(b.id)) - (vinc.has(a.id) || auto.has(a.id)));
+    $('#peVinc').innerHTML = ord.length ? ord.slice(0, 60).map(x => { const fx = faixaPax(x), ix = idadeEm(x.nasc, hojeISO());
+      return `<label>${avPessoa(x)}<span style="flex:1;min-width:0"><b>${esc(x.nome)}</b><small>${FAIXAS_PAX[fx].n}${ix !== null ? ' · ' + ix + ' anos' : ''} · ${x.cpf ? esc(x.cpf) : 'sem CPF'}${auto.has(x.id) && !vinc.has(x.id) ? ' · já voou numa emissão dele' : ''}</small></span><input type="checkbox" data-vinc="${x.id}"${vinc.has(x.id) || auto.has(x.id) ? ' checked' : ''}${auto.has(x.id) && !vinc.has(x.id) ? ' disabled' : ''}></label>`; }).join('')
+      : '<p class="fraco">Nenhum passageiro com essa busca.</p>';
+    $$('#peVinc [data-vinc]').forEach(c => c.onchange = () => { if (c.checked) vinc.add(c.dataset.vinc); else vinc.delete(c.dataset.vinc); });
+  };
+  $('#peVincBusca').oninput = desenharVinc; desenharVinc();
+  const ler = () => {
+    const cli = $('#pePapCli').checked, pax = $('#pePapPax').checked, t = cli ? tipoAtual() : (p0.tipo || 'pessoa');
+    const primeiro = $('#peNome').value.trim().toUpperCase(), sobrenome = $('#peSobre').value.trim().toUpperCase();
+    const novo = {...(id ? (DB.pessoas || []).find(x => x.id === id) : {}), id:id || uid(), nome:[primeiro, sobrenome].filter(Boolean).join(' '), primeiro, sobrenome,
+      papeis:{cliente:cli, passageiro:pax}, tipo:t, empresa:cli && t !== 'pessoa' ? $('#peEmpresa').value.trim() : '',
+      fone:$('#peFone').value.trim(), email:$('#peEmail').value.trim(), obs:$('#peObs').value.trim(),
+      sexo:$('#peSexo').value, cpf:formatarCPF($('#peCpf').value.trim()), nasc:$('#peNasc').value, doc:$('#peDoc').value.trim(), docVal:$('#peVal').value,
+      pass:$('#pePass').value.trim().toUpperCase(), passVal:$('#pePassVal').value,
+      cnpj:$('#peCnpj').value.trim(), origem:$('#peOrigem').value, milheiro:moedaNum($('#peMilheiro').value) || 0,
+      vinculos:cli ? [...vinc] : []};
+    delete novo.confirmouNome;
+    return novo;
+  };
+  $('#peVincNovo').onclick = () => {
+    const rascunho = ler();
+    fecharFolha();
+    setTimeout(() => editarPessoa(null, {papel:'passageiro', aoSalvar: nova => {
+      rascunho.vinculos = [...new Set((rascunho.vinculos || []).concat(nova.id))];
+      const k = (DB.pessoas || []).findIndex(x => x.id === rascunho.id);
+      if (k >= 0){ DB.pessoas[k].vinculos = rascunho.vinculos; salvar(); setTimeout(() => editarPessoa(rascunho.id), 0); }
+      else { avisar(`${nova.nome} foi cadastrado. Salve o cliente para ligá-lo.`, 'info', 5000); setTimeout(() => editarPessoa(null, {papel:'cliente', nome:rascunho.nome}), 0); }
+    }}), 0);
+  };
+  $('#btSalvarPessoa').onclick = () => {
+    const n = ler(), cli = n.papeis.cliente, pax = n.papeis.passageiro;
+    const erro = (aAba, sel, msg) => { aba(aAba); erroNoCampo(sel, msg); };
+    if (!cli && !pax) return erro('basico', '#pePapCli', 'Marque se é cliente, passageiro ou os dois.');
+    if (cli && n.tipo !== 'pessoa' && !n.empresa) return erro('basico', '#peEmpresa', 'Informe o nome da agência ou da empresa.');
+    if (!n.primeiro) return erro('basico', '#peNome', cli && n.tipo !== 'pessoa' ? 'Informe o nome do contato.' : 'Informe o nome.');
+    if (pax && !n.sobrenome) return erro('basico', '#peSobre', 'Informe o sobrenome, como está no documento.');
+    if (cli && !n.fone) return erro('basico', '#peFone', 'Informe o telefone ou WhatsApp do cliente.');
+    if (pax && !n.sexo) return erro('documentos', '#peSexo', 'Informe o sexo como está no documento.');
+    if (pax && !n.cpf) return erro('documentos', '#peCpf', 'Informe o CPF do passageiro.');
+    if (n.cpf && !cpfValido(n.cpf)) return erro('documentos', '#peCpf', 'CPF inválido. Confira os dígitos.');
+    if (pax && !n.nasc) return erro('documentos', '#peNasc', 'Informe a data de nascimento.');
+    const mesmoCpf = n.cpf && (DB.pessoas || []).find(x => x.id !== n.id && soDigitos(x.cpf) === soDigitos(n.cpf));
+    if (mesmoCpf){ aba('documentos'); avisar(`Esse CPF já está cadastrado em ${mesmoCpf.nome}. Abra o cadastro dele e marque o papel que faltar.`, 'alerta', 7000); return; }
+    const gravar = () => {
+      DB.pessoas = DB.pessoas || [];
+      const k = DB.pessoas.findIndex(x => x.id === n.id);
+      if (k >= 0) DB.pessoas[k] = n; else DB.pessoas.push(n);
+      salvar(); fecharFolha(); try { renderBalcao(); } catch(_){} try { renderEmissoes(); } catch(_){} renderClientes();
+      avisar(cli && pax ? 'Cadastro salvo como cliente e passageiro.' : cli ? 'Cliente salvo.' : 'Passageiro salvo.', 'ok');
+      if (semente.aoSalvar) setTimeout(() => semente.aoSalvar(n), 0);
+    };
+    const mesmoNome = (DB.pessoas || []).find(x => x.id !== n.id && semAcento(x.nome) === semAcento(n.nome) && !(n.tipo !== 'pessoa' && semAcento(x.empresa || '') !== semAcento(n.empresa || '')));
+    if (mesmoNome){
+      confirmar('Já existe alguém com esse nome', `<b>${esc(mesmoNome.nome)}</b> já está no cadastro${mesmoNome.cpf ? ', CPF ' + esc(mesmoNome.cpf) : ''}. Se for a mesma pessoa, feche e marque o papel que faltar no cadastro dela. Se for outra pessoa, pode cadastrar.`, gravar, 'Cadastrar assim mesmo', false);
+      return;
+    }
+    if (id && !conferirAntesDeSalvar('pessoas', n, 'um cadastro')) return;
+    gravar();
+  };
+  if (semente.papel === 'passageiro' && !id) setTimeout(() => { const c = $('#peNome'); if (c) c.focus(); }, 60);
+};
+
+/* ── seletor de passageiros: os do cliente primeiro ──────────────────────── */
+const _abrirSeletorPaxAntigo = abrirSeletorPax;
+abrirSeletorPax = function(atuais, aoConfirmar, clienteId, clienteNome){
+  _abrirSeletorPaxAntigo(atuais, aoConfirmar);
+  const cli = clienteId ? pessoa(clienteId) : (clienteNome ? (DB.pessoas || []).find(p => semAcento(p.nome) === semAcento(clienteNome)) : null);
+  const rol = document.getElementById('paxRol'); if (!rol) return;
+  const reorganizar = () => {
+    /* só passageiros: cliente que não viaja não aparece para escolher */
+    rol.querySelectorAll('[data-pax]').forEach(b => { const p = pessoa(b.dataset.pax); if (p && !ehPassageiro(p)) b.remove(); });
+    if (!cli || rol.querySelector('.pax-grupo-cab')) return;
+    const ids = passageirosDoCliente(cli).map(x => x.p.id).concat(ehPassageiro(cli) ? [cli.id] : []);
+    const dele = ids.map(i => rol.querySelector(`[data-pax="${i}"]`)).filter(Boolean);
+    if (!dele.length) return;
+    const cab = document.createElement('div'); cab.className = 'pax-grupo-cab';
+    cab.innerHTML = `<span>Passageiros de ${esc(cli.empresa || cli.nome)}</span><button type="button" class="bt p fantasma" id="paxTodosCli">Marcar todos</button>`;
+    const fim = document.createElement('div'); fim.className = 'pax-grupo-cab'; fim.innerHTML = '<span>Outros passageiros</span>';
+    rol.prepend(fim); dele.reverse().forEach(b => rol.prepend(b)); rol.prepend(cab);
+    cab.querySelector('#paxTodosCli').onclick = () => { ids.forEach(i => { if (!paxEscolhidos.includes(i)) paxEscolhidos.push(i); }); const bs = $('#paxBusca'); if (bs) bs.dispatchEvent(new Event('input')); };
+  };
+  reorganizar();
+  new MutationObserver(reorganizar).observe(rol, {childList:true});
+};
+
+/* ── herói da tela: clientes ou passageiros, conforme a aba ──────────────── */
+(function(){
+  const _h = renderHeroiClientes;
+  renderHeroiClientes = function(){
+    if (cpAba !== 'clientes') return _h.apply(this, arguments);
+    const alvo = $('#heroiArea'); if (!alvo) return;
+    const cs = (DB.pessoas || []).filter(ehCliente);
+    if (!cs.length){ montarHeroi(alvo, {rot:'Clientes', vazio:'Nenhum cliente cadastrado ainda. Toque em Novo Cliente: pode ser uma pessoa, uma agência ou uma empresa, e ele não precisa viajar.'}); return; }
+    const vendas = cs.map(c => ({c, v:soma(emissoesDoCliente(c).map(r => Number(r.cobrado) || 0))}));
+    const tot = soma(vendas.map(x => x.v)), ag = cs.filter(c => c.tipo === 'agencia' || c.tipo === 'empresa').length;
+    const ligados = new Set(cs.flatMap(c => passageirosDoCliente(c).map(x => x.p.id))).size;
+    const porMes = {}; (DB.reservas || []).filter(r => r.quem === 'terceiro').forEach(r => { const k = String(r.data || r.criada || '').slice(0, 7); if (k) porMes[k] = (porMes[k] || 0) + (Number(r.cobrado) || 0); });
+    const serie = Object.keys(porMes).sort().slice(-12).map(k => ({r:rotuloMes(k), v:porMes[k]}));
+    montarHeroi(alvo, {rot:'Clientes', valor:`${nBR(cs.length)}<small> ${cs.length === 1 ? 'cliente' : 'clientes'}</small>`,
+      linha:`<span>Compraram <b>${brl(tot)}</b></span>${ag ? `<span class="heroi-chip sobe">${ag} ${ag === 1 ? 'agência ou empresa' : 'agências ou empresas'}</span>` : ''}`,
+      numeros:[[nBR(cs.length - ag), cs.length - ag === 1 ? 'pessoa física' : 'pessoas físicas'], [nBR(ag), ag === 1 ? 'agência ou empresa' : 'agências ou empresas'], [nBR(ligados), ligados === 1 ? 'passageiro ligado' : 'passageiros ligados']],
+      fatias:fatiasHeroi(vendas.filter(x => x.v > 0).map(x => ({id:x.c.id, v:x.v})), x => { const c = pessoa(x.id) || {}; const n = c.empresa || c.nome || ''; return n.length > 22 ? n.slice(0, 21) + '…' : n; }), fmtFatia:v => brl(v), compRot:'Vendas por cliente',
+      dirRot:'Vendas a clientes, mês a mês', dirSub:'O que foi cobrado nas emissões para terceiros.',
+      ult: serie.length ? {b:brl(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null, serie, fmtSerie:v => brl(v), semSerie:'A curva aparece a partir do segundo mês com venda.'});
+  };
+})();
+
+/* ── ligações ─────────────────────────────────────────────────────────────── */
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-cp-aba]'); if (a){ cpTrocarAba(a.dataset.cpAba); return; }
+  const f = e.target.closest('[data-cp-ficha]'); if (f){ abrirFichaPessoa(f.dataset.cpFicha); return; }
+  const fa = e.target.closest('[data-cp-fa]');
+  if (fa){ $$('#folhaCorpo [data-cp-fa]').forEach(b => b.classList.toggle('on', b === fa)); $$('#folhaCorpo [data-cp-fp]').forEach(x => x.hidden = x.dataset.cpFp !== fa.dataset.cpFa); return; }
+  const em = e.target.closest('[data-cp-emitir]');
+  if (em) cpNovaEmissao(em.dataset.cpEmitir);
+});
+/* na cotação: escolher um cliente com milheiro combinado aplica o milheiro dele */
+document.addEventListener('change', e => {
+  if (!e.target || e.target.id !== 'cqCliente' || typeof vemEst === 'undefined' || !vemEst) return;
+  const c = (DB.pessoas || []).find(p => ehCliente(p) && Number(p.milheiro) > 0 && [p.nome, p.empresa].filter(Boolean).some(n => semAcento(n) === semAcento(e.target.value)));
+  if (!c) return;
+  const m = moedaTxt(Number(c.milheiro));
+  (vemEst.ops || []).forEach(o => { o.milheiro = m; });
+  try { vemGuardarRascunho(); renderVem(); } catch(_){}
+  avisar(`Milheiro combinado com ${c.empresa || c.nome} aplicado: ${brl2(Number(c.milheiro))} por mil.`, 'ok', 5000);
+});
+</script>
+
+<style>
+.cp-hist .cp-av{ flex:0 0 38px; }
+.cp-hist .etq{ flex:0 0 auto; }
+/* ══ aviso de renovação de clube (15/10/2026) ══ */
+.rn-pilha{ position:fixed; top:84px; right:24px; z-index:1450; display:flex; flex-direction:column; gap:12px; width:min(400px, calc(100vw - 32px)); pointer-events:none; }
+.rn-card{ pointer-events:auto; position:relative; overflow:hidden; border-radius:18px; padding:16px 16px 14px 18px; color:#F3F6FB;
+  background:linear-gradient(150deg, rgba(22,40,66,.94), rgba(12,24,40,.96)); border:1px solid rgba(255,255,255,.10);
+  box-shadow:0 24px 60px -18px rgba(5,12,24,.65), 0 2px 0 rgba(255,255,255,.04) inset; backdrop-filter:blur(16px) saturate(140%);
+  animation:rnEntra .5s cubic-bezier(.2,.9,.25,1.15) both; }
+.rn-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--rn-cor, #F2C14E); }
+.rn-card.saindo{ animation:rnSai .28s ease forwards; }
+@keyframes rnEntra{ from{ opacity:0; transform:translateY(-14px) scale(.96); } to{ opacity:1; transform:none; } }
+@keyframes rnSai{ to{ opacity:0; transform:translateX(30px) scale(.97); } }
+.rn-topo{ display:flex; gap:12px; align-items:flex-start; }
+.rn-sino{ width:38px; height:38px; flex:0 0 38px; border-radius:12px; display:grid; place-items:center; background:color-mix(in srgb, var(--rn-cor, #F2C14E) 20%, transparent); }
+.rn-sino svg{ width:19px; height:19px; fill:none; stroke:var(--rn-cor, #F2C14E); stroke-width:1.9; animation:rnBalanca 2.4s ease-in-out 1s 2; transform-origin:50% 10%; }
+@keyframes rnBalanca{ 0%,100%{ transform:rotate(0); } 15%{ transform:rotate(14deg); } 30%{ transform:rotate(-12deg); } 45%{ transform:rotate(8deg); } 60%{ transform:rotate(-5deg); } 75%{ transform:rotate(2deg); } }
+.rn-txt{ flex:1; min-width:0; }
+.rn-olho{ font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--rn-cor, #F2C14E); font-weight:700; }
+.rn-txt b{ display:block; font-size:15px; margin:3px 0 4px; line-height:1.3; }
+.rn-txt p{ margin:0; font-size:13px; line-height:1.5; color:rgba(220,229,243,.78); }
+.rn-txt p b{ display:inline !important; font-size:inherit; margin:0; color:#F3F6FB; }
+.rn-x{ border:0; background:rgba(255,255,255,.07); color:#DCE4F0; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; cursor:pointer; flex:0 0 28px; }
+.rn-x svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.rn-dias{ display:flex; align-items:baseline; gap:6px; margin-top:10px; font-family:var(--f-m, monospace); }
+.rn-dias strong{ font-size:26px; font-weight:500; color:var(--rn-cor, #F2C14E); line-height:1; }
+.rn-dias span{ font-size:12px; color:rgba(220,229,243,.7); }
+.rn-acoes{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.rn-acoes button{ border-radius:10px; padding:8px 12px; font:600 12.5px var(--f-b, inherit); cursor:pointer; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#F3F6FB; }
+.rn-acoes button.rn-pri{ background:var(--rn-cor, #F2C14E); border-color:transparent; color:#1A1405; }
+.rn-acoes button:hover{ filter:brightness(1.08); }
+@media (max-width:560px){ .rn-pilha{ top:auto; bottom:calc(150px + env(safe-area-inset-bottom, 0px)); right:16px; left:16px; width:auto; } }
+@media (prefers-reduced-motion:reduce){ .rn-card, .rn-sino svg{ animation:none; } }
+</style>
+<script>
+/* ══ AVISO DE RENOVAÇÃO DE CLUBE (15/10/2026, pedido do Jadiel) ═══════════════════
+   Clube renova sozinho, e a renovação costuma perder o bônus da campanha: o
+   certo é fazer o downgrade (ou cancelar) antes. A partir de 3 dias antes da
+   renovação, toda vez que a Torre abre, aparece um cartão suspenso no canto da
+   tela, com quantos dias faltam e o que fazer:
+     · "Ver o clube" leva a Meus Clubes;
+     · "Depois" fecha por agora (volta na próxima vez que abrir a Torre);
+     · "Já resolvi" some até a próxima renovação desta assinatura.
+   Quando já há mudança de plano marcada, o cartão lembra de conferir no site
+   do programa se a troca foi feita. */
+const RN_DIAS = 3;
+function renovacoesProximas(){
+  return (DB.assinaturas || []).filter(a => a.status === 'ativa' && a.renova).map(a => ({a, d:diasAte(a.renova)}))
+    .filter(x => x.d !== null && x.d <= RN_DIAS && x.d >= -1 && x.a.renovaOk !== x.a.renova)
+    .sort((x, y) => x.d - y.d);
+}
+function mostrarAvisosRenovacao(){
+  let pilha = document.getElementById('rnPilha');
+  if (!pilha){ pilha = document.createElement('div'); pilha.id = 'rnPilha'; pilha.className = 'rn-pilha'; pilha.setAttribute('aria-live', 'polite'); document.body.appendChild(pilha); }
+  pilha.innerHTML = '';
+  renovacoesProximas().slice(0, 3).forEach(({a, d}) => {
+    const pl = typeof ccPlano === 'function' ? ccPlano(a) : null;
+    const mud = a.mudanca && a.mudanca.planoId ? ((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId : '';
+    const quando = d < 0 ? 'renovou ontem' : d === 0 ? 'renova hoje' : d === 1 ? 'renova amanhã' : `renova em ${d} dias`;
+    const cor = mud ? '#6FB7FF' : d <= 1 ? '#FF8A6B' : '#F2C14E';
+    const el = document.createElement('div');
+    el.className = 'rn-card'; el.style.setProperty('--rn-cor', cor); el.setAttribute('role', 'alert'); el.dataset.rn = a.id;
+    el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
+      <div class="rn-txt"><div class="rn-olho">Renovação de clube</div>
+        <b>${esc(prog(a.prog).n)} ${esc(pl ? pl.n : '')} de ${esc(nomeCurtoConta(a.contaId))} ${quando}</b>
+        <p>${mud ? `Já está marcada a troca para <b style="display:inline">${esc(mud)}</b>. Confira no site do programa se a mudança foi feita antes de ${dataBR(a.renova)}.`
+          : `Renovar costuma perder o bônus da campanha. Faça o downgrade ou cancele antes de ${dataBR(a.renova)} para não pagar caro.`}</p></div>
+      <button type="button" class="rn-x" data-rn-fechar aria-label="Fechar"><svg><use href="#i-x"/></svg></button></div>
+      <div class="rn-dias"><strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a renovação' : 'dias para a renovação'} · ${brl2(a.valor)}</span></div>
+      <div class="rn-acoes"><button type="button" class="rn-pri" data-rn-ver>Ver o clube</button><button type="button" data-rn-fechar>Depois</button><button type="button" data-rn-ok>Já resolvi</button></div>`;
+    const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
+    el.querySelectorAll('[data-rn-fechar]').forEach(b => b.onclick = sair);
+    el.querySelector('[data-rn-ver]').onclick = () => { sair(); try { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); setTimeout(() => { const l = document.querySelector(`[data-assin="${a.id}"]`); if (l) l.scrollIntoView({block:'center', behavior:'smooth'}); }, 500); } catch(_){} };
+    el.querySelector('[data-rn-ok]').onclick = () => { a.renovaOk = a.renova; salvar(); sair(); avisar('Combinado: este aviso volta só na próxima renovação.', 'ok', 3500); };
+    pilha.appendChild(el);
+  });
+}
+/* toda vez que a Torre abre: depois da abertura, para o cartão não brigar com ela */
+(function(){
+  const iniciar = () => setTimeout(() => { try { mostrarAvisosRenovacao(); } catch(e){ console.error(e); } }, 2200);
+  if (document.readyState === 'complete') iniciar(); else addEventListener('load', iniciar);
 })();
 </script>
 </body>
