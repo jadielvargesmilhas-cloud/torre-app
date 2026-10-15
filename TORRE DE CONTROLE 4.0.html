@@ -11791,7 +11791,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 23:00';
+const BUILD = '2026-10-14 23:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -21475,15 +21475,38 @@ function editorDeFoto(src, aoAplicar){
 
 /* A foto de uma pessoa do grupo: a da própria conta, se houver; e, na conta do
    titular, a foto do perfil — titular e dono da Torre são a mesma pessoa. */
+/* 14/10/2026: regra geral. A conta do dono da Torre é achada nesta ordem:
+   a que ele escolheu em "Meu perfil", a de mesmo nome do perfil (primeiro e
+   último nome) e, por fim, a de vínculo Titular. Onde quer que essa conta
+   apareça, aparece a foto do perfil. As outras contas usam a foto própria. */
+function contaDoDono(){
+  const contas = DB.contas || [], p = (DB.cfg && DB.cfg.perfil) || {};
+  if (p.contaId){ const c = contas.find(x => x.id === p.contaId); if (c) return c; }
+  const tk = n => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/\s+/).filter(Boolean);
+  const pn = tk(p.nome);
+  if (pn.length){
+    const igual = contas.find(c => { const cn = tk(c.nome); return cn.length && cn[0] === pn[0] && (pn.length === 1 || cn[cn.length - 1] === pn[pn.length - 1]); });
+    if (igual) return igual;
+  }
+  return contas.find(c => typeof ehTitular === 'function' && ehTitular(c)) || null;
+}
 function fotoDaConta(c){
   if (!c) return '';
-  if (c.foto) return c.foto;
-  const p = (DB.cfg && DB.cfg.perfil) || {};
-  return typeof ehTitular === 'function' && ehTitular(c) && p.foto ? p.foto : '';
+  if (typeof c === 'string') c = (DB.contas || []).find(x => x.id === c);
+  if (!c) return '';
+  const p = (DB.cfg && DB.cfg.perfil) || {}, dono = contaDoDono();
+  if (dono && dono.id === c.id && p.foto) return p.foto;
+  return c.foto || '';
 }
 function avatarConta(c, cls = 'tit-av'){
   const f = fotoDaConta(c);
   return `<span class="${cls}${f ? ' com-foto' : ''}">${f ? `<img src="${f}" alt="">` : esc(iniciaisDe(c ? c.nome : ''))}</span>`;
+}
+/* A mesma peça para qualquer lugar: aceita a conta, o id dela ou só o nome. */
+function avatarDe(ref, cls = 'tit-av', tag = 'span'){
+  const c = ref && typeof ref === 'object' ? ref : (DB.contas || []).find(x => x.id === ref) || {nome:typeof ref === 'string' ? nomeConta(ref) : ''};
+  const f = fotoDaConta(c);
+  return `<${tag} class="${cls}${f ? ' com-foto' : ''}">${f ? `<img src="${f}" alt="">` : esc(iniciaisDe(c.nome))}</${tag}>`;
 }
 
 let _fotoPerfil = undefined;
@@ -21507,6 +21530,7 @@ function abrirPerfil(){
       <div class="campo"><label>Telefone ou WhatsApp</label><input type="text" inputmode="tel" autocomplete="tel" id="pfTel" value="${esc(p.tel || '')}" placeholder="(71) 9 0000-0000"></div>
       <div class="campo"><label>Cidade</label><input type="text" id="pfCidade" value="${esc(p.cidade || '')}" placeholder="Salvador, BA"></div>
       <div class="campo"><label>Empresa ou marca <span class="fraco">opcional</span></label><input type="text" id="pfMarca" value="${esc(p.marca || '')}" placeholder="VEM · Viagens & Experiências com Milhas"></div>
+      <div class="campo"><label>Sua conta no grupo <span class="fraco">recebe esta foto</span></label><select id="pfConta">${(DB.contas || []).slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt')).map(c => `<option value="${c.id}"${(contaDoDono() || {}).id === c.id ? ' selected' : ''}>${esc(nomeCurto(c.nome))}</option>`).join('')}</select></div>
     </div>
     <p class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:10px">${contas} ${contas === 1 ? 'titular de programa cadastrado' : 'titulares de programa cadastrados'} em Carteira → Contas. Este perfil é o seu, o dono da Torre${titularC ? `: a foto também aparece na conta de titular (${esc(titularC.nome)})` : ''}.</p>`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="pfSair"><svg><use href="#i-sair"/></svg>Sair da conta</button><div class="esticar"></div><button class="bt primario" id="pfSalvar"><svg><use href="#i-ok"/></svg>Salvar</button>`});
@@ -21526,8 +21550,8 @@ function abrirPerfil(){
     if ($('#cropUsar')){ $('#cropUsar').click(); await new Promise(ok => setTimeout(ok, 250)); }
     const email = $('#pfEmail').value.trim();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ erroNoCampo('#pfEmail', 'Esse e-mail não parece completo (falta o @ ou o domínio).'); return; }
-    DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || ''};
-    salvar(); pintarAvatar(); fecharFolha(); avisar('Perfil salvo.', 'ok');
+    DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || '', contaId:($('#pfConta') || {}).value || ''};
+    salvar(); pintarAvatar(); fecharFolha(); try { aplicarTudo(); } catch(_){} avisar('Perfil salvo. A foto aparece em todo lugar onde a sua conta aparece.', 'ok', 5000);
     if (vistaAtual === 'saldo' && typeof renderSaldo === 'function') renderSaldo();
     if (typeof nuvemPronta === 'function' && nuvemPronta()) setTimeout(() => nuvemSincronizar(false), 300);
   };
@@ -29583,9 +29607,22 @@ function editarConta(id){
   const c = id ? DB.contas.find(x => x.id === id)
               : {nome:'', papel: titular ? 'Cônjuge' : 'Titular', cpf:'', email:'', obs:'', niveis:{}};
   const niveis = c.niveis || {};
+  const dono0 = contaDoDono(), ehDono = !!(id && dono0 && dono0.id === id);
+  let _fotoConta = ehDono ? (((DB.cfg || {}).perfil || {}).foto || '') : (c.foto || '');
   abrirFolha({
     titulo: id ? 'Editar Conta' : 'Nova Conta', largura:'larga',
-    corpo:`<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
+    corpo:`<div class="ct-foto-linha">
+      <div class="perfil-foto" id="ctFoto">${_fotoConta ? `<img src="${_fotoConta}" alt="">` : `<b>${esc(iniciaisDe(c.nome || '?'))}</b>`}</div>
+      <div class="pilha" style="gap:6px">
+        <div class="linha" style="gap:8px;flex-wrap:wrap">
+          <label class="bt fantasma p" style="cursor:pointer"><svg><use href="#i-imagem"/></svg>Escolher foto<input type="file" id="ctArquivo" accept="image/*" hidden></label>
+          <button type="button" class="bt fantasma p" id="ctTirarFoto"${_fotoConta ? '' : ' hidden'}><svg><use href="#i-x"/></svg>Tirar a foto</button>
+        </div>
+        <small class="fraco">${ehDono ? 'Esta é a sua conta: a foto é a mesma do seu perfil e aparece em todo lugar onde ela aparece.' : 'A foto aparece em todo lugar onde esta conta aparece.'}</small>
+      </div>
+    </div>
+    <div id="pfEditor" hidden></div>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-top:12px">
       <div class="campo"><label>Nome</label><input type="text" id="ctN" value="${esc(c.nome)}" placeholder="Nome completo"></div>
       <div class="campo"><label>Vínculo</label><select id="ctP">${PARENTESCO.map(p => {
         const preso = p === 'Titular' && titular;
@@ -29616,8 +29653,17 @@ function editarConta(id){
     pe:`<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarConta">Salvar</button>`
   });
   ligarCampoCPF('#ctC', '#ctCdica');
+  const pintarFotoConta = () => { $('#ctFoto').innerHTML = _fotoConta ? `<img src="${_fotoConta}" alt="">` : `<b>${esc(iniciaisDe($('#ctN').value || '?'))}</b>`; $('#ctTirarFoto').hidden = !_fotoConta; };
+  $('#ctArquivo').onchange = async ev => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    try { editorDeFoto(await lerImagemGrande(f), url => { _fotoConta = url; pintarFotoConta(); }); } catch(e){ avisar(e.message, 'alerta'); }
+    ev.target.value = '';
+  };
+  $('#ctTirarFoto').onclick = () => { _fotoConta = ''; pintarFotoConta(); };
+  $('#ctN').addEventListener('input', () => { if (!_fotoConta) pintarFotoConta(); });
 
-  $('#btSalvarConta').onclick = () => {
+  $('#btSalvarConta').onclick = async () => {
+    if ($('#cropUsar')){ $('#cropUsar').click(); await new Promise(ok => setTimeout(ok, 250)); }
     const nome = $('#ctN').value.trim();
     const cpf = $('#ctC').value.trim();
     const email = $('#ctE').value.trim();
@@ -29668,12 +29714,16 @@ function editarConta(id){
 
     const nv = {};
     $$('#folhaCorpo select[data-nivel]').forEach(el => { if (el.value) nv[el.dataset.nivel] = el.value; });
-    const novo = {id:c.id || uid(), nome, papel, cpf:formatarCPF(cpf), email, obs:$('#ctO').value.trim(), niveis:nv};
+    const novo = {...c, id:c.id || uid(), nome, papel, cpf:formatarCPF(cpf), email, obs:$('#ctO').value.trim(), niveis:nv};
+    /* foto: a do dono mora no perfil (uma só para o sistema todo); a das outras, na conta */
+    if (ehDono){ delete novo.foto; } else if (_fotoConta) novo.foto = _fotoConta; else delete novo.foto;
+    const fotoDonoMudou = ehDono && ((((DB.cfg || {}).perfil || {}).foto || '') !== _fotoConta);
     const mesmoCpfConta = soDigitos(novo.cpf) && (DB.contas || []).find(x => x.id !== novo.id && soDigitos(x.cpf) === soDigitos(novo.cpf));
     if (mesmoCpfConta){ avisar(`Esse CPF já é da conta de ${mesmoCpfConta.nome}.`, 'alerta', 7000); return; }
-    if (!conferirAntesDeSalvar('contas', novo, 'uma conta')) return;
+    if (!fotoDonoMudou && !conferirAntesDeSalvar('contas', novo, 'uma conta')) return;
     if (id) DB.contas[DB.contas.findIndex(x => x.id === id)] = novo; else DB.contas.push(novo);
-    salvar(); fecharFolha(); renderSaldo(); renderFita(); avisar('Conta salva.', 'ok');
+    if (fotoDonoMudou){ DB.cfg.perfil = {...(DB.cfg.perfil || {}), foto:_fotoConta}; }
+    salvar(); fecharFolha(); try { pintarAvatar(); } catch(_){} try { aplicarTudo(); } catch(_){ renderSaldo(); renderFita(); } avisar('Conta salva.', 'ok');
   };
 }
 
@@ -54367,7 +54417,7 @@ function ccLinha(a, modo){
     a.cancelarAntes ? `<span class="etq" data-dica="Intenção de cancelar marcada">cancelar no ${a.cancelarAntes}º mês</span>` : ''
   ].filter(Boolean).join('');
   const quem = modo === 'clube'
-    ? `<div class="cc-ini">${esc(ccIniciais(nomeConta(a.contaId)))}</div><div><b>${esc(nomeCurtoConta(a.contaId))}</b><small>${esc(MODALIDADES[a.modalidade] || a.modalidade || '')} · ${brl2(a.valor)}${a.modalidade === 'anual_parcelado' && Number(a.parcelas) > 1 ? ` em ${a.parcelas}x` : ''}</small></div>`
+    ? `${avatarDe(a.contaId, 'cc-ini', 'div')}<div><b>${esc(nomeCurtoConta(a.contaId))}</b><small>${esc(MODALIDADES[a.modalidade] || a.modalidade || '')} · ${brl2(a.valor)}${a.modalidade === 'anual_parcelado' && Number(a.parcelas) > 1 ? ` em ${a.parcelas}x` : ''}</small></div>`
     : `<div class="cc-marca" style="--marca:${prog(a.prog).cor}">${discoProg(a.prog, 'p')}</div><div><b>${esc(prog(a.prog).n)}</b><small>${esc(MODALIDADES[a.modalidade] || a.modalidade || '')} · ${brl2(a.valor)}${a.modalidade === 'anual_parcelado' && Number(a.parcelas) > 1 ? ` em ${a.parcelas}x` : ''}</small></div>`;
   return `<div class="cc-linha" style="--marca:${prog(a.prog).cor}" data-assin="${esc(a.id)}">
     <div class="cc-quem">${quem}</div>
@@ -54401,7 +54451,7 @@ function ccGrupo(chave, lista, modo){
   const contasOrd = [...new Set(fatias.map(x => x.a.contaId))];
   return `<details class="cc-grupo" open style="--marca:${marca}">
     <summary class="cc-cab">
-      ${ehClube ? `<div class="cc-marca" style="--marca:${marca}">${discoProg(chave)}</div>` : `<div class="cc-ini">${esc(ccIniciais(titulo))}</div>`}
+      ${ehClube ? `<div class="cc-marca" style="--marca:${marca}">${discoProg(chave)}</div>` : avatarDe(chave, 'cc-ini', 'div')}
       <div class="cc-tit"><h4>${esc(ehClube ? titulo : nomeCurto(titulo))}<span class="etq">${pessoas} ${ehClube ? (pessoas === 1 ? 'titular' : 'titulares') : (pessoas === 1 ? 'clube' : 'clubes')}</span></h4>
         <small>${ativas.length} ${ativas.length === 1 ? 'assinatura ativa' : 'assinaturas ativas'}${lista.length > ativas.length ? ` · ${lista.length - ativas.length} encerrada${lista.length - ativas.length > 1 ? 's' : ''}` : ''}</small></div>
       <span class="cc-seta"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -55391,7 +55441,7 @@ function ptSimRender(){
     </article>
     ${bons.length > 1 ? `<div class="sm-outras"><div class="sm-sub">Outras ${todos ? 'opções' : 'contas'}, em ordem</div>${bons.slice(1).map((x, i) => `
       <div class="sm-linha">
-        <span class="sm-pos">${i + 2}º</span>${todos ? discoProg(x.l.prog) : `<span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>`}
+        <span class="sm-pos">${i + 2}º</span>${todos ? discoProg(x.l.prog) : avatarDe(x.l.conta, 'pv-ini')}
         <div class="sm-nome"><b>${quem(x)}</b><small>${brl2(x.preco)} contra ${brl2(x.l.cpm)} · ${esc(ptCpfTxt(x))}</small></div>
         <div class="sm-val"><b class="${x.lucro >= 0 ? 'jade' : 'brasa'}">${lc(x.lucro)}</b><small>${brl(Math.abs(m.lucro - x.lucro))} a menos</small></div>
         <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="${ac.acao} por ${esc(nomeCurto(x.l.conta.nome))}">${ac.id === 'passagem' ? 'Emitir' : 'Reservar'}</button>
@@ -55452,7 +55502,7 @@ function ptSmRenderShop(alvo){
     ${bons.length > 1 ? `<div class="sm-outras"><div class="sm-sub">Outras contas, em ordem</div>${bons.slice(1).map((x, i) => {
       const d = x.custo - m.custo;
       return `<div class="sm-linha">
-        <span class="sm-pos">${i + 2}º</span><span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>
+        <span class="sm-pos">${i + 2}º</span>${avatarDe(x.l.conta, 'pv-ini')}
         <div class="sm-nome"><b>${quem(x)}</b><small>${brl2(x.l.cpm)} o milheiro · ${esc(ptCpfShopTxt(x))} · ${nBR(x.l.qtd)} milhas</small></div>
         <div class="sm-val"><b>${brl(x.custo)}</b><small>${Math.abs(d) < .005 ? 'mesmo custo' : `${brl(Math.abs(d))} ${d > 0 ? 'a mais' : 'a menos'}${d < 0 && m.zerada && !x.zerada ? ', mas tem vaga de CPF' : ''}`}</small></div>
         <button type="button" class="bt p fantasma" data-sm-ir="${lista.indexOf(x)}" aria-label="Resgatar por ${esc(nomeCurto(x.l.conta.nome))}">Resgatar</button>
@@ -55464,7 +55514,7 @@ function ptSmRenderShop(alvo){
 function ptSmFora(fora, quem){
   if (!fora.length) return '';
   return `<details class="sm-fora"><summary>Sem condição agora (${fora.length})</summary>${fora.map(x => `
-    <div class="sm-linha fora"><span class="sm-pos"></span><span class="pv-ini">${esc(iniciaisDe(x.l.conta.nome))}</span>
+    <div class="sm-linha fora"><span class="sm-pos"></span>${avatarDe(x.l.conta, 'pv-ini')}
       <div class="sm-nome"><b>${quem(x)}</b><small>${nBR(x.l.qtd)} milhas · ${esc(x.shop ? ptCpfShopTxt(x) : ptCpfTxt(x))}</small></div>
       <div class="sm-val"><b class="brasa">${esc(x.motivo)}</b></div><span></span></div>`).join('')}</details>`;
 }
@@ -55677,7 +55727,7 @@ function ptRenderVitrine(){
   const lucro = receita - custo;
   const totConta = id => soma((posicoesDeVenda() || []).filter(l => l.conta.id === id).map(l => l.qtd));
   const chip = (id, ini, nome, pe) => `<button type="button" class="pv-conta${ptSel === id ? ' on' : ''}" data-pt-conta="${esc(id)}" aria-pressed="${ptSel === id}">
-      <span class="pv-ini">${ini}</span><span><b>${esc(id === '*' ? nome : nomeCurto(nome))}</b><small>${pe}</small></span></button>`;
+      ${id === '*' ? `<span class="pv-ini">${ini}</span>` : avatarDe(id, 'pv-ini')}<span><b>${esc(id === '*' ? nome : nomeCurto(nome))}</b><small>${pe}</small></span></button>`;
   /* "Grupo todo" vem primeiro, separado das contas por um fio; as contas seguem
      em ordem alfabética, sem fio entre elas. */
   const chips = (ptContasDisp.length > 1 ? chip('*', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c2.6-.4 5 1 5.7 4.4"/></svg>', 'GRUPO TODO', milCurto(soma(ptContasDisp.map(c => totConta(c.id)))) + ' milhas')
@@ -56049,7 +56099,7 @@ function renderEsperaClube(){
         ? `<span class="etq ouro">campanha no ar, acima do alvo</span><small>${esc(st.melhor.c.titulo || 'Campanha de clube')}: ${brl2(st.melhor.r.cpm)} o milheiro</small>`
         : `<span class="etq">vigiando</span><small>Nenhuma campanha deste clube no ar.${st.tabela ? ` Sem promoção, sai ${brl2(st.tabela)} o milheiro.` : ''}</small>`;
     return `<div class="ce-item${st.quente ? ' quente' : ''}" data-espera="${esc(e.id)}">
-      <div class="ce-quem"><div class="cc-ini">${esc(ccIniciais(nomeConta(e.contaId)))}</div><div><b>${esc(nomeCurtoConta(e.contaId))}</b><small>${esc(prog(e.prog).n)} · ${esc(pl ? pl.n : 'qualquer plano')}</small></div></div>
+      <div class="ce-quem">${avatarDe(e.contaId, 'cc-ini', 'div')}<div><b>${esc(nomeCurtoConta(e.contaId))}</b><small>${esc(prog(e.prog).n)} · ${esc(pl ? pl.n : 'qualquer plano')}</small></div></div>
       <div class="ce-alvo"><small>Assinar quando o milheiro chegar a</small><b>${st.alvo ? brl2(st.alvo) : 'n/d'}</b></div>
       <div class="ce-estado">${estado}${e.obs ? `<small>${esc(e.obs)}</small>` : ''}</div>
       <div class="ce-acoes">
@@ -56136,5 +56186,13 @@ function assinarDaEspera(id){
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 80)); else setTimeout(ligar, 80);
 })();
 </script>
+
+<style>
+/* foto da conta dentro de qualquer avatar redondo (14/10/2026) */
+.cc-ini.com-foto, .pv-ini.com-foto, .tit-av.com-foto, .jn-pos.com-foto{ padding:0; overflow:hidden; background:none; }
+.cc-ini.com-foto img, .pv-ini.com-foto img, .tit-av.com-foto img, .jn-pos.com-foto img{ width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit; }
+.ct-foto-linha{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:4px; }
+.ct-foto-linha .perfil-foto{ width:72px; height:72px; flex:0 0 72px; }
+</style>
 </body>
 </html>
