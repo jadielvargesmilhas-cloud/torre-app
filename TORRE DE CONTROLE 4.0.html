@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 12:00';
+const BUILD = '2026-10-15 15:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -19758,7 +19758,7 @@ let catMural = 'alerta', ordemMural = 'quente', soAtivasMural = true;
    O que os melhores murais de promoção fazem (Pelando, Promobit), trazido para
    uma pessoa só e para o jeito como as oportunidades chegam: texto pronto de
    grupo. "Colar anúncios" lê esse texto — um ou vários de uma vez — e tira
-   título, prazo, links, a classificação em magos, o destaque e as condições.
+   título, prazo, links, a classificação (em bússolas ROTA), o destaque e as condições.
    "Mais quentes" junta a classificação do anúncio, o voto de quem usa
    (esquentar/esfriar) e o prazo. Anúncio de transferência vira campanha com um
    clique. E os alertas importantes trazem o que a Torre percebe sozinha.
@@ -19983,7 +19983,7 @@ function abrirColarMural(){
     titulo:'Colar Anúncios', largura:'larga',
     corpo:`<div class="campo rotulo-inteiro"><label>Texto dos anúncios</label>
         <textarea id="mrColar" rows="10" placeholder="Cole aqui o texto como veio do grupo — um anúncio ou vários de uma vez."></textarea>
-        <div class="dica">Cada anúncio que começa com 🚨 ou 🔊 vira uma oportunidade separada. A Torre tira título, prazo, links, a classificação em magos, o destaque e as condições; você confere antes de gravar.</div></div>
+        <div class="dica">Cada anúncio que começa com 🚨 ou 🔊 vira uma oportunidade separada. A Torre tira título, prazo, links, a classificação (em bússolas ROTA), o destaque e as condições; você confere antes de gravar.</div></div>
       <div id="mrPrevias" class="mr-previas"></div>`,
     pe:`<button class="bt fantasma sair" onclick="fecharFolha()">Fechar</button>
         <button class="bt" id="btLerAnuncios" onclick="previaAnuncios()"><svg><use href="#i-busca"/></svg>Ler anúncios</button>
@@ -20010,7 +20010,7 @@ function previaAnuncios(){
           <span class="etq ${a.fim ? 'jade' : ''}">${a.fim ? 'até ' + dataBR(a.fim) : 'sem prazo'}</span>
           ${a.destaque ? `<span class="etq ouro">${esc(a.destaque)}</span>` : ''}
           ${a.cupom ? `<span class="etq anil">cupom ${esc(a.cupom)}</span>` : ''}
-          ${a.magos ? `<span class="mr-magos" title="Classificação do anúncio">${'🧙'.repeat(a.magos)}</span>` : ''}
+          ${a.magos ? bussolaHTML(bussolaDeMagos(a.magos), {compacto:true}) : ''}
           <span class="fraco">${a.condicoes.length} condições · ${a.links.length} link${a.links.length === 1 ? '' : 's'}</span>
           ${a.sugestao ? `<span class="etq anil">${esc(rotuloSugestao(a.sugestao))}</span>` : ''}
         </div>
@@ -20177,7 +20177,7 @@ function renderMural(){
       <div class="mural-topo">
         <b class="mural-tit">${esc(m.titulo)}</b>
         ${m.pontuacao ? `<span class="etq ouro">${esc(m.pontuacao)}</span>` : ''}
-        ${m.magos ? `<span class="mr-magos" title="Classificação do anúncio: ${m.magos} de 5">${'🧙'.repeat(m.magos)}</span>` : ''}
+        ${m.magos ? bussolaHTML(bussolaDeMagos(m.magos), {compacto:true}) : ''}
         <div class="esticar"></div>
         <span class="mr-voto" role="group" aria-label="Sua avaliação">
           <button class="bt p fantasma icone${Number(m.voto) === 1 ? ' on-quente' : ''}" onclick="votarMural('${m.id}', 1)" data-dica="Esquentar: serve para mim">▲</button>
@@ -23291,10 +23291,10 @@ const GUIA_MURAL = {
      p:['O mural é a caixa de entrada das oportunidades que chegam pelos grupos e canais: alertas, compras bonificadas, passagens e cashback. Em vez de ficarem perdidas no celular, ficam aqui, com prazo e link.',
         'Os alertas importantes também trazem o que a própria Torre percebe sozinha: campanhas que fecham hoje e campanhas que bateram recorde.']},
     {i:'i-mais', n:'Como cadastrar sem digitar',
-     p:['Use "Colar anúncios": cole o texto do grupo, um anúncio ou vários de uma vez. A Torre separa cada um e tira título, prazo, links, a classificação em magos e as condições. Você confere a prévia e grava.',
+     p:['Use "Colar anúncios": cole o texto do grupo, um anúncio ou vários de uma vez. A Torre separa cada um e tira título, prazo, links, a classificação (em bússolas ROTA) e as condições. Você confere a prévia e grava.',
         'Anúncio de transferência bonificada vira campanha com um clique, em "Virar campanha", já com bônus, prazo, link e regras preenchidos.']},
     {i:'i-faisca', n:'Como se lê a temperatura',
-     p:['"Mais quentes" junta três coisas: a classificação em magos que veio no anúncio, o seu voto — esquentar ou esfriar — e o prazo, porque o que fecha hoje pede atenção antes.',
+     p:['"Mais quentes" junta três coisas: a classificação (em bússolas ROTA) que veio no anúncio, o seu voto — esquentar ou esfriar — e o prazo, porque o que fecha hoje pede atenção antes.',
         'A classificação do anúncio é de quem o publicou. O seu voto é o que você achou dele para a sua carteira.']},
     {i:'i-alvo', n:'O que fazer com cada uma',
      p:['Leu e não serve: marque como lida, e ela sai do contador. Serve: esquente, abra o link e, se for transferência, vire campanha para a Torre calcular o milheiro.',
@@ -57850,10 +57850,25 @@ function renderUltimasCT(){
 .bf-bloco{ border:1px solid var(--fio); border-radius:var(--r-lg); padding:16px 18px; background:var(--sup-0); }
 .bf-tit{ font-weight:600; color:var(--giz); font-size:calc(14.5px * var(--esc)); margin-bottom:10px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
 .bf-tit small{ font-weight:400; color:var(--grafite); font-size:calc(12px * var(--esc)); }
-.bf-licoes{ margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap:10px; }
-.bf-licoes li{ position:relative; padding:10px 12px 10px 30px; border-radius:12px; background:color-mix(in srgb, var(--ouro) 6%, transparent); border:1px solid color-mix(in srgb, var(--ouro) 20%, transparent); color:var(--giz-2); font-size:calc(13px * var(--esc)); line-height:1.5; }
-.bf-licoes li::before{ content:''; position:absolute; left:12px; top:16px; width:7px; height:7px; border-radius:50%; background:var(--ouro); }
-.bf-licoes b{ color:var(--giz); }
+.bf-licoes{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px; }
+.bf-licoes li{ display:grid; grid-template-columns:minmax(150px, 210px) minmax(0, 1fr); gap:18px; align-items:center; padding:14px 18px; border-radius:14px;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--ouro) 12%, transparent), color-mix(in srgb, var(--ouro) 3%, transparent) 45%, transparent);
+  border:1px solid color-mix(in srgb, var(--ouro) 28%, transparent); border-left:4px solid var(--ouro); }
+.bf-l-num b{ display:block; font:600 calc(24px * var(--esc))/1.1 var(--f-m); color:var(--ouro); white-space:nowrap; }
+.bf-l-num span{ display:block; margin-top:4px; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.bf-l-txt h4{ margin:0 0 4px; font-size:calc(15px * var(--esc)); color:var(--giz); display:flex; gap:9px; align-items:center; }
+.bf-l-txt h4 em{ font-style:normal; font:600 calc(11px * var(--esc))/1 var(--f-m); width:20px; height:20px; border-radius:50%; display:inline-grid; place-items:center; background:var(--ouro); color:#1a1408; flex-shrink:0; }
+.bf-l-txt p{ margin:0; color:var(--giz-2); font-size:calc(13.5px * var(--esc)); line-height:1.5; }
+.bf-teto{ display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.bf-teto > div{ display:grid; grid-template-columns:150px minmax(0, 1fr) 50px; gap:10px; align-items:center; }
+.bf-teto span{ display:flex; gap:7px; align-items:center; color:var(--giz-2); font-size:calc(13px * var(--esc)); white-space:nowrap; }
+.bf-teto i{ height:8px; border-radius:99px; background:color-mix(in srgb, var(--giz) 8%, transparent); overflow:hidden; }
+.bf-teto em{ display:block; height:100%; border-radius:99px; background:linear-gradient(90deg, #B8892E, #F2C766); }
+.bf-teto b{ font:600 calc(14px * var(--esc)) var(--f-m); color:var(--giz); text-align:right; }
+@media (max-width:640px){
+  .bf-licoes li{ grid-template-columns:1fr; gap:8px; padding:12px 14px; }
+  .bf-teto > div{ grid-template-columns:118px minmax(0, 1fr) 44px; }
+}
 .bf-cal{ display:flex; flex-direction:column; gap:5px; overflow-x:auto; }
 .bf-cal-l{ display:grid; grid-template-columns:130px minmax(420px, 1fr); gap:10px; align-items:center; }
 .bf-cal-l > span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
@@ -58126,12 +58141,17 @@ function renderBlack(){
   }).filter(Boolean);
   const smiles100 = BLACK_2025.filter(e => e.cat === 'tr' && e.para === 'smiles' && e.v === 100);
   const datas = BLACK_2025.map(e => e.pub).filter(Boolean).sort();
+  /* uma lição por linha: o número grande à esquerda, a frase à direita */
+  const d0 = datas[0], d1 = datas[datas.length - 1];
+  const diasBlack = Math.round((Date.parse(d1) - Date.parse(d0)) / 864e5) + 1;
+  const tetoMax = Math.max(...dest.map(d => d.max), 1);
   const licoes = [
-    `A Black das milhas durou o mês todo: a primeira campanha saiu em <b>${dataBR(datas[0])}</b> e a última em <b>${dataBR(datas[datas.length - 1])}</b>. Não espere a sexta-feira.`,
-    smiles100.length > 1 ? `A Smiles deu <b>100%</b> ${smiles100.length} vezes (${smiles100.map(e => _bfDM(e.pub)).join(', ')}). Se perder uma, costuma vir outra.` : '',
-    `Teto de bônus por destino: ${dest.map(d => `${esc(prog(d.p).n)} <b>${d.max}%</b>`).join(' · ')}.`,
-    'Na Smiles, na Azul e na ConnectMiles o bônus máximo exigia clube; sem clube ficava entre 40% e 80%. Na LATAM Pass os 30% valiam para todos.',
-    'A Iberia via Esfera não voltou na Black 2025, segundo o balanço da matéria.'
+    {num:`${_bfDM(d0)} a ${_bfDM(d1)}`, rot:`${diasBlack} dias de campanhas`, tit:'A Black das milhas durou o mês todo', txt:`A primeira campanha saiu em ${dataBR(d0)} e a última em ${dataBR(d1)}. Não espere a sexta-feira.`},
+    smiles100.length > 1 ? {num:`100% · ${smiles100.length}×`, rot:smiles100.map(e => _bfDM(e.pub)).join(' · '), tit:`A Smiles deu o bônus máximo ${smiles100.length} vezes`, txt:'Se perder uma, costuma vir outra no mesmo mês.'} : null,
+    {num:`${tetoMax}%`, rot:'maior bônus de transferência', tit:'O teto de cada destino',
+      html:`<div class="bf-teto">${dest.map(d => `<div><span>${discoProg(d.p, 'p')}${esc(prog(d.p).n)}</span><i><em style="width:${(d.max / tetoMax * 100).toFixed(0)}%"></em></i><b>${d.max}%</b></div>`).join('')}</div>`},
+    {num:'40% a 80%', rot:'o bônus de quem não tinha clube', tit:'O bônus máximo exigia clube', txt:'Foi assim na Smiles, na Azul e na ConnectMiles. Na LATAM Pass, os 30% valiam para todos.'},
+    {num:'0', rot:'campanhas da Iberia via Esfera', tit:'A Iberia via Esfera não voltou', txt:'Segundo o balanço da matéria sobre a Black 2025.'}
   ].filter(Boolean);
 
   /* calendário de novembro de 2025: um quadrado por dia, uma linha por destino */
@@ -58195,7 +58215,7 @@ function renderBlack(){
         <div><b>${conta('espera') + conta('nao')}</b><span>${conta('nao') ? 'sem campanha' : 'ainda não saíram'}</span></div>
       </div>
     </section>
-    <section class="bf-bloco"><div class="bf-tit">O que a Black 2025 ensinou</div><ul class="bf-licoes">${licoes.map(l => `<li>${l}</li>`).join('')}</ul></section>
+    <section class="bf-bloco"><div class="bf-tit">O que a Black 2025 ensinou</div><ol class="bf-licoes">${licoes.map((l, i) => `<li><div class="bf-l-num"><b>${l.num}</b><span>${esc(l.rot)}</span></div><div class="bf-l-txt"><h4><em>${i + 1}</em>${esc(l.tit)}</h4>${l.html || `<p>${esc(l.txt)}</p>`}</div></li>`).join('')}</ol></section>
     <section class="bf-bloco"><div class="bf-tit">Novembro de 2025, dia a dia <small>quanto mais forte a cor, maior o bônus · o quadro marcado é a sexta da Black (28/11)</small></div>
       <div class="bf-cal"><div class="bf-cal-l bf-cal-cab"><span></span><div class="bf-cal-d">${Array.from({length:30}, (_, i) => `<i>${(i + 1) % 5 === 1 || i === 29 ? i + 1 : ''}</i>`).join('')}</div></div>${cal}</div></section>
     <div class="seg bf-seg" id="bfSeg">${cats.map(c => `<button type="button" data-c="${c}" class="${c === bfCat ? 'on' : ''}">${BLACK_CATS[c]} <span class="cont">${new Set(BLACK_2025.filter(e => e.cat === c).map(bfRotaKey)).size}</span></button>`).join('')}</div>
@@ -58222,6 +58242,360 @@ function renderBlack(){
   try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === _rf) RENDER[k] = renderFabrica; }); } catch(_){}
   const ligar = () => { try { renderBlack(); } catch(e){ console.error(e); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 120)); else setTimeout(ligar, 120);
+})();
+</script>
+
+<style>
+/* ══ Bússola ROTA ══ */
+#folhaPe:has(#btCopiarBz){ flex-wrap:wrap; justify-content:center; }
+.bz{ display:inline-flex; align-items:center; gap:7px; padding:3px 9px 3px 5px; border-radius:999px; border:1px solid color-mix(in srgb, var(--bzc) 40%, transparent);
+  background:color-mix(in srgb, var(--bzc) 10%, transparent); color:var(--bzc); vertical-align:middle; white-space:nowrap; }
+.bz-grafite{ --bzc:var(--grafite); } .bz-anil{ --bzc:var(--anil-claro); } .bz-ouro{ --bzc:var(--ouro); } .bz-jade{ --bzc:var(--jade); }
+.bz-icos{ display:inline-flex; gap:2px; }
+.bz-icos i{ width:15px; height:15px; display:inline-grid; place-items:center; opacity:.28; }
+.bz-icos i.on{ opacity:1; }
+.bz-icos svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.bz-icos i.on .bz-ag{ fill:currentColor; }
+.bz b{ font-size:calc(11.5px * var(--esc)); font-weight:600; }
+.bz-c{ padding:2px 8px 2px 4px; gap:5px; }
+.bz-c .bz-icos i, .bz-c .bz-icos svg{ width:13px; height:13px; }
+.lj-bz{ margin:2px 0 -2px; }
+.bz-legenda{ display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 14px; border:1px solid var(--fio); border-radius:var(--r-lg);
+  background:linear-gradient(90deg, color-mix(in srgb, #6B3FA0 12%, transparent), transparent 60%); }
+.bz-leg-t{ display:inline-flex; align-items:center; gap:7px; font-weight:600; color:var(--giz); font-size:calc(13px * var(--esc)); margin-right:6px; }
+.bz-leg-t svg{ width:18px; height:18px; fill:none; stroke:#A57BDB; stroke-width:1.8; }
+.bz-leg-t small{ font-weight:500; color:#A57BDB; font-size:calc(11px * var(--esc)); letter-spacing:.02em; }
+.bz-leg-i{ display:inline-flex; align-items:center; gap:6px; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.bz-lista{ display:flex; flex-direction:column; gap:12px; }
+.bz-lista-cab{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.bz-lista-campos{ display:flex; gap:10px; flex-wrap:wrap; }
+.bz-lista-campos .campo{ min-width:150px; }
+.bz-placar{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+.bz-placar > div{ display:flex; flex-direction:column; gap:4px; align-items:flex-start; padding:9px 11px; border:1px solid var(--fio); border-radius:12px; }
+.bz-placar b{ font:600 calc(19px * var(--esc))/1 var(--f-m); color:var(--giz); }
+.bz-placar span:last-child{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.bz-grupo{ border:1px solid var(--fio); border-radius:12px; overflow:hidden; }
+.bz-g-t{ padding:7px 12px; font-size:calc(12px * var(--esc)); font-weight:600; color:var(--giz-2); background:color-mix(in srgb, var(--giz) 4%, transparent); border-bottom:1px solid var(--fio); }
+.bz-item{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; gap:10px; align-items:center; padding:7px 12px; cursor:pointer; }
+.bz-item + .bz-item{ border-top:1px solid var(--fio); }
+.bz-n{ color:var(--giz); font-size:calc(13.5px * var(--esc)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bz-v{ font-family:var(--f-m); color:var(--giz); font-size:calc(13.5px * var(--esc)); white-space:nowrap; }
+.bz-v small{ color:var(--grafite); font-size:calc(10.5px * var(--esc)); }
+@media (max-width:640px){
+  .bz-placar{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .bz-item{ grid-template-columns:auto minmax(0, 1fr) auto; }
+  .bz-item > .bz, .bz-item > .fraco{ grid-column:2 / -1; justify-self:start; }
+}
+</style>
+<script>
+/* ══ BÚSSOLA ROTA (15/10/2026, pedido do Jadiel) ══════════════════════════════
+   A classificação das ofertas de compra em loja, no lugar dos "magos" dos
+   grupos. A bússola é o símbolo do Método ROTA, e classificar oferta é a etapa
+   T do método: Timing das Oportunidades. Mesmas faixas que os grupos usam:
+   até 4 pontos por real, 5 a 6, 7 a 12 e 13 ou mais. */
+const BUSSOLA_FAIXAS = [
+  {n:1, ate:4,  rot:'Só se já ia comprar', faixa:'até 4 pontos',      cor:'grafite'},
+  {n:2, ate:6,  rot:'Vale conferir',        faixa:'de 5 a 6 pontos',   cor:'anil'},
+  {n:3, ate:12, rot:'Boa oportunidade',     faixa:'de 7 a 12 pontos',  cor:'ouro'},
+  {n:4, ate:1e9, rot:'Rota certa',          faixa:'a partir de 13 pontos', cor:'jade'}
+];
+function bussolaDe(ptsPorReal){
+  const v = Number(ptsPorReal);
+  if (!(v > 0)) return null;
+  return BUSSOLA_FAIXAS.find(f => v <= f.ate);
+}
+/* os magos (2 a 5) dos anúncios viram bússolas (1 a 4) */
+function bussolaDeMagos(m){ const n = Math.max(1, Math.min(4, (Number(m) || 0) - 1)); return BUSSOLA_FAIXAS[n - 1]; }
+const _BUS_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path class="bz-ag" d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>';
+function bussolaHTML(f, {rotulo = true, compacto = false} = {}){
+  if (!f) return '';
+  return `<span class="bz bz-${f.cor}${compacto ? ' bz-c' : ''}" title="Bússola ROTA: ${f.n} de 4 · ${esc(f.rot)} (${esc(f.faixa)} por real)">
+    <span class="bz-icos">${[1, 2, 3, 4].map(i => `<i class="${i <= f.n ? 'on' : ''}">${_BUS_SVG}</i>`).join('')}</span>${rotulo ? `<b>${esc(f.rot)}</b>` : ''}</span>`;
+}
+const bussolaTexto = f => f ? '🧭'.repeat(f.n) : '';
+
+/* ── leitura da lista do dia ("Junte pontos com Esfera & Parceiros") ───────── */
+const CAT_LISTA = [[/aliment|bebida|mercado|restaur|delivery/, 'alimentação'], [/beleza|perfum|cosm|cuidado/, 'beleza'], [/casa|decora|m[oó]ve/, 'casa'],
+  [/eletr|inform|celular|games|tecnolog/, 'eletrônicos'], [/farm[aá]c|sa[uú]de|drogar/, 'farmácia'], [/esporte|fitness|suplement/, 'esporte'], [/kids|infantil|crian|brinquedo|beb[eê]/, 'moda'],
+  [/viage|turism|hotel|passage|carro/, 'viagem'], [/moda|roupa|cal[cç]ado|joia|acess[oó]r|[oó]tica/, 'moda']];
+function catDaLista(t){ const s = semAcento(String(t || '')).toLowerCase(); const m = CAT_LISTA.find(([r]) => r.test(s)); return m ? m[1] : 'geral'; }
+function lerListaLojas(texto){
+  const linhas = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+  const reItem = /^(?:[^\p{L}\p{N}]*)(.{2,60}?)\s*[:\-–]\s*(?:at[eé]\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:pontos?|pts|milhas?)\s*(?:por\s*|\/\s*)?(real|reais|r\$|d[oó]lar(?:es)?|us\$)/iu;
+  const itens = []; let cat = 'geral', catTxt = '';
+  linhas.forEach(l => {
+    const m = l.match(reItem);
+    if (m){
+      const n = SEM_EMOJI(m[1]).replace(/^[\s*👉•\-–]+/, '').trim();
+      if (n && !/^(classifica|at[eé]|de \d|a partir)/i.test(n)) itens.push({n, v:Number(m[2].replace(',', '.')), unid:/d[oó]lar|us\$/i.test(m[3]) ? 'dolar' : 'real', cat, catTxt});
+      return;
+    }
+    /* título de seção: "🍷 *Alimentação e Bebidas:*" (Esfera) ou "🍷 *Alimentação e Bebidas*" (Livelo) */
+    const s = SEM_EMOJI(l);
+    if ((/:$/.test(s) || /\*[^*]+\*\s*:?\s*$/.test(l)) && !/\d|https?:/i.test(s) && s.length <= 50){ catTxt = s.replace(/:$/, '').trim(); cat = catDaLista(catTxt); }
+  });
+  if (itens.length < 3) return null;
+  const cab = SEM_EMOJI(linhas[0]);
+  const achaProg = t => { const s = semAcento(String(t)).toLowerCase(); return PROG_IDS.find(p => { const k = semAcento(prog(p).n).toLowerCase().split(/\s+/)[0]; return k.length >= 3 && new RegExp('\\b' + k.replace(/[^a-z0-9]/g, '') + '\\b').test(s); }) || ''; };
+  const progId = achaProg(cab) || achaProg(linhas.slice(0, 8).join(' '));
+  let data = '';
+  const md = linhas.join(' ').match(/(?:ofertas? de hoje|ofertas? do dia|do dia|hoje|v[aá]lid[oa]s? at[eé]|at[eé])\s*[-:–]?\s*(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
+  if (md){ const a = md[3] ? (md[3].length === 2 ? '20' + md[3] : md[3]) : hojeISO().slice(0, 4); data = `${a}-${md[2].padStart(2, '0')}-${md[1].padStart(2, '0')}`; }
+  const ml = linhas.join(' ').match(/(https?:\/\/[^\s)]+|\b[a-z0-9-]+\.(?:com\.br|com\.vc|com|net|app)(?:\/[^\s)]*)?)/i);
+  const link = ml ? (/^https?:/i.test(ml[1]) ? ml[1] : 'https://' + ml[1]).replace(/[.,;]+$/, '') : '';
+  return {titulo:cab.replace(/[!.:]+$/, ''), prog:progId, data, link, itens};
+}
+/* dólar do dia, para classificar o que paga "por dólar" (sem câmbio, fica sem bússola) */
+let _cambioUSD = null;
+async function cambioDolar(){
+  if (_cambioUSD) return _cambioUSD;
+  try { const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', {cache:'no-store'}); const j = await r.json(); const v = Number(j && j.USDBRL && j.USDBRL.bid); if (v > 0) _cambioUSD = v; } catch(_){}
+  return _cambioUSD;
+}
+function porRealDoItem(it){ return it.unid === 'dolar' ? (_cambioUSD ? it.v / _cambioUSD : null) : it.v; }
+
+/* ── prévia dentro de "Colar Anúncios" ───────────────────────────────────── */
+let listaLida = null;
+function previaListaLojas(L){
+  const box = $('#mrPrevias'), bt = $('#btGravarAnuncios'); if (!box) return;
+  listaLida = L;
+  const opP = PROG_IDS.map(p => `<option value="${p}"${p === L.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('');
+  const grupos = []; L.itens.forEach((it, i) => { let g = grupos.find(x => x.t === (it.catTxt || 'Outras')); if (!g){ g = {t:it.catTxt || 'Outras', itens:[]}; grupos.push(g); } g.itens.push({it, i}); });
+  const conta = BUSSOLA_FAIXAS.map(f => ({f, n:L.itens.filter(it => (bussolaDe(porRealDoItem(it)) || {}).n === f.n).length}));
+  box.innerHTML = `<div class="bz-lista">
+    <div class="bz-lista-cab">
+      <div><div class="olho anil" style="margin:0">Lista do dia · ${L.itens.length} lojas</div><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(L.titulo)}</div></div>
+      <div class="bz-lista-campos">
+        <div class="campo"><label>Programa</label><select id="bzProg">${opP}</select></div>
+        <div class="campo"><label>Válida até</label><input type="date" id="bzFim" value="${L.data || hojeISO()}"></div>
+      </div>
+    </div>
+    <div class="bz-placar">${conta.slice().reverse().map(({f, n}) => `<div>${bussolaHTML(f, {rotulo:false, compacto:true})}<b>${n}</b><span>${esc(f.rot)}</span></div>`).join('')}</div>
+    ${grupos.map(g => `<div class="bz-grupo"><div class="bz-g-t">${esc(g.t)}</div>${g.itens.sort((a, b) => (porRealDoItem(b.it) || 0) - (porRealDoItem(a.it) || 0)).map(({it, i}) => {
+      const pr = porRealDoItem(it), f = bussolaDe(pr);
+      return `<label class="bz-item"><input type="checkbox" checked data-bz="${i}"><span class="bz-n">${esc(it.n)}</span>
+        <span class="bz-v">${nBRdec(it.v)} <small>${it.unid === 'dolar' ? 'por dólar' : 'por real'}</small></span>
+        ${f ? bussolaHTML(f, {compacto:true}) : `<span class="fraco" style="font-size:calc(12px * var(--esc))">${it.unid === 'dolar' ? 'sem o dólar do dia' : ''}</span>`}</label>`; }).join('')}</div>`).join('')}
+    <p class="fraco" style="font-size:calc(12px * var(--esc));margin:8px 0 0">Bússola ROTA, etapa T (Timing das Oportunidades): ${BUSSOLA_FAIXAS.map(f => `${bussolaTexto(f)} ${f.faixa}`).join(' · ')}. As ofertas entram em Lojas Parceiras, onde a Torre mostra quanto de cada real volta em pontos.</p>
+  </div>`;
+  const contar = () => { const n = box.querySelectorAll('[data-bz]:checked').length; if (bt){ bt.disabled = !n; bt.innerHTML = `<svg><use href="#i-ok"/></svg>Cadastrar ${n} ${n === 1 ? 'oferta' : 'ofertas'}`; } };
+  box.querySelectorAll('[data-bz]').forEach(x => x.addEventListener('change', contar)); contar();
+  const pe = $('#folhaPe');
+  if (pe && !$('#btCopiarBz')){ const b = document.createElement('button'); b.className = 'bt fantasma'; b.id = 'btCopiarBz'; b.innerHTML = '<svg><use href="#i-copiar"/></svg>Copiar em bússolas'; b.onclick = () => copiarListaBussolas(listaParaTexto()); pe.insertBefore(b, $('#btGravarAnuncios')); }
+  if (pe && pe.scrollWidth > pe.clientWidth + 1) pe.style.flexWrap = 'wrap';
+}
+function listaParaTexto(){
+  const L = listaLida; if (!L) return '';
+  const p = ($('#bzProg') || {}).value || L.prog, fim = ($('#bzFim') || {}).value || L.data;
+  const marcados = new Set([...document.querySelectorAll('#mrPrevias [data-bz]:checked')].map(x => Number(x.dataset.bz)));
+  return textoBussolas(p, fim, L.itens.filter((_, i) => !marcados.size || marcados.has(i)).map(it => ({n:it.n, v:it.v, unid:it.unid, cat:it.catTxt || 'Outras'})), L.link);
+}
+function textoBussolas(p, fim, itens, link){
+  const grupos = []; itens.forEach(it => { let g = grupos.find(x => x.t === it.cat); if (!g){ g = {t:it.cat, l:[]}; grupos.push(g); } g.l.push(it); });
+  const fmt = n => String(n).padStart(2, '0');
+  return [`🧭 *Torre de Controle · Lojas ${p ? prog(p).n : ''}*`, '', '*Bússola ROTA* (etapa T: Timing das Oportunidades)', '',
+    ...BUSSOLA_FAIXAS.map(f => `${bussolaTexto(f)} ${f.faixa}: ${f.rot.toLowerCase()}`), '',
+    `⏳ Ofertas ${fim ? 'até ' + dataBR(fim) : 'de hoje'}`, link ? `📌 ${link}` : '', '',
+    ...grupos.flatMap(g => [`*${g.t}*`, ...g.l.sort((a, b) => b.v - a.v).map(it => { const f = bussolaDe(porRealDoItem(it)); return `${bussolaTexto(f) || '·'} ${it.n}: até ${fmt(nBRdec(it.v))} pontos por ${it.unid === 'dolar' ? 'dólar' : 'real'}`; }), '']),
+    '🚨 Entre pelo site ou app do programa antes de comprar e grave a tela da compra.', '🚨 Leia o regulamento: alguns sites pedem cupom ou limitam a pontuação a certos produtos.', '', 'ROTA te leva. VEM acontece.'
+  ].filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
+}
+async function copiarListaBussolas(t){
+  if (!t) return;
+  try { await navigator.clipboard.writeText(t); avisar('Lista copiada com as bússolas. É só colar no WhatsApp.', 'ok', 5000); }
+  catch(_){ abrirFolha({titulo:'Lista em bússolas', corpo:`<textarea rows="16" style="width:100%" readonly>${esc(t)}</textarea>`, pe:'<button class="bt perigo" onclick="fecharFolha()">Fechar</button>', tipo:'aviso'}); }
+}
+function gravarListaLojas(){
+  const L = listaLida; if (!L) return;
+  const p = ($('#bzProg') || {}).value || L.prog, fim = ($('#bzFim') || {}).value || L.data || hojeISO();
+  if (!p){ avisar('Escolha o programa da lista.', 'alerta'); return; }
+  const marcados = [...document.querySelectorAll('#mrPrevias [data-bz]:checked')].map(x => Number(x.dataset.bz));
+  DB.lojas = DB.lojas || [];
+  let novas = 0, atual = 0;
+  marcados.forEach(i => {
+    const it = L.itens[i];
+    const ex = DB.lojas.find(l => l.prog === p && normLoja(l.n) === normLoja(it.n) && (l.fim || '') === fim);
+    const dados = {promo:it.v, porDolar:it.unid === 'dolar' || undefined, cat:it.cat, link:L.link || '', fim, fonte:'lista colada · ' + (L.titulo || ''), em:hojeISO(), conf:'alta'};
+    if (ex){ Object.assign(ex, dados); atual++; }
+    else { DB.lojas.push({id:uid(), prog:p, n:it.n, base:1, faixas:[], obs:it.catTxt || '', ...dados}); novas++; }
+  });
+  salvar(); fecharFolha(); listaLida = null;
+  try { renderLojasParceiras(); } catch(_){}
+  avisar(`${novas} ${novas === 1 ? 'oferta cadastrada' : 'ofertas cadastradas'} em Lojas Parceiras${atual ? `, ${atual} ${atual === 1 ? 'atualizada' : 'atualizadas'}` : ''}.`, 'ok', 6000);
+}
+(function(){
+  /* Colar Anúncios: lista de lojas vira prévia em bússolas, não um anúncio só */
+  const _prev = previaAnuncios;
+  previaAnuncios = function(){
+    const ta = $('#mrColar'); const L = ta ? lerListaLojas(ta.value) : null;
+    if (L){
+      if (L.itens.some(it => it.unid === 'dolar') && !_cambioUSD) cambioDolar().then(v => { if (v && listaLida === L) previaListaLojas(L); });
+      return previaListaLojas(L);
+    }
+    listaLida = null; const b = $('#btCopiarBz'); if (b) b.remove();
+    return _prev.apply(this, arguments);
+  };
+  const _grav = gravarAnuncios;
+  gravarAnuncios = function(){ if (listaLida) return gravarListaLojas(); return _grav.apply(this, arguments); };
+  /* a legenda dos grupos ("até 04 pontos 🧙🧙") não é a nota do anúncio */
+  const _um = lerUmAnuncio;
+  lerUmAnuncio = function(bloco){
+    const limpo = (bloco || []).filter(l => !/^\s*✅?\s*(at[eé]|de\s*\d|a partir de)\s*\d*.*(pontos|pts).*🧙/iu.test(l));
+    return _um.call(this, limpo);
+  };
+  /* a vitrine: bússola no cartão de cada loja (o que paga por dólar entra com o câmbio do dia) */
+  const _carta = cartaoLoja;
+  cartaoLoja = function(l){
+    const h = _carta.apply(this, arguments);
+    const t = tetoLoja(l), v = t.promo || t.base || 0;
+    const f = bussolaDe(l.porDolar ? (_cambioUSD ? v / _cambioUSD : null) : v);
+    return f ? h.replace('<div class="lj-miolo">', `<div class="lj-bz">${bussolaHTML(f)}</div><div class="lj-miolo">`) : h;
+  };
+  const ligar = () => {
+    const nova = document.getElementById('btNovaLojaCamp');
+    if (nova && !document.getElementById('btColarListaLj')){
+      const a = document.createElement('button'); a.className = 'bt fantasma'; a.id = 'btColarListaLj'; a.innerHTML = '<svg><use href="#i-livro"/></svg>Colar lista do dia'; a.onclick = () => { abrirColarMural(); };
+      const b = document.createElement('button'); b.className = 'bt fantasma'; b.id = 'btCopiarVitrineBz'; b.innerHTML = '<svg><use href="#i-copiar"/></svg>Copiar em bússolas';
+      b.onclick = () => {
+        const vivas = ofertasVitrine().filter(l => l.origem === 'loja');
+        if (!vivas.length) return avisar('A vitrine está vazia.', 'alerta');
+        const porProg = {}; vivas.forEach(l => { porProg[l.prog] = (porProg[l.prog] || 0) + 1; });
+        const p = Object.keys(porProg).sort((x, y) => porProg[y] - porProg[x])[0];
+        const daq = vivas.filter(l => l.prog === p);
+        const fim = daq.map(l => l.fim).filter(Boolean).sort()[0] || '';
+        copiarListaBussolas(textoBussolas(p, fim, daq.map(l => ({n:l.n, v:tetoLoja(l).promo || tetoLoja(l).base, unid:l.porDolar ? 'dolar' : 'real', cat:(l.cat || 'geral')[0].toUpperCase() + (l.cat || 'geral').slice(1)})), (daq.find(l => l.link) || {}).link || ''));
+      };
+      nova.before(a); nova.before(b);
+    }
+    const vit = document.getElementById('ljVitrine');
+    if (vit && !document.getElementById('bzLegenda')){
+      const d = document.createElement('div'); d.id = 'bzLegenda'; d.className = 'bz-legenda';
+      d.innerHTML = `<span class="bz-leg-t"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>Bússola ROTA <small>T · Timing das Oportunidades</small></span>${BUSSOLA_FAIXAS.map(f => `<span class="bz-leg-i">${bussolaHTML(f, {rotulo:false, compacto:true})}<span>${esc(f.faixa)}</span></span>`).join('')}`;
+      vit.before(d);
+    }
+    if ((DB.lojas || []).some(l => l.porDolar) && !_cambioUSD) cambioDolar().then(v => { if (v) try { renderLojasParceiras(); } catch(_){} });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 150)); else setTimeout(ligar, 150);
+})();
+</script>
+
+<style>
+/* ══ Mesma loja, programas diferentes ══ */
+.lc2{ border:1px solid color-mix(in srgb, var(--jade) 30%, var(--fio)); border-radius:var(--r-lg); padding:16px 18px; background:linear-gradient(180deg, color-mix(in srgb, var(--jade) 6%, var(--sup-0)), var(--sup-0) 90px); display:flex; flex-direction:column; gap:12px; }
+.lc2-cab h3{ margin:0; display:flex; gap:9px; align-items:center; font-size:calc(15.5px * var(--esc)); color:var(--giz); }
+.lc2-cab h3 svg{ width:18px; height:18px; fill:none; stroke:var(--jade); stroke-width:1.8; }
+.lc2-cab p{ margin:4px 0 0; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.lc2-lista{ display:flex; flex-direction:column; gap:8px; }
+.lc2-l{ display:grid; grid-template-columns:minmax(220px, 1fr) minmax(0, 1.4fr); gap:14px; align-items:center; padding:10px 12px; border:1px solid var(--fio); border-radius:12px; background:var(--sup-0); }
+.lc2-n{ display:flex; gap:10px; align-items:center; min-width:0; }
+.lc2-n b{ display:block; color:var(--giz); font-size:calc(14.5px * var(--esc)); }
+.lc2-n small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.45; margin-top:2px; }
+.lc2-n small b{ display:inline; font-size:inherit; color:var(--jade); }
+.lc2-ps{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.lc2-p{ position:relative; display:grid; grid-template-columns:auto 1fr auto; grid-template-areas:"d n v" "b b s"; gap:4px 7px; align-items:center; min-width:170px; padding:8px 10px; border-radius:10px; border:1px solid var(--fio); opacity:.85; }
+.lc2-p .disco-prog{ grid-area:d; } .lc2-pn{ grid-area:n; font-size:calc(12.5px * var(--esc)); color:var(--giz-2); }
+.lc2-p > b{ grid-area:v; font:600 calc(17px * var(--esc)) var(--f-m); color:var(--giz); }
+.lc2-p > .bz{ grid-area:b; justify-self:start; } .lc2-p small{ grid-area:s; font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.lc2-p.win{ opacity:1; border-color:color-mix(in srgb, var(--jade) 60%, transparent); background:color-mix(in srgb, var(--jade) 9%, transparent); box-shadow:0 0 0 1px color-mix(in srgb, var(--jade) 25%, transparent); }
+.lc2-p.win > b{ color:var(--jade); }
+.lc2-p em{ position:absolute; top:-9px; right:10px; font-style:normal; font-size:calc(10.5px * var(--esc)); font-weight:700; padding:1px 8px; border-radius:999px; background:var(--jade); color:#06120c; }
+.lc2-mais{ align-self:flex-start; }
+@media (max-width:760px){
+  .lc2{ padding:14px; }
+  .lc2-l{ grid-template-columns:1fr; }
+  .lc2-ps{ justify-content:stretch; }
+  .lc2-p{ flex:1 1 140px; min-width:0; }
+  .lc2-p{ grid-template-areas:"d n v" "b b b" "s s s"; }
+}
+</style>
+<script>
+/* ══ MESMA LOJA, PROGRAMAS DIFERENTES (15/10/2026) ════════════════════════════
+   Quando a mesma loja está no ar em mais de um programa (Insider: 8 na Esfera,
+   15 na Livelo), a Torre põe lado a lado e diz por onde comprar. Só aparece o
+   que se repete, para a vitrine não ficar poluída; o resto continua nos cartões. */
+let cmpLojaTudo = false;
+function comparacaoLojas(){
+  const vivas = ofertasVitrine().filter(l => !(l.porDolar && !_cambioUSD));
+  const g = {};
+  vivas.forEach(l => { const k = normLoja(l.n); if (!k) return; (g[k] = g[k] || []).push(l); });
+  return Object.values(g).map(ls => {
+    const porProg = {};
+    ls.forEach(l => { if (!porProg[l.prog] || voltaPct(l) > voltaPct(porProg[l.prog])) porProg[l.prog] = l; });
+    const os = Object.values(porProg).sort((a, b) => voltaPct(b) - voltaPct(a));
+    if (os.length < 2) return null;
+    const empate = Math.abs(voltaPct(os[0]) - voltaPct(os[1])) < 0.05;
+    return {n:os[0].n, os, empate, dif:voltaPct(os[0]) - voltaPct(os[os.length - 1])};
+  }).filter(Boolean).sort((a, b) => b.dif - a.dif || a.n.localeCompare(b.n, 'pt-BR'));
+}
+function renderComparaLojas(){
+  const vit = document.getElementById('ljVitrine'); if (!vit) return;
+  let box = document.getElementById('ljCompara');
+  if (!box){ box = document.createElement('section'); box.id = 'ljCompara'; box.className = 'lc2'; vit.before(box); }
+  const lista = comparacaoLojas();
+  if (!lista.length){ box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  const mostra = cmpLojaTudo ? lista : lista.slice(0, 5);
+  const mult = l => tetoLoja(l).promo || tetoLoja(l).base || 0;
+  const vol = l => nBRdec(Math.round(voltaPct(l) * 10) / 10) + '%';
+  const linha = x => {
+    const m = x.os[0];
+    const frase = x.empate ? 'Tanto faz: rende igual nos dois.'
+      : `Compre pela <b>${esc(prog(m.prog).n)}</b>: ${nBRdec(mult(m))} pontos por real, contra ${x.os.slice(1).map(o => `${nBRdec(mult(o))} na ${esc(prog(o.prog).n)}`).join(' e ')}.`;
+    return `<div class="lc2-l">
+      <div class="lc2-n"><span class="lj-avatar" style="--h:${matizLoja(x.n)}" aria-hidden="true">${esc(siglaLoja(x.n))}</span><div><b>${esc(x.n)}</b><small>${frase}</small></div></div>
+      <div class="lc2-ps">${x.os.map((o, i) => { const f = bussolaDe(o.porDolar ? mult(o) / _cambioUSD : mult(o));
+        return `<div class="lc2-p${i === 0 && !x.empate ? ' win' : ''}">${discoProg(o.prog, 'p')}<span class="lc2-pn">${esc(prog(o.prog).n)}</span><b>${nBRdec(mult(o))}×</b>${f ? bussolaHTML(f, {rotulo:false, compacto:true}) : ''}<small>${vol(o)} de volta</small>${i === 0 && !x.empate ? '<em>Rende mais</em>' : ''}</div>`; }).join('')}</div>
+    </div>`;
+  };
+  box.innerHTML = `<div class="lc2-cab"><div><h3><svg><use href="#i-troca"/></svg>Mesma loja, programas diferentes</h3>
+      <p>${lista.length} ${lista.length === 1 ? 'loja está' : 'lojas estão'} em mais de um programa hoje. Antes de comprar, veja por onde rende mais.</p></div></div>
+    <div class="lc2-lista">${mostra.map(linha).join('')}</div>
+    ${lista.length > 5 ? `<button type="button" class="bt p fantasma lc2-mais" id="lc2Mais">${cmpLojaTudo ? 'Mostrar só as 5 primeiras' : `Ver as ${lista.length} lojas`}</button>` : ''}`;
+  const b = document.getElementById('lc2Mais'); if (b) b.onclick = () => { cmpLojaTudo = !cmpLojaTudo; renderComparaLojas(); };
+}
+(function(){
+  const _r = renderLojasParceiras;
+  renderLojasParceiras = function(){ const x = _r.apply(this, arguments); try { renderComparaLojas(); } catch(e){ console.error(e); } return x; };
+  try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === _r) RENDER[k] = renderLojasParceiras; }); } catch(_){}
+  setTimeout(() => { try { renderComparaLojas(); } catch(_){} }, 300);
+})();
+</script>
+
+<script>
+/* ══ A página Black Friday só existe na temporada (15/10/2026, pedido do Jadiel):
+   aparece 45 dias antes da Black e some depois de 10 de dezembro, quando a
+   comparação já terminou. Fora disso, nem o menu nem a aba aparecem. */
+function blackFridayDe(ano){
+  /* a sexta depois da quarta quinta-feira de novembro */
+  const d = new Date(Date.UTC(ano, 10, 1));
+  const primeiraQui = 1 + ((4 - d.getUTCDay() + 7) % 7);
+  return `${ano}-11-${String(primeiraQui + 21 + 1).padStart(2, '0')}`;
+}
+function temporadaBlack(hoje){
+  const h = hoje || hojeISO(), ano = Number(h.slice(0, 4));
+  const bf = blackFridayDe(ano), abre = somaDias(-45, bf), fecha = `${ano}-12-10`;
+  return {bf, abre, fecha, visivel:h >= abre && h <= fecha};
+}
+function aplicarTemporadaBlack(){
+  const t = temporadaBlack(), area = (AREAS || []).find(a => a.k === 'promocoes');
+  const ITEM = ['fabrica', 'fb-black', 'Black Friday', '#i-fogo'];
+  if (area && area.menu && area.menu[0]){
+    const itens = area.menu[0].itens, i = itens.findIndex(x => x[1] === 'fb-black');
+    if (t.visivel && i < 0) itens.push(ITEM);
+    if (!t.visivel && i >= 0) itens.splice(i, 1);
+  }
+  const aba = document.querySelector('.aba[data-aba="fb-black"]'); if (aba) aba.hidden = !t.visivel;
+  if (!t.visivel){
+    const p = document.getElementById('p-fb-black');
+    if (p && p.classList.contains('on')) try { irParaAba('fabrica', 'fb-ofertas'); } catch(_){}
+  }
+  try { _marcaColuna = ''; marcarColunaMenu(); } catch(_){}
+  return t.visivel;
+}
+(function(){
+  const ir = () => { try { aplicarTemporadaBlack(); } catch(e){ console.error(e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ir, 60)); else setTimeout(ir, 60);
+  setInterval(ir, 3600000);
 })();
 </script>
 </body>
