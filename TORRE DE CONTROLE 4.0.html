@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 17:00';
+const BUILD = '2026-10-15 18:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -44965,15 +44965,21 @@ function fotoDsHTML(d){
    bonificada direto com a companhia (Magalu → Azul, Magalu → Smiles). */
 const LOJAS_DE_TUDO = /magalu|magazine|casas bahia|ponto( frio)?|extra\.com|amazon|americanas|submarino|shoptime|mercado livre|carrefour|kabum|via\b|walmart|shopee|aliexpress|girafa|fast ?shop|leroy|havan/i;
 const LOJAS_CAT = [
-  [/mobly|tok ?& ?stok|etna|camicado|madeira ?madeira|westwing|ortobom|castor|simmons|colch|leroy|telhanorte|c&c|polishop/i, 'casa'],
-  [/netshoes|centauro|decathlon|nike|adidas|puma|asics|olympikus|under armour/i, 'esporte'],
-  [/sephora|boticario|botic|natura|avon|eudora|quem disse|beleza na web|l.?occitane|mac\b|granado/i, 'beleza'],
-  [/drogasil|droga ?raia|pague menos|panvel|drogaria|farm|ultrafarma/i, 'farmácia'],
-  [/renner|riachuelo|c&a|zara|hering|dafiti|zattini|arezzo|shein|reserva|farm rio|lojas marisa|centauro moda/i, 'moda'],
-  [/apple|samsung|dell|lenovo|motorola|xiaomi|positivo|multilaser|kabum|fast ?shop|lg\b|sony/i, 'eletrônicos'],
-  [/booking|hoteis|hotels|decolar|expedia|airbnb|123 ?milhas|max ?milhas|zarpo|cvc|localiza|movida|unidas|rentcars|uber/i, 'viagem'],
-  [/ifood|rappi|p[aã]o de a[cç][uú]car|zé delivery|ze delivery|assai|atacad|hortifruti|st marche|cacau show|kopenhagen/i, 'alimentação'],
-  [/petz|petlove|cobasi/i, 'casa']
+  /* revisado em 15/10/2026: loja que a Torre não conhece NÃO serve para item
+     nenhum da lista. Antes, loja sem categoria entrava em tudo, e a Tia Sônia
+     (alimentos) aparecia para tênis e celular. Uma loja pode vender mais de uma
+     categoria: tênis está em esporte e em moda. */
+  [/mobly|tok ?& ?stok|etna|camicado|madeira ?madeira|westwing|ortobom|castor|simmons|colch|leroy|telhanorte|c&c|abc da constru|trussardi|buddemeyer|zelo\b/i, ['casa']],
+  [/polishop|dufrio|electrolux|brastemp|consul/i, ['casa', 'eletrônicos']],
+  [/netshoes|centauro|decathlon|nike|adidas|puma|asics|olympikus|under armour|mizuno|fila\b|new balance|speedo|track ?& ?field|vans\b|crocs/i, ['esporte', 'moda']],
+  [/integral m[eé]dica|growth|max titanium|probi[oó]tica/i, ['esporte', 'farmácia']],
+  [/sephora|botic|natura|avon|eudora|quem disse|beleza na web|l.?occitane|mac\b|mac cosm|granado|jo malone|darkness|o botic|epoca cosm|[ée]poca cosm/i, ['beleza']],
+  [/drogasil|droga ?raia|pague menos|panvel|drogaria|farm[aá]cia|ultrafarma|iherb/i, ['farmácia']],
+  [/renner|riachuelo|c&a|zara|hering|dafiti|zattini|arezzo|shein|reserva|farm rio|lojas marisa|insider|havaianas|aramis|democrata|dudalina|individual|john john|le lis|meia sola|posthaus|bo\.?b[oô]|bibi\b|carter|morana|monte carlo|e-?lens|e-?[oó]tica|liz\b|osklen|lacoste|tommy|calvin|schutz|anacapri|vivara|pandora/i, ['moda']],
+  [/apple|samsung|dell|lenovo|motorola|xiaomi|positivo|multilaser|kabum|lg\b|sony|acc?er\b|acer|asus|jbl|philips/i, ['eletrônicos']],
+  [/booking|hoteis|hotels|decolar|expedia|airbnb|123 ?milhas|max ?milhas|zarpo|cvc|localiza|movida|unidas|rentcars|uber|hertz|budget|seus ingressos|ingresso/i, ['viagem']],
+  [/ifood|rappi|p[aã]o de a[cç][uú]car|z[eé] delivery|assa[ií]|atacad|hortifruti|st marche|cacau show|kopenhagen|tia s[oô]nia|angeloni|bombay|divvino|nespresso|coffee|mistral|evino|wine\b|grand cru|starbucks/i, ['alimentação']],
+  [/petz|petlove|cobasi/i, ['casa']]
 ];
 const LOJAS_SUGERIDAS = {
   casa:['Magalu', 'Casas Bahia', 'Mobly', 'Amazon', 'Leroy Merlin', 'Tok&Stok', 'MadeiraMadeira'],
@@ -44982,13 +44988,21 @@ const LOJAS_SUGERIDAS = {
   'farmácia':['Drogasil', 'Droga Raia', 'Pague Menos'], esporte:['Netshoes', 'Centauro', 'Decathlon', 'Nike'],
   viagem:['Booking', 'Decolar', 'Hoteis.com'], 'alimentação':['iFood', 'Pão de Açúcar', 'Carrefour'], geral:['Magalu', 'Amazon', 'Casas Bahia']
 };
+function categoriasDaLoja(nome){
+  if (LOJAS_DE_TUDO.test(nome || '')) return null;            /* vende quase tudo */
+  const m = LOJAS_CAT.find(([re]) => re.test(nome || ''));
+  return m ? [].concat(m[1]) : [];
+}
 function lojaServeCategoria(nome, cat, catLoja){
   if (!cat || cat === 'geral') return true;
-  if (catLoja && catLoja !== 'geral') return catLoja === cat;
-  /* loja de departamento vende quase tudo, mas não hotel nem aluguel de carro */
-  if (LOJAS_DE_TUDO.test(nome || '')) return cat !== 'viagem';
-  const m = LOJAS_CAT.find(([re]) => re.test(nome || ''));
-  return m ? m[1] === cat : catLoja === 'geral';
+  /* o que a Torre sabe da loja vale mais que o título da seção do anúncio:
+     a Centauro vem em "Eletrônicos e Esportes", mas vende tênis, não celular */
+  if (LOJAS_DE_TUDO.test(nome || '')) return cat !== 'viagem';  /* departamento: tudo, menos hotel e carro */
+  const conhecidas = categoriasDaLoja(nome);
+  if (conhecidas && conhecidas.length) return conhecidas.includes(cat);
+  /* loja desconhecida: só serve se a categoria dela foi dada e bate. Sem
+     categoria ("geral"), não é sugerida para item nenhum. */
+  return !!catLoja && catLoja !== 'geral' && catLoja === cat;
 }
 const lojaBate = (nome, prefs) => !prefs.length || prefs.some(p => semAcento(String(nome).toLowerCase()).includes(semAcento(p.toLowerCase())) || semAcento(p.toLowerCase()).includes(semAcento(String(nome).toLowerCase())));
 const prefsDoDesejo = d => String(d.lojasPref || '').split(/[,;]/).map(s => s.trim()).filter(Boolean);
@@ -45120,7 +45134,7 @@ function candidatosDesejo(d, vivos){
     if (viva !== vivos) return;
     if (!lojaBate(l.n, prefs)) return;
     const faixa = (l.faixas || []).find(f => f.cat === d.cat);
-    const serve = faixa || l.cat === d.cat || lojaServeCategoria(l.n, d.cat, l.cat);
+    const serve = faixa || lojaVendeItem(l.n, d, l.cat);
     if (!serve) return;
     const mult = faixa ? (Number(faixa.promo) || Number(faixa.base) || 0) : (Number(l.promo) || Number(l.base) || 0);
     if (mult <= 0) return;
@@ -45133,7 +45147,7 @@ function candidatosDesejo(d, vivos){
     const viva = (!c.inicio || c.inicio <= hoje) && (!c.fim || c.fim >= hoje);
     if (viva !== vivos) return;
     if (!vivos && c.fim && diasAte(c.fim) < -180) return;
-    if (!lojaBate(c.parceiro, prefs) || !lojaServeCategoria(c.parceiro, d.cat, '')) return;
+    if (!lojaBate(c.parceiro, prefs) || !lojaVendeItem(c.parceiro, d, '')) return;
     const deg = typeof seuDegrauBonificada === 'function' ? seuDegrauBonificada(c) : null;
     const mult = Number(deg && deg.v) || Number(c.ptsPorReal) || 0; if (mult <= 0) return;
     const topo = Math.max(Number(c.ptsPorReal) || 0, ...(c.faixas || []).map(f => Number(f.v) || 0));
@@ -45208,7 +45222,7 @@ function renderDesejos(){
 
   const cartaoMira = x => {
     const {d, melhor, ultima} = x, p = PRIORIDADES[d.prioridade] || PRIORIDADES[1];
-    const sug = (LOJAS_SUGERIDAS[d.cat] || LOJAS_SUGERIDAS.geral).filter(n => !prefsDoDesejo(d).length || lojaBate(n, prefsDoDesejo(d)));
+    const sug = (LOJAS_SUGERIDAS[d.cat] || LOJAS_SUGERIDAS.geral).concat(LOJAS_SUGERIDAS.geral).filter((n, i, arr) => arr.indexOf(n) === i && (typeof lojaVendeItem !== 'function' || lojaVendeItem(n, d, ''))).filter(n => !prefsDoDesejo(d).length || lojaBate(n, prefsDoDesejo(d)));
     return `<div class="ds-item" data-id="${d.id}">
       ${fotoDsHTML(d)}
       <div class="ds-corpo">
@@ -58327,7 +58341,7 @@ function lerListaLojas(texto){
     const m = l.match(reItem);
     if (m){
       const n = SEM_EMOJI(m[1]).replace(/^[\s*👉•\-–]+/, '').trim();
-      if (n && !/^(classifica|at[eé]|de \d|a partir)/i.test(n)) itens.push({n, v:Number(m[2].replace(',', '.')), unid:/d[oó]lar|us\$/i.test(m[3]) ? 'dolar' : 'real', cat, catTxt});
+      if (n && !/^(classifica|at[eé]|de \d|a partir)/i.test(n)){ const cn = typeof categoriasDaLoja === 'function' ? categoriasDaLoja(n) : []; itens.push({n, v:Number(m[2].replace(',', '.')), unid:/d[oó]lar|us\$/i.test(m[3]) ? 'dolar' : 'real', cat:cn && cn.length ? cn[0] : (cat === 'eletrônicos' && /esporte/i.test(catTxt) ? 'geral' : cat), catTxt}); }
       return;
     }
     /* título de seção: "🍷 *Alimentação e Bebidas:*" (Esfera) ou "🍷 *Alimentação e Bebidas*" (Livelo) */
@@ -58597,6 +58611,158 @@ function aplicarTemporadaBlack(){
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ir, 60)); else setTimeout(ir, 60);
   setInterval(ir, 3600000);
 })();
+</script>
+
+<script>
+/* ══ O QUE CADA LOJA VENDE (15/10/2026, correção pedida pelo Jadiel) ══════════
+   A lista de desejos só sugere uma loja quando ela VENDE aquele tipo de
+   produto. Antes a Torre cruzava categorias largas ("eletrônicos", "geral") e
+   chegou a sugerir tênis e celular na Tia Sônia, que vende alimentos naturais,
+   e celular na Centauro, que vende artigos esportivos.
+
+   Agora são duas listas:
+   · o que cada loja vende, conferido no site de cada uma (VENDE_LOJA);
+   · o tipo de cada item, pelo nome dele ("Tênis corrida" é calçado,
+     "Celular" é celular) (TIPOS_ITEM).
+   Loja que a Torre não conhece não é sugerida: é melhor deixar de sugerir do
+   que sugerir errado. */
+const FISICOS = ['tenis', 'tenis_corrida', 'calcados', 'roupas', 'bolsas', 'joias', 'oculos', 'celular', 'informatica', 'tv', 'games', 'fones', 'eletro', 'arcondicionado', 'moveis', 'colchao',
+  'cama_mesa_banho', 'decoracao', 'cozinha', 'construcao', 'perfume', 'maquiagem', 'cosmeticos', 'suplementos', 'brinquedos', 'esporte_equip', 'infantil_roupas', 'pet', 'mercado', 'vinho', 'cafe', 'chocolate'];
+const VENDE_LOJA = [
+  /* conferido em 15/10/2026 no site de cada loja (ou em fonte que a descreve,
+     quando o site não abriu). Ordem importa: o mais específico vem antes. */
+  [/amazon|mercado livre|shopee|aliexpress|americanas|submarino|shoptime|magalu|magazine luiza|casas bahia|ponto( frio)?|extra\.com|walmart|havan/i, FISICOS],
+  [/carrefour/i, ['celular', 'informatica', 'tv', 'games', 'fones', 'eletro', 'arcondicionado', 'moveis', 'colchao', 'cama_mesa_banho', 'cozinha', 'brinquedos', 'pet', 'mercado', 'vinho', 'cafe', 'chocolate']],
+  [/angeloni/i, ['mercado', 'vinho', 'cafe', 'chocolate', 'eletro', 'tv', 'celular', 'informatica', 'moveis', 'cama_mesa_banho', 'decoracao', 'cozinha', 'brinquedos', 'pet', 'construcao', 'esporte_equip']],
+  [/fast ?shop/i, ['celular', 'informatica', 'tv', 'games', 'fones', 'eletro', 'arcondicionado', 'cozinha']],
+  [/kabum/i, ['celular', 'informatica', 'tv', 'games', 'fones', 'arcondicionado']],
+  [/girafa/i, ['celular', 'informatica', 'tv', 'games', 'fones', 'eletro']],
+  [/abc da constru/i, ['construcao']],
+  [/leroy|telhanorte|c&c/i, ['construcao', 'decoracao', 'cozinha', 'cama_mesa_banho']],
+  [/mobly|madeira ?madeira|tok ?& ?stok|etna|westwing/i, ['moveis', 'decoracao', 'cama_mesa_banho', 'cozinha', 'colchao']],
+  [/camicado/i, ['cozinha', 'decoracao', 'cama_mesa_banho', 'eletro']],
+  [/trussardi|buddemeyer|zelo\b|altenburg/i, ['cama_mesa_banho']],
+  [/ortobom|castor|simmons|colch/i, ['colchao', 'moveis', 'cama_mesa_banho']],
+  [/polishop/i, ['eletro', 'cozinha', 'esporte_equip']],
+  [/dufrio/i, ['arcondicionado', 'eletro', 'construcao']],
+  [/electrolux|brastemp|consul/i, ['eletro', 'arcondicionado']],
+  [/apple/i, ['celular', 'informatica', 'fones']],
+  [/samsung/i, ['celular', 'informatica', 'tv', 'fones', 'eletro']],
+  [/motorola|xiaomi/i, ['celular', 'fones']],
+  [/acc?er\b|acer\b/i, ['informatica', 'games', 'fones']],
+  [/dell|lenovo|positivo|asus/i, ['informatica']],
+  [/\blg\b/i, ['tv', 'eletro', 'arcondicionado']],
+  [/sony/i, ['tv', 'games', 'fones']],
+  [/jbl/i, ['fones']],
+  [/netshoes|centauro|decathlon/i, ['tenis_corrida', 'tenis', 'calcados', 'roupas', 'esporte_equip', 'suplementos', 'bolsas']],
+  [/nike|adidas|puma|asics|olympikus|mizuno|fila\b|new balance|under armour|track ?& ?field/i, ['tenis_corrida', 'tenis', 'calcados', 'roupas', 'bolsas']],
+  [/vans\b/i, ['tenis', 'calcados', 'roupas']],
+  [/havaianas/i, ['calcados', 'bolsas']],
+  [/crocs/i, ['calcados']],
+  [/speedo/i, ['roupas', 'esporte_equip']],
+  [/integral m[eé]dica|growth|max titanium|probi[oó]tica|darkness/i, ['suplementos']],
+  [/zattini/i, ['tenis_corrida', 'tenis', 'calcados', 'roupas', 'bolsas', 'perfume']],
+  [/dafiti/i, ['tenis_corrida', 'tenis', 'calcados', 'roupas', 'bolsas']],
+  [/democrata/i, ['tenis', 'calcados']],
+  [/arezzo|schutz|meia sola/i, ['calcados', 'bolsas']],
+  [/anacapri/i, ['calcados', 'bolsas']],
+  [/\bbibi\b/i, ['calcados']],
+  [/riachuelo/i, ['roupas', 'tenis', 'calcados', 'bolsas', 'infantil_roupas', 'cama_mesa_banho', 'decoracao', 'perfume', 'maquiagem']],
+  [/c&a\b|cea\b/i, ['roupas', 'tenis', 'calcados', 'bolsas', 'infantil_roupas', 'oculos', 'perfume', 'maquiagem', 'cosmeticos']],
+  [/renner|marisa|zara|shein/i, ['roupas', 'tenis', 'calcados', 'bolsas', 'infantil_roupas']],
+  [/posthaus/i, ['roupas', 'calcados', 'infantil_roupas']],
+  [/bo\.?b[oô]/i, ['roupas', 'calcados', 'bolsas', 'joias']],
+  [/le lis|john john|dudalina/i, ['roupas', 'calcados', 'bolsas']],
+  [/aramis/i, ['roupas', 'calcados']],
+  [/hering/i, ['roupas', 'infantil_roupas']],
+  [/reserva|farm rio|individual|osklen|lacoste|tommy|calvin|insider/i, ['roupas']],
+  [/\bliz\b/i, ['roupas']],
+  [/carter/i, ['infantil_roupas']],
+  [/morana/i, ['joias', 'bolsas']],
+  [/monte carlo|vivara|pandora/i, ['joias']],
+  [/e-?lens|e-?[oó]tica/i, ['oculos']],
+  [/sephora|beleza na web|[eé]poca cosm/i, ['perfume', 'maquiagem', 'cosmeticos']],
+  [/botic|natura\b|avon|eudora|piatan/i, ['perfume', 'maquiagem', 'cosmeticos']],
+  [/jo malone/i, ['perfume', 'cosmeticos', 'decoracao']],
+  [/l.?occitane|granado/i, ['perfume', 'cosmeticos']],
+  [/quem disse/i, ['maquiagem', 'cosmeticos']],
+  [/\bmac\b|mac cosm/i, ['maquiagem']],
+  [/drogasil|droga ?raia|pague menos|panvel|drogaria|farm[aá]cia|ultrafarma/i, ['farmacia', 'cosmeticos']],
+  [/iherb/i, ['suplementos', 'cosmeticos', 'mercado']],
+  [/p[aã]o de a[cç][uú]car|st marche|assa[ií]|atacad|hortifruti/i, ['mercado', 'vinho', 'cafe', 'chocolate']],
+  [/tia s[oô]nia|bombay/i, ['mercado']],
+  [/divvino|evino|\bwine\b|grand cru|mistral/i, ['vinho']],
+  [/nespresso/i, ['cafe', 'eletro']],
+  [/coffee|starbucks/i, ['cafe']],
+  [/cacau show|kopenhagen/i, ['chocolate']],
+  [/pet ?love sa[uú]de/i, ['plano_pet']],              /* plano de saúde do pet: não vende produto */
+  [/petz|petlove|cobasi/i, ['pet']],
+  [/booking/i, ['hotel', 'carro']],
+  [/hoteis|hotels|expedia|airbnb|zarpo/i, ['hotel']],
+  [/decolar|cvc|123 ?milhas|max ?milhas/i, ['hotel', 'passagem', 'carro']],
+  [/localiza|movida|unidas|hertz|budget|rentcars/i, ['carro']],
+  [/seus ingressos|ingresso\.com|sympla|eventim/i, ['ingresso']],
+  [/giuliana flores|flores online/i, ['flores', 'chocolate']]
+];
+const TIPOS_ITEM = [
+  [/t[eê]nis.*(corrida|running|caminhada|academia|treino|esportiv|basquete|v[oô]lei|futsal)|chuteira/, 'tenis_corrida'],
+  [/t[eê]nis/, 'tenis'],
+  [/sapat|sand[aá]lia|chinelo|\bbota\b|calcad|havaianas|crocs|mocassim|scarpin/, 'calcados'],
+  [/camis|cal[cç]a\b|bermuda|vestido|blusa|jaqueta|casaco|moletom|\bshort|saia\b|roupa|cueca|biqu[ií]ni|mai[oô]\b|pijama|terno|blazer|lingerie/, 'roupas'],
+  [/bolsa|mochila|carteira\b|mala\b/, 'bolsas'],
+  [/\banel\b|colar\b|brinco|pulseira|rel[oó]gio|joia|alian[cç]a|pingente/, 'joias'],
+  [/[oó]culos|lente/, 'oculos'],
+  [/celular|iphone|smartphone|galaxy|moto g|redmi|telefone/, 'celular'],
+  [/notebook|computador|\bpc\b|macbook|ipad|tablet|monitor|impressora|teclado|mouse|\bssd\b|hd externo/, 'informatica'],
+  [/\btv\b|televis|smart ?tv/, 'tv'],
+  [/playstation|\bps5\b|xbox|nintendo|console|videogame/, 'games'],
+  [/fone|headphone|airpods|caixa de som|soundbar/, 'fones'],
+  [/geladeira|fog[aã]o|micro.?ondas|m[aá]quina de lavar|lava.?lou[cç]as|airfryer|air fryer|fritadeira|liquidificador|aspirador|cafeteira|ventilador|ferro de passar|cooktop|forno|batedeira|purificador/, 'eletro'],
+  [/ar.?condicionado|\bsplit\b/, 'arcondicionado'],
+  [/sof[aá]|guarda.?roupa|\bmesa\b|cadeira|\brack\b|estante|poltrona|arm[aá]rio|c[oô]moda|escrivaninha/, 'moveis'],
+  [/colch[aã]o|cama box/, 'colchao'],
+  [/len[cç]ol|toalha|edredom|travesseiro|cobertor|jogo de cama/, 'cama_mesa_banho'],
+  [/tapete|cortina|lumin[aá]ria|quadro|vaso|decora/, 'decoracao'],
+  [/panela|talher|jogo de jantar|faqueiro|utens[ií]lio/, 'cozinha'],
+  [/tinta|furadeira|ferramenta|porcelanato|torneira|chuveiro/, 'construcao'],
+  [/perfume|col[oô]nia|fragr[aâ]ncia|eau de/, 'perfume'],
+  [/maquiagem|batom|r[ií]mel|blush|corretivo/, 'maquiagem'],
+  [/hidratante|shampoo|condicionador|creme|protetor solar|sabonete|skin.?care|s[eé]rum/, 'cosmeticos'],
+  [/rem[eé]dio|medicamento/, 'farmacia'],
+  [/whey|creatina|suplemento|prote[ií]na|vitamina/, 'suplementos'],
+  [/vinho|espumante|champagne|prosecco/, 'vinho'],
+  [/\bcaf[eé]\b|c[aá]psula/, 'cafe'],
+  [/chocolate|ovo de p[aá]scoa|bombom/, 'chocolate'],
+  [/ra[cç][aã]o|\bpet\b|cachorro|gato|areia sanit/, 'pet'],
+  [/hotel|hospedagem|pousada|di[aá]ria/, 'hotel'],
+  [/aluguel de carro|loca[cç][aã]o de carro|carro alugado/, 'carro'],
+  [/passagem|\bvoo\b/, 'passagem'],
+  [/ingresso|\bshow\b|teatro/, 'ingresso'],
+  [/flores|buqu[eê]/, 'flores'],
+  [/brinquedo|boneca|\blego\b/, 'brinquedos'],
+  [/bicicleta|\bbike\b|esteira|halter|raquete|\bbola\b/, 'esporte_equip']
+];
+function tiposDoItem(d){
+  const t = semAcento(String((d && d.n) || '') + ' ' + String((d && d.obs) || '')).toLowerCase();
+  const sa = s => semAcento(s);
+  let r = [...new Set(TIPOS_ITEM.filter(([re]) => re.test(t) || re.test(sa(t))).map(([, k]) => k))];
+  if (r.includes('tenis_corrida')) r = r.filter(k => k !== 'tenis');
+  return r;
+}
+function oQueALojaVende(nome){
+  const m = VENDE_LOJA.find(([re]) => re.test(String(nome || '')));
+  return m ? m[1] : null;
+}
+/* a loja vende este item? */
+function lojaVendeItem(nome, d, catLoja){
+  const tipos = tiposDoItem(d), vende = oQueALojaVende(nome);
+  if (tipos.length){
+    if (!vende) return false;                     /* loja desconhecida: não sugere */
+    return tipos.some(t => vende.includes(t));
+  }
+  /* item sem tipo reconhecido: vale a categoria, só para loja conhecida */
+  return vende ? lojaServeCategoria(nome, d.cat, catLoja) : false;
+}
 </script>
 </body>
 </html>
