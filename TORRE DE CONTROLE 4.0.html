@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 20:00';
+const BUILD = '2026-10-15 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -51909,7 +51909,14 @@ function abrirDesejoNaLista(id){
           : `<b>${comDes.length === 1 ? 'Uma loja serve' : comDes.length + ' lojas servem'}</b> ${itens === 1 ? 'a um item' : 'a ' + itens + ' itens'} da sua Lista de desejos.`}</span>
           <button type="button" class="bt p ${soListaV ? 'primario' : 'fantasma'}" id="btSoLista">${soListaV ? 'Mostrar todas as lojas' : 'Ver só essas'}</button>`;
         alvo.parentNode.insertBefore(b, alvo);
-        b.querySelector('#btSoLista').onclick = () => { soListaV = !soListaV; renderLojasParceiras(); };
+        b.querySelector('#btSoLista').onclick = () => {
+          soListaV = !soListaV;
+          /* "Ver só essas" mostra exatamente as lojas do aviso: os outros filtros
+             (categoria, programa, caminho, busca) saem, senão a lista ficava vazia */
+          if (soListaV){ catLoja = ''; progLojaV = ''; tipoShopV = ''; buscaLojaV = ''; soMelhorLojaV = false;
+            const bu = document.getElementById('ljBusca'); if (bu) bu.value = ''; const sm = document.getElementById('ljSoMelhor'); if (sm) sm.checked = false; }
+          renderLojasParceiras();
+        };
       } catch(e){ console.error(e); }
       return r;
     };
@@ -58544,11 +58551,14 @@ function comparacaoLojas(){
 function renderComparaLojas(){
   const vit = document.getElementById('ljVitrine'); if (!vit) return;
   let box = document.getElementById('ljCompara');
-  if (!box){ box = document.createElement('section'); box.id = 'ljCompara'; box.className = 'lc2'; vit.before(box); }
+  if (!box){ box = document.createElement('section'); box.id = 'ljCompara'; box.className = 'lc2'; }
+  /* fica ACIMA dos filtros: eles não mudam este quadro (15/10/2026) */
+  const bloco = (document.getElementById('btNovaLojaCamp') || vit).closest('.pilha') || vit;
+  if (box.nextElementSibling !== bloco) bloco.before(box);
   const lista = comparacaoLojas();
   if (!lista.length){ box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false;
-  const mostra = cmpLojaTudo ? lista : lista.slice(0, 5);
+  const mostra = cmpLojaTudo ? lista : lista.slice(0, 3);
   const mult = l => tetoLoja(l).promo || tetoLoja(l).base || 0;
   const vol = l => nBRdec(Math.round(voltaPct(l) * 10) / 10) + '%';
   const linha = x => {
@@ -58564,7 +58574,7 @@ function renderComparaLojas(){
   box.innerHTML = `<div class="lc2-cab"><div><h3><svg><use href="#i-troca"/></svg>Mesma loja, programas diferentes</h3>
       <p>${lista.length} ${lista.length === 1 ? 'loja está' : 'lojas estão'} em mais de um programa hoje. Antes de comprar, veja por onde rende mais.</p></div></div>
     <div class="lc2-lista">${mostra.map(linha).join('')}</div>
-    ${lista.length > 5 ? `<button type="button" class="bt p fantasma lc2-mais" id="lc2Mais">${cmpLojaTudo ? 'Mostrar só as 5 primeiras' : `Ver as ${lista.length} lojas`}</button>` : ''}`;
+    ${lista.length > 3 ? `<button type="button" class="bt p fantasma lc2-mais" id="lc2Mais">${cmpLojaTudo ? 'Mostrar só as 3 primeiras' : `Ver as ${lista.length} lojas`}</button>` : ''}`;
   const b = document.getElementById('lc2Mais'); if (b) b.onclick = () => { cmpLojaTudo = !cmpLojaTudo; renderComparaLojas(); };
 }
 (function(){
@@ -58833,5 +58843,195 @@ document.addEventListener('input', e => { const t = e.target; if (t && t.matches
   previaAnuncios = function(){ const r = _p.apply(this, arguments); document.querySelectorAll('textarea.mr-previa-tit').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); return r; };
 })();
 </script>
+
+<style>
+/* tela de abertura mais contida (15/10/2026) */
+.abertura .selo-vem img{ width:clamp(72px, 22vw, 104px); }
+.abertura .selo-vem-txt{ font-size:calc(11px * var(--esc)); letter-spacing:.14em; }
+.abertura-nome{ font-size:clamp(15px, 4.4vw, calc(20px * var(--esc))); letter-spacing:.12em; }
+.abertura-nucleo{ gap:12px; }
+.abertura-barra{ width:140px; }
+.abertura-msg{ font-size:calc(11px * var(--esc)); }
+</style>
+
+<style>
+/* ══ Lojas Parceiras em lista ══ */
+.ljl-l{ cursor:pointer; }
+.ljl-l:hover{ background:color-mix(in srgb, var(--anil) 5%, transparent); }
+@media (max-width:760px){
+  .ljl-a{ display:none; }
+  .ljl-l::after{ content:'›'; grid-column:3; grid-row:1 / span 2; align-self:center; justify-self:end; color:var(--grafite); font-size:20px; margin-right:-4px; display:none; }
+  .lj-ferramentas{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .lj-ferramentas .lj-busca{ grid-column:1 / -1; }
+  .lj-ferramentas .lj-gasto, .lj-ferramentas .lj-ordem{ min-width:0; }
+  .lj-ferramentas .lj-ordem select{ min-width:0; width:100%; }
+  .lj-ferramentas .lj-gasto input{ min-width:0; width:100%; }
+  .lj-ferramentas .lj-melhor{ grid-column:1 / -1; }
+  .lj-ferramentas .ljl-modo{ grid-column:1 / -1; }
+}
+
+.ljl-g{ display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+.ljl-gc{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:2px 2px 0; }
+.ljl-gc > span:not(.bz){ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.ljl-gc em{ margin-left:auto; font-style:normal; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.ljl-lista{ border:1px solid var(--fio); border-radius:var(--r-lg); overflow:hidden; background:var(--sup-0); }
+.ljl-l{ display:grid; grid-template-columns:36px minmax(0, 1.6fr) minmax(110px, .9fr) 78px 92px auto; gap:12px; align-items:center; padding:9px 14px; }
+.ljl-l + .ljl-l{ border-top:1px solid var(--fio); }
+.ljl-l.tem-des{ background:color-mix(in srgb, var(--jade) 6%, transparent); }
+.ljl-l .lj-avatar{ width:34px; height:34px; font-size:calc(12px * var(--esc)); }
+.ljl-n{ min-width:0; display:flex; flex-direction:column; gap:1px; }
+.ljl-n b{ color:var(--giz); font-size:calc(14px * var(--esc)); overflow-wrap:anywhere; }
+.ljl-n small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.ljl-des{ display:inline-flex; gap:5px; align-items:center; color:var(--jade); font-size:calc(12px * var(--esc)); font-weight:600; margin-top:2px; }
+.ljl-des svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; flex-shrink:0; }
+.ljl-p{ display:flex; gap:7px; align-items:center; color:var(--giz-2); font-size:calc(13px * var(--esc)); min-width:0; }
+.ljl-m, .ljl-v{ display:flex; flex-direction:column; align-items:flex-end; line-height:1.15; }
+.ljl-m b{ font:600 calc(18px * var(--esc)) var(--f-m); color:var(--ouro); }
+.ljl-v b{ font:600 calc(16px * var(--esc)) var(--f-m); color:var(--jade); }
+.ljl-m small, .ljl-v small{ color:var(--grafite); font-size:calc(11px * var(--esc)); white-space:nowrap; }
+.ljl-a{ display:flex; gap:6px; justify-content:flex-end; }
+.ljl-abrir{ align-self:flex-start; background:none; border:1px dashed var(--fio-forte); border-radius:10px; padding:9px 14px; color:var(--grafite); cursor:pointer; font:inherit; font-size:calc(13px * var(--esc)); }
+.ljl-abrir:hover{ color:var(--giz); border-color:var(--anil); }
+.ljl-cat{ display:inline-flex; align-items:center; gap:8px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.ljl-cat select{ min-width:180px; }
+.ljl-modo{ margin-left:auto; }
+@media (max-width:760px){
+  .ljl-l{ grid-template-columns:34px minmax(0, 1fr) auto; grid-template-areas:"av n m" "av p v" "a a a"; gap:4px 10px; padding:10px 12px; }
+  .ljl-l .lj-avatar{ grid-area:av; align-self:start; }
+  .ljl-n{ grid-area:n; } .ljl-p{ grid-area:p; } .ljl-m{ grid-area:m; } .ljl-v{ grid-area:v; } .ljl-a{ grid-area:a; justify-content:flex-start; margin-top:4px; }
+  .ljl-cat select{ min-width:0; width:100%; }
+  .ljl-cat{ width:100%; }
+  .ljl-modo{ margin-left:0; }
+}
+</style>
+<script>
+/* ══ LOJAS PARCEIRAS SIMPLES (15/10/2026, auditoria pedida pelo Jadiel) ═══════
+   A vitrine virou uma lista curta, separada pela Bússola ROTA: primeiro o que
+   mais rende, por último o que só vale se você já ia comprar (fechado). Cada
+   linha diz o essencial: loja, programa, pontos por real e quanto volta. Os
+   cartões grandes continuam a um toque ("Cartões"). Menos filtros: programa em
+   botões, categoria numa caixa de escolha, e só aparece o que tem oferta. */
+let modoLojaV = 'lista', ljlAbertos = {};
+try { modoLojaV = localStorage.getItem('torre-lj-modo') || 'lista'; } catch(_){}
+const CAT_ROTULO = {geral:'Lojas de tudo', 'alimentação':'Alimentação', beleza:'Beleza', casa:'Casa', 'eletrônicos':'Eletrônicos', esporte:'Esporte',
+  'farmácia':'Farmácia', lazer:'Lazer', moda:'Moda', pet:'Pet', presentes:'Presentes', viagem:'Viagem'};
+const catRot = c => CAT_ROTULO[c] || (c ? c[0].toUpperCase() + c.slice(1) : 'Outras');
+
+/* a mesma seleção que a vitrine de cartões usa */
+function lojasFiltradas(){
+  const vivas = ofertasVitrine(), busca = normLoja(buscaLojaV);
+  let lista = vivas.filter(l => (!soListaV || (typeof desejosDaOferta === 'function' && desejosDaOferta(l).length)) && (!tipoShopV || caminhoDe(l) === tipoShopV)
+    && (!catLoja || l.cat === catLoja) && (!progLojaV || l.prog === progLojaV) && (!busca || normLoja(l.n).includes(busca)));
+  if (soMelhorLojaV){ const pl = {}; lista.forEach(l => { const k = normLoja(l.n); if (!pl[k] || voltaPct(l) > voltaPct(pl[k])) pl[k] = l; }); lista = Object.values(pl); }
+  const ord = {volta:(a, b) => voltaPct(b) - voltaPct(a), prazo:(a, b) => (a.fim || '9999').localeCompare(b.fim || '9999') || voltaPct(b) - voltaPct(a),
+    mult:(a, b) => (tetoLoja(b).promo || tetoLoja(b).base) - (tetoLoja(a).promo || tetoLoja(a).base)};
+  return lista.sort(ord[ordemLojaV] || ord.volta);
+}
+const _ljlMult = l => { const t = tetoLoja(l); return t.promo || t.base || 0; };
+const _ljlFaixa = l => bussolaDe(l.porDolar ? (_cambioUSD ? _ljlMult(l) / _cambioUSD : null) : _ljlMult(l));
+function linhaLojaHTML(l){
+  const mult = _ljlMult(l), vol = voltaPct(l), d = diasAte(l.fim);
+  const prazo = d === null ? '' : d < 0 ? 'encerrada' : d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `até ${dataBR(l.fim).slice(0, 5)}`;
+  const des = typeof desejosDaOferta === 'function' ? desejosDaOferta(l) : [];
+  const gasto = gastoLojaV > 0 ? Math.floor(gastoLojaV * mult) : 0;
+  const r = retornoLoja(l);
+  return `<div class="ljl-l${des.length ? ' tem-des' : ''}" data-ljl="${esc(String(l.id))}">
+    <span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>
+    <div class="ljl-n"><b>${esc(l.n)}</b><small>${esc(catRot(l.cat))}${prazo ? ' · ' + prazo : ''}</small>
+      ${des.length ? `<span class="ljl-des"><svg><use href="#i-alvo"/></svg>${des[0].hora ? 'Hora de comprar' : 'Na sua lista'}: ${esc(des.map(x => x.d.n).join(', '))}</span>` : ''}</div>
+    <span class="ljl-p">${discoProg(l.prog, 'p')}<span>${esc(prog(l.prog).n)}</span></span>
+    <span class="ljl-m"><b>${nBRdec(mult)}</b><small>${l.porDolar ? 'por dólar' : 'por real'}</small></span>
+    <span class="ljl-v" title="${esc(`${nBRdec(mult)} pontos × ${brl2(r.cpm)} o milheiro`)}">${gasto ? `<b>${brl2(gasto * r.cpm / 1000)}</b><small>${nBR(gasto)} pts em ${brl(gastoLojaV)}</small>` : `<b>${nBRdec(Math.round(vol * 10) / 10)}%</b><small>de volta</small>`}</span>
+    <span class="ljl-a">
+      ${l.link ? `<a class="bt p fantasma icone" href="${esc(l.link)}" target="_blank" rel="noopener" data-dica="Abrir a loja pelo site do programa" aria-label="Abrir a loja"><svg><use href="#i-link"/></svg></a>` : ''}
+      <button type="button" class="bt p fantasma" data-ljl-vale="${esc(String(l.id))}">Vale a pena?</button>
+      ${l.origem === 'loja' ? `<button type="button" class="bt p fantasma icone" onclick="editarLoja('${l.id}')" data-dica="Editar" aria-label="Editar"><svg><use href="#i-lapis"/></svg></button>` : ''}
+    </span>
+  </div>`;
+}
+function renderVitrineLista(){
+  const alvo = document.getElementById('ljVitrine'); if (!alvo) return;
+  const lista = lojasFiltradas();
+  if (!lista.length) return;                         /* o aviso de vazio da vitrine original fica */
+  const grupos = BUSSOLA_FAIXAS.slice().reverse().map(f => ({f, ls:lista.filter(l => (_ljlFaixa(l) || {}).n === f.n)}));
+  const semF = lista.filter(l => !_ljlFaixa(l));
+  if (semF.length) grupos.push({f:null, ls:semF});
+  alvo.innerHTML = grupos.filter(g => g.ls.length).map(g => {
+    const k = g.f ? 'f' + g.f.n : 'sem';
+    const fechado = g.f && g.f.n === 1 && !ljlAbertos[k] && !soListaV && !buscaLojaV;
+    return `<section class="ljl-g">
+      <header class="ljl-gc">${g.f ? bussolaHTML(g.f, {compacto:true}) : '<span class="bz bz-grafite bz-c"><b>Sem classificação</b></span>'}
+        <span>${g.f ? esc(g.f.faixa) + ' por real' : 'paga por dólar: falta o dólar do dia'}</span><em>${g.ls.length} ${g.ls.length === 1 ? 'loja' : 'lojas'}</em></header>
+      ${fechado ? `<button type="button" class="ljl-abrir" data-ljl-abre="${k}">Mostrar as ${g.ls.length} lojas que só valem se você já ia comprar</button>`
+        : `<div class="ljl-lista">${g.ls.map(linhaLojaHTML).join('')}</div>`}
+    </section>`;
+  }).join('') + `<p class="lj-rodape"><svg><use href="#i-info"/></svg>Entre na loja pelo site ou app do programa: é isso que faz pontuar. Entrar direto na loja não conta, e cupom de fora costuma anular os pontos.</p>`;
+  alvo.querySelectorAll('[data-ljl-abre]').forEach(b => b.onclick = () => { ljlAbertos[b.dataset.ljlAbre] = true; renderVitrineLista(); });
+  alvo.querySelectorAll('[data-ljl-vale]').forEach(b => b.onclick = e => { e.stopPropagation(); abrirValeLoja(b.dataset.ljlVale, b); });
+  /* tocar na linha abre "Vale a pena?", que tem o botão Abrir Loja */
+  alvo.querySelectorAll('.ljl-l').forEach(r => r.onclick = e => { if (e.target.closest('a, button')) return; abrirValeLoja(r.dataset.ljl, r); });
+}
+function arrumarFiltrosLojas(){
+  const vivas = ofertasVitrine();
+  /* caminhos: só os que têm oferta; com um só, o seletor some */
+  const segT = document.getElementById('ljSegTipo');
+  if (segT){ const bts = [...segT.querySelectorAll('button')]; bts.forEach(b => { const n = Number((b.querySelector('.cont-disco') || {}).textContent || 0); if (b.dataset.t && !n) b.hidden = true; });
+    segT.hidden = bts.filter(b => b.dataset.t && !b.hidden).length < 2; }
+  /* categorias: numa caixa de escolha, não em 13 botões */
+  const segC = document.getElementById('ljSegCat');
+  if (segC){
+    segC.hidden = true;
+    let sel = document.getElementById('ljCatSel');
+    if (!sel){ const lb = document.createElement('label'); lb.className = 'ljl-cat'; lb.innerHTML = 'Categoria <select id="ljCatSel" data-ordem="natural"></select>'; segC.before(lb); sel = lb.querySelector('select');
+      sel.onchange = () => { catLoja = sel.value; renderLojasParceiras(); }; }
+    const cats = [...new Set(vivas.map(l => l.cat))].sort((a, b) => catRot(a).localeCompare(catRot(b), 'pt-BR'));
+    sel.innerHTML = `<option value="">Todas (${vivas.length})</option>` + cats.map(c => `<option value="${esc(c)}"${c === catLoja ? ' selected' : ''}>${esc(catRot(c))} (${vivas.filter(l => l.cat === c).length})</option>`).join('');
+  }
+  const cb = document.getElementById('btCopiarVitrineBz');
+  if (cb) cb.onclick = () => {
+    const vv = ofertasVitrine().filter(l => l.origem === 'loja' && (!progLojaV || l.prog === progLojaV));
+    if (!vv.length) return avisar('A vitrine está vazia.', 'alerta');
+    const progs = [...new Set(vv.map(l => l.prog))];
+    copiarListaBussolas(progs.map(p => { const daq = vv.filter(l => l.prog === p);
+      return textoBussolas(p, daq.map(l => l.fim).filter(Boolean).sort()[0] || '', daq.map(l => ({n:l.n, v:_ljlMult(l), unid:l.porDolar ? 'dolar' : 'real', cat:catRot(l.cat)})), (daq.find(l => l.link) || {}).link || ''); }).join('\n\n━━━━━━━━━━\n\n'));
+  };
+  /* um botão de colar só */
+  const dup = document.getElementById('btColarLoja'); if (dup) dup.remove();
+  const cl = document.getElementById('btColarListaLj'); if (cl) cl.innerHTML = '<svg><use href="#i-copiar"/></svg>Colar lista ou anúncio';
+  /* legenda: na lista, cada grupo já diz a sua faixa */
+  const leg = document.getElementById('bzLegenda'); if (leg) leg.hidden = modoLojaV === 'lista';
+  /* lista ou cartões */
+  const ferr = document.querySelector('.lj-ferramentas');
+  if (ferr && !document.getElementById('ljModo')){
+    const m = document.createElement('div'); m.className = 'seg ljl-modo'; m.id = 'ljModo';
+    m.innerHTML = '<button type="button" data-m="lista">Lista</button><button type="button" data-m="cartoes">Cartões</button>';
+    ferr.appendChild(m);
+    m.querySelectorAll('button').forEach(b => b.onclick = () => { modoLojaV = b.dataset.m; try { localStorage.setItem('torre-lj-modo', modoLojaV); } catch(_){} renderLojasParceiras(); });
+  }
+  document.querySelectorAll('#ljModo button').forEach(b => b.classList.toggle('on', b.dataset.m === modoLojaV));
+}
+(function(){
+  /* "de 1×" riscado só quando se sabe o de sempre (maior que 1) */
+  const _rl = renderLojasParceiras;
+  renderLojasParceiras = function(){
+    const r = _rl.apply(this, arguments);
+    try { arrumarFiltrosLojas(); if (modoLojaV === 'lista') renderVitrineLista(); } catch(e){ console.error(e); }
+    return r;
+  };
+  try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === _rl) RENDER[k] = renderLojasParceiras; }); } catch(_){}
+  const _cl = cartaoLoja;
+  cartaoLoja = function(l){ return _cl.apply(this, arguments).replace(/ · <s>de 1×<\/s>/g, ''); };
+  setTimeout(() => { try { renderLojasParceiras(); } catch(_){} }, 400);
+})();
+</script>
+
+<style>
+@media (max-width:760px){
+  .ljl-l .ljl-a{ display:none !important; }
+  .ljl-l{ grid-template-areas:"av n m" "av p v" !important; }
+  .lj-ferramentas .lj-ordem{ font-size:0 !important; gap:0; }
+  .lj-ferramentas .lj-ordem select{ font-size:calc(14px * var(--esc)); }
+}
+</style>
 </body>
 </html>
