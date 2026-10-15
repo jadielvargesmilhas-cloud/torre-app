@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 23:30';
+const BUILD = '2026-10-16 00:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -58911,7 +58911,8 @@ document.addEventListener('input', e => { const t = e.target; if (t && t.matches
    linha diz o essencial: loja, programa, pontos por real e quanto volta. Os
    cartões grandes continuam a um toque ("Cartões"). Menos filtros: programa em
    botões, categoria numa caixa de escolha, e só aparece o que tem oferta. */
-let modoLojaV = 'lista', ljlAbertos = {};
+let modoLojaV = 'lista', ljlAbertos = {}, ljlMais = {};
+const LJL_TOP = 5;
 try { modoLojaV = localStorage.getItem('torre-lj-modo') || 'lista'; } catch(_){}
 const CAT_ROTULO = {geral:'Lojas de tudo', 'alimentação':'Alimentação', beleza:'Beleza', casa:'Casa', 'eletrônicos':'Eletrônicos', esporte:'Esporte',
   'farmácia':'Farmácia', lazer:'Lazer', moda:'Moda', pet:'Pet', presentes:'Presentes', viagem:'Viagem'};
@@ -58959,14 +58960,29 @@ function renderVitrineLista(){
   alvo.innerHTML = grupos.filter(g => g.ls.length).map(g => {
     const k = g.f ? 'f' + g.f.n : 'sem';
     const fechado = g.f && g.f.n === 1 && !ljlAbertos[k] && !soListaV && !buscaLojaV;
-    return `<section class="ljl-g">
+    return `<section class="ljl-g" data-ljl-sec="${k}">
       <header class="ljl-gc">${g.f ? bussolaHTML(g.f, {compacto:true}) : '<span class="bz bz-grafite bz-c"><b>Sem classificação</b></span>'}
         <span>${g.f ? esc(g.f.faixa) + ' por real' : 'paga por dólar: falta o dólar do dia'}</span><em>${g.ls.length} ${g.ls.length === 1 ? 'loja' : 'lojas'}</em></header>
       ${fechado ? `<button type="button" class="ljl-abrir" data-ljl-abre="${k}">Mostrar as ${g.ls.length} lojas que só valem se você já ia comprar</button>`
-        : `<div class="ljl-lista">${g.ls.map(linhaLojaHTML).join('')}</div>`}
+        : (() => {
+            /* Top 5 de cada faixa; o resto fica atrás de "Ver mais". Loja em "Hora de
+               comprar" (bateu o alvo da sua lista) nunca fica escondida. Na busca ou em
+               "Ver só essas", mostra tudo, porque ali a pessoa já filtrou. */
+            const linhas = g.ls.map(l => ({h:linhaLojaHTML(l)}));
+            linhas.forEach(x => { x.des = x.h.includes('Hora de comprar'); });
+            const tudo = ljlMais[k] || soListaV || buscaLojaV || linhas.length <= LJL_TOP;
+            const vis = tudo ? linhas : linhas.filter((x, i) => i < LJL_TOP || x.des);
+            const resto = linhas.length - vis.length;
+            const bt = tudo ? (ljlMais[k] && linhas.length > LJL_TOP ? `<button type="button" class="ljl-mais" data-ljl-menos="${k}">Ver menos</button>` : '')
+              : `<button type="button" class="ljl-mais" data-ljl-mais="${k}">Ver mais ${resto} ${resto === 1 ? 'loja' : 'lojas'}<svg><use href="#i-baixo"/></svg></button>`;
+            return `<div class="ljl-lista">${vis.map(x => x.h).join('')}</div>${bt}`;
+          })()}
     </section>`;
   }).join('') + `<p class="lj-rodape"><svg><use href="#i-info"/></svg>Entre na loja pelo site ou app do programa: é isso que faz pontuar. Entrar direto na loja não conta, e cupom de fora costuma anular os pontos.</p>`;
   alvo.querySelectorAll('[data-ljl-abre]').forEach(b => b.onclick = () => { ljlAbertos[b.dataset.ljlAbre] = true; renderVitrineLista(); });
+  alvo.querySelectorAll('[data-ljl-mais]').forEach(b => b.onclick = () => { ljlMais[b.dataset.ljlMais] = true; renderVitrineLista(); });
+  alvo.querySelectorAll('[data-ljl-menos]').forEach(b => b.onclick = () => { const k = b.dataset.ljlMenos; ljlMais[k] = false; renderVitrineLista();
+    const sec = alvo.querySelector(`[data-ljl-sec="${k}"]`); if (sec && sec.getBoundingClientRect().top < 70){ sec.style.scrollMarginTop = '80px'; sec.scrollIntoView({block:'start'}); } });
   alvo.querySelectorAll('[data-ljl-vale]').forEach(b => b.onclick = e => { e.stopPropagation(); abrirValeLoja(b.dataset.ljlVale, b); });
   /* tocar na linha abre "Vale a pena?", que tem o botão Abrir Loja */
   alvo.querySelectorAll('.ljl-l').forEach(r => r.onclick = e => { if (e.target.closest('a, button')) return; abrirValeLoja(r.dataset.ljl, r); });
@@ -59036,6 +59052,10 @@ function arrumarFiltrosLojas(){
 
 <style>
 /* colunas medidas: todas as linhas com as mesmas larguras, com ou sem botão de editar */
+@media (max-width:560px){ .ljl-gc{ display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-areas:"bz em" "tx tx"; row-gap:4px; } .ljl-gc > .bz{ grid-area:bz; justify-self:start; } .ljl-gc > span:not(.bz){ grid-area:tx; } .ljl-gc em{ grid-area:em; justify-self:end; } }
+.ljl-mais{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:8px; padding:10px 14px; background:none; border:1px solid var(--fio-forte); border-radius:12px; color:var(--anil); font:inherit; font-weight:600; font-size:calc(14px * var(--esc)); cursor:pointer; }
+.ljl-mais:hover{ background:color-mix(in srgb, var(--anil) 6%, transparent); }
+.ljl-mais svg{ width:16px; height:16px; }
 .ljl-ph{ visibility:hidden; pointer-events:none; }
 #ljSegTipo, #ljSegProg{ flex-wrap:wrap !important; max-width:100%; overflow-x:visible !important; }
 @media (min-width:1100px){
@@ -59151,6 +59171,233 @@ function editarBonificada(id){
     const r = orig.apply(this, arguments);
     const sel = document.getElementById('cpTipo');
     if (sel) sel.addEventListener('change', () => { if (sel.value === 'bonificada' && !id){ fecharFolha(); setTimeout(() => editarBonificada(null), 60); } });
+    return r;
+  };
+})();
+</script>
+<style id="ct-css">
+.ct{ margin-top:18px; padding-top:16px; border-top:1px solid var(--fio); }
+.ct-cab{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.ct-cab h3{ margin:0; font-size:calc(15px * var(--esc)); font-weight:700; color:var(--giz); }
+.ct-rota{ font-size:calc(11.5px * var(--esc)); font-weight:700; letter-spacing:.02em; padding:3px 9px; border-radius:99px; color:#fff; background:#c2621a; white-space:nowrap; }
+.ct-grade{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+.ct-grade.um{ grid-template-columns:minmax(0,1fr); }
+.ct-c{ display:flex; flex-direction:column; gap:10px; padding:12px 13px; border-radius:12px; background:var(--sup-1); border:1px solid var(--fio); min-width:0; }
+.ct-c.ct-jade{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+.ct-c.ct-ouro{ border-color:color-mix(in srgb, var(--ouro) 50%, var(--fio)); }
+.ct-tag{ font-size:calc(11.5px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.ct-jade .ct-tag{ color:var(--jade); } .ct-ouro .ct-tag{ color:var(--ouro); }
+.ct-q{ display:flex; align-items:center; gap:10px; min-width:0; }
+.ct-av{ flex:0 0 34px; width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-weight:700; font-size:calc(12.5px * var(--esc)); color:#fff; background:var(--anil); }
+.ct-n{ display:flex; flex-direction:column; min-width:0; }
+.ct-n b{ font-size:calc(14.5px * var(--esc)); color:var(--giz); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ct-n small{ font-size:calc(12px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ct-num{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+.ct-grade:not(.um) .ct-num{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+.ct-num li{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.ct-num span{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.ct-num b{ font-size:calc(15.5px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ct-num b.jade{ color:var(--jade); }
+.ct-num small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.ct-obs{ margin:0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.ct-nota{ margin:10px 0 0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.ct-todas{ display:flex; align-items:center; justify-content:center; gap:7px; width:100%; margin-top:10px; padding:10px 14px; background:none; border:1px solid var(--fio-forte); border-radius:12px; color:var(--anil); font:inherit; font-weight:600; font-size:calc(14px * var(--esc)); cursor:pointer; }
+.ct-todas:hover{ background:color-mix(in srgb, var(--anil) 6%, transparent); }
+.ct-todas svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
+.ctd .dr-painel{ width:min(820px, calc(100vw - 32px)); }
+.ctd-ord{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.ctd-ord button{ padding:7px 12px; border-radius:99px; border:1px solid var(--fio-forte); background:none; color:var(--grafite); font:inherit; font-size:calc(13px * var(--esc)); cursor:pointer; }
+.ctd-ord button.on{ background:var(--anil); border-color:var(--anil); color:#fff; font-weight:600; }
+.ctd-h, .ctd-l{ display:grid; grid-template-columns:34px minmax(0,1fr) 92px 104px 104px 120px; gap:12px; align-items:center; }
+.ctd-h{ padding:0 12px 6px; font-size:calc(11.5px * var(--esc)); color:var(--grafite); text-transform:uppercase; letter-spacing:.04em; }
+.ctd-h span:nth-child(n+3), .ctd-l > div:nth-child(n+3){ text-align:right; }
+.ctd-l{ padding:10px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); margin-bottom:8px; }
+.ctd-l.top{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+.ctd-l > div{ display:flex; flex-direction:column; min-width:0; }
+.ctd-l > div:nth-child(n+3){ align-items:flex-end; }
+.ctd-l b{ font-size:calc(14.5px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ctd-l b.jade{ color:var(--jade); }
+.ctd-l small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.ctd-barra{ display:block; width:100%; height:5px; margin-top:4px; border-radius:99px; background:var(--fio); overflow:hidden; }
+.ctd-barra i{ display:block; height:100%; margin-left:auto; border-radius:99px; background:var(--jade); }
+@media (max-width:640px){
+  .ct-grade{ grid-template-columns:minmax(0,1fr); }
+  .ctd-h{ display:none; }
+  .ctd-l{ grid-template-columns:34px repeat(3, minmax(0,1fr)); grid-template-areas:"av n n q" "av p m d"; row-gap:8px; column-gap:10px; align-items:start; }
+  .ctd-l > .ct-av{ grid-area:av; } .ctd-n{ grid-area:n; } .ctd-q{ grid-area:q; } .ctd-p{ grid-area:p; } .ctd-m{ grid-area:m; } .ctd-d{ grid-area:d; }
+  .ctd-p, .ctd-m, .ctd-d{ align-items:flex-start !important; text-align:left !important; }
+  .ctd-p::before, .ctd-m::before, .ctd-d::before{ font-size:calc(11px * var(--esc)); color:var(--grafite); }
+  .ctd-p::before{ content:'Pontos'; } .ctd-m::before{ content:'Hoje'; } .ctd-d::before{ content:'Depois'; }
+  .ctd-d small{ display:none; }
+}
+</style>
+<script id="ct-js">
+/* ══════════════════════════════════════════════════════════════════════════════
+   ROTA · O (Otimização dos Gastos): em qual conta comprar
+   ──────────────────────────────────────────────────────────────────────────────
+   A compra rende pontos numa conta só (o CPF que entra pelo link do programa).
+   Cada conta tem o próprio estoque e o próprio milheiro, então a mesma compra
+   tem efeito diferente em cada uma:
+
+     pontos       = preço × multiplicador DESSA conta (o "até" das listas e os
+                    degraus das compras bonificadas costumam exigir o clube)
+     custo extra  = preço aqui − menor preço em outra loja (zero se não pagou a
+                    mais: é a compra que você já ia fazer, e o ponto sai de graça)
+     milheiro     = (custo do estoque + custo extra) ÷ (pontos do estoque + pontos novos) × 1000
+
+   Duas leituras, porque respondem perguntas diferentes:
+     1. Mais pontos: a conta onde a compra rende mais (é dinheiro de verdade).
+     2. Baixar o milheiro mais caro: a conta com o milheiro mais alto hoje, em
+        geral a que paga o clube mais caro, e quanto ele cai com essa compra.
+   Quando a conta que baixa o milheiro recebe menos pontos, a Torre diz quanto
+   isso custa em pontos, para a escolha ser consciente. */
+function estoqueContaProg(prog, contaId){
+  const ls = (DB.lancamentos || []).filter(x => x.contaId === contaId);
+  const e = (estoqueMedio(ls) || {})[prog] || {qtd:0, custo:0};
+  return {qtd:Math.max(0, Number(e.qtd) || 0), custo:Math.max(0, Number(e.custo) || 0)};
+}
+function clubeDaConta(prog, contaId){
+  const a = (DB.assinaturas || []).find(x => x.prog === prog && x.contaId === contaId && x.status === 'ativa');
+  if (!a) return null;
+  const pl = ((catalogoDe(prog) || {}).planos || []).find(x => x.id === a.planoId);
+  let cpm = null; try { cpm = cpmAssinatura(a); } catch(e){}
+  return {a, plano:pl ? pl.n : '', qtd:pl ? Number(pl.qtd || pl.pontos || 0) : 0, cpm:cpm > 0 ? cpm : null};
+}
+function multDaConta(l, clube){
+  const camp = l.campId ? (DB.campanhas || []).find(c => c.id === l.campId) : null;
+  const fx = camp && (camp.faixas || []).length ? camp.faixas : null;
+  if (fx){
+    const st = {clube:!!clube, qtd:clube ? clube.qtd : 0};
+    const f = melhorFaixaPara(fx, st) || fx.slice().sort((a, b) => a.v - b.v)[0];
+    return {mult:Number(f.v) || 0, rot:f.rot || '', incerto:false};
+  }
+  const t = tetoLoja(l), m = t.promo || t.base || 0;
+  /* lista do dia ("até X pontos"): o máximo costuma ser de quem assina o clube */
+  return {mult:m, rot:'', incerto:l.origem === 'loja' && !clube};
+}
+function contasParaLoja(l, preco, outra){
+  const contas = DB.contas || [];
+  const custoExtra = outra > 0 ? Math.max(0, preco - outra) : 0;
+  return contas.map(c => {
+    const est = estoqueContaProg(l.prog, c.id);
+    const clube = clubeDaConta(l.prog, c.id);
+    const m = multDaConta(l, clube);
+    const pts = Math.floor(preco * m.mult);
+    const temSaldo = (DB.saldos || []).some(s => s.prog === l.prog && s.contaId === c.id && Number(s.qtd) > 0);
+    const antes = est.qtd > 0 ? est.custo / est.qtd * 1000 : null;
+    const depois = (est.qtd + pts) > 0 ? (est.custo + custoExtra) / (est.qtd + pts) * 1000 : null;
+    return {id:c.id, nome:c.nome || 'Conta', est, clube, mult:m.mult, rotFaixa:m.rot, incerto:m.incerto, pts, custoExtra,
+      antes, depois, queda:antes != null && depois != null ? antes - depois : null,
+      semPrograma:!est.qtd && !clube && !temSaldo};
+  });
+}
+function escolherContas(rs){
+  if (!rs.length) return {mais:null, caro:null};
+  const ord = (a, b) => b.pts - a.pts || (a.incerto - b.incerto) || (b.queda || 0) - (a.queda || 0) || (b.antes || 0) - (a.antes || 0);
+  const mais = rs.slice().sort(ord)[0];
+  const comEst = rs.filter(r => r.antes != null && r.antes > 0 && r.pts > 0);
+  const caro = comEst.sort((a, b) => b.antes - a.antes || (b.queda || 0) - (a.queda || 0))[0] || null;
+  return {mais, caro};
+}
+const _ctPlano = c => { const p = String(c.plano || '').trim(); return !p ? 'Com clube' : /^clube/i.test(p) ? p : 'Clube ' + p; };
+function _ctMilTxt(r){
+  if (r.antes == null) return r.pts > 0 ? `começa o estoque a ${brl2(r.depois || 0)} o milheiro` : 'sem pontos nessa compra';
+  return `milheiro ${brl2(r.antes)} → <b>${brl2(r.depois)}</b>`;
+}
+function _ctCartao(r, rot, tom, ref, mult){
+  const dif = ref && ref.id !== r.id ? r.pts - ref.pts : 0;
+  return `<article class="ct-c ct-${tom}">
+    <header><span class="ct-tag">${rot}</span></header>
+    <div class="ct-q"><span class="ct-av">${esc(mono(r.nome))}</span>
+      <div class="ct-n"><b>${esc(r.nome)}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' a ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : 'sem clube nesse programa'}</small></div></div>
+    <ul class="ct-num">
+      <li><span>Pontos</span><b>+${nBR(r.pts)}</b><small>${nBRdec(r.mult)} por real</small></li>
+      <li><span>Milheiro</span><b>${r.antes != null ? brl2(r.depois) : (r.pts ? brl2(r.depois || 0) : 'n/d')}</b><small>${r.antes != null ? `hoje ${brl2(r.antes)}` : 'conta sem estoque'}</small></li>
+      <li><span>Queda</span><b class="${r.queda > 0 ? 'jade' : ''}">${r.queda != null ? (r.queda > 0 ? '−' : '') + brl2(Math.abs(r.queda)) : 'n/d'}</b><small>${r.queda != null && r.antes ? (r.queda / r.antes * 100).toFixed(1).replace('.', ',') + '% a menos' : '&nbsp;'}</small></li>
+    </ul>
+    ${dif < 0 ? `<p class="ct-obs">Rende ${nBR(-dif)} pontos a menos que a conta de ${esc(ref.nome)} (cerca de ${brl2(-dif * (mult || 0) / 1000)}).</p>` : ''}
+    ${r.incerto ? `<p class="ct-obs">A lista diz "até ${nBRdec(r.mult)}": sem clube, essa conta pode receber menos.</p>` : ''}
+  </article>`;
+}
+let _ctL = null, _ctRs = [], _ctOrdem = 'queda';
+function secaoContasLoja(l, preco, outra){
+  _ctL = l;
+  const contas = DB.contas || [];
+  if (!(preco > 0)) return '';
+  if (!contas.length) return `<section class="ct"><div class="ct-cab"><h3>Em qual conta comprar</h3><span class="ct-rota">ROTA · Otimização</span></div>
+    <p class="vl-dica"><svg><use href="#i-info"/></svg><span>Cadastre as contas da família e os lançamentos de cada uma: a Torre passa a dizer em qual CPF essa compra rende mais e qual milheiro ela baixa.</span></p></section>`;
+  const rs = _ctRs = contasParaLoja(l, preco, outra);
+  const {mais, caro} = escolherContas(rs);
+  const vRef = retornoLoja(l).cpm;
+  const mesma = !caro || caro.id === mais.id;
+  const custo = rs[0] ? rs[0].custoExtra : 0;
+  return `<section class="ct">
+    <div class="ct-cab"><h3>Em qual conta comprar</h3><span class="ct-rota">ROTA · Otimização</span></div>
+    <div class="ct-grade${mesma ? ' um' : ''}">
+      ${_ctCartao(mais, mesma ? 'Melhor conta: mais pontos e baixa o milheiro' : 'Rende mais pontos', 'jade', null, vRef)}
+      ${mesma ? '' : _ctCartao(caro, 'Baixa o milheiro mais caro', 'ouro', mais, vRef)}
+    </div>
+    <p class="ct-nota">${custo > 0 ? `Os pontos custam ${brl2(custo)}, o que você paga a mais que na outra loja; esse valor entra no milheiro.` : 'Sem pagar a mais que em outra loja, os pontos entram de graça e só baixam o milheiro.'} Lembre de entrar na loja logado no CPF escolhido.</p>
+    ${contas.length > 1 ? `<button type="button" class="ct-todas" id="ctTodas"><svg><use href="#i-grafico"/></svg>Comparar as ${contas.length} contas</button>` : ''}
+  </section>`;
+}
+function abrirComparaContas(){
+  const l = _ctL; if (!l) return;
+  let d = document.getElementById('dlgContasLoja');
+  if (!d){
+    d = document.createElement('dialog'); d.id = 'dlgContasLoja'; d.className = 'dr vl ctd';
+    d.setAttribute('aria-labelledby', 'ctdTit');
+    prepararJanelaFixa(d);
+    document.body.appendChild(d);
+  }
+  const desenhar = () => {
+    const rs = _ctRs.slice();
+    const ords = {queda:(a, b) => (b.queda ?? -1e9) - (a.queda ?? -1e9) || b.pts - a.pts,
+                  caro:(a, b) => (b.antes ?? -1) - (a.antes ?? -1) || b.pts - a.pts,
+                  pts:(a, b) => b.pts - a.pts || (b.queda ?? -1e9) - (a.queda ?? -1e9)};
+    rs.sort(ords[_ctOrdem]);
+    const maxQ = Math.max(...rs.map(r => r.queda || 0), 0.01);
+    d.querySelector('#ctdLista').innerHTML = rs.map((r, i) => `<div class="ctd-l${i === 0 ? ' top' : ''}">
+      <span class="ct-av">${esc(mono(r.nome))}</span>
+      <div class="ctd-n"><b>${esc(r.nome)}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' · ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : (r.semPrograma ? 'sem conta nesse programa' : 'sem clube')}</small></div>
+      <div class="ctd-p"><b>+${nBR(r.pts)}</b><small>${nBRdec(r.mult)}/real${r.incerto ? ' (até)' : ''}</small></div>
+      <div class="ctd-m"><b>${r.antes != null ? brl2(r.antes) : 'n/d'}</b><small>${nBR(r.est.qtd)} pts</small></div>
+      <div class="ctd-d"><b>${r.depois != null ? brl2(r.depois) : 'n/d'}</b><small>depois</small></div>
+      <div class="ctd-q"><b class="${r.queda > 0 ? 'jade' : ''}">${r.queda != null ? (r.queda > 0 ? '−' : '') + brl2(Math.abs(r.queda)) : 'n/d'}</b>
+        <span class="ctd-barra"><i style="width:${r.queda > 0 ? Math.max(4, r.queda / maxQ * 100) : 0}%"></i></span></div>
+    </div>`).join('');
+    d.querySelectorAll('[data-ctord]').forEach(b => b.classList.toggle('on', b.dataset.ctord === _ctOrdem));
+  };
+  const custo = _ctRs[0] ? _ctRs[0].custoExtra : 0;
+  d.innerHTML = `<div class="dr-painel ctd-painel">
+    <header class="dr-cab"><div class="dr-rota"><span class="lj-avatar" style="--h:${matizLoja(l.n)}">${esc(siglaLoja(l.n))}</span>
+      <div class="dr-rota-txt"><h2 id="ctdTit">Comparar contas · ${esc(l.n)}</h2><span class="rc-sub">${esc(prog(l.prog).n)} · o que essa compra faz no milheiro de cada conta</span></div></div></header>
+    <div class="dr-corpo">
+      <div class="ctd-ord" role="group" aria-label="Ordenar por">
+        <button type="button" data-ctord="queda">Maior queda no milheiro</button>
+        <button type="button" data-ctord="caro">Milheiro mais caro hoje</button>
+        <button type="button" data-ctord="pts">Mais pontos</button></div>
+      <div class="ctd-h"><span></span><span>Conta</span><span>Pontos</span><span>Milheiro hoje</span><span>Depois</span><span>Queda</span></div>
+      <div id="ctdLista"></div>
+      <p class="ct-nota">${custo > 0 ? `Custo dos pontos: ${brl2(custo)} (o que você paga a mais que na outra loja).` : 'Custo dos pontos: zero, porque você não paga a mais que em outra loja.'} O milheiro de cada conta vem dos lançamentos dela. Conta sem clube pode receber menos que o "até" da lista.</p>
+    </div>
+    <footer class="dr-pe"><button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgContasLoja').close()">Fechar</button></footer>
+  </div>`;
+  d.querySelectorAll('[data-ctord]').forEach(b => b.onclick = () => { _ctOrdem = b.dataset.ctord; desenhar(); });
+  desenhar();
+  if (!d.open){ d.showModal(); travarFundo(true); }
+}
+(function(){
+  const orig = contaValeLoja;
+  contaValeLoja = function(l){
+    const r = orig.apply(this, arguments);
+    const d = document.getElementById('dlgValeLoja'); if (!d) return r;
+    const preco = moedaNum(d.querySelector('#vlPreco').value) || 0;
+    const outra = moedaNum(d.querySelector('#vlOutra').value) || 0;
+    const alvo = d.querySelector('#vlConta');
+    const old = alvo.querySelector('.ct'); if (old) old.remove();
+    const h = secaoContasLoja(l, preco, outra);
+    if (h){ alvo.insertAdjacentHTML('beforeend', h); const b = alvo.querySelector('#ctTodas'); if (b) b.onclick = abrirComparaContas; }
     return r;
   };
 })();
