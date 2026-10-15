@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 18:00';
+const BUILD = '2026-10-15 20:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13772,7 +13772,7 @@ const AEROPORTOS = {
 };
 
 const CABINES = { Y:{n:'Econômica', mult:1, mi:1}, W:{n:'Premium', mult:1.85, mi:1.7}, J:{n:'Executiva', mult:3.6, mi:2.9}, F:{n:'Primeira', mult:7.2, mi:5.4} };
-const CATEGORIAS_LOJA = ['eletrônicos','moda','beleza','casa','farmácia','esporte','viagem','alimentação','geral'];
+const CATEGORIAS_LOJA = ['eletrônicos','moda','beleza','casa','farmácia','esporte','viagem','alimentação','pet','presentes','lazer','geral'];
 
 /* ── destinos conhecidos pelo motor de roteiros ───────────────────────────── */
 const DESTINOS = {
@@ -20004,7 +20004,7 @@ function previaAnuncios(){
       <label class="mr-inclui"><input type="checkbox"${a.jaTem ? '' : ' checked'} data-i="${i}"> Incluir</label>
       <div class="mr-previa-corpo">
         ${a.jaTem ? `<div class="mr-ja"><svg><use href="#i-alerta"/></svg><span><b>Já está no mural.</b> Este anúncio foi gravado${a.jaTem.criadoEm ? ' em ' + dataBR(String(a.jaTem.criadoEm).slice(0, 10)) : ''}${a.jaTem.lida ? ' e já foi lido' : ''}. Não será gravado de novo.</span></div>` : ''}
-        <input type="text" class="mr-previa-tit" data-i="${i}" data-k="titulo" value="${esc(a.titulo)}" aria-label="Título">
+        <textarea class="mr-previa-tit" rows="1" data-i="${i}" data-k="titulo" aria-label="Título">${esc(a.titulo)}</textarea>
         <div class="mr-previa-linha">
           <select data-i="${i}" data-k="cat" aria-label="Categoria">${Object.entries(CATEGORIAS_MURAL).map(([k, c]) => `<option value="${k}"${k === a.cat ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select>
           <span class="etq ${a.fim ? 'jade' : ''}">${a.fim ? 'até ' + dataBR(a.fim) : 'sem prazo'}</span>
@@ -58331,7 +58331,7 @@ const bussolaTexto = f => f ? '🧭'.repeat(f.n) : '';
 /* ── leitura da lista do dia ("Junte pontos com Esfera & Parceiros") ───────── */
 const CAT_LISTA = [[/aliment|bebida|mercado|restaur|delivery/, 'alimentação'], [/beleza|perfum|cosm|cuidado/, 'beleza'], [/casa|decora|m[oó]ve/, 'casa'],
   [/eletr|inform|celular|games|tecnolog/, 'eletrônicos'], [/farm[aá]c|sa[uú]de|drogar/, 'farmácia'], [/esporte|fitness|suplement/, 'esporte'], [/kids|infantil|crian|brinquedo|beb[eê]/, 'moda'],
-  [/viage|turism|hotel|passage|carro/, 'viagem'], [/moda|roupa|cal[cç]ado|joia|acess[oó]r|[oó]tica/, 'moda']];
+  [/pet\b|animal/, 'pet'], [/flor|presente/, 'presentes'], [/viage|turism|hotel|passage|carro/, 'viagem'], [/moda|roupa|cal[cç]ado|joia|acess[oó]r|[oó]tica/, 'moda']];
 function catDaLista(t){ const s = semAcento(String(t || '')).toLowerCase(); const m = CAT_LISTA.find(([r]) => r.test(s)); return m ? m[1] : 'geral'; }
 function lerListaLojas(texto){
   const linhas = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
@@ -58341,7 +58341,7 @@ function lerListaLojas(texto){
     const m = l.match(reItem);
     if (m){
       const n = SEM_EMOJI(m[1]).replace(/^[\s*👉•\-–]+/, '').trim();
-      if (n && !/^(classifica|at[eé]|de \d|a partir)/i.test(n)){ const cn = typeof categoriasDaLoja === 'function' ? categoriasDaLoja(n) : []; itens.push({n, v:Number(m[2].replace(',', '.')), unid:/d[oó]lar|us\$/i.test(m[3]) ? 'dolar' : 'real', cat:cn && cn.length ? cn[0] : (cat === 'eletrônicos' && /esporte/i.test(catTxt) ? 'geral' : cat), catTxt}); }
+      if (n && !/^(classifica|at[eé]|de \d|a partir)/i.test(n)){ const cp = typeof categoriaDaLoja === 'function' ? categoriaDaLoja(n) : null; itens.push({n, v:Number(m[2].replace(',', '.')), unid:/d[oó]lar|us\$/i.test(m[3]) ? 'dolar' : 'real', cat:cp || (/ e /.test(catTxt) ? 'geral' : cat), catTxt}); }
       return;
     }
     /* título de seção: "🍷 *Alimentação e Bebidas:*" (Esfera) ou "🍷 *Alimentação e Bebidas*" (Livelo) */
@@ -58632,6 +58632,8 @@ const VENDE_LOJA = [
   /* conferido em 15/10/2026 no site de cada loja (ou em fonte que a descreve,
      quando o site não abriu). Ordem importa: o mais específico vem antes. */
   [/amazon|mercado livre|shopee|aliexpress|americanas|submarino|shoptime|magalu|magazine luiza|casas bahia|ponto( frio)?|extra\.com|walmart|havan/i, FISICOS],
+  [/carrefour mercado/i, ['mercado', 'vinho', 'cafe', 'chocolate']],
+  [/sam.?s club/i, ['mercado', 'vinho', 'cafe', 'chocolate', 'eletro', 'tv', 'celular', 'informatica', 'cozinha', 'cama_mesa_banho', 'brinquedos', 'pet']],
   [/carrefour/i, ['celular', 'informatica', 'tv', 'games', 'fones', 'eletro', 'arcondicionado', 'moveis', 'colchao', 'cama_mesa_banho', 'cozinha', 'brinquedos', 'pet', 'mercado', 'vinho', 'cafe', 'chocolate']],
   [/angeloni/i, ['mercado', 'vinho', 'cafe', 'chocolate', 'eletro', 'tv', 'celular', 'informatica', 'moveis', 'cama_mesa_banho', 'decoracao', 'cozinha', 'brinquedos', 'pet', 'construcao', 'esporte_equip']],
   [/fast ?shop/i, ['celular', 'informatica', 'tv', 'games', 'fones', 'eletro', 'arcondicionado', 'cozinha']],
@@ -58643,7 +58645,7 @@ const VENDE_LOJA = [
   [/camicado/i, ['cozinha', 'decoracao', 'cama_mesa_banho', 'eletro']],
   [/trussardi|buddemeyer|zelo\b|altenburg/i, ['cama_mesa_banho']],
   [/ortobom|castor|simmons|colch/i, ['colchao', 'moveis', 'cama_mesa_banho']],
-  [/polishop/i, ['eletro', 'cozinha', 'esporte_equip']],
+  [/polishop/i, ['cozinha', 'eletro', 'esporte_equip']],
   [/dufrio/i, ['arcondicionado', 'eletro', 'construcao']],
   [/electrolux|brastemp|consul/i, ['eletro', 'arcondicionado']],
   [/apple/i, ['celular', 'informatica', 'fones']],
@@ -58659,7 +58661,7 @@ const VENDE_LOJA = [
   [/vans\b/i, ['tenis', 'calcados', 'roupas']],
   [/havaianas/i, ['calcados', 'bolsas']],
   [/crocs/i, ['calcados']],
-  [/speedo/i, ['roupas', 'esporte_equip']],
+  [/speedo/i, ['esporte_equip', 'roupas']],
   [/integral m[eé]dica|growth|max titanium|probi[oó]tica|darkness/i, ['suplementos']],
   [/zattini/i, ['tenis_corrida', 'tenis', 'calcados', 'roupas', 'bolsas', 'perfume']],
   [/dafiti/i, ['tenis_corrida', 'tenis', 'calcados', 'roupas', 'bolsas']],
@@ -58702,7 +58704,12 @@ const VENDE_LOJA = [
   [/decolar|cvc|123 ?milhas|max ?milhas/i, ['hotel', 'passagem', 'carro']],
   [/localiza|movida|unidas|hertz|budget|rentcars/i, ['carro']],
   [/seus ingressos|ingresso\.com|sympla|eventim/i, ['ingresso']],
-  [/giuliana flores|flores online/i, ['flores', 'chocolate']]
+  [/giuliana flores|flores online/i, ['flores', 'chocolate']],
+  [/adcos|abelha rainha/i, ['cosmeticos', 'maquiagem']],
+  [/\blego\b/i, ['brinquedos']],
+  [/samsonite/i, ['bolsas']],
+  [/ciclic|assist card|universal assistance|seguro.?viagem/i, ['seguro_viagem']],
+  [/klabin/i, ['casa_papel']]
 ];
 const TIPOS_ITEM = [
   [/t[eê]nis.*(corrida|running|caminhada|academia|treino|esportiv|basquete|v[oô]lei|futsal)|chuteira/, 'tenis_corrida'],
@@ -58753,6 +58760,40 @@ function oQueALojaVende(nome){
   const m = VENDE_LOJA.find(([re]) => re.test(String(nome || '')));
   return m ? m[1] : null;
 }
+
+/* A categoria que aparece no cartão da loja e nos filtros sai do que a loja
+   VENDE (pesquisado), e não do título da seção do anúncio. Antes, a Centauro
+   aparecia como "eletrônicos" porque a Livelo a pôs em "Eletrônicos e Esportes". */
+const CAT_DA_ETIQUETA = {tenis_corrida:'esporte', esporte_equip:'esporte', suplementos:'esporte',
+  tenis:'moda', calcados:'moda', roupas:'moda', bolsas:'moda', joias:'moda', oculos:'moda', infantil_roupas:'moda',
+  celular:'eletrônicos', informatica:'eletrônicos', tv:'eletrônicos', games:'eletrônicos', fones:'eletrônicos', eletro:'eletrônicos', arcondicionado:'eletrônicos',
+  moveis:'casa', colchao:'casa', cama_mesa_banho:'casa', decoracao:'casa', cozinha:'casa', construcao:'casa',
+  perfume:'beleza', maquiagem:'beleza', cosmeticos:'beleza', farmacia:'farmácia',
+  mercado:'alimentação', vinho:'alimentação', cafe:'alimentação', chocolate:'alimentação',
+  pet:'pet', plano_pet:'pet', hotel:'viagem', carro:'viagem', passagem:'viagem', ingresso:'lazer', flores:'presentes', brinquedos:'presentes', seguro_viagem:'viagem', casa_papel:'casa'};
+function categoriaDaLoja(nome){
+  const n = String(nome || '');
+  if (/angeloni/i.test(n)) return 'alimentação';          /* supermercado que também vende eletro */
+  if (/iherb/i.test(n)) return 'farmácia';
+  if (/samsonite/i.test(n)) return 'viagem';            /* malas de viagem */
+  if (/sam.?s club/i.test(n)) return 'geral';
+  const t = oQueALojaVende(n);
+  if (!t) return null;
+  if (t === FISICOS || t.length >= 12) return 'geral';      /* loja de departamento */
+  return CAT_DA_ETIQUETA[t[0]] || 'geral';
+}
+/* corrige as lojas já gravadas com a categoria errada */
+function corrigirCategoriasLojas(){
+  if (typeof DB !== 'object' || !DB || !Array.isArray(DB.lojas)) return 0;
+  let n = 0;
+  DB.lojas.forEach(l => { const c = categoriaDaLoja(l.n); if (c && l.cat !== c){ l.cat = c; n++; } });
+  if (n){ salvar(); try { renderLojasParceiras(); } catch(_){} }
+  return n;
+}
+(function(){
+  const ir = () => { try { corrigirCategoriasLojas(); } catch(e){ console.error(e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ir, 200)); else setTimeout(ir, 200);
+})();
 /* a loja vende este item? */
 function lojaVendeItem(nome, d, catLoja){
   const tipos = tiposDoItem(d), vende = oQueALojaVende(nome);
@@ -58763,6 +58804,34 @@ function lojaVendeItem(nome, d, catLoja){
   /* item sem tipo reconhecido: vale a categoria, só para loja conhecida */
   return vende ? lojaServeCategoria(nome, d.cat, catLoja) : false;
 }
+</script>
+
+<style>
+/* ══ Celular: nada de texto cortado (15/10/2026) ══ */
+textarea.mr-previa-tit{ resize:none; overflow:hidden; field-sizing:content; min-height:0; line-height:1.35; font:inherit; font-weight:600; width:100%; }
+.mr-previa-linha .etq{ white-space:normal; max-width:100%; overflow-wrap:anywhere; text-align:left; }
+.vt-nome b{ white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
+.logo-nome{ white-space:normal; overflow-wrap:anywhere; }
+.hp-nome b{ white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+.cartao-cab .etq{ white-space:normal; max-width:100%; }
+.ct-vem img{ width:min(140px, 40vw); }
+.ct-vem span{ color:color-mix(in srgb, var(--anil-claro) 70%, var(--giz)); }
+@media (max-width:640px){
+  .mr-previa{ flex-direction:column; gap:8px; }
+  .mr-inclui{ padding-top:0; }
+  .seg.pr-chips, .pr-camp-barra .seg{ flex-wrap:wrap !important; overflow-x:visible !important; }
+  .seg.pr-chips > button, .pr-camp-barra .seg > button{ flex:1 1 auto; white-space:normal; }
+  .ct-vem img{ width:min(112px, 32vw); }
+  .ct-marca{ gap:8px; padding:20px 18px; }
+}
+</style>
+<script>
+/* título da prévia: a caixa cresce com o texto (para navegadores sem field-sizing) */
+document.addEventListener('input', e => { const t = e.target; if (t && t.matches && t.matches('textarea.mr-previa-tit')){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; } });
+(function(){
+  const _p = previaAnuncios;
+  previaAnuncios = function(){ const r = _p.apply(this, arguments); document.querySelectorAll('textarea.mr-previa-tit').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); return r; };
+})();
 </script>
 </body>
 </html>
