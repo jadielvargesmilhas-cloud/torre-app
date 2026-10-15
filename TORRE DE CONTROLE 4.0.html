@@ -10097,6 +10097,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
       <!-- O tema mora no rodapé da barra lateral, que some no celular: ali não
            havia caminho nenhum para trocá-lo, porque a paleta e a tecla T pedem
            teclado. Este botão aparece só na tela estreita, ao lado do sino. -->
+      <button class="bt fantasma icone" id="btEscalaCel" aria-label="Tamanho da letra" data-dica="Tamanho da letra"><span class="esc-aa">Aa</span><span class="esc-niv"><i></i><i></i><i></i></span></button>
       <button class="bt fantasma icone" id="btTemaTopo" data-dica="Tema claro ou escuro"><svg><use href="#i-lua"/></svg></button>
       <button type="button" class="perfil-bt so-estreito" id="btPerfilTopo" aria-label="Meu perfil"><span class="perfil-av" id="perfilAvTopo"></span></button>
       <button class="bt fantasma icone" id="btAlertas" data-dica="Central de Avisos"><svg><use href="#i-sino"/></svg></button>
@@ -10785,6 +10786,9 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <button class="bt primario" id="btNovaAssinatura"><svg><use href="#i-mais"/></svg>Nova Assinatura</button>
             </div>
             <div class="pilha" style="gap:10px" id="fbAssinaturas"></div>
+            <!-- Clube na espera (14/10/2026): conta sem clube, aguardando a
+                 promoção certa para assinar. A Torre vigia as campanhas e avisa. -->
+            <section id="fbEsperaClube"></section>
 
             <!-- O título cobre tudo que simula custo de fabricação: a calculadora
                  do clube, o roteador e a régua. As três respondem à mesma pergunta
@@ -11787,7 +11791,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 18:10';
+const BUILD = '2026-10-14 23:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16322,6 +16326,7 @@ function avisos(){
   /* Só quem TEM prazo é promovido pela data. A cota de CPF já vem com o grau
      certo e dias null — sem a checagem, ela caía aqui e ganhava selo de "hoje",
      que não faz sentido para um limite que não tem data. */
+  try { if (typeof avisosEsperaClube === 'function') avisosEsperaClube().forEach(a => L.push(a)); } catch(_){}
   L.forEach(a => { if (a.dias !== null && a.dias !== undefined && a.dias <= 0) a.grau = 3; });
   return L.sort((a, b) => (b.grau - a.grau) || ((a.dias ?? 999) - (b.dias ?? 999)));
 }
@@ -16589,18 +16594,18 @@ function montarHeroi(alvo, o){
   /* Sem dados, o painel continua com a cara de painel: o número zero à
      esquerda com o primeiro passo, e à direita o aviso de que ele se monta
      sozinho. Antes era uma frase solta numa faixa, e parecia tela inacabada. */
+  alvo.classList.toggle('heroi-unico', !!o.vazio);
   if (o.vazio){
+    /* 14/10/2026: vazio, o painel fica numa coluna só. Antes eram duas caixas
+       dizendo a mesma coisa ("0 ..." e "O painel se monta sozinho"), e logo
+       abaixo vinha a lista vazia dizendo de novo. Uma frase basta. */
     const unid = o.vazioUnid || UNID_VAZIO[o.rot.replace(/ \(.*\)$/, '')] || '';
     alvo.innerHTML = `
       <div class="heroi-esq heroi-vazio-esq">
         <div class="heroi-rot">${esc(o.rot)}</div>
         ${unid ? `<div class="heroi-valor heroi-valor-zero">0<small> ${esc(unid)}</small></div>` : ''}
         <p class="heroi-vazio-txt">${o.vazio}</p>
-      </div>
-      <div class="heroi-dir heroi-dir-vazio">
-        <svg><use href="#i-grafico"/></svg>
-        <b>O painel se monta sozinho</b>
-        <span>Com o primeiro registro, aparecem aqui os números, a divisão por programa e a curva mês a mês.</span>
+        <p class="heroi-vazio-pe"><svg><use href="#i-grafico"/></svg>O painel se monta sozinho com o primeiro registro.</p>
       </div>`;
     return;
   }
@@ -26506,15 +26511,19 @@ function editarAssinatura(id, pre){
     const ciclos = lancarCiclosClube(novo.id, true);
     const gravada = DB.assinaturas.find(x => x.id === novo.id);
     const bonusMexeu = gravada ? sincronizarBonusClube(gravada) : 0;
+    /* assinou o clube que estava na espera: ele sai da espera sozinho */
+    const saiuEspera = gravada && gravada.status === 'ativa' ? (DB.esperaClube || []).filter(e => e.contaId === gravada.contaId && e.prog === gravada.prog) : [];
+    if (saiuEspera.length) DB.esperaClube = DB.esperaClube.filter(e => !saiuEspera.includes(e));
 
     salvar(); fecharFolha(); aplicarTudo(); try { renderClubes(); } catch(_){}
     const partes = [];
     if (bonusMexeu && gravada && temBonusAssin(gravada)) partes.push('o bônus da campanha já caído');
-    const moveuTxt = movidos ? ` O clube passou para ${nomeCurto(nomeConta(contaNova))} com ${movidos} ${movidos === 1 ? 'lançamento' : 'lançamentos'} e os pontos.` : '';
+    const esperaTxt = saiuEspera.length ? ' Ele saiu da lista de espera.' : '';
+    const moveuTxt = esperaTxt + (movidos ? ` O clube passou para ${nomeCurto(nomeConta(contaNova))} com ${movidos} ${movidos === 1 ? 'lançamento' : 'lançamentos'} e os pontos.` : '');
     if (credito) partes.push(`${nBR(credito.qtd)} ${prog(novo.prog).n} de ${credito.partes.join(' e ')}`);
     if (ciclos) partes.push(`${ciclos} ${ciclos > 1 ? 'créditos mensais' : 'crédito mensal'} já vencidos`);
     avisar((partes.length ? `Assinatura salva. Entraram ${partes.join(', e mais ')}.` : 'Assinatura salva.') + moveuTxt,
-      'ok', partes.length || movidos ? 6000 : 3200);
+      'ok', partes.length || movidos || saiuEspera.length ? 6000 : 3200);
   };
 }
 
@@ -43532,7 +43541,10 @@ function arrancar(){
   }, 260);
 
   const av = avisos().filter(a => a.grau === 2);
-  if (av.length) setTimeout(() => avisar(`${av.length} ${av.length > 1 ? 'itens exigem' : 'item exige'} decisão hoje.<br>${av.length > 1 ? 'Estão' : 'Está'} no topo do Painel.`, 'alerta', 6500), 1500);
+  /* 14/10/2026: o aviso de abertura "1 item exige decisão hoje" saiu. Ele
+     repetia o selo do botão "O que fazer hoje" e o número no menu, e cobria um
+     terço da tela do celular. A informação continua nos dois lugares. */
+  void av;
 }
 document.addEventListener('DOMContentLoaded', arrancar);
 
@@ -55851,6 +55863,278 @@ renderComposicao = function(){
   alvo.innerHTML = painel('pontos', 'Pontos', 'Nos bancos, ainda a direcionar')
                  + painel('milhas', 'Milhas', 'Nos programas aéreos, prontas para emitir');
 };
+</script>
+
+<style>
+/* ══ AUDITORIA DE DESIGN (14/10/2026) ═════════════════════════════════════════
+   Menos camadas dizendo a mesma coisa, mais tela para o conteúdo.
+   ══════════════════════════════════════════════════════════════════════════════ */
+@media (min-width:861px){
+  /* A barra da direita guardava só a foto e um "Sair" que ainda não funciona.
+     A foto sobe para o topo, o Sair continua dentro de "Meu perfil", e a tela
+     ganha a largura da barra. */
+  :root{ --trilho-dir:0px; }
+  .trilho-dir{ display:none !important; }
+  .perfil-bt.so-estreito{ display:block; }
+  /* A faixa "Módulo X" repetia o nome que já está no menu ao lado e no título.
+     O número dela (ex.: 154 campanhas) passa para baixo do título. */
+  .faixa-modulo{ display:none !important; }
+  /* Com o menu aberto, o nome da área já está nele e o da tela está no título
+     da seção logo abaixo: a barra de cima fica só com o número do momento. */
+  html:not(.coluna-fechada) #topoSub, html:not(.coluna-fechada) #topoTit{ display:none; }
+  .topo-resumo{ font-size:calc(13.5px * var(--esc)); color:var(--grafite); line-height:1.2; display:inline-flex; align-items:center; gap:9px; white-space:nowrap; }
+  .topo-resumo:not(:empty)::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--jade); box-shadow:0 0 0 3px color-mix(in oklab, var(--jade) 18%, transparent); flex-shrink:0; }
+  html.coluna-fechada .topo-resumo{ display:none; }
+}
+@media (max-width:860px){ .topo-resumo{ display:none; } }
+
+/* painel vazio: uma coluna, uma frase */
+.heroi.heroi-unico{ grid-template-columns:minmax(0, 1fr); padding-top:24px; padding-bottom:24px; }
+.heroi.heroi-unico .heroi-vazio-esq{ display:flex; flex-direction:column; }
+.heroi.heroi-unico .heroi-valor{ margin-bottom:8px; }
+.heroi-vazio-pe{ display:flex; align-items:center; gap:8px; margin:14px 0 0; font-size:calc(12.5px * var(--esc)); color:var(--grafite-dim); }
+.heroi-vazio-pe svg{ width:15px; height:15px; fill:none; stroke:#F2C14E; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; opacity:.8; }
+
+/* curva que ainda não existe: um traço fantasma no lugar do branco */
+.heroi-curva > p.heroi-sub{ width:100%; margin:0; text-align:center; padding:70px 12px 18px !important;
+  background:no-repeat center 14px / min(260px, 80%) 46px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 46'%3E%3Cpath d='M2 38 C 40 36, 60 14, 98 20 S 160 40, 196 22 S 240 8, 258 10' fill='none' stroke='%23F2C14E' stroke-opacity='.35' stroke-width='2' stroke-dasharray='5 6' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.heroi-curva:has(> p.heroi-sub){ align-items:center; }
+
+/* avisos do canto: no máximo dois de cada vez, mais justos no celular */
+#avisos .aviso:nth-last-child(n+3){ display:none; }
+@media (max-width:560px){
+  .aviso{ padding:10px 12px; font-size:calc(13px * var(--esc)); gap:9px; }
+}
+
+/* letra no celular: um botão só, que alterna os três tamanhos */
+#btEscalaCel{ display:none; position:relative; }
+#btEscalaCel .esc-aa{ font:700 calc(14px * var(--esc)) var(--f-b); line-height:1; }
+#btEscalaCel .esc-niv{ position:absolute; bottom:5px; left:50%; transform:translateX(-50%); display:flex; gap:2px; }
+#btEscalaCel .esc-niv i{ width:4px; height:4px; border-radius:50%; background:var(--fio-forte, var(--grafite)); }
+#btEscalaCel[data-n="1"] .esc-niv i:nth-child(-n+1),
+#btEscalaCel[data-n="2"] .esc-niv i:nth-child(-n+2),
+#btEscalaCel[data-n="3"] .esc-niv i:nth-child(-n+3){ background:var(--ouro); }
+#btEscalaCel .esc-aa{ margin-top:-4px; }
+@media (max-width:560px){
+  /* Resumo do dia e O que fazer hoje lado a lado: uma faixa a menos no alto */
+  .sec-cab:has(#btHoje) > .sec-tit{ flex-basis:100%; }
+  .sec-cab:has(#btHoje) > .esticar{ display:none; }
+  .sec-cab:has(#btHoje){ column-gap:10px !important; }
+  #btResumo, #btHoje{ flex:1 1 calc(50% - 5px) !important; max-width:calc(50% - 5px); min-width:0 !important; width:auto !important; padding-left:8px; padding-right:8px; white-space:nowrap; }
+  #segEscala{ display:none !important; }
+  #btEscalaCel{ display:grid; place-items:center; }
+}
+</style>
+<script>
+/* ══ AUDITORIA DE DESIGN (14/10/2026): peças de JavaScript ═════════════════════ */
+(function(){
+  const ligar = () => {
+    /* o número do módulo vai para baixo do título */
+    const r = document.getElementById('fmResumo'), t = document.querySelector('.topo-titulo');
+    if (r && t && r.parentElement !== t){ r.classList.add('topo-resumo'); t.appendChild(r); }
+    /* No Painel, a linha de cima cumprimenta pelo nome e pela hora do dia. */
+    if (typeof pintarFaixaModulo === 'function' && !pintarFaixaModulo._saudacao){
+      const orig = pintarFaixaModulo;
+      pintarFaixaModulo = function(v){
+        const ret = orig.apply(this, arguments);
+        try {
+          const el = document.getElementById('fmResumo');
+          if (el && v === 'mesa'){
+            const h = new Date().getHours(), oi = h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+            const p = typeof perfilAtual === 'function' ? perfilAtual() : {};
+            const nome = String((p && p.nome) || '').trim().split(/\s+/)[0] || '';
+            el.textContent = `${oi}${nome ? ', ' + nome : ''} · ${el.textContent}`;
+          }
+        } catch(_){}
+        return ret;
+      };
+      pintarFaixaModulo._saudacao = true;
+    }
+    try { if (typeof pintarFaixaModulo === 'function' && typeof vistaAtual !== 'undefined') pintarFaixaModulo(vistaAtual); } catch(_){}
+    /* botão único da letra no celular: lê o tamanho marcado e passa ao próximo */
+    const b = document.getElementById('btEscalaCel');
+    const nivel = () => { const bts = [...document.querySelectorAll('#segEscala button')]; const i = bts.findIndex(x => x.classList.contains('on')); return {bts, i:i < 0 ? 0 : i}; };
+    const pintar = () => { if (!b) return; const {i} = nivel(); b.dataset.n = String(i + 1); b.dataset.dica = ['Tamanho da letra: normal', 'Tamanho da letra: médio', 'Tamanho da letra: grande'][i]; };
+    if (b && !b.dataset.ligado){
+      b.dataset.ligado = '1';
+      b.onclick = () => { const {bts, i} = nivel(); const prox = bts[(i + 1) % bts.length]; if (prox) prox.click(); setTimeout(pintar, 0); };
+      document.querySelectorAll('#segEscala button').forEach(x => x.addEventListener('click', () => setTimeout(pintar, 0)));
+    }
+    pintar();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 60)); else setTimeout(ligar, 60);
+})();
+</script>
+
+<style>
+/* ══ clube na espera (14/10/2026) ══ */
+.ce-cab{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0 10px; }
+.ce-cab .olho{ margin:0; }
+.ce-lista{ display:flex; flex-direction:column; gap:10px; }
+.ce-item{ display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.4fr) auto; gap:16px; align-items:center;
+  padding:14px 18px; border:1px solid var(--fio); border-radius:16px; background:var(--sup-0, transparent); }
+.ce-item.quente{ border-color:color-mix(in srgb, var(--jade) 55%, var(--fio)); background:linear-gradient(110deg, color-mix(in srgb, var(--jade) 10%, transparent), transparent 55%); }
+.ce-quem{ display:flex; gap:11px; align-items:center; min-width:0; }
+.ce-quem .cc-ini{ width:36px; height:36px; flex:0 0 36px; font-size:calc(13px * var(--esc)); }
+.ce-quem div{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.ce-quem b{ color:var(--giz); font-size:calc(14.5px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ce-quem small, .ce-alvo small, .ce-estado small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.ce-alvo{ display:flex; flex-direction:column; gap:2px; }
+.ce-alvo b{ font:500 calc(15px * var(--esc)) var(--f-m, inherit); color:var(--giz); }
+.ce-estado{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.ce-estado .etq{ align-self:flex-start; margin:0; }
+.ce-acoes{ display:flex; gap:6px; align-items:center; }
+.ce-vazio{ border:1px dashed var(--fio); border-radius:16px; padding:16px 18px; color:var(--grafite); font-size:calc(13.5px * var(--esc)); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.ce-vazio svg{ width:18px; height:18px; fill:none; stroke:var(--ouro); stroke-width:1.8; flex-shrink:0; }
+@media (max-width:860px){ .ce-item{ grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); } .ce-estado{ grid-column:1 / -1; } .ce-acoes{ grid-column:1 / -1; justify-content:flex-end; } }
+</style>
+<script>
+/* ══ CLUBE NA ESPERA (14/10/2026, pedido do Jadiel) ════════════════════════════
+   "Uma conta está sem clube, esperando promoção para assinar." Funciona como a
+   lista de desejos dos produtos: guarda quem, qual clube (e plano, se quiser) e
+   o milheiro que faria valer a pena. A Torre compara com as campanhas de clube
+   no ar e, quando uma chega no alvo, avisa no sino e em "O que fazer hoje", com
+   o botão de assinar já preenchido. Assinar tira a espera da lista. */
+function milheiroCampanhaClube(c, planoId){
+  const cat = catalogoDe(c.para); if (!cat || !cat.planos) return null;
+  const alvo = planoId || c.plano || '';
+  if (c.plano && planoId && c.plano !== planoId) return null;
+  const planos = alvo ? cat.planos.filter(p => p.id === alvo) : cat.planos;
+  const temPts = Number(c.bonusPts) > 0 || Number(c.bonusAdesao) > 0 || (c.bonusLista || []).length;
+  if (!temPts){ const v = cpmClubeSeguro(alvo ? {...c, plano:alvo} : c); return v == null ? null : {cpm:v, plano:alvo || ''}; }
+  let melhor = null;
+  planos.forEach(p => {
+    const mensal = Math.min(...Object.values(p.precos || {}).filter(v => v > 0));
+    if (!isFinite(mensal) || !(p.qtd > 0)) return;
+    const bb = bonusDaAssin({bonus:{pontos:c.bonusPts || 0, cada:c.bonusCada != null ? c.bonusCada : 1, lista:c.bonusLista || [], primeiro:c.bonusPrim || 'inicio', meses:c.bonusMeses || 12, naAdesao:c.bonusAdesao || 0}});
+    const pts = p.qtd * 12 * (1 + (Number(c.bonus) || 0) / 100) + (Number(c.pontosExtrasAno) || 0) + bonusNoAno(bb);
+    const v = mensal * 12 * (1 - (Number(c.desconto) || 0) / 100) / pts * 1000;
+    if (!melhor || v < melhor.cpm) melhor = {cpm:v, plano:p.id};
+  });
+  return melhor;
+}
+/* milheiro do plano sem campanha, para comparar */
+function milheiroTabelaClube(prog, planoId){
+  const cat = catalogoDe(prog); if (!cat) return null;
+  const planos = planoId ? cat.planos.filter(p => p.id === planoId) : cat.planos;
+  const vs = planos.map(p => { const m = Math.min(...Object.values(p.precos || {}).filter(v => v > 0)); return isFinite(m) && p.qtd > 0 ? m / p.qtd * 1000 : Infinity; }).filter(isFinite);
+  return vs.length ? Math.min(...vs) : null;
+}
+function estadoEsperaClube(e){
+  const vivas = campanhasVivas('clube').filter(c => c.para === e.prog && (!e.planoId || !c.plano || c.plano === e.planoId));
+  const opcoes = vivas.map(c => ({c, r:milheiroCampanhaClube(c, e.planoId)})).filter(x => x.r && x.r.cpm != null).sort((a, b) => a.r.cpm - b.r.cpm);
+  const alvo = Number(e.alvo) || (faixasDe(e.prog) || {}).alvo || 0;
+  const melhor = opcoes[0] || null;
+  return {alvo, melhor, quente:!!(melhor && alvo && melhor.r.cpm <= alvo), tabela:milheiroTabelaClube(e.prog, e.planoId)};
+}
+function avisosEsperaClube(){
+  return (DB.esperaClube || []).map(e => {
+    const st = estadoEsperaClube(e); if (!st.quente) return null;
+    const c = st.melhor.c, dias = c.fim ? diasAte(c.fim) : null;
+    return {grau:2, tipo:'clube', dias, ref:'espera-clube:' + e.id + ':' + c.id,
+      curto:`Assinar ${prog(e.prog).n}`,
+      t:`Hora de assinar o ${prog(e.prog).n} para ${nomeCurto(nomeConta(e.contaId))}: ${brl2(st.melhor.r.cpm)} o milheiro`,
+      s:`${c.titulo || 'Campanha de clube'}${c.fim ? ', até ' + dataBR(c.fim) : ''}. Seu alvo era ${brl2(st.alvo)}.`,
+      ir:['fabrica', 'fb-clubes'], fn:`assinarDaEspera('${e.id}')`};
+  }).filter(Boolean);
+}
+function renderEsperaClube(){
+  const cx = document.getElementById('fbEsperaClube'); if (!cx) return;
+  const lista = (DB.esperaClube || []).slice().sort((a, b) => nomeConta(a.contaId).localeCompare(nomeConta(b.contaId), 'pt') || prog(a.prog).n.localeCompare(prog(b.prog).n, 'pt'));
+  const linhas = lista.map(e => {
+    const st = estadoEsperaClube(e), cat = catalogoDe(e.prog), pl = e.planoId && cat ? cat.planos.find(p => p.id === e.planoId) : null;
+    const estado = st.quente
+      ? `<span class="etq jade">hora de assinar</span><small>${esc(st.melhor.c.titulo || 'Campanha de clube')}: <b style="color:var(--jade)">${brl2(st.melhor.r.cpm)}</b> o milheiro${st.melhor.c.fim ? `, até ${dataBR(st.melhor.c.fim)}` : ''}</small>`
+      : st.melhor
+        ? `<span class="etq ouro">campanha no ar, acima do alvo</span><small>${esc(st.melhor.c.titulo || 'Campanha de clube')}: ${brl2(st.melhor.r.cpm)} o milheiro</small>`
+        : `<span class="etq">vigiando</span><small>Nenhuma campanha deste clube no ar.${st.tabela ? ` Sem promoção, sai ${brl2(st.tabela)} o milheiro.` : ''}</small>`;
+    return `<div class="ce-item${st.quente ? ' quente' : ''}" data-espera="${esc(e.id)}">
+      <div class="ce-quem"><div class="cc-ini">${esc(ccIniciais(nomeConta(e.contaId)))}</div><div><b>${esc(nomeCurtoConta(e.contaId))}</b><small>${esc(prog(e.prog).n)} · ${esc(pl ? pl.n : 'qualquer plano')}</small></div></div>
+      <div class="ce-alvo"><small>Assinar quando o milheiro chegar a</small><b>${st.alvo ? brl2(st.alvo) : 'n/d'}</b></div>
+      <div class="ce-estado">${estado}${e.obs ? `<small>${esc(e.obs)}</small>` : ''}</div>
+      <div class="ce-acoes">
+        ${st.quente ? `<button type="button" class="bt p primario" onclick="assinarDaEspera('${e.id}')"><svg><use href="#i-mais"/></svg>Assinar agora</button>` : ''}
+        <button type="button" class="bt p fantasma icone" onclick="editarEsperaClube('${e.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+        <button type="button" class="bt p fantasma icone" onclick="apagar('esperaClube','${e.id}','esta espera de clube')" data-dica="Excluir"><svg><use href="#i-lixo"/></svg></button>
+      </div></div>`;
+  }).join('');
+  cx.innerHTML = `<div class="ce-cab"><div class="esticar"><div class="olho anil">Na espera de promoção${lista.length ? ` (${lista.length})` : ''}</div></div>
+      <button type="button" class="bt fantasma" id="btEsperaClube"><svg><use href="#i-sino"/></svg>Esperar promoção</button></div>
+    ${lista.length ? `<div class="ce-lista">${linhas}</div>`
+      : `<div class="ce-vazio"><svg><use href="#i-sino"/></svg><span>Conta sem clube, esperando a promoção certa? Toque em <b>Esperar promoção</b>: a Torre vigia as campanhas e avisa quando o milheiro chegar no seu alvo.</span></div>`}`;
+  document.getElementById('btEsperaClube').onclick = () => editarEsperaClube();
+}
+function editarEsperaClube(id){
+  const e = id ? (DB.esperaClube || []).find(x => x.id === id) : {contaId:'', prog:'', planoId:'', alvo:0, obs:''};
+  if (!e) return;
+  const progs = progsComCatalogo().slice().sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt'));
+  const contas = (DB.contas || []).slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt'));
+  /* sugere a primeira conta que ainda não tem clube ativo no programa escolhido */
+  abrirFolha({titulo: id ? 'Editar Espera de Clube' : 'Esperar Promoção de Clube', largura:'media', tipo:'formulario', corpo:`
+    <p class="fraco" style="margin:0 0 14px">A Torre compara as campanhas de clube no ar com o seu alvo. Quando uma chegar lá, aparece no sino e em <b>O que fazer hoje</b>, com o botão de assinar pronto.</p>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))">
+      <div class="campo"><label>Titular sem clube</label><select id="ceConta">${contas.map(c => `<option value="${c.id}"${c.id === e.contaId ? ' selected' : ''}>${esc(nomeCurto(c.nome))}</option>`).join('')}</select></div>
+      <div class="campo"><label>Clube</label><select id="ceProg">${progs.map(p => `<option value="${p}"${p === e.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Plano</label><select id="cePlano" data-ordem="natural"></select></div>
+      <div class="campo"><label>Assinar quando o milheiro chegar a (R$)</label><input type="text" inputmode="decimal" data-moeda id="ceAlvo" value="${e.alvo ? moedaTxt(e.alvo) : ''}"></div>
+    </div>
+    <div class="campo" style="margin-top:12px"><label>Observação</label><input type="text" id="ceObs" value="${esc(e.obs || '')}" placeholder="Ex.: esperar a campanha de upgrade, que costuma vir em novembro"></div>
+    <div class="nota" id="ceDica" style="margin-top:12px"></div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="ceOk"><svg><use href="#i-sino"/></svg>${id ? 'Salvar' : 'Vigiar este clube'}</button>`});
+  const planos = () => {
+    const cat = catalogoDe($('#ceProg').value), atual = $('#cePlano').value || e.planoId || '';
+    $('#cePlano').innerHTML = `<option value="">qualquer plano</option>` + ((cat || {planos:[]}).planos).map(p => `<option value="${p.id}"${p.id === atual ? ' selected' : ''}>${esc(p.n)} · ${nBR(p.qtd)}/mês</option>`).join('');
+  };
+  const dica = () => {
+    const p = $('#ceProg').value, f = faixasDe(p) || {}, tab = milheiroTabelaClube(p, $('#cePlano').value);
+    if (!$('#ceAlvo').value && f.alvo) $('#ceAlvo').value = moedaTxt(f.alvo);
+    const st = estadoEsperaClube({prog:p, planoId:$('#cePlano').value, alvo:moedaNum($('#ceAlvo').value)});
+    $('#ceDica').innerHTML = `<svg><use href="#i-info"/></svg><div>${tab ? `Sem promoção, este clube sai <b>${brl2(tab)}</b> o milheiro. ` : ''}${f.alvo ? `O alvo da Torre para ${esc(prog(p).n)} é ${brl2(f.alvo)}. ` : ''}${st.melhor ? `No ar agora: <b>${esc(st.melhor.c.titulo || 'campanha')}</b>, ${brl2(st.melhor.r.cpm)} o milheiro${st.quente ? ', <b style="color:var(--jade)">já no seu alvo</b>' : ''}.` : 'Nenhuma campanha deste clube no ar agora.'}</div>`;
+  };
+  const sugerirConta = () => { if (id) return; const tem = c => (DB.assinaturas || []).some(a => a.status === 'ativa' && a.contaId === c && a.prog === $('#ceProg').value);
+    if (tem($('#ceConta').value)){ const sem = contas.find(c => !tem(c.id)); if (sem) $('#ceConta').value = sem.id; } };
+  $('#ceProg').onchange = () => { $('#ceAlvo').value = ''; sugerirConta(); planos(); dica(); };
+  $('#cePlano').onchange = dica; $('#ceAlvo').oninput = dica;
+  if (!e.prog){ const sem = contas.find(c => !(DB.assinaturas || []).some(a => a.status === 'ativa' && a.contaId === c.id && a.prog === $('#ceProg').value)); if (sem) $('#ceConta').value = sem.id; }
+  planos(); dica();
+  $('#ceOk').onclick = () => {
+    const novo = {...e, id:e.id || uid(), contaId:$('#ceConta').value, prog:$('#ceProg').value, planoId:$('#cePlano').value, alvo:moedaNum($('#ceAlvo').value), obs:$('#ceObs').value.trim(), criadoEm:e.criadoEm || Date.now()};
+    if (!novo.alvo){ avisar('Informe o milheiro que faria valer a pena assinar.', 'alerta'); $('#ceAlvo').focus(); return; }
+    const jaTem = (DB.assinaturas || []).find(a => a.status === 'ativa' && a.contaId === novo.contaId && a.prog === novo.prog);
+    if (jaTem){ avisar(`${nomeCurto(nomeConta(novo.contaId))} já tem o ${prog(novo.prog).n} ativo. A espera é para conta sem clube.`, 'alerta', 6000); return; }
+    DB.esperaClube = DB.esperaClube || [];
+    const mesmo = DB.esperaClube.find(x => x.id !== novo.id && x.contaId === novo.contaId && x.prog === novo.prog);
+    if (mesmo){ avisar(`${nomeCurto(nomeConta(novo.contaId))} já está esperando promoção do ${prog(novo.prog).n}. Edite a espera que já existe.`, 'alerta', 6000); return; }
+    if (!conferirAntesDeSalvar('esperaClube', novo, 'uma espera de clube')) return;
+    if (id) DB.esperaClube[DB.esperaClube.findIndex(x => x.id === id)] = novo; else DB.esperaClube.push(novo);
+    salvar(); fecharFolha(); renderEsperaClube(); try { aplicarTudo(); } catch(_){}
+    const st = estadoEsperaClube(novo);
+    avisar(st.quente ? `Já tem campanha no alvo: ${brl2(st.melhor.r.cpm)} o milheiro. Toque em Assinar agora.` : `Vigiando o ${prog(novo.prog).n} para ${nomeCurto(nomeConta(novo.contaId))}. A Torre avisa quando a promoção chegar no alvo.`, 'ok', 6000);
+  };
+}
+function assinarDaEspera(id){
+  const e = (DB.esperaClube || []).find(x => x.id === id); if (!e) return;
+  const st = estadoEsperaClube(e), c = st.melhor && st.melhor.c;
+  const planoId = (st.melhor && st.melhor.r.plano) || e.planoId || '';
+  const pl = planoId ? (catalogoDe(e.prog) || {planos:[]}).planos.find(p => p.id === planoId) : null;
+  const bonus = c && (Number(c.bonusPts) > 0 || Number(c.bonusAdesao) > 0 || (c.bonusLista || []).length)
+    ? {pontos:c.bonusPts || 0, cada:c.bonusCada != null ? c.bonusCada : 1, lista:c.bonusLista || [], primeiro:c.bonusPrim || 'inicio', meses:c.bonusMeses || 12, naAdesao:c.bonusAdesao || 0, obs:c.titulo || ''} : null;
+  try { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); } catch(_){}
+  /* a modalidade mais barata do plano, que é a mesma que o milheiro da espera usou */
+  const precos = Object.entries((pl && pl.precos) || {}).filter(([, v]) => v > 0).sort((x, y) => x[1] - y[1]);
+  const mod = precos.length ? precos[0][0] : 'mensal';
+  editarAssinatura(null, {contaId:e.contaId, prog:e.prog, planoId, modalidade:mod, valor:pl ? valorCobranca(pl, mod, 12) || 0 : 0, qtd:pl ? pl.qtd : 0, ...(bonus ? {bonus} : {})});
+}
+(function(){
+  const ligar = () => {
+    if (typeof renderClubes === 'function' && !renderClubes._espera){
+      const o = renderClubes; renderClubes = function(){ const r = o.apply(this, arguments); try { renderEsperaClube(); } catch(err){ console.error(err); } return r; }; renderClubes._espera = true;
+      try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderClubes; }); } catch(_){}
+    }
+    try { renderEsperaClube(); } catch(_){}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 80)); else setTimeout(ligar, 80);
+})();
 </script>
 </body>
 </html>
