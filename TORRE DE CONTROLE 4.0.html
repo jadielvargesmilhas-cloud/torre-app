@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 01:00';
+const BUILD = '2026-10-16 02:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -59419,6 +59419,206 @@ function abrirComparaContas(){
     return r;
   };
 })();
+</script>
+<style id="lcm-css">
+.lc-marca{ margin-top:10px; padding:12px 14px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); }
+.lcm-t{ display:flex; align-items:center; gap:7px; font-size:calc(12px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--grafite); margin-bottom:10px; }
+.lcm-t svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.lcm-g{ display:grid; grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr); gap:8px; align-items:stretch; }
+.lcm-x{ align-self:center; text-align:center; font-weight:700; color:var(--grafite); }
+.lcm-c{ display:flex; flex-direction:column; gap:2px; padding:10px 12px; border-radius:10px; border:1px solid var(--fio); min-width:0; }
+.lcm-c.top{ border-color:color-mix(in srgb, var(--jade) 50%, var(--fio)); background:color-mix(in srgb, var(--jade) 6%, transparent); }
+.lcm-tag{ font-size:calc(11px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--grafite); }
+.lcm-c.top .lcm-tag{ color:var(--jade); }
+.lcm-n{ font-size:calc(15px * var(--esc)); color:var(--giz); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lcm-c > small, .lcm-v small{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.lcm-v{ margin-top:6px; display:flex; flex-direction:column; }
+.lcm-v b{ font-size:calc(17px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.lcm-c.top .lcm-v b{ color:var(--jade); }
+.lcm-v-t{ margin:10px 0 0; font-size:calc(13.5px * var(--esc)); line-height:1.5; color:var(--grafite); }
+.lcm-v-t b{ color:var(--giz); } .lcm-v-t b.jade{ color:var(--jade); }
+@media (max-width:480px){ .lcm-g{ grid-template-columns:minmax(0,1fr); } .lcm-x{ display:none; } .lcm-c{ display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; } .lcm-tag, .lcm-n, .lcm-c > small{ grid-column:1; } .lcm-v{ grid-column:2; grid-row:1 / span 3; margin-top:0; align-self:center; text-align:right; } }
+</style>
+<script id="lcm-js">
+/* ── Loja da própria marca x melhor oferta (15/10/2026) ──────────────────────
+   "Chinelo Havaianas": a Torre achava a Centauro (15 por real) e a Havaianas
+   (10 por real) entrava só na conta, sem aparecer. Quando o item cita uma loja
+   pelo nome, essa loja aparece ao lado da melhor, com a diferença em reais e o
+   preço até onde a melhor continua vencendo (o preço pode não ser o mesmo nas
+   duas lojas):  melhor vence enquanto preço_lá ≤ preço_marca × (1 − k_marca) ÷ (1 − k_melhor),
+   onde k é a fração do preço que volta em pontos. */
+function lojaDaMarca(d, todas){
+  const nome = ' ' + semAcento(String(d.n || '').toLowerCase()).replace(/[^a-z0-9&]+/g, ' ') + ' ';
+  return (todas || []).filter(o => {
+    const n = semAcento(String(o.loja.n || '').toLowerCase()).replace(/[^a-z0-9&]+/g, ' ').trim();
+    return n.length >= 4 && nome.includes(' ' + n + ' ');
+  }).sort((a, b) => b.retorno - a.retorno)[0] || null;
+}
+function comparaMarcaHTML(x){
+  const d = x.d, valor = Number(d.valor) || 0;
+  const m = lojaDaMarca(d, x.todas), b = x.melhor;
+  if (!m || !b || m === b || !(valor > 0)) return '';
+  if (semAcento(m.loja.n.toLowerCase()) === semAcento(b.loja.n.toLowerCase())) return '';
+  const kB = b.retorno / valor, kM = m.retorno / valor;
+  const dif = b.retorno - m.retorno;
+  const teto = kB < 1 ? valor * (1 - kM) / (1 - kB) : null;
+  const col = (o, tag, top) => `<div class="lcm-c${top ? ' top' : ''}"><span class="lcm-tag">${tag}</span>
+    <b class="lcm-n">${esc(o.loja.n)}</b><small>${nBRdec(o.mult)} por real na ${esc(prog(o.prog).n)}</small>
+    <div class="lcm-v"><b>${brl(o.retorno)}</b><small>${pct(o.retorno / valor * 100, 1)} de volta</small></div></div>`;
+  return `<div class="lc-marca">
+    <div class="lcm-t"><svg><use href="#i-troca"/></svg>Loja da marca x melhor oferta</div>
+    <div class="lcm-g">${col(b, 'Melhor oferta', true)}<span class="lcm-x">x</span>${col(m, 'Loja da marca', false)}</div>
+    <p class="lcm-v-t"><b>${esc(b.loja.n)}</b> devolve <b class="jade">${brl(dif)} a mais</b> numa compra de ${brl(valor)}.${teto ? ` Se os preços forem diferentes: com o item a ${brl(valor)} na ${esc(m.loja.n)}, a ${esc(b.loja.n)} continua melhor enquanto custar até <b>${brl(teto)}</b>.` : ''}</p>
+  </div>`;
+}
+(function(){
+  const orig = caminhosItemHTML;
+  caminhosItemHTML = function(x){ return orig.apply(this, arguments) + comparaMarcaHTML(x); };
+})();
+</script>
+<style id="ga-css">
+.ga .dr-painel{ width:min(560px, calc(100vw - 32px)); }
+.ga-ic{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:color-mix(in srgb, var(--jade) 16%, transparent); flex:0 0 40px; }
+.ga-ic svg{ width:22px; height:22px; fill:none; stroke:var(--jade); stroke-width:2; }
+.ga-lista{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.ga-lista label{ display:grid; grid-template-columns:22px 30px minmax(0,1fr); gap:10px; align-items:center; padding:11px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); cursor:pointer; }
+.ga-lista label:has(input:checked){ border-color:color-mix(in srgb, var(--jade) 55%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, var(--sup-1)); }
+.ga-lista input{ width:20px; height:20px; accent-color:var(--jade); margin:0; cursor:pointer; }
+.ga-i svg{ width:22px; height:22px; fill:none; stroke:var(--anil-claro, var(--anil)); stroke-width:1.9; display:block; }
+.ga-t{ font-size:calc(14px * var(--esc)); line-height:1.45; color:var(--giz); }
+.ga-t b{ color:var(--giz); }
+.ga-falta{ margin:12px 0 0; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.ga-falta.ok{ color:var(--jade); font-weight:600; }
+.ga-hoje{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:calc(13px * var(--esc)); color:var(--grafite); cursor:pointer; }
+.ga-hoje input{ width:16px; height:16px; accent-color:var(--jade); }
+#gaOk[disabled]{ opacity:.45; cursor:not-allowed; }
+</style>
+<script id="ga-js">
+/* ══ Como garantir seus pontos (15/10/2026) ════════════════════════════════════
+   Antes de ir para a loja e antes de registrar a compra, a Torre mostra o que
+   os programas pedem para a compra pontuar, no mesmo espírito do aviso da
+   Livelo, mas com caixas para marcar: o botão só libera quando tudo estiver
+   marcado. É a etapa A do ROTA (Ação) feita sem perder ponto por descuido. */
+let _gaPularAte = '';
+try { _gaPularAte = localStorage.getItem('torre-ga-pular') || ''; } catch(e){}
+function _gaContexto(el){
+  let l = null, d = null;
+  const row = el.closest('[data-ljl]'); if (row) l = ofertasVitrine().find(x => String(x.id) === row.dataset.ljl) || null;
+  const dlg = el.closest('#dlgValeLoja'); if (!l && dlg && dlg._id) l = ofertasVitrine().find(x => x.id === dlg._id) || null;
+  const it = el.closest('.ds-item[data-id]');
+  if (!l && it){ d = (DB.desejos || []).find(x => x.id === it.dataset.id); if (d){ const x = avaliarDesejo(d); if (x.melhor) l = {n:x.melhor.loja.n, prog:x.melhor.prog, fim:x.melhor.fim, mult:x.melhor.mult}; } }
+  return l;
+}
+function _gaConta(l){
+  try {
+    if (!l || !l.id || (DB.contas || []).length < 2) return '';
+    const {mais, caro} = escolherContas(contasParaLoja(l, gastoLojaV > 0 ? gastoLojaV : 100, 0));
+    const r = mais || caro; return r ? r.nome : '';
+  } catch(e){ return ''; }
+}
+function avisoGarantirPontos(modo, l, seguir){
+  const hoje = hojeISO();
+  if (modo === 'ir' && _gaPularAte === hoje){ seguir(); return; }
+  const pg = l && l.prog ? prog(l.prog).n : 'programa';
+  let mult = 0; try { mult = l ? (l.mult || (tetoLoja(l).promo || tetoLoja(l).base) || 0) : 0; } catch(e){}
+  const dd = l && l.fim ? diasAte(l.fim) : null;
+  const conta = modo === 'ir' ? _gaConta(l) : '';
+  const prazo = l && l.prog ? prazoCreditoDias({prog:l.prog}) : 30;
+  const itens = modo === 'ir' ? [
+    ['i-documento', `Conferi a oferta${mult ? `: <b>${nBRdec(mult)} pontos por real</b>` : ''}${dd === 0 ? ', <b>só até hoje</b>' : dd > 0 ? `, até ${dataBR(l.fim)}` : ''}, e as regras do parceiro (o "até" pode exigir clube).`],
+    ['i-usuarios', `Estou logado na <b>${esc(pg)}</b>${conta ? ` na conta de <b>${esc(conta)}</b>, a sugerida pela Torre` : ' na conta (CPF) certa'}.`],
+    ['i-link', 'Vou entrar na loja por este botão, que é o link do programa, e não pelo Google ou pelo app da loja.'],
+    ['i-carrinho', 'Vou esvaziar o carrinho da loja e adicionar os produtos depois de entrar pelo link.'],
+    ['i-alerta', 'Sem outras abas, comparador de preço, cupom de fora, aba anônima ou bloqueador de anúncio até terminar.'],
+    ['i-imagem', 'Vou tirar print da compra e guardar o número do pedido.']
+  ] : [
+    ['i-link', `Comprei entrando pelo link da <b>${esc(pg)}</b>, na mesma aba, do começo ao fim.`],
+    ['i-imagem', 'Guardei o print e o número do pedido: é a prova se os pontos não caírem.'],
+    ['i-relogio', `Sei o prazo: os pontos costumam cair em até <b>${prazo} dias</b>. A Torre avisa se passar disso.`]
+  ];
+  let d = document.getElementById('dlgGarantir');
+  if (!d){
+    d = document.createElement('dialog'); d.id = 'dlgGarantir'; d.className = 'dr ga';
+    d.setAttribute('aria-labelledby', 'gaTit');
+    prepararJanelaFixa(d); document.body.appendChild(d);
+  }
+  d.innerHTML = `<div class="dr-painel ga-painel">
+    <header class="dr-cab"><div class="dr-rota"><span class="ga-ic"><svg><use href="#i-escudo"/></svg></span>
+      <div class="dr-rota-txt"><h2 id="gaTit">${modo === 'ir' ? 'Como garantir seus pontos' : 'Antes de registrar a compra'}</h2>
+      <span class="rc-sub">${l && l.n ? esc(l.n) + ' · ' : ''}${esc(pg)} · marque cada item</span></div></div></header>
+    <div class="dr-corpo"><ul class="ga-lista">${itens.map(([ic, t], i) => `<li><label>
+      <input type="checkbox" data-ga="${i}"><span class="ga-i"><svg><use href="#${ic}"/></svg></span><span class="ga-t">${t}</span></label></li>`).join('')}</ul>
+      <p class="ga-falta" id="gaFalta">Faltam ${itens.length} itens.</p>
+      ${modo === 'ir' ? '<label class="ga-hoje"><input type="checkbox" id="gaHoje"> Já conferi tudo hoje: não perguntar de novo até amanhã</label>' : ''}
+    </div>
+    <footer class="dr-pe"><button type="button" class="bt fantasma sair" id="gaFechar">Fechar</button>
+      <button type="button" class="bt primario" id="gaOk" disabled><svg><use href="#i-ok"/></svg>${modo === 'ir' ? 'Tudo certo, ir para a loja' : 'Tudo certo, registrar'}</button></footer>
+  </div>`;
+  const ok = d.querySelector('#gaOk'), falta = d.querySelector('#gaFalta');
+  const conf = () => { const n = [...d.querySelectorAll('[data-ga]')].filter(c => !c.checked).length;
+    ok.disabled = n > 0; falta.textContent = n ? `Falta${n > 1 ? 'm' : ''} ${n} ${n > 1 ? 'itens' : 'item'}.` : 'Tudo certo. Boa compra!'; falta.classList.toggle('ok', !n); };
+  d.querySelectorAll('[data-ga]').forEach(c => c.addEventListener('change', conf)); conf();
+  d.querySelector('#gaFechar').onclick = () => d.close();
+  ok.onclick = () => {
+    const h = d.querySelector('#gaHoje');
+    if (h && h.checked){ _gaPularAte = hoje; try { localStorage.setItem('torre-ga-pular', hoje); } catch(e){} }
+    d.close(); seguir();
+  };
+  if (!d.open){ d.showModal(); travarFundo(true); }
+}
+/* ir para a loja: qualquer link de loja na vitrine, no "Vale a pena?" e na lista de desejos */
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href][target="_blank"]'); if (!a || a.dataset.gaOk) return;
+  if (!a.closest('#ljVitrine, #dlgValeLoja, .ds-item')) return;
+  if (!/^https?:/i.test(a.getAttribute('href') || '')) return;
+  e.preventDefault(); e.stopPropagation();
+  const l = _gaContexto(a), href = a.href;
+  avisoGarantirPontos('ir', l, () => { window.open(href, '_blank', 'noopener'); });
+}, true);
+/* registrar a compra */
+(function(){
+  const envolver = (nome, ctx) => { const orig = window[nome]; if (typeof orig !== 'function') return;
+    window[nome] = function(){ const args = arguments; avisoGarantirPontos('registrar', ctx.apply(null, args), () => orig.apply(this, args)); }; };
+  envolver('comprarDesejo', id => { const d = (DB.desejos || []).find(x => x.id === id); const x = d && avaliarDesejo(d); return x && x.melhor ? {n:x.melhor.loja.n, prog:x.melhor.prog} : null; });
+  envolver('comprarDesejoNaOferta', (id, ch) => { const d = (DB.desejos || []).find(x => x.id === id); const x = d && avaliarDesejo(d); const o = x && (x.todas || []).find(o => String(o.loja.id) === String(ch)) || (x && x.melhor); return o ? {n:o.loja.n, prog:o.prog} : null; });
+  envolver('registrarCompraLoja', id => ofertasVitrine().find(x => x.id === id) || null);
+})();
+</script>
+<style id="ctdes-css">
+.ga .dr-corpo{ padding-top:16px; }
+.ct.ct-des{ margin-top:12px; padding:14px; border:1px solid var(--fio); border-radius:12px; background:var(--sup-1); }
+.ct.ct-des .ct-c{ background:var(--sup-2, var(--sup-1)); }
+.ct.ct-des .ct-grade{ grid-template-columns:minmax(0,1fr); }
+.ct-num, .ct-grade:not(.um) .ct-num{ grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,.75fr) !important; }
+.ct-n small{ white-space:normal !important; }
+@media (max-width:560px){ .ct.ct-des{ padding:12px 10px; } .ct.ct-des .ct-c{ padding:11px 10px; } .ct.ct-des .ct-num{ gap:6px; } .ct.ct-des .ct-num b{ font-size:calc(14.5px * var(--esc)); } }
+</style>
+<script id="ctdes-js">
+/* Lista de desejos: "Em qual conta comprar" no cartão do item, com a mesma conta
+   da janela "Vale a pena?" (mais pontos x baixar o milheiro mais caro), usando o
+   preço do item e a melhor oferta dele. */
+function _ctLojaDoDesejo(x){
+  const o = x && x.melhor; if (!o) return null;
+  return {...o.loja, n:o.loja.n, prog:o.prog, fim:o.fim, origem:o.fonte === 'campanha' ? 'bonificada' : 'loja', campId:o.camp ? o.camp.id : (o.loja.campId || ''),
+    base:o.fonte === 'campanha' ? 0 : o.loja.base, promo:o.fonte === 'campanha' ? o.mult : o.loja.promo, faixas:o.fonte === 'campanha' ? [] : (o.loja.faixas || [])};
+}
+function contasDesejoHTML(x){
+  const l = _ctLojaDoDesejo(x), valor = Number(x.d.valor) || 0;
+  if (!l || !(valor > 0) || !(DB.contas || []).length) return '';
+  const h = secaoContasLoja(l, valor, 0);
+  return h.replace('id="ctTodas"', `data-ct-des="${esc(x.d.id)}"`).replace('<section class="ct">', '<section class="ct ct-des">');
+}
+(function(){
+  const orig = caminhosItemHTML;
+  caminhosItemHTML = function(x){ return orig.apply(this, arguments) + contasDesejoHTML(x); };
+})();
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ct-des]'); if (!b) return;
+  const d = (DB.desejos || []).find(y => y.id === b.dataset.ctDes); if (!d) return;
+  const x = avaliarDesejo(d), l = _ctLojaDoDesejo(x); if (!l) return;
+  _ctL = l; _ctRs = contasParaLoja(l, Number(d.valor) || 0, 0);
+  abrirComparaContas();
+});
 </script>
 </body>
 </html>
