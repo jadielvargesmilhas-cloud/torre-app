@@ -11791,7 +11791,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 04:00';
+const BUILD = '2026-10-15 05:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -53756,7 +53756,7 @@ function lerClubeDoTexto(texto, contas, hoje){
 
   /* tipo de assinatura e valor */
   if (/\banual\b/.test(s)) out.tipo = 'anual'; else if (/\bmensal\b/.test(s)) out.tipo = 'mensal';
-  const din = t.match(/R\$\s*([\d.]+,\d{2})/);
+  const din = t.match(/R\s?[$S5]\s*([\d.]+,\d{2})/);
   if (din) out.valor = _lcNum(din[1]);
 
   /* datas: a da mudança está na frase da mudança; a de renovação é a outra */
@@ -53766,10 +53766,17 @@ function lerClubeDoTexto(texto, contas, hoje){
   linhas.forEach(l => { if (ehMud(l) && !dMud) dMud = datasDe(l)[0] || ''; });
   const iRen = linhas.findIndex(l => /renova/i.test(_lcSem(l)));
   let dRen = iRen >= 0 ? (datasDe(linhas[iRen])[0] || (linhas[iRen + 1] ? datasDe(linhas[iRen + 1])[0] : '') || '') : '';
-  if (!dRen) dRen = linhas.filter(l => !ehMud(l)).map(datasDe).flat()[0] || '';
+  /* "Última mensalidade 22/07/2026 · Paga": é o último pagamento, não a renovação */
+  const ehPag = l => /tim[ao]s?\s+(mensalidade|pagamento|cobranca|parcela|fatura)|pago em|paga em|pagamento realizado/.test(_lcSem(l));
+  const iPag = linhas.findIndex(ehPag);
+  const dPag = iPag >= 0 ? ([0, 1, 2].map(k => linhas[iPag + k] ? datasDe(linhas[iPag + k])[0] : '').find(Boolean) || '') : '';
+  out.pago = dPag;
+  if (!dRen) dRen = linhas.filter(l => !ehMud(l)).map(datasDe).flat().filter(x => x !== dPag)[0] || '';
   out.renova = dRen;
+  const ta = s.match(/\b(\d{1,2})\s*[l1i|]?\s*anos?\s*(?:e\s*)?(?:(\d{1,2})\s*mes(?:es)?)?/);
   const tm = s.match(/\b(\d{1,3})\s*mes(es)?\b/);
-  if (tm) out.tempo = Number(tm[1]);
+  if (ta) out.tempo = Number(ta[1]) * 12 + (ta[2] ? Number(ta[2]) : 0);
+  else if (tm) out.tempo = Number(tm[1]);
   if (/altera[cç][aã]o em andamento|plano em altera|vai mudar|mudanca de plano|mudanca programada/.test(s) || dMud){
     out.mudanca = {em:dMud || dRen || '', planoId:''};
     /* plano novo, quando o print diz ("para o Clube Mega", "para o plano 12.000") */
@@ -53779,6 +53786,41 @@ function lerClubeDoTexto(texto, contas, hoje){
       const pn = cat.planos.find(p => p.id !== out.planoId && (alvo.includes(_lcSem(p.n)) || alvo.includes(String(p.qtd)) || alvo.includes(nBR(p.qtd))));
       if (pn) out.mudanca.planoId = pn.id;
     }
+  }
+
+  /* o valor pago diz o plano e a modalidade (R$ 474,12 na Esfera = Pro anual à
+     vista, 12 x 39,51), mesmo quando o print não mostra os pontos do plano */
+  if (cat && out.valor){
+    const cand = [];
+    cat.planos.forEach(p => Object.entries(p.precos || {}).forEach(([mod, v]) => {
+      if (!v) return;
+      cand.push({p, mod, valor:v, anual:false});
+      if (mod !== 'mensal') cand.push({p, mod, valor:Math.round(v * 12 * 100) / 100, anual:true});
+    }));
+    const perto = cand.filter(c => (!out.planoId || c.p.id === out.planoId) && Math.abs(c.valor - out.valor) <= Math.max(0.06, c.valor * 0.03))
+      .sort((a, b) => Math.abs(a.valor - out.valor) - Math.abs(b.valor - out.valor))[0];
+    if (perto){
+      if (!out.planoId){ out.planoId = perto.p.id; out.planoLido = perto.p.n; out.qtd = perto.p.qtd; out.planoPeloValor = true; }
+      out.mod = perto.mod;
+      if (perto.anual) out.tipo = 'anual';
+      else if (perto.mod === 'mensal' && !out.tipo) out.tipo = 'mensal';
+    }
+  }
+  /* sem data de renovação, ela vem do último pagamento + o ciclo */
+  if (!out.renova && out.pago){
+    const hj = hoje || hojeISO();
+    if (!out.tipo && (Date.parse(hj) - Date.parse(out.pago)) / 864e5 > 40) out.tipo = 'anual';
+    const ciclo = out.tipo === 'anual' ? 12 : 1;
+    let r = somaMeses(ciclo, out.pago), i = 0;
+    while (r <= hj && i++ < 60) r = somaMeses(ciclo, r);
+    out.renova = r; out.renovaPeloPagamento = true;
+  }
+  /* cartão: "visa final 7371" */
+  const fin = s.match(/final\s*(?:do cartao\s*)?[:.]?\s*(\d{4})\b/);
+  if (fin){
+    out.cartaoFinal = fin[1];
+    const cc = (typeof DB === 'object' && DB && DB.cartoes || []).filter(c => String(c.final || '').replace(/\D/g, '').slice(-4) === fin[1]);
+    if (cc.length === 1) out.cartaoId = cc[0].id;
   }
 
   /* início: pelo tempo de assinatura e pela renovação */
@@ -53798,11 +53840,22 @@ function lerClubeDoTexto(texto, contas, hoje){
     if (porPrimeiro.length === 1) conta = porPrimeiro[0];
   }
   if (conta){ out.contaId = conta.id; out.nomeLido = conta.nome; }
+  else if (out.cartaoId){
+    const cr = (DB.cartoes || []).find(c => c.id === out.cartaoId), tn = cr && _lcSem(cr.contaId ? '' : (cr.titular || '')).split(/\s+/).filter(x => x.length >= 3);
+    let pc = cr && cr.contaId ? cs.find(c => c.id === cr.contaId) : null;
+    if (!pc && tn && tn.length){
+      const m = cs.filter(c => { const k = tok(c); return k[0] === tn[0] && (tn.length < 2 || k.length < 2 || k[k.length - 1] === tn[tn.length - 1]); });
+      if (m.length === 1) pc = m[0];
+    }
+    if (pc){ out.contaId = pc.id; out.nomeLido = pc.nome; out.contaPeloCartao = true; }
+  }
   return out;
 }
 
 /* modalidade e valor como a assinatura guarda (cobrança de cada vez) */
 function _lcModalidade(d, pl){
+  if (d.mod === 'anual_avista') return {mod:'anual_avista', valor:d.valor, parcelas:1, total:d.valor};
+  if (d.mod === 'anual_parcelado' && d.tipo !== 'anual') return {mod:'anual_parcelado', valor:d.valor, parcelas:12, total:Math.round(d.valor * 12 * 100) / 100};
   if (d.tipo === 'mensal') return {mod:'mensal', valor:d.valor || (pl && pl.precos.mensal) || 0, parcelas:1};
   /* anual: o print mostra o total do ano; sem dizer se foi à vista ou parcelado,
      fica parcelado em 12x, que é como os clubes cobram o anual por padrão */
@@ -53843,13 +53896,16 @@ function renderConferirClube(){
   const m = _lcModalidade(d, pl);
   const lidos = [d.prog ? prog(d.prog).n : null, pl ? `plano ${pl.n} (${nBR(pl.qtd)} por mês)` : null,
     d.valor ? `${brl2(d.valor)}${d.tipo === 'anual' ? ' no ano' : d.tipo === 'mensal' ? ' por mês' : ''}` : null,
-    d.renova ? `renova em ${dataBR(d.renova)}` : null, d.tempo != null ? `${d.tempo} ${d.tempo === 1 ? 'mês' : 'meses'} de assinatura` : null,
+    d.pago ? `último pagamento em ${dataBR(d.pago)}` : null,
+    d.renova ? `renova em ${dataBR(d.renova)}${d.renovaPeloPagamento ? ' (pelo último pagamento)' : ''}` : null, d.tempo != null ? `${d.tempo} ${d.tempo === 1 ? 'mês' : 'meses'} de assinatura${d.tempo >= 12 ? ` (${Math.floor(d.tempo / 12)} ${d.tempo >= 24 ? 'anos' : 'ano'}${d.tempo % 12 ? ` e ${d.tempo % 12} ${d.tempo % 12 === 1 ? 'mês' : 'meses'}` : ''})` : ''}` : null,
+    d.cartaoFinal ? `cartão final ${d.cartaoFinal}` : null,
     d.mudanca ? `mudança de plano a partir de ${d.mudanca.em ? dataBR(d.mudanca.em) : 'data não lida'}` : null].filter(Boolean);
   const opPlano = (sel, excluir) => (cat ? cat.planos : []).filter(p => p.id !== excluir).map(p => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.n)} · ${nBR(p.qtd)}/mês</option>`).join('');
   c.innerHTML = `<div class="lc-conf">
     <div class="lc-print"><img src="${_lcEstado.url}" alt="Print do clube">
       <div class="lc-lido"><b style="color:var(--giz)">O que a Torre leu no print</b><br>${lidos.length ? esc(lidos.join(' · ')) + '.' : 'Nada reconhecível. Preencha abaixo.'}
-      ${!d.contaId ? '<br><span style="color:var(--ouro)">O print não mostra o nome do titular: escolha a conta.</span>' : `<br>Titular reconhecido pelo nome: <b style="color:var(--giz)">${esc(d.nomeLido)}</b>.`}</div></div>
+      ${d.planoPeloValor ? `<br>O print não mostra os pontos do plano: a Torre achou o <b style="color:var(--giz)">${esc(d.planoLido)}</b> pelo valor pago.` : ''}
+      ${!d.contaId ? '<br><span style="color:var(--ouro)">O print não mostra o nome do titular: escolha a conta.</span>' : `<br>Titular reconhecido pelo ${d.contaPeloCartao ? 'cartão' : 'nome'}: <b style="color:var(--giz)">${esc(d.nomeLido)}</b>.`}</div></div>
     <div class="lc-grade">
       <div class="campo${d.contaId ? '' : ' lc-falta'}"><label>Titular</label><select id="lcConta"><option value="">escolha a conta</option>${(DB.contas || []).map(x => `<option value="${x.id}"${x.id === d.contaId ? ' selected' : ''}>${esc(nomeCurto(x.nome))}</option>`).join('')}</select></div>
       <div class="campo${d.prog ? '' : ' lc-falta'}"><label>Clube</label><select id="lcProg"><option value="">escolha o clube</option>${progs.map(p => `<option value="${p}"${p === d.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
@@ -53858,6 +53914,7 @@ function renderConferirClube(){
       <div class="campo"><label>Valor ${d.tipo === 'anual' ? 'no ano' : 'por mês'} (R$)</label><input type="text" inputmode="decimal" data-moeda id="lcValor" value="${moedaTxt(d.tipo === 'anual' ? (m.total || 0) : m.valor)}"></div>
       <div class="campo"><label>Início<small>${d.tempo != null ? `pelo tempo de ${d.tempo} meses` : ''}</small></label><input type="date" id="lcInicio" value="${d.inicio || hojeISO()}"></div>
       <div class="campo${d.renova ? '' : ' lc-falta'}"><label>Próxima renovação</label><input type="date" id="lcRenova" value="${d.renova || ''}"></div>
+      <div class="campo"><label>Cartão que paga${d.cartaoFinal && !d.cartaoId ? `<small>final ${esc(d.cartaoFinal)} não cadastrado</small>` : ''}</label><select id="lcCartao" data-ordem="natural"><option value="">não informar</option>${(DB.cartoes || []).filter(x => x.ativo !== false || x.id === d.cartaoId).map(x => `<option value="${x.id}"${x.id === d.cartaoId ? ' selected' : ''}>${esc(x.banco || '')} ${esc(x.produto || '')}${x.final ? ' · final ' + esc(x.final) : ''}</option>`).join('')}</select></div>
     </div>
     ${d.mudanca ? `<div class="lc-mud"><div><b>Mudança de plano programada</b> a partir de <b>${d.mudanca.em ? dataBR(d.mudanca.em) : '?'}</b>. ${d.mudanca.planoId ? '' : 'O print não diz para qual plano: escolha abaixo.'}</div>
       <div class="lc-grade">
@@ -53897,6 +53954,8 @@ function confirmarLeituraClube(){
   if (!a){ a = {id:uid(), contaId:conta, prog:p, fid:pl.fid || 0, status:'ativa', cartaoId:'', cartao:'', obs:'', cancelarAntes:0}; DB.assinaturas.push(a); }
   Object.assign(a, {planoId:pl.id, modalidade:mod, valor, parcelas:mod === 'anual_parcelado' ? 12 : 1, renova:$('#lcRenova').value,
     inicio:novo ? ($('#lcInicio').value || hojeISO()) : (a.inicio || $('#lcInicio').value)});
+  const lcCt = $('#lcCartao') && $('#lcCartao').value;
+  if (lcCt){ const cr = (DB.cartoes || []).find(x => x.id === lcCt); a.cartaoId = lcCt; if (cr) a.cartao = `${cr.banco || ''} ${cr.produto || ''}`.trim(); }
   const nv = $('#lcNovo') && $('#lcNovo').value;
   if (nv){
     const plN = cat.planos.find(x => x.id === nv);
