@@ -53365,6 +53365,103 @@ function contaBancoSemUso(db){
   return ['lancamentos','contas','saldos','metas','reservas','desejos','cartoes','assinaturas','lotes','compras','cotacoes','pendentes','pagamentos','roteiros'].every(k => n(k) === 0);
 }
 
+/* ══ SINCRONIZAÇÃO SEM PERGUNTA (15/10/2026) ═══════════════════════════════════
+   Pedido do Jadiel: com a conta ligada, a Torre não pergunta mais "Já existe
+   banco na nuvem" nem "Duas versões diferentes". Tudo no automático.
+
+   A causa da pergunta repetida: ao TRAZER os dados da conta, o banco deste
+   aparelho era trocado pelo da conta, e a anotação de sincronização (versão,
+   marca e a qual conta o aparelho pertence) ia junto, porque a conta não guarda
+   essa anotação. Na abertura seguinte o aparelho se achava "novo", zerava a
+   versão e perguntava de novo. Agora a anotação deste aparelho fica.
+
+   As decisões automáticas:
+   1. Aparelho que nunca sincronizou (ou perdeu a anotação): vale a conta. O que
+      havia aqui fica guardado neste aparelho (torre-copia-antes-da-conta).
+   2. Só um lado mudou: vale o lado que mudou (já era assim).
+   3. Os dois mudaram: junta registro por registro; se o MESMO registro foi
+      mudado nos dois, vale o deste aparelho, que é onde a pessoa está agora.
+      A versão da conta continua nas cópias de segurança por hora. */
+(function(){
+  /* 1) a anotação de sincronização é deste aparelho: nunca vem da conta */
+  const _seg = comSegredosLocais;
+  comSegredosLocais = function(novo){
+    const minha = (contaAtiva() && typeof DB === 'object' && DB && DB.cfg && DB.cfg.nuvem) ? JSON.parse(JSON.stringify(DB.cfg.nuvem)) : null;
+    const r = _seg.apply(this, arguments);
+    if (minha && r && typeof r === 'object'){ r.cfg = r.cfg || {}; r.cfg.nuvem = Object.assign({}, r.cfg.nuvem || {}, minha); }
+    return r;
+  };
+  /* aparelho que perdeu a anotação da conta pelo defeito antigo, mas é da mesma
+     pessoa: não precisa zerar nada */
+  const _pronta = contaPronta;
+  contaPronta = function(){
+    try {
+      const s = contaSessao();
+      if (s && typeof DB === 'object' && DB){ const c = nuvemCfg(); if (!c.modo && localStorage.getItem(CONTA_DONO) === s.user.id) c.modo = 'conta:' + s.user.id; }
+    } catch(_){}
+    return _pronta.apply(this, arguments);
+  };
+  /* 3) junção que nunca desiste: no empate do mesmo registro, fica o deste aparelho */
+  contaJuntarLista = function(aqui, la, base){
+    if (![aqui, la].every(l => Array.isArray(l) && l.every(x => x && typeof x === 'object' && x.id != null))) return Array.isArray(aqui) ? aqui : la;
+    base = base || {};
+    const imp = x => contaImpressao(JSON.stringify(x));
+    const mA = new Map(aqui.map(x => [String(x.id), x])), mL = new Map(la.map(x => [String(x.id), x]));
+    if (mA.size !== aqui.length || mL.size !== la.length) return aqui;
+    const fica = new Map();
+    for (const id of new Set([...mA.keys(), ...mL.keys()])){
+      const a = mA.get(id), l = mL.get(id), b = base[id];
+      if (a && l){ const ia = imp(a); fica.set(id, (ia !== b || imp(l) === b) ? a : l); }
+      else if (a){ if (b === undefined || imp(a) !== b) fica.set(id, a); }
+      else { if (b === undefined || imp(l) !== b) fica.set(id, l); }
+    }
+    const saida = [], usados = new Set();
+    aqui.forEach(x => { const id = String(x.id); if (fica.has(id)){ saida.push(fica.get(id)); usados.add(id); } });
+    la.forEach(x => { const id = String(x.id); if (fica.has(id) && !usados.has(id)){ saida.push(fica.get(id)); usados.add(id); } });
+    return saida;
+  };
+  /* 4) junção que mexeu no MESMO saldo dos dois lados: o número da carteira
+     não se soma sozinho (cada aparelho tinha o seu). Os lançamentos dos dois
+     ficam, e o saldo é refeito pela soma do Diário, que é a referência. */
+  const _juntar = contaJuntar;
+  contaJuntar = function(remoto, primeira){
+    const sid = l => (l || []).reduce((m, x) => (m[x.id] = JSON.stringify(x), m), {});
+    const aqui = sid(DB.saldos), la = sid(remoto && remoto.dados && remoto.dados.saldos);
+    const pares = [];
+    Object.keys(aqui).forEach(id => { if (la[id] !== undefined && la[id] !== aqui[id]){ const x = JSON.parse(aqui[id]); pares.push([x.contaId, x.prog]); } });
+    const r = _juntar.apply(this, arguments);
+    if (r && pares.length && typeof acertarSaldoDe === 'function'){
+      const antes = JSON.stringify(DB.saldos);
+      pares.forEach(([c, p]) => { try { acertarSaldoDe(c, p); } catch(_){} });
+      if (JSON.stringify(DB.saldos) !== antes){ salvar(); try { aplicarTudo(); } catch(_){} }
+    }
+    return r;
+  };
+  const _conflito = nuvemAbrirConflito;
+  nuvemAbrirConflito = function(remoto, motivo){
+    if (!contaAtiva()) return _conflito.apply(this, arguments);
+    try {
+      if (motivo === 'primeira'){
+        /* 1) vale a conta; guarda o que havia aqui */
+        try { localStorage.removeItem(CONTA_TRAZER); } catch(_){}
+        if (!contaBancoSemUso(DB)){ try { localStorage.setItem('torre-copia-antes-da-conta', JSON.stringify(semSegredos(DB))); } catch(_){} }
+        DB = comSegredosLocais(remoto.dados);
+        const c = nuvemCfg(), s = contaSessao();
+        c.sha = remoto.sha; c.marca = assinaturaDados(DB); c.ultima = Date.now();
+        if (s) c.modo = 'conta:' + s.user.id;
+        c.marcas = contaImpressoes(DB); c.marcasItens = contaImpressoesItens(DB);
+        salvar(); aplicarTudo(); nuvemEstado('ok');
+        avisar('Dados atualizados com a sua conta.', 'ok');
+        return;
+      }
+      if (contaJuntar(remoto, false)) return;
+    } catch(e){ console.error(e); }
+    /* sobra de segurança: sem pergunta, envia o deste aparelho */
+    window._nuvemRemoto = remoto;
+    nuvemResolver('enviar');
+  };
+})();
+
 /* ── volta do link do e-mail (#access_token=...&type=recovery) ─────────────── */
 window.__contaVolta = null;
 if (contaLigada() && /(^#|&)(access_token|error_code|error)=/.test(location.hash)){
