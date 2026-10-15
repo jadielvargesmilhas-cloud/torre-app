@@ -10698,7 +10698,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
                       <input type="text" inputmode="decimal" id="ljGasto" placeholder="0,00" aria-label="Quanto vai gastar"></label>
                     <label class="lj-ordem">Ordenar
                       <select id="ljOrdem" data-ordem="natural"><option value="volta">Maior volta</option><option value="prazo">Fecha antes</option><option value="mult">Maior multiplicador</option></select></label>
-                    <label class="lj-melhor"><input type="checkbox" id="ljSoMelhor"> Só o melhor programa de cada loja</label>
+                    <label class="lj-melhor" hidden><input type="checkbox" id="ljSoMelhor"> Só o melhor programa de cada loja</label>
                   </div>
                   <div class="seg lj-seg-tipo" id="ljSegTipo"></div>
                   <div class="lj-filtros">
@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 00:30';
+const BUILD = '2026-10-16 01:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23200,7 +23200,7 @@ function abrirValeLoja(id, gatilho){
     </header>
     <div class="dr-corpo vl-corpo">
       <div class="vl-campos">
-        <label><span>Preço nesta loja</span><span class="dr-sim-preco-caixa">R$ <input type="text" inputmode="decimal" id="vlPreco" value="${gastoLojaV > 0 ? moedaTxt(gastoLojaV) : ''}" placeholder="0,00"></span></label>
+        <label><span>Preço nesta loja</span><span class="dr-sim-preco-caixa">R$ <input type="text" inputmode="decimal" id="vlPreco" value="${moedaTxt(gastoLojaV > 0 ? gastoLojaV : 100)}" placeholder="0,00"></span></label>
         <label><span>Menor preço em outra loja <em>(opcional)</em></span><span class="dr-sim-preco-caixa">R$ <input type="text" inputmode="decimal" id="vlOutra" placeholder="0,00"></span></label>
       </div>
       <div id="vlConta"></div>
@@ -58923,7 +58923,11 @@ function lojasFiltradas(){
   const vivas = ofertasVitrine(), busca = normLoja(buscaLojaV);
   let lista = vivas.filter(l => (!soListaV || (typeof desejosDaOferta === 'function' && desejosDaOferta(l).length)) && (!tipoShopV || caminhoDe(l) === tipoShopV)
     && (!catLoja || l.cat === catLoja) && (!progLojaV || l.prog === progLojaV) && (!busca || normLoja(l.n).includes(busca)));
-  if (soMelhorLojaV){ const pl = {}; lista.forEach(l => { const k = normLoja(l.n); if (!pl[k] || voltaPct(l) > voltaPct(pl[k])) pl[k] = l; }); lista = Object.values(pl); }
+  /* A mesma loja em dois programas aparece uma vez só, no programa que devolve
+     mais; o outro vira uma nota na linha ("também na Livelo: 9 por real"). Antes
+     era uma caixa de marcar que quase nunca mudava nada visível. */
+  { const pl = {}, todos = {}; lista.forEach(l => { const k = normLoja(l.n); (todos[k] = todos[k] || []).push(l); if (!pl[k] || voltaPct(l) > voltaPct(pl[k])) pl[k] = l; });
+    lista = Object.values(pl); lista.forEach(l => { l._outros = todos[normLoja(l.n)].filter(o => o !== l); }); }
   const ord = {volta:(a, b) => voltaPct(b) - voltaPct(a), prazo:(a, b) => (a.fim || '9999').localeCompare(b.fim || '9999') || voltaPct(b) - voltaPct(a),
     mult:(a, b) => (tetoLoja(b).promo || tetoLoja(b).base) - (tetoLoja(a).promo || tetoLoja(a).base)};
   return lista.sort(ord[ordemLojaV] || ord.volta);
@@ -58938,7 +58942,7 @@ function linhaLojaHTML(l){
   const r = retornoLoja(l);
   return `<div class="ljl-l${des.length ? ' tem-des' : ''}" data-ljl="${esc(String(l.id))}">
     <span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>
-    <div class="ljl-n"><b>${esc(l.n)}</b><small>${esc(catRot(l.cat))}${prazo ? ' · ' + prazo : ''}</small>
+    <div class="ljl-n"><b>${esc(l.n)}</b><small>${esc(catRot(l.cat))}${prazo ? ' · ' + prazo : ''}</small>${(l._outros || []).length ? `<small class="ljl-tb">Também na ${l._outros.map(o => `${esc(curto(prog(o.prog).n))}: ${nBRdec(tetoLoja(o).promo || tetoLoja(o).base || 0)} por real`).join('; na ')}</small>` : ''}
       ${des.length ? `<span class="ljl-des"><svg><use href="#i-alvo"/></svg>${des[0].hora ? 'Hora de comprar' : 'Na sua lista'}: ${esc(des.map(x => x.d.n).join(', '))}</span>` : ''}</div>
     <span class="ljl-p">${discoProg(l.prog, 'p')}<span>${esc(prog(l.prog).n)}</span></span>
     <span class="ljl-m"><b>${nBRdec(mult)}</b><small>${l.porDolar ? 'por dólar' : 'por real'}</small></span>
@@ -59056,6 +59060,8 @@ function arrumarFiltrosLojas(){
 .ljl-mais{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:8px; padding:10px 14px; background:none; border:1px solid var(--fio-forte); border-radius:12px; color:var(--anil); font:inherit; font-weight:600; font-size:calc(14px * var(--esc)); cursor:pointer; }
 .ljl-mais:hover{ background:color-mix(in srgb, var(--anil) 6%, transparent); }
 .ljl-mais svg{ width:16px; height:16px; }
+.lj-melhor[hidden]{ display:none !important; }
+.ljl-n small.ljl-tb{ color:var(--anil-claro, var(--anil)); }
 .ljl-ph{ visibility:hidden; pointer-events:none; }
 #ljSegTipo, #ljSegProg{ flex-wrap:wrap !important; max-width:100%; overflow-x:visible !important; }
 @media (min-width:1100px){
@@ -59199,6 +59205,15 @@ function editarBonificada(id){
 .ct-num b{ font-size:calc(15.5px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ct-num b.jade{ color:var(--jade); }
 .ct-num small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.ct-num li > span{ order:0; } .ct-num li > small, .ct-num li > s{ order:1; } .ct-num li > b{ order:2; }
+.ct-num s{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); text-decoration:line-through; text-decoration-color:var(--brasa, #d9534f); text-decoration-thickness:1.5px; font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.35; }
+.ct-num small, .ct-num s{ font-size:calc(12px * var(--esc)) !important; line-height:calc(17px * var(--esc)) !important; display:block; }
+.ct-num b{ display:block; line-height:1.3; }
+.ct-num b .ct-seta{ width:14px; height:14px; margin-left:4px; vertical-align:-1px; }
+.ct-seta{ width:15px; height:15px; flex:0 0 15px; fill:none; stroke:var(--jade); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+
+.ctd-l b .ct-seta{ margin-left:4px; vertical-align:-2px; }
+.ctd-d b{ display:inline-flex; align-items:center; }
 .ct-obs{ margin:0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
 .ct-nota{ margin:10px 0 0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
 .ct-todas{ display:flex; align-items:center; justify-content:center; gap:7px; width:100%; margin-top:10px; padding:10px 14px; background:none; border:1px solid var(--fio-forte); border-radius:12px; color:var(--anil); font:inherit; font-weight:600; font-size:calc(14px * var(--esc)); cursor:pointer; }
@@ -59311,15 +59326,18 @@ function _ctCartao(r, rot, tom, ref, mult){
     <div class="ct-q"><span class="ct-av">${esc(mono(r.nome))}</span>
       <div class="ct-n"><b>${esc(r.nome)}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' a ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : 'sem clube nesse programa'}</small></div></div>
     <ul class="ct-num">
-      <li><span>Pontos</span><b>+${nBR(r.pts)}</b><small>${nBRdec(r.mult)} por real</small></li>
-      <li><span>Milheiro</span><b>${r.antes != null ? brl2(r.depois) : (r.pts ? brl2(r.depois || 0) : 'n/d')}</b><small>${r.antes != null ? `hoje ${brl2(r.antes)}` : 'conta sem estoque'}</small></li>
-      <li><span>Queda</span><b class="${r.queda > 0 ? 'jade' : ''}">${r.queda != null ? (r.queda > 0 ? '−' : '') + brl2(Math.abs(r.queda)) : 'n/d'}</b><small>${r.queda != null && r.antes ? (r.queda / r.antes * 100).toFixed(1).replace('.', ',') + '% a menos' : '&nbsp;'}</small></li>
+      <li><span>Pontos</span><small>${nBRdec(r.mult)} por real</small><b>+${nBR(r.pts)}</b></li>
+      <li class="ct-mil"><span>Milheiro</span>${r.antes != null ? `<s title="milheiro de hoje">${brl2(r.antes)}</s>` : '<small>sem estoque hoje</small>'}
+        <b>${r.depois != null ? brl2(r.depois) : 'n/d'}${r.queda > 0 ? _CT_SETA : ''}</b></li>
+      <li class="ct-qd"><span>Queda</span><small>${r.queda > 0 ? '−' + brl2(r.queda) : '&nbsp;'}</small><b class="${r.queda > 0 ? 'jade' : ''}">${_ctPct(r)}</b></li>
     </ul>
     ${dif < 0 ? `<p class="ct-obs">Rende ${nBR(-dif)} pontos a menos que a conta de ${esc(ref.nome)} (cerca de ${brl2(-dif * (mult || 0) / 1000)}).</p>` : ''}
     ${r.incerto ? `<p class="ct-obs">A lista diz "até ${nBRdec(r.mult)}": sem clube, essa conta pode receber menos.</p>` : ''}
   </article>`;
 }
 let _ctL = null, _ctRs = [], _ctOrdem = 'queda';
+const _CT_SETA = '<svg class="ct-seta" viewBox="0 0 24 24" aria-label="caiu"><path d="M12 4v15M5.5 12.5L12 19l6.5-6.5"/></svg>';
+const _ctPct = r => r.queda != null && r.antes > 0 ? (r.queda > 0 ? '−' : '') + (Math.abs(r.queda) / r.antes * 100).toFixed(1).replace('.', ',') + '%' : 'n/d';
 function secaoContasLoja(l, preco, outra){
   _ctL = l;
   const contas = DB.contas || [];
@@ -59362,8 +59380,8 @@ function abrirComparaContas(){
       <div class="ctd-n"><b>${esc(r.nome)}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' · ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : (r.semPrograma ? 'sem conta nesse programa' : 'sem clube')}</small></div>
       <div class="ctd-p"><b>+${nBR(r.pts)}</b><small>${nBRdec(r.mult)}/real${r.incerto ? ' (até)' : ''}</small></div>
       <div class="ctd-m"><b>${r.antes != null ? brl2(r.antes) : 'n/d'}</b><small>${nBR(r.est.qtd)} pts</small></div>
-      <div class="ctd-d"><b>${r.depois != null ? brl2(r.depois) : 'n/d'}</b><small>depois</small></div>
-      <div class="ctd-q"><b class="${r.queda > 0 ? 'jade' : ''}">${r.queda != null ? (r.queda > 0 ? '−' : '') + brl2(Math.abs(r.queda)) : 'n/d'}</b>
+      <div class="ctd-d"><b>${r.depois != null ? brl2(r.depois) : 'n/d'}${r.queda > 0 ? _CT_SETA : ''}</b><small>depois</small></div>
+      <div class="ctd-q"><b class="${r.queda > 0 ? 'jade' : ''}">${_ctPct(r)}</b><small>${r.queda > 0 ? '−' + brl2(r.queda) : '&nbsp;'}</small>
         <span class="ctd-barra"><i style="width:${r.queda > 0 ? Math.max(4, r.queda / maxQ * 100) : 0}%"></i></span></div>
     </div>`).join('');
     d.querySelectorAll('[data-ctord]').forEach(b => b.classList.toggle('on', b.dataset.ctord === _ctOrdem));
