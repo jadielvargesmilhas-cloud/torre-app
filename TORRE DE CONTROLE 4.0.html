@@ -11791,7 +11791,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 01:00';
+const BUILD = '2026-10-15 02:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -47785,6 +47785,7 @@ ${avisos}
   <div class="caixa bagagem">
 ${bag.join('\n')}
   </div>
+${htmlRegrasVem(d)}
 
   <h2>O valor</h2>
   <div class="caixa valor">
@@ -47984,6 +47985,7 @@ function gerarComparacao(lista, urlP, urlI){
   <p class="nota">Os horários estão no fuso de cada aeroporto.</p>
   <h2>Bagagem · Opção ${n}</h2>
   <div class="caixa bagagem">${bag.join('')}</div>
+  ${htmlRegrasVem(d, ' · Opção ' + n)}
   <h2>O valor · Opção ${n}</h2>
   <div class="caixa valor">
     <div class="linha-valor"><span>Passagem<small>${e(pessoas(d.passageiros))}</small></span><b>${brl(c.passagem)}</b></div>
@@ -48378,6 +48380,7 @@ const VEM_BAG = {
   despachada: {rot:'Bagagem despachada', um:'bagagem despachada', varios:'bagagens despachadas', kg:'23'}
 };
 let vemEst = null;          /* o que está no formulário agora */
+let vemBagLendo = null;     /* opção cuja bagagem está sendo lida do print */
 let vemConfTimer = null;
 
 function vemCfg(){
@@ -48428,7 +48431,7 @@ function vemTextoBag(tipo, b){
   const B = VEM_BAG[tipo]; const q = Math.max(1, parseInt(b.q, 10) || 1);
   let t = b.estado === 'inc' ? `${q} ${q === 1 ? B.um : B.varios}` : B.um[0].toUpperCase() + B.um.slice(1);
   const kg = String(b.kg || '').replace(/\D/g, '');
-  if (kg) t += `, até ${kg} kg`;
+  if (kg) t += b.kgTotal && q > 1 ? `, ${kg} kg no total` : `, até ${kg} kg`;
   return t;
 }
 function vemParaDados(st){
@@ -48495,7 +48498,8 @@ function vemParaDados(st){
     if (!bagagem.length) erros.push(N + 'marque ao menos um item de bagagem.');
     lista.push({cliente: String(c.cliente || '').trim(), whatsapp: zap, milheiro: vemNumTxt(o.milheiro), milhas: String(milhas),
       taxa_embarque: vemNumTxt(o.taxa), desconto_pix: vemNumTxt(cfg.pix), taxa_cartao_1x: vemNumTxt(cfg.t1), taxa_cartao_12x: vemNumTxt(cfg.t12),
-      passageiros, cabine: c.cabine || 'Econômica', rodape: c.rodape ?? cfg.rodape, viagens, bagagem});
+      passageiros, cabine: c.cabine || 'Econômica', rodape: c.rodape ?? cfg.rodape, viagens, bagagem,
+      regras: String(o.regras || '').split('\n').map(x => x.trim()).filter(Boolean)});
   });
   if (st.ops.length > 1){
     const tipos = new Set(st.ops.map(o => !!o.temVolta));
@@ -48581,7 +48585,18 @@ function vemHtmlOpcao(o, oi){
     <label class="ck-rotulo vem-ck"><input type="checkbox" data-vk="ops.${oi}.temVolta"${o.temVolta ? ' checked' : ''}> Tem volta</label>
     ${o.temVolta ? `<div class="olho" style="margin-top:12px">Volta</div>${trechos('volta')}` : ''}
     <div class="olho" style="margin-top:16px">Bagagem</div>
-    ${vemHtmlBag(oi, o)}
+    <div class="vem-bag-area">
+      <div class="vem-bag-lista">${vemHtmlBag(oi, o)}</div>
+      <div class="vem-bag-print${vemBagLendo === oi ? ' lendo' : ''}" data-bag-print="${oi}" tabindex="0" role="button" aria-label="Ler a bagagem de um print: arraste, cole ou clique para escolher">
+        <svg><use href="#i-imagem"/></svg>
+        <b>${vemBagLendo === oi ? 'Lendo o print…' : 'Ler bagagem e regras do print'}</b>
+        <span>${vemBagLendo === oi ? 'Só um instante.' : 'Arraste o print, cole com Ctrl+V com o mouse aqui, ou clique para escolher.'}</span>
+        <input type="file" accept="image/*,application/pdf,.pdf" hidden data-bag-arq="${oi}">
+      </div>
+    </div>
+    <div class="olho" style="margin-top:16px">Alteração e cancelamento</div>
+    <div class="campo vem-regras"><textarea data-vk="ops.${oi}.regras" rows="3" placeholder="Uma regra por linha. Ex.: Mais de 24 horas antes do embarque: US$ 25">${esc(o.regras || '')}</textarea>
+      <div class="dica">Opcional. Vai para a página do cliente, logo depois da bagagem. O campo ao lado da bagagem também lê estas regras do print.</div></div>
   </div>`;
 }
 
@@ -48915,6 +48930,7 @@ function vemDeDados(lista){
       const q = String(b.texto || '').match(/^\s*(\d+)/), kg = String(b.texto || '').match(/(\d+)\s*kg/);
       o.bag[b.tipo] = {estado: b.incluida === false ? 'tarifa' : 'inc', q: q ? +q[1] : 1, kg: kg ? kg[1] : ''};
     });
+    o.regras = (d.regras || []).join('\n');
     return o;
   });
   if (lista.some(d => String(d.desconto_pix ?? '5') !== String(vemNumTxt(vemCfg().pix)) || String(d.taxa_cartao_1x ?? '4.2') !== String(vemNumTxt(vemCfg().t1)) || String(d.taxa_cartao_12x ?? '13.74') !== String(vemNumTxt(vemCfg().t12))))
@@ -49369,7 +49385,7 @@ function cqMontar(){
   st.ops = idas.map((ida, i) => {
     const v = parDe(ida, i);
     const o = vemNovaOpcao();
-    const ant = anteriores[i]; if (ant && ant.bag) o.bag = cqClone(ant.bag);
+    const ant = anteriores[i]; if (ant && ant.bag) o.bag = cqClone(ant.bag); if (ant && ant.regras) o.regras = ant.regras;
     const mil = (ida.milhas || 0) + (v ? v.milhas || 0 : 0);
     const tx = ida.taxas == null && (!v || v.taxas == null) ? null : (Number(ida.taxas) || 0) + (v ? Number(v.taxas) || 0 : 0);
     o.milhas = mil ? qtdTxt(mil) : '';
@@ -56704,6 +56720,192 @@ const cqAbertasPerdidas = new Set();
     if (cqAbertasPerdidas.has(id)) cqAbertasPerdidas.delete(id); else cqAbertasPerdidas.add(id);
     cqRender();
   });
+})();
+</script>
+
+<style>
+/* ══ ler a bagagem do print (15/10/2026) ══ */
+.vem-bag-area{ display:grid; grid-template-columns:minmax(0, 1fr) 190px; gap:14px; align-items:stretch; }
+.vem-bag-area .vem-bag-nome{ min-width:150px; }
+.vem-bag-area .vem-bag{ gap:8px 10px; }
+.vem-bag-area .vem-bag .seg button{ padding-left:10px; padding-right:10px; }
+.vem-bag-area .vem-mini input{ width:56px; }
+/* o texto que o cliente lê vai na linha de baixo, alinhado: as três linhas ficam com a mesma altura */
+@media (min-width:561px){ .vem-bag-area .vem-bag-txt{ flex-basis:100%; padding-left:160px; margin-top:-4px; } }
+.vem-bag-lista{ min-width:0; }
+.vem-bag-print{ border:1.5px dashed var(--fio-forte, var(--fio)); border-radius:16px; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px;
+  cursor:pointer; color:var(--grafite); background:var(--sup-1, transparent); transition:border-color .2s, background .2s; min-height:140px; outline:none; }
+.vem-bag-print svg{ width:24px; height:24px; fill:none; stroke:var(--ouro); stroke-width:1.7; }
+.vem-bag-print b{ color:var(--giz); font-size:calc(14px * var(--esc)); }
+.vem-bag-print span{ font-size:calc(12.5px * var(--esc)); line-height:1.45; }
+.vem-bag-print:hover, .vem-bag-print:focus-visible, .vem-bag-print.sobre{ border-color:var(--ouro); background:color-mix(in srgb, var(--ouro) 8%, transparent); }
+.vem-bag-print.lendo{ border-style:solid; border-color:var(--anil); }
+.vem-bag-print.lendo svg{ animation:vemBagPulso 1s ease-in-out infinite alternate; }
+@keyframes vemBagPulso{ from{ opacity:.35; } to{ opacity:1; } }
+@media (max-width:900px){ .vem-bag-area{ grid-template-columns:minmax(0, 1fr); } .vem-bag-print{ min-height:110px; } }
+</style>
+<script>
+/* ══ LER A BAGAGEM DO PRINT (15/10/2026, pedido do Jadiel) ═════════════════════
+   Ao lado da bagagem de cada opção, um campo que lê o print: arrastar, colar
+   (com o mouse sobre ele) ou clicar para escolher. O texto do print vira
+   quantidade e peso de cada tipo de bagagem: item pessoal, mala de mão e
+   despachada. O que o print não diz continua como estava. */
+const VEM_BAG_RE = {
+  mochila: /item pessoal|artigo pessoal|objeto pessoal|bolsa ou mochila|mochila|bolsa|personal item|art[ií]culo personal/i,
+  mala: /bagagem de m[aã]o|mala de m[aã]o|mala pequena|carry[\s-]?on|hand bag(?:gage)?|cabin bag(?:gage)?|equipaje de mano/i,
+  despachada: /bagage(?:m|ns) despachad|despachad[ao]s?|bagagem para despachar|checked bag|hold bag|equipaje (?:facturado|documentado|en bodega)/i
+};
+function bagDoTexto(texto){
+  const L = String(texto || '').split('\n').map(x => x.trim()).filter(Boolean), r = {};
+  const ordem = ['despachada', 'mala', 'mochila'];
+  const usadas = new Set();
+  ordem.forEach(tp => {
+    const i = L.findIndex((l, k) => !usadas.has(k) && VEM_BAG_RE[tp].test(l) && !(tp === 'mochila' && VEM_BAG_RE.mala.test(l)) && !(tp !== 'despachada' && VEM_BAG_RE.despachada.test(l)));
+    if (i < 0) return;
+    usadas.add(i);
+    /* a linha do rótulo e, se ela não trouxer número, a de baixo */
+    let w = L[i]; if (!/\d/.test(w.replace(VEM_BAG_RE[tp], '')) && L[i + 1] && !Object.values(VEM_BAG_RE).some(re => re.test(L[i + 1]))){ w += ' ' + L[i + 1]; usadas.add(i + 1); }
+    const neg = /n[aã]o inclu|not included|no incluye|sem bagagem|n[aã]o permitid|cobrad[ao]|tarifa adicional|pago [aà] parte|\bpor\s+R\$/i.test(w);
+    const kg = (w.match(/(\d{1,2})\s?kg/i) || [])[1] || '';
+    let q = (w.match(/\b(\d)\s*(?:volumes?|pe[cç]as?|pieces?|bags?|malas?|bagagens?|itens?|unidades?|un\.?|x\b)/i) || [])[1]
+      || (w.match(/\b(\d)\s*(?:de|x)\s*\d{1,2}\s?kg/i) || [])[1] || '';
+    if (!q && /\b(?:uma|um|one|1)\b/i.test(w) && !neg) q = '1';
+    if (neg){ r[tp] = {estado:'oculta'}; return; }
+    r[tp] = {estado:'inc', q:q ? +q : 1, kg, kgTotal:/kg\s*(?:no\s+)?total|total\s+de\s+\d{1,2}\s?kg|combined/i.test(w)};
+  });
+  return r;
+}
+async function vemLerBagagem(oi, arquivo){
+  if (!arquivo || !((arquivo.type || '').startsWith('image/') || ehPDF(arquivo))){ avisar('Use uma imagem (PNG, JPG, WEBP) ou PDF.', 'alerta'); return; }
+  const o = vemEst && vemEst.ops && vemEst.ops[oi]; if (!o) return;
+  vemBagLendo = oi; renderVem();
+  try {
+    const w = await prepararLeitorOCR();
+    const texto = await textoDoArquivo(arquivo, w);
+    const achou = bagDoTexto(texto);
+    const tipos = Object.keys(achou);
+    vemBagLendo = null;
+    if (!tipos.length){ renderVem(); avisar('Não achei informação de bagagem neste print. Preencha à mão, ou tente um print mais de perto da parte da bagagem.', 'alerta', 6500); return; }
+    tipos.forEach(tp => { o.bag[tp] = Object.assign({}, o.bag[tp] || {}, achou[tp]); if (achou[tp].estado === 'oculta'){ o.bag[tp].q = o.bag[tp].q || 1; } });
+    vemGuardarRascunho(); renderVem(); try { vemAgendarConf(); } catch(_){}
+    const txt = tipos.map(tp => achou[tp].estado === 'oculta' ? `${VEM_BAG[tp].rot}: não incluída` : `${VEM_BAG[tp].rot}: ${vemTextoBag(tp, o.bag[tp])}`).join(' · ');
+    avisar(`Bagagem lida do print. ${txt}.`, 'ok', 7000);
+  } catch (err){
+    vemBagLendo = null; renderVem();
+    avisar('Não deu para ler o print aqui: ' + (err.message || err), 'alerta', 6000);
+  }
+}
+(function(){
+  let alvoBag = null;   /* opção cuja área de leitura está sob o mouse */
+  document.addEventListener('click', e => {
+    const z = e.target.closest('[data-bag-print]'); if (!z || z.classList.contains('lendo')) return;
+    const inp = z.querySelector('[data-bag-arq]'); if (inp && e.target !== inp) inp.click();
+  });
+  document.addEventListener('keydown', e => {
+    const z = e.target.closest && e.target.closest('[data-bag-print]');
+    if (z && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); const inp = z.querySelector('[data-bag-arq]'); if (inp) inp.click(); }
+  });
+  document.addEventListener('change', e => {
+    const inp = e.target.closest && e.target.closest('[data-bag-arq]'); if (!inp) return;
+    e.stopPropagation();
+    const f = inp.files && inp.files[0]; if (f) vemLerBagagem(+inp.dataset.bagArq, f); inp.value = '';
+  }, true);
+  document.addEventListener('mouseover', e => { const z = e.target.closest && e.target.closest('[data-bag-print]'); alvoBag = z ? +z.dataset.bagPrint : null; });
+  ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { const z = e.target.closest && e.target.closest('[data-bag-print]'); if (!z) return; e.preventDefault(); z.classList.add('sobre'); }));
+  ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { const z = e.target.closest && e.target.closest('[data-bag-print]'); if (z) z.classList.remove('sobre'); }));
+  document.addEventListener('drop', e => {
+    const z = e.target.closest && e.target.closest('[data-bag-print]'); if (!z) return;
+    e.preventDefault(); e.stopPropagation();
+    const f = [...((e.dataTransfer || {}).files || [])][0]; if (f) vemLerBagagem(+z.dataset.bagPrint, f);
+  }, true);
+  /* colar: com o mouse sobre o campo ou com ele focado, o print vai para a bagagem */
+  document.addEventListener('paste', e => {
+    const foco = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-bag-print]');
+    const oi = foco ? +foco.dataset.bagPrint : alvoBag;
+    if (oi == null || isNaN(oi) || !document.querySelector(`[data-bag-print="${oi}"]`)) return;
+    const f = [...((e.clipboardData || {}).files || [])].find(x => (x.type || '').startsWith('image/') || ehPDF(x)); if (!f) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    vemLerBagagem(oi, f);
+  }, true);
+})();
+</script>
+
+<style>
+.vem-regras textarea{ width:100%; min-height:72px; resize:vertical; font:inherit; font-size:calc(13.5px * var(--esc)); line-height:1.5; }
+/* em tela média, o campo do print desce para baixo da bagagem, numa faixa */
+@media (max-width:1400px){
+  .vem-bag-area{ grid-template-columns:minmax(0, 1fr) !important; }
+  .vem-bag-print{ min-height:0 !important; flex-direction:row !important; flex-wrap:wrap; justify-content:flex-start !important; text-align:left !important; padding:12px 16px !important; gap:4px 12px !important; }
+  .vem-bag-print span{ flex:1; min-width:200px; }
+}
+</style>
+<script>
+/* ══ ALTERAÇÃO E CANCELAMENTO NA COTAÇÃO (15/10/2026, pedido do Jadiel) ═════════
+   Cada opção pode levar as regras de alteração e cancelamento da tarifa. Elas
+   aparecem na página do cliente logo depois da bagagem, uma por linha, com o
+   valor à direita, no mesmo desenho da caixa de valores. O campo de print ao
+   lado da bagagem lê também estas regras ("Mais de 24 horas antes do
+   embarque: $25"). */
+function htmlRegrasVem(d, sufixo){
+  const rs = (d && d.regras || []).map(x => String(x).trim()).filter(Boolean);
+  if (!rs.length) return '';
+  const e = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
+  const linha = r => { const k = r.lastIndexOf(':'); return k > 0 && k < r.length - 1
+    ? `<div class="linha-valor"><span>${e(r.slice(0, k).trim())}</span><b>${e(r.slice(k + 1).trim())}</b></div>`
+    : `<div class="linha-valor"><span>${e(r)}</span></div>`; };
+  return `  <h2>Alteração e cancelamento${sufixo || ''}</h2>
+  <div class="caixa valor regras">
+    ${rs.map(linha).join('\n    ')}
+    <p class="nota" style="margin:10px 0 0">Valores por passageiro, cobrados pela companhia aérea. Antes de qualquer mudança, confirmamos com você.</p>
+  </div>
+`;
+}
+/* regras de alteração e cancelamento num texto de print */
+function regrasDoTexto(texto){
+  const L = String(texto || '').split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const out = [];
+  L.forEach(l => {
+    if (typeof VEM_BAG_RE !== 'undefined' && Object.values(VEM_BAG_RE).some(re => re.test(l))) return;
+    const prazo = /\b(antes|depois|ap[oó]s|at[eé]|horas?|hours?|dias?|days?|embarque|partida|departure)\b/i.test(l);
+    const valor = /(R\$|US\$|U\$|\$|€|£|\bUSD\b|\bEUR\b|\bBRL\b)\s?\d|\d\s?(USD|EUR|BRL)\b|gr[aá]tis|gratuit|sem custo|sem taxa|free of charge|n[aã]o (?:permitid|reembols)|reembols[aá]vel|non-?refundable|no show|no-show/i.test(l);
+    const titulo = /^(altera[cç][aã]o|cancelamento|remarca[cç][aã]o|reembolso|change|cancellation|refund)\b.*:/i.test(l);
+    if ((prazo && valor) || titulo || /^(n[aã]o reembols[aá]vel|reembols[aá]vel|non-?refundable)\b/i.test(l)){
+      const t = l.replace(/[ⓘ©®]+/g, '').replace(/\s+\(?i\)?$/i, '').trim();
+      if (t && !out.includes(t)) out.push(t);
+    }
+  });
+  return out;
+}
+(function(){
+  if (typeof vemLerBagagem !== 'function') return;
+  /* o mesmo campo do print passa a ler a bagagem e as regras de uma vez */
+  vemLerBagagem = async function(oi, arquivo){
+    if (!arquivo || !((arquivo.type || '').startsWith('image/') || ehPDF(arquivo))){ avisar('Use uma imagem (PNG, JPG, WEBP) ou PDF.', 'alerta'); return; }
+    const o = vemEst && vemEst.ops && vemEst.ops[oi]; if (!o) return;
+    vemBagLendo = oi; renderVem();
+    try {
+      const w = await prepararLeitorOCR();
+      const texto = await textoDoArquivo(arquivo, w);
+      const achou = bagDoTexto(texto), tipos = Object.keys(achou), regras = regrasDoTexto(texto);
+      vemBagLendo = null;
+      if (!tipos.length && !regras.length){ renderVem(); avisar('Não achei bagagem nem regras de alteração e cancelamento neste print. Preencha à mão, ou tente um print mais de perto dessa parte.', 'alerta', 6500); return; }
+      tipos.forEach(tp => { o.bag[tp] = Object.assign({}, o.bag[tp] || {}, achou[tp]); });
+      let novas = 0;
+      if (regras.length){
+        const atuais = String(o.regras || '').split('\n').map(x => x.trim()).filter(Boolean);
+        regras.forEach(r => { if (!atuais.includes(r)){ atuais.push(r); novas++; } });
+        o.regras = atuais.join('\n');
+      }
+      vemGuardarRascunho(); renderVem(); try { vemAgendarConf(); } catch(_){}
+      const partes = [];
+      if (tipos.length) partes.push(tipos.map(tp => achou[tp].estado === 'oculta' ? `${VEM_BAG[tp].rot}: não incluída` : `${VEM_BAG[tp].rot}: ${vemTextoBag(tp, o.bag[tp])}`).join(' · '));
+      if (regras.length) partes.push(novas ? `${novas} ${novas === 1 ? 'regra' : 'regras'} de alteração e cancelamento` : 'as regras de alteração e cancelamento já estavam lá');
+      avisar(`Lido do print: ${partes.join('; ')}.`, 'ok', 7000);
+    } catch (err){
+      vemBagLendo = null; renderVem();
+      avisar('Não deu para ler o print aqui: ' + (err.message || err), 'alerta', 6000);
+    }
+  };
 })();
 </script>
 </body>
