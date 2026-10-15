@@ -10496,6 +10496,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <button class="aba" data-aba="fb-clubes">Meus Clubes <span class="cont" id="contClubes">0</span></button>
           <button class="aba" data-aba="fb-compras">Lista de desejos</button>
           <button class="aba" data-aba="fb-mural">Mural</button>
+          <button class="aba" data-aba="fb-black">Black Friday</button>
         </div>
 
 
@@ -10894,6 +10895,14 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           </div>
         </div>
 
+
+        <!-- BLACK FRIDAY (15/10/2026): a Black de 2025 como régua para a de 2026 -->
+        <div class="painel-aba" id="p-fb-black">
+          <div class="pilha" style="gap:18px">
+            <div class="linha sec-cab"></div>
+            <div id="bfBlack"></div>
+          </div>
+        </div>
 
         <div class="painel-aba" id="p-fb-mural">
           <div class="pilha" style="gap:14px">
@@ -11795,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-15 10:30';
+const BUILD = '2026-10-15 12:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -15280,7 +15289,8 @@ const AREAS = [
     menu:[{g:'', itens:[['fabrica', 'fb-ofertas', 'Mapa das Ofertas', '#i-radar', undefined, ['fabrica', 'fb-mural']],
       ['fabrica', 'fb-compras', 'Lista de desejos', '#i-alvo'],
       ['fabrica', 'fb-campanhas', 'Campanhas', '#i-troca', 'camp'],
-      ['fabrica', 'fb-campanhas', 'Lojas Parceiras', '#i-sacola', 'loja', ['fabrica', 'fb-campanhas', '', '', 'bonificada']]]}]},
+      ['fabrica', 'fb-campanhas', 'Lojas Parceiras', '#i-sacola', 'loja', ['fabrica', 'fb-campanhas', '', '', 'bonificada']],
+      ['fabrica', 'fb-black', 'Black Friday', '#i-fogo']]}]},
   {k:'acumular',  n:'Acumular',  sub:'O que você faz para juntar',        ic:'#i-dinheiro', vistas:['comprar', 'fabrica'],
     menu:[{g:'', itens:[['fabrica', 'fb-acumular', 'Mapa do acúmulo', '#i-rota']]},
       {g:'Todo mês', itens:[['fabrica', 'fb-clubes', 'Meus Clubes', '#i-atualizar']]},
@@ -57814,6 +57824,404 @@ function renderUltimasCT(){
   const _r = renderComprarTransferir;
   renderComprarTransferir = function(){ const r = _r.apply(this, arguments); try { renderUltimasCT(); } catch(e){ console.error(e); } return r; };
   try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === _r) RENDER[k] = renderComprarTransferir; }); } catch(_){}
+})();
+</script>
+
+<style>
+/* ══ Black Friday ══ */
+#bfBlack{ display:flex; flex-direction:column; gap:18px; }
+.bf-heroi{ position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:18px 26px; align-items:center;
+  padding:26px 28px; border-radius:var(--r-xl); color:#F4EFE3;
+  background:radial-gradient(120% 140% at 100% 0%, rgba(214,170,74,.28), transparent 55%), linear-gradient(135deg, #0B0B0D 0%, #17140E 60%, #241C0C 100%);
+  border:1px solid rgba(214,170,74,.35); box-shadow:0 18px 50px -24px rgba(214,170,74,.45); }
+.bf-heroi::after{ content:'BLACK'; position:absolute; right:-10px; bottom:-34px; font:900 120px/1 var(--f-b, sans-serif); letter-spacing:-.04em; color:rgba(214,170,74,.07); pointer-events:none; }
+.bf-eyebrow{ font-family:var(--f-m); font-size:calc(11px * var(--esc)); letter-spacing:.14em; text-transform:uppercase; color:#D6AA4A; }
+.bf-heroi h2{ margin:6px 0 8px; font-size:calc(24px * var(--esc)); line-height:1.15; color:#FFF8E8; }
+.bf-heroi p{ margin:0; max-width:620px; color:rgba(244,239,227,.72); font-size:calc(13.5px * var(--esc)); line-height:1.55; }
+.bf-cont{ text-align:center; padding:14px 20px; border-radius:16px; border:1px solid rgba(214,170,74,.45); background:rgba(214,170,74,.08); min-width:130px; position:relative; z-index:1; }
+.bf-cont b{ display:block; font:600 calc(40px * var(--esc))/1 var(--f-m); color:#F2C766; }
+.bf-cont span{ display:block; font-size:calc(12.5px * var(--esc)); color:rgba(244,239,227,.8); margin-top:4px; }
+.bf-cont small{ display:block; font-family:var(--f-m); font-size:calc(11px * var(--esc)); color:rgba(244,239,227,.5); margin-top:6px; }
+.bf-placar{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; position:relative; z-index:1; }
+.bf-placar > div{ padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+.bf-placar b{ display:block; font:600 calc(22px * var(--esc))/1.1 var(--f-m); color:#F4EFE3; }
+.bf-placar span{ font-size:calc(12px * var(--esc)); color:rgba(244,239,227,.65); }
+.bf-placar .jade b{ color:#4CC38A; } .bf-placar .ouro b{ color:#F2C766; } .bf-placar .brasa b{ color:#F0785A; }
+.bf-bloco{ border:1px solid var(--fio); border-radius:var(--r-lg); padding:16px 18px; background:var(--sup-0); }
+.bf-tit{ font-weight:600; color:var(--giz); font-size:calc(14.5px * var(--esc)); margin-bottom:10px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+.bf-tit small{ font-weight:400; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.bf-licoes{ margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap:10px; }
+.bf-licoes li{ position:relative; padding:10px 12px 10px 30px; border-radius:12px; background:color-mix(in srgb, var(--ouro) 6%, transparent); border:1px solid color-mix(in srgb, var(--ouro) 20%, transparent); color:var(--giz-2); font-size:calc(13px * var(--esc)); line-height:1.5; }
+.bf-licoes li::before{ content:''; position:absolute; left:12px; top:16px; width:7px; height:7px; border-radius:50%; background:var(--ouro); }
+.bf-licoes b{ color:var(--giz); }
+.bf-cal{ display:flex; flex-direction:column; gap:5px; overflow-x:auto; }
+.bf-cal-l{ display:grid; grid-template-columns:130px minmax(420px, 1fr); gap:10px; align-items:center; }
+.bf-cal-l > span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); white-space:nowrap; }
+.bf-cal-d{ display:grid; grid-template-columns:repeat(30, minmax(0, 1fr)); gap:3px; }
+.bf-cal-d i{ height:20px; border-radius:4px; background:color-mix(in srgb, var(--giz) 5%, transparent); font-style:normal; }
+.bf-cal-d i.on{ background:color-mix(in srgb, var(--ouro) calc(var(--a) * 100%), color-mix(in srgb, var(--giz) 5%, transparent)); cursor:help; }
+.bf-cal-d i.bf{ outline:1.5px solid var(--giz); outline-offset:-1.5px; }
+.bf-cal-cab .bf-cal-d i{ height:auto; background:none; font:calc(10px * var(--esc)) var(--f-m); color:var(--grafite); text-align:left; }
+.bf-seg{ align-self:flex-start; flex-wrap:wrap; }
+.bf-grupo{ display:flex; flex-direction:column; gap:10px; }
+.bf-g-cab{ display:flex; align-items:center; gap:10px; margin-top:6px; }
+.bf-g-cab h3{ margin:0; font-size:calc(15.5px * var(--esc)); color:var(--giz); }
+.bf-g-cab > span{ margin-left:auto; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.bf-rota{ display:grid; grid-template-columns:minmax(0, 1fr) 250px; border:1px solid var(--fio); border-radius:var(--r-lg); overflow:hidden; background:var(--sup-0); }
+.bf-25{ padding:14px 16px; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px 16px; align-items:start; }
+.bf-rt{ display:flex; align-items:center; gap:8px; min-width:0; }
+.bf-rt .disco-prog{ width:34px; height:34px; font-size:calc(12px * var(--esc)); }
+.bf-seta{ width:14px; height:14px; fill:none; stroke:var(--grafite); stroke-width:2; flex-shrink:0; }
+.bf-nome{ color:var(--giz); font-weight:600; font-size:calc(14px * var(--esc)); margin-left:4px; }
+.bf-data{ color:var(--grafite); font-size:calc(12px * var(--esc)); margin:2px 0 0 4px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.bf-vezes{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); padding:1px 7px; border-radius:999px; border:1px solid color-mix(in srgb, var(--anil) 45%, transparent); color:var(--anil-claro); cursor:help; }
+.bf-chip{ font-family:var(--f-m); font-size:calc(10.5px * var(--esc)); padding:1px 7px; border-radius:999px; background:color-mix(in srgb, var(--ouro) 14%, transparent); color:var(--ouro); font-weight:600; }
+.bf-max{ text-align:right; }
+.bf-max b{ display:block; font:600 calc(22px * var(--esc))/1 var(--f-m); color:var(--ouro); white-space:nowrap; }
+.bf-max span{ font-size:calc(11px * var(--esc)); color:var(--grafite); }
+.bf-fxs{ grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px; }
+.bf-fx{ display:inline-flex; align-items:center; gap:6px; padding:3px 4px 3px 10px; border-radius:999px; border:1px solid var(--fio); font-size:calc(12px * var(--esc)); }
+.bf-fx em{ font-style:normal; color:var(--grafite); }
+.bf-fx b{ font-family:var(--f-m); font-weight:600; color:var(--giz); padding:1px 7px; border-radius:999px; background:color-mix(in srgb, var(--giz) 7%, transparent); }
+.bf-fx.top{ border-color:color-mix(in srgb, var(--ouro) 50%, transparent); }
+.bf-fx.top b{ background:color-mix(in srgb, var(--ouro) 18%, transparent); color:var(--ouro); }
+.bf-reg{ grid-column:1 / 2; display:flex; flex-direction:column; gap:2px; color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.45; }
+.bf-link{ grid-column:2; align-self:end; display:inline-flex; gap:6px; align-items:center; color:var(--anil-claro); font-size:calc(12.5px * var(--esc)); text-decoration:none; white-space:nowrap; }
+.bf-link:hover{ text-decoration:underline; }
+.bf-link svg, .bf-outros svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.bf-26{ padding:14px 16px; border-left:1px dashed var(--fio-forte); background:color-mix(in srgb, var(--giz) 2.5%, transparent); display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+.bf-26-rot{ font-family:var(--f-m); font-size:calc(11px * var(--esc)); letter-spacing:.1em; color:var(--grafite); display:flex; gap:8px; align-items:center; }
+.bf-selo{ font-family:var(--f-b, inherit); letter-spacing:0; font-size:calc(11px * var(--esc)); padding:2px 8px; border-radius:999px; border:1px solid currentColor; }
+.bf-selo.jade, .bf-26-v.jade{ color:var(--jade); } .bf-selo.ouro, .bf-26-v.ouro{ color:var(--ouro); } .bf-selo.brasa, .bf-26-v.brasa{ color:var(--brasa); } .bf-selo.x, .bf-26-v.x{ color:var(--grafite); }
+.bf-26-v{ font:600 calc(22px * var(--esc))/1 var(--f-m); }
+.bf-26-s{ font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.bf-rota.jade{ border-color:color-mix(in srgb, var(--jade) 45%, transparent); }
+.bf-rota.brasa{ border-color:color-mix(in srgb, var(--brasa) 45%, transparent); }
+.bf-outros{ margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
+.bf-outros a{ display:inline-flex; gap:6px; align-items:center; padding:6px 12px; border-radius:999px; border:1px solid var(--fio); color:var(--giz-2); text-decoration:none; font-size:calc(12.5px * var(--esc)); }
+.bf-outros a:hover{ border-color:var(--anil); color:var(--anil-claro); }
+.bf-fonte{ margin:12px 0 0; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.bf-fonte a{ color:var(--anil-claro); }
+@media (max-width:760px){
+  .bf-heroi{ grid-template-columns:1fr; padding:20px 18px; }
+  .bf-cont{ justify-self:start; display:flex; gap:10px; align-items:baseline; padding:10px 14px; }
+  .bf-cont b{ font-size:calc(30px * var(--esc)); }
+  .bf-placar{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .bf-rota{ grid-template-columns:1fr; }
+  .bf-26{ border-left:0; border-top:1px dashed var(--fio-forte); }
+  .bf-reg{ grid-column:1 / -1; }
+  .bf-link{ grid-column:1 / -1; }
+  .bf-cal-l{ grid-template-columns:96px minmax(420px, 1fr); }
+}
+</style>
+<script>
+/* ══ BLACK FRIDAY 2025: a régua para comparar a Black de 2026 ═════════════════
+   Fonte: cartoesdecredito.me, "Black Friday: veja o que rolou em 2025 para
+   comparar com 2026" (12/10/2026) e a matéria de cada campanha, abertas uma a
+   uma em 15/10/2026. Só entra o que a matéria diz; "pub" é o dia em que a
+   matéria saiu e "fim" o último dia da campanha.
+   cat: tr = transferência, cp = compra de pontos, lj = compra em loja (pts/real),
+   ht = hotel (ALL Accor). v = o máximo da campanha, na unidade da categoria. */
+const BLACK_FONTE = 'https://www.cartoesdecredito.me/geral/black-friday-veja-o-que-rolou-em-2025-para-comparar-com-2026/';
+const BLACK_2025 = [
+  /* ── transferências para a Smiles ── */
+  {n:15, cat:'tr', para:'smiles', de:'', deN:'Todos os parceiros', v:100, pub:'2025-11-06', fim:'2025-11-07',
+   fx:[['Clube Smiles ou Diamante, só quem recebeu e-mail', 100]], lim:'300 mil milhas de bônus por CPF',
+   r:'Só para clientes selecionados por e-mail, sem cadastro. Bônus válido por 12 meses.',
+   link:'https://www.cartoesdecredito.me/noticia/smiles-100-de-bonus-nas-transferencias/'},
+  {n:16, cat:'tr', para:'smiles', de:'', deN:'Todos os parceiros', v:100, pub:'2025-11-12', fim:'2025-11-13',
+   fx:[['Todos', 50], ['Clube 1.000', 90], ['Clube 2.000 e 3.000', 93], ['Clube 5.000', 95], ['Clube 7.000', 97], ['Clube 10.000', 98], ['Clube 20.000 ou Diamante', 100]],
+   lim:'500 mil milhas de bônus por CPF', r:'Cadastro antes de transferir. Bônus válido por 12 meses.',
+   link:'https://www.cartoesdecredito.me/noticia/smiles-ate-100-de-bonus-nas-transferencias/'},
+  {n:17, cat:'tr', para:'smiles', de:'', deN:'Todos os parceiros', v:100, pub:'2025-11-27', fim:'2025-11-28',
+   fx:[['Todos', 50], ['Clube 1.000', 90], ['Clube 2.000 e 3.000', 93], ['Clube 5.000', 95], ['Clube 7.000', 97], ['Clube 10.000', 98], ['Clube 20.000 ou Diamante', 100]],
+   lim:'300 mil milhas de bônus por CPF', r:'Cadastro antes de transferir. Bônus válido por 12 meses.',
+   link:'https://www.cartoesdecredito.me/noticia/smiles-ate-100-de-bonus-nas-transferencias-2/'},
+  {n:18, cat:'tr', para:'smiles', de:'livelo', deN:'Livelo', v:90, pub:'2025-11-24', fim:'2025-11-25',
+   fx:[['Todos', 50], ['Clube Smiles, Diamante ou Clube Livelo', 90]], lim:'300 mil milhas de bônus por CPF; mínimo de 10 mil pontos',
+   r:'Cadastro antes de transferir. Bônus válido por 12 meses.',
+   link:'https://www.cartoesdecredito.me/noticia/smiles-e-livelo-ate-90-de-bonus-nas-transferencias-2/'},
+  {n:19, cat:'tr', para:'smiles', de:'atomos', deN:'C6 Bank', v:70, pub:'2025-11-19', fim:'2025-11-24',
+   fx:[['Todos', 40], ['Clube Smiles ou Diamante', 70]], lim:'300 mil milhas de bônus por CPF', r:'Cadastro antes de transferir.',
+   link:'https://www.cartoesdecredito.me/noticia/smiles-e-c6-bank-ate-70-de-bonus-nas-transferencias-2/'},
+  {n:20, cat:'tr', para:'smiles', de:'', deN:'Inter', v:70, pub:'2025-11-04', fim:'2025-11-05',
+   fx:[['Todos', 40], ['Clube Smiles ou Diamante', 70]], lim:'300 mil milhas de bônus por CPF; mínimo de 10 mil pontos',
+   r:'Só Inter Prime e Win. Cadastro antes de transferir.',
+   link:'https://www.cartoesdecredito.me/noticia/smiles-inter-ate-70-de-bonus-nas-transferencias/'},
+  /* ── transferências para a Azul ── */
+  {n:21, cat:'tr', para:'azul', de:'', deN:'Todos os parceiros', v:100, pub:'2025-11-17', fim:'2025-11-19',
+   fx:[['Todos', 80], ['Clube Azul', 100], ['+ tempo de Clube (6 meses a 5 anos)', '+5 a +30']],
+   lim:'500 mil pontos de bônus por CPF', r:'Todos os parceiros financeiros, menos Porto. Cadastro antes de transferir.',
+   link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-ate-100-de-bonus-nas-transferencias/'},
+  {n:22, cat:'tr', para:'azul', de:'', deN:'KMV (Ipiranga)', v:100, pub:'2025-11-11', fim:'2025-11-16',
+   fx:[['Todos', 60], ['Clube Azul há mais de 24h', 100]], lim:'6 trocas por mês, no app Abastece Aí',
+   r:'Paga taxa de R$ 285 a cada 10 mil pontos: milheiro de R$ 17,81 (60%) ou R$ 14,25 (100%).',
+   link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-kmv-ate-100-de-bonus-nas-transferencias-2/'},
+  {n:23, cat:'tr', para:'azul', de:'', deN:'Bancos menores', v:95, pub:'2025-11-03', fim:'2025-11-07',
+   fx:[['Todos', 75], ['Clube Azul', 95], ['+ tempo de Clube', '+5 a +20']], lim:'300 mil pontos de bônus por CPF',
+   r:'Banpará, BNB, Banrisul, Nomad, Dotz, Genial, Mercantil, Sicoob, BIB, BV e Banestes.',
+   link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-ate-95-de-bonus-nas-transferencias/'},
+  {n:24, cat:'tr', para:'azul', de:'livelo', deN:'Livelo', v:95, pub:'2025-11-03', fim:'2025-11-07',
+   fx:[['Todos', 75], ['Clube Azul ou Clube Livelo', 95], ['+ tempo de Clube Azul', '+5 a +20']], lim:'500 mil pontos de bônus por CPF',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-livelo-ate-95-de-bonus-nas-transferencias/'},
+  {n:25, cat:'tr', para:'azul', de:'atomos', deN:'C6 Bank', v:90, pub:'2025-11-03', fim:'2025-11-05',
+   fx:[['Todos', 70], ['Clube Azul', 90], ['+ tempo de Clube', '+5 a +20']], lim:'300 mil pontos de bônus por CPF',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-c6-bank-ate-90-de-bonus-nas-transferencias/'},
+  {n:26, cat:'tr', para:'azul', de:'itau', deN:'Itaú', v:90, pub:'2025-11-10', fim:'2025-11-11',
+   fx:[['Todos', 70], ['Clube Azul', 90], ['+ tempo de Clube', '+5 a +30']], lim:'300 mil pontos de bônus por CPF',
+   r:'Itaú Shop, Pão de Açúcar e Credicard.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-itau-ate-90-de-bonus-nas-transferencias/'},
+  {n:27, cat:'tr', para:'azul', de:'', deN:'Inter', v:90, pub:'2025-11-10', fim:'2025-11-12',
+   fx:[['Todos', 70], ['Clube Azul', 90], ['+ tempo de Clube', '+5 a +30']], lim:'500 mil pontos de bônus por CPF',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-inter-ate-90-de-bonus-nas-transferencias/'},
+  {n:28, cat:'tr', para:'azul', de:'esfera', deN:'Esfera', v:90, pub:'2025-11-13', fim:'2025-11-16',
+   fx:[['Todos', 70], ['Clube Azul', 90], ['+ tempo de Clube', '+5 a +30']], lim:'500 mil pontos de bônus por CPF',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-esfera-ate-90-de-bonus-nas-transferencias/'},
+  /* ── LATAM Pass e ConnectMiles ── */
+  {n:29, cat:'tr', para:'latampass', de:'', deN:'Vários bancos', v:30, pub:'2025-11-26', fim:'2025-11-30',
+   fx:[['Todos', 30]], lim:'300 mil pontos extras', r:'Itaú, Credicard, Sicredi, C6, BTG, Banrisul, Sicoob e outros. Cadastro no app antes.',
+   link:'https://www.cartoesdecredito.me/noticia/latam-pass-ganhe-30-de-bonus-nas-transferencias-2/'},
+  {n:30, cat:'tr', para:'latampass', de:'', deN:'Sicredi', v:30, pub:'2025-11-03', fim:'2025-11-05', fx:[['Todos', 30]], lim:'',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-sicredi-30-de-bonus-nas-transferencias/'},
+  {n:31, cat:'tr', para:'latampass', de:'banriclube', deN:'Banrisul', v:30, pub:'2025-11-05', fim:'2025-11-07', fx:[['Todos', 30]], lim:'',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-e-banrisul-30-de-bonus-nas-transferencias/'},
+  {n:32, cat:'tr', para:'latampass', de:'itau', deN:'Itaú', v:30, pub:'2025-11-10', fim:'2025-11-14', fx:[['Todos', 30]], lim:'',
+   r:'Itaú Shop, Pão de Açúcar e Credicard.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-itau-30-de-bonus-nas-transferencias-2/'},
+  {n:33, cat:'tr', para:'latampass', de:'atomos', deN:'C6 Bank', v:30, pub:'2025-11-17', fim:'2025-11-18', fx:[['Todos', 30]], lim:'300 mil pontos extras por CPF',
+   r:'Cadastro antes de transferir.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-e-c6-bank-30-de-bonus-nas-transferencias-2/'},
+  {n:34, cat:'tr', para:'latampass', de:'', deN:'Nubank', v:30, pub:'2025-11-24', fim:'2025-11-25', fx:[['Todos', 30]], lim:'',
+   r:'Cadastro no app LATAM Pass antes.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-e-nubank-30-de-bonus-nas-transferencias/'},
+  {n:35, cat:'tr', para:'latampass', de:'', deN:'Porto Bank', v:30, pub:'2025-11-28', fim:'2025-11-28', fx:[['Todos', 30]], lim:'',
+   r:'Só no dia 28/11. Mais 1.500 pontos na primeira transferência.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-e-porto-bank-30-de-bonus-nas-transferencias-2/'},
+  {n:36, cat:'tr', para:'connect', de:'esfera', deN:'Esfera', v:75, pub:'2025-11-26', fim:'2025-11-30',
+   fx:[['Todos', 50], ['Clube Esfera', 75]], lim:'500 mil pontos de bônus por CPF', r:'Paridade de 3 pontos Esfera para 1 milha.',
+   link:'https://www.cartoesdecredito.me/noticia/esfera-e-connectmiles-ate-75-de-bonus-nas-transferencias-2/'},
+  /* ── compra de pontos (v = desconto efetivo; o bônus vira desconto: 320% = 76,2%) ── */
+  {n:11, cat:'cp', para:'esfera', v:55, pub:'2025-11-28', fim:'2025-11-30', tipoV:'desc',
+   fx:[['Demais clientes (cupom 50BEST)', '50% off'], ['Clube Esfera (cupom 55BEST)', '55% off']], mil:'R$ 35,00 (50%) e R$ 31,50 (55%)',
+   lim:'Limite mensal de 200 mil (sem clube) a 1,25 milhão (Exclusive)', r:'Só no cartão de crédito, até 12x.',
+   link:'https://www.cartoesdecredito.me/noticia/esfera-ate-55-off-na-compra-de-pontos-2/'},
+  {n:12, cat:'cp', para:'azul', v:76.2, bonus:320, pub:'2025-11-24', fim:'2025-12-01', tipoV:'bonus',
+   fx:[['Todos', '+120%'], ['Topázio, Safira ou Diamante', '+220%'], ['Clube Azul', '+320%']], mil:'R$ 31,81 · R$ 21,87 · R$ 16,66 (R$ 15,00 com cartão Azul Itaú)',
+   lim:'3 milhões de pontos por ano', r:'Até 10x sem juros. Cartão Azul Itaú dá mais 10% de desconto.',
+   link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-ate-320-de-bonus-na-compra-de-pontos/'},
+  {n:13, cat:'cp', para:'latampass', v:66, pub:'2025-11-25', fim:'2025-11-26', tipoV:'desc',
+   fx:[['Todos', '64% off'], ['Cartão LATAM Pass Itaú', '66% off']], mil:'R$ 25,20 (64%) e R$ 23,80 (66%)',
+   lim:'Até 200 mil pontos', r:'Pelo app, até 10x sem juros. Lotes de mil pontos.',
+   link:'https://www.cartoesdecredito.me/noticia/latam-pass-ate-66-off-na-compra-de-milhas/'},
+  {n:14, cat:'cp', para:'aeroplan', v:50, bonus:100, pub:'2025-11-23', fim:'2025-12-17', tipoV:'bonus',
+   fx:[['5 a 25 mil pontos', '+55%'], ['30 a 70 mil', '+75%'], ['Acima de 80 mil', '+100%']], mil:'CAD 24,19 · 21,42 · 18,75 (em dólar canadense)',
+   lim:'Até 500 mil pontos', r:'O bônus pode variar de pessoa para pessoa.',
+   link:'https://www.cartoesdecredito.me/milhas/compre-milhas-aeroplan-da-air-canada-com-ate-100-de-bonus-4/'},
+  /* ── compra em loja (pontos por real) ── */
+  {n:2, cat:'lj', para:'azul', loja:'Natura', v:20, pub:'2025-11-10', fim:'2025-11-13', fx:[['Todos', 12], ['Clube Azul', 20]], lim:'',
+   r:'Cupom PONTOSAZUL, só produtos vendidos pela Natura.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-natura-ate-20-pontos-por-real-em-compras/'},
+  {n:3, cat:'lj', para:'livelo', loja:'Natura', v:10, pub:'2025-11-11', fim:'2025-11-11', fx:[['Todos', 10]], lim:'',
+   r:'Só no dia 11/11, cupom LIVELO.', link:'https://www.cartoesdecredito.me/noticia/livelo-e-natura-10-pontos-por-real-em-compras/'},
+  {n:5, cat:'lj', para:'livelo', loja:'Natura', v:8, pub:'', fim:'', fx:[['Todos', 8]], lim:'',
+   r:'Segunda campanha da Livelo com a Natura na Black 2025.', link:'https://www.cartoesdecredito.me/noticia/livelo-e-natura-8-pontos-por-real-em-compras/'},
+  {n:4, cat:'lj', para:'esfera', loja:'Natura', v:10, pub:'2025-11-17', fim:'2025-11-17', fx:[['Todos', 6], ['Clube Esfera', 10]], lim:'300 mil pontos por CPF',
+   r:'Só no dia 17/11, cupom ESFERA.', link:'https://www.cartoesdecredito.me/noticia/esfera-e-natura-ate-10-pontos-por-real-em-compras/'},
+  {n:6, cat:'lj', para:'esfera', loja:'Casas Bahia', v:7, pub:'2025-11-25', fim:'2025-11-25', fx:[['Todos', 6], ['Clube Esfera', 7]], lim:'200 mil pontos por CPF',
+   r:'Só no dia 25/11.', link:'https://www.cartoesdecredito.me/noticia/esfera-casas-bahia-ate-7-pontos-por-real-em-compras/'},
+  {n:7, cat:'lj', para:'esfera', loja:'Magalu', v:6, pub:'2025-11-17', fim:'2025-11-17', fx:[['Todos', 5], ['Clube Esfera', 6], ['Lojas parceiras Magalu', '2 a 3']], lim:'200 mil pontos por CPF',
+   r:'Só no dia 17/11, vendido e entregue por Magalu.', link:'https://www.cartoesdecredito.me/noticia/esfera-e-magalu-ate-6-pontos-por-real-em-compras-3/'},
+  {n:8, cat:'lj', para:'livelo', loja:'Amazon', v:4, pub:'2025-11-24', fim:'2025-11-30', fx:[['Todos', 4]], lim:'',
+   r:'Informar o CPF na página da Livelo antes de comprar.', link:'https://www.cartoesdecredito.me/noticia/livelo-e-amazon-4-pontos-por-real-em-compras-3/'},
+  {n:10, cat:'lj', para:'livelo', loja:'C&A, Mizuno e Petz', v:15, pub:'', fim:'', fx:[['Conforme a loja', '11 a 15']], lim:'',
+   r:'Balanço da Black 2025.', link:'https://www.cartoesdecredito.me/geral/black-friday-2025-decepcionante-ou-imperdivel/'},
+  {n:9, cat:'lj', para:'esfera', loja:'Pague Menos', v:4, pub:'', fim:'', fx:[['Todos', 4]], lim:'',
+   r:'Balanço da Black 2025.', link:'https://www.cartoesdecredito.me/geral/black-friday-2025-decepcionante-ou-imperdivel/'},
+  {n:1, cat:'lj', para:'', loja:'Shop Coopera (Sicoob)', v:10, pub:'', fim:'', fx:[['Site todo, sem clube', 10]], lim:'',
+   r:'Pontos Coopera.', link:'https://www.cartoesdecredito.me/geral/comprei-meu-iphone-17-na-black-friday/'},
+  /* ── hotéis: ALL Accor ── */
+  {n:37, cat:'ht', para:'accor', de:'livelo', deN:'Livelo', v:10, pub:'2025-11-26', fim:'2025-11-28', fx:[['Todos', '25% de volta em Livelo'], ['ALL Signature', '+10%']],
+   mil:'Euro a R$ 4,20 (R$ 3,82 com Signature)', lim:'', r:'Os 25% voltam em pontos Livelo.', link:'https://www.cartoesdecredito.me/noticia/livelo-e-all-25-de-volta-10-de-bonus/'},
+  {n:38, cat:'ht', para:'accor', de:'esfera', deN:'Esfera', v:30, pub:'2025-11-03', fim:'2025-11-05', fx:[['Todos', 20], ['ALL Signature', '+10']],
+   mil:'Euro a R$ 4,67 (R$ 4,31 com Signature)', lim:'Bônus até 50 mil pontos ALL; uso único', r:'Contas da mesma pessoa.', link:'https://www.cartoesdecredito.me/noticia/esfera-e-all-ate-30-de-bonus-nas-transferencias-2/'},
+  {n:39, cat:'ht', para:'accor', de:'azul', deN:'Azul', v:30, pub:'2025-11-06', fim:'2025-11-07', fx:[['Todos', 10], ['ALL Signature', '+10'], ['Conta ALL ligada à Azul', '+10']],
+   mil:'Euro a R$ 4,45 (até R$ 3,77)', lim:'Bônus até 50 mil pontos ALL', r:'Só Clube Azul, cartão Azul ou Diamante.', link:'https://www.cartoesdecredito.me/noticia/azul-fidelidade-e-all-ate-30-de-bonus-nas-transferencias/'},
+  {n:40, cat:'ht', para:'accor', de:'', deN:'Curtaí (BRB)', v:30, pub:'2025-11-12', fim:'2025-11-14', fx:[['Todos', 20], ['ALL Signature', '+10']],
+   mil:'Euro a R$ 4,74 (R$ 4,38 com Signature)', lim:'Uso único', r:'Só assinantes do Clube Curta+.', link:'https://www.cartoesdecredito.me/noticia/curtai-e-all-ate-30-de-bonus-nas-transferencias-2/'},
+  {n:41, cat:'ht', para:'accor', de:'smiles', deN:'Smiles', v:25, pub:'2025-11-08', fim:'2025-11-11', fx:[['Todos', 15], ['ALL Signature', '+10']],
+   mil:'Euro a R$ 4,04 (R$ 3,72 com Signature)', lim:'Bônus até 50 mil pontos ALL', r:'Clube Smiles e Diamante com paridade 6:1.', link:'https://www.cartoesdecredito.me/noticia/smiles-e-all-accor-ate-25-de-bonus-2/'},
+  {n:42, cat:'ht', para:'accor', de:'latampass', deN:'LATAM Pass', v:20, pub:'2025-11-17', fim:'2025-11-19', fx:[['Todos', 10], ['ALL Signature', 20]],
+   mil:'Euro a R$ 4,36 (R$ 4,00 com Signature)', lim:'Bônus até 50 mil pontos ALL', r:'Paridade promocional de 4:1.', link:'https://www.cartoesdecredito.me/noticia/latam-pass-e-all-accor-ate-20-de-bonus-nas-transferencias-3/'}
+];
+const BLACK_OUTROS = [
+  ['Uber: 15% de desconto', 'https://www.cartoesdecredito.me/geral/ganhe-15-de-desconto-na-uber/'],
+  ['iFood: R$ 20 de desconto com cartão Santander', 'https://www.cartoesdecredito.me/geral/ifood-r-2000-de-desconto-com-um-cartao-santander/'],
+  ['Seats.aero: 30% de desconto na primeira assinatura', 'https://www.cartoesdecredito.me/geral/seats-aero-30-de-desconto-na-assinatura/'],
+  ['Azul Fidelidade: 3.500 pontos para novos cadastros', 'https://www.cartoesdecredito.me/milhas/azul-fidelidade-ganhe-3-500-pontos-ao-realizar-o-seu-cadastro/'],
+  ['Cartão GOL Smiles: até 7 milhas por dólar', 'https://www.cartoesdecredito.me/cartoes/cartao-gol-smiles-promocao-prorrogada-oferece-ate-7-milhas-por-dolar/']
+];
+
+/* ══ PÁGINA BLACK FRIDAY (15/10/2026, pedido do Jadiel) ═══════════════════════
+   Cada rota de 2025 (destino + origem, ou loja + programa) fica ao lado da
+   campanha de 2026 da mesma rota, quando ela for cadastrada em Campanhas (ou
+   colada como anúncio). A Torre compara pelo máximo de cada uma e diz se a
+   deste ano está melhor, igual ou pior. Nada é digitado duas vezes: a de 2026
+   é a campanha normal da Torre, achada pela rota e pela data. */
+const BLACK_DIA_2026 = '2026-11-27';
+const BLACK_JANELA_26 = ['2026-10-27', '2026-12-10'];
+const BLACK_CATS = {tr:'Transferências', cp:'Compra de pontos', lj:'Compras em lojas', ht:'Hotéis (ALL Accor)'};
+const BLACK_UNID = {tr:'% de bônus', cp:'% de desconto', lj:'pts por real', ht:'% de bônus'};
+let bfCat = 'tr';
+try { bfCat = localStorage.getItem('torre-bf-cat') || 'tr'; } catch(_){}
+
+function bfRotaKey(e){ return [e.cat, e.para || '', e.loja ? 'L:' + _bfSem(e.loja) : (e.de || 'T:' + _bfSem(e.deN || ''))].join('|'); }
+function _bfSem(t){ return (typeof semAcento === 'function' ? semAcento(String(t || '')) : String(t || '')).toLowerCase().trim(); }
+function bfRotas(){
+  const m = new Map();
+  BLACK_2025.forEach(e => { const k = bfRotaKey(e); if (!m.has(k)) m.set(k, {k, cat:e.cat, para:e.para, de:e.de || '', deN:e.deN || '', loja:e.loja || '', vezes:[]}); m.get(k).vezes.push(e); });
+  m.forEach(r => { r.vezes.sort((a, b) => String(a.pub || a.fim).localeCompare(String(b.pub || b.fim))); r.max = Math.max(...r.vezes.map(e => e.v)); r.top = r.vezes.filter(e => e.v === r.max).pop(); /* a mais recente com o máximo, que costuma trazer todas as faixas */ });
+  return [...m.values()];
+}
+/* o número de 2026, na mesma régua do de 2025 */
+function bfValor26(c, cat){
+  const fx = (c.faixas || []).map(f => Number(f.v) || 0);
+  if (cat === 'cp'){ const d = (Number(c.desconto) || 0) / 100, b = (Number(c.bonus) || 0) / 100; const ef = 1 - (1 - d) / (1 + b); return ef > 0 ? Math.round(ef * 1000) / 10 : null; }
+  if (cat === 'lj') return Math.max(Number(c.ptsPorReal) || 0, ...fx) || null;
+  return Math.max(Number(c.bonus) || 0, ...fx) || null;
+}
+function bfAchar26(r){
+  const tipo = r.cat === 'cp' ? 'compra' : r.cat === 'lj' ? 'bonificada' : 'transferencia';
+  const [ini, fim] = BLACK_JANELA_26;
+  const txt = c => _bfSem([c.titulo, c.regra, c.parceiro].filter(Boolean).join(' '));
+  return (DB.campanhas || []).filter(c => {
+    if (!c || c.tipo !== tipo) return false;
+    const d = String(c.inicio || c.fim || '').slice(0, 10);
+    if (!d || d < ini || d > fim) return false;
+    if (r.cat === 'lj'){
+      if (r.para && c.para !== r.para) return false;
+      return _bfSem(r.loja).split(/[ ,]+e?\s*/).filter(w => w.length >= 3).some(w => txt(c).includes(w));
+    }
+    if (c.para !== r.para) return false;
+    if (r.cat === 'cp') return true;
+    if (r.de) return c.de === r.de;
+    if (/todos|varios/.test(_bfSem(r.deN))) return !c.de;
+    return _bfSem(r.deN).split(/[ ()]+/).filter(w => w.length >= 3).some(w => txt(c).includes(w));
+  }).map(c => ({c, v:bfValor26(c, r.cat)})).filter(x => x.v != null).sort((a, b) => b.v - a.v);
+}
+function bfVeredito(r){
+  const achadas = bfAchar26(r), hj = hojeISO();
+  if (!achadas.length) return {k:hj > BLACK_JANELA_26[1] ? 'nao' : 'espera', achadas};
+  const v = achadas[0].v, d = Math.round((v - r.max) * 10) / 10;
+  return {k:d > 0.5 ? 'melhor' : d < -0.5 ? 'pior' : 'igual', v, d, achadas};
+}
+const _bfFmt = (v, cat) => cat === 'lj' ? `${nBRdec(v)} pts/real` : `${nBRdec(v)}%${cat === 'cp' ? ' off' : ''}`;
+const _bfDM = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
+
+function renderBlack(){
+  const alvo = document.getElementById('bfBlack'); if (!alvo) return;
+  const rotas = bfRotas(), hj = hojeISO();
+  const ver = rotas.map(r => ({r, v:bfVeredito(r)}));
+  const conta = k => ver.filter(x => x.v.k === k).length;
+  const dias = Math.round((Date.parse(BLACK_DIA_2026) - Date.parse(hj)) / 864e5);
+  const contagem = dias > 0 ? `<b>${dias}</b><span>${dias === 1 ? 'dia' : 'dias'} para a Black</span>` : dias === 0 ? '<b>Hoje</b><span>é a Black Friday</span>' : '<b>Passou</b><span>a Black de 2026</span>';
+
+  /* lições que a própria Black 2025 ensina, tiradas dos números */
+  const dest = ['smiles', 'azul', 'latampass', 'connect'].map(p => {
+    const es = BLACK_2025.filter(e => e.cat === 'tr' && e.para === p);
+    return es.length ? {p, max:Math.max(...es.map(e => e.v)), n:es.length} : null;
+  }).filter(Boolean);
+  const smiles100 = BLACK_2025.filter(e => e.cat === 'tr' && e.para === 'smiles' && e.v === 100);
+  const datas = BLACK_2025.map(e => e.pub).filter(Boolean).sort();
+  const licoes = [
+    `A Black das milhas durou o mês todo: a primeira campanha saiu em <b>${dataBR(datas[0])}</b> e a última em <b>${dataBR(datas[datas.length - 1])}</b>. Não espere a sexta-feira.`,
+    smiles100.length > 1 ? `A Smiles deu <b>100%</b> ${smiles100.length} vezes (${smiles100.map(e => _bfDM(e.pub)).join(', ')}). Se perder uma, costuma vir outra.` : '',
+    `Teto de bônus por destino: ${dest.map(d => `${esc(prog(d.p).n)} <b>${d.max}%</b>`).join(' · ')}.`,
+    'Na Smiles, na Azul e na ConnectMiles o bônus máximo exigia clube; sem clube ficava entre 40% e 80%. Na LATAM Pass os 30% valiam para todos.',
+    'A Iberia via Esfera não voltou na Black 2025, segundo o balanço da matéria.'
+  ].filter(Boolean);
+
+  /* calendário de novembro de 2025: um quadrado por dia, uma linha por destino */
+  const linhasCal = [['smiles', 'tr', 'Smiles'], ['azul', 'tr', 'Azul'], ['latampass', 'tr', 'LATAM Pass'], ['connect', 'tr', 'ConnectMiles'], ['accor', 'ht', 'ALL Accor'], ['*', 'cp', 'Compra de pontos'], ['*', 'lj', 'Lojas']];
+  const cal = linhasCal.map(([p, cat, nome]) => {
+    const es = BLACK_2025.filter(e => e.cat === cat && (p === '*' || e.para === p) && e.pub);
+    const maxCat = Math.max(...BLACK_2025.filter(e => e.cat === cat).map(e => e.v), 1);
+    const cel = Array.from({length:30}, (_, i) => {
+      const d = `2025-11-${String(i + 1).padStart(2, '0')}`;
+      const no = es.filter(e => e.pub <= d && (e.fim || e.pub) >= d);
+      const v = no.length ? Math.max(...no.map(e => e.v)) : 0;
+      const dica = no.length ? `${_bfDM(d)}: ` + no.map(e => `${e.deN || e.loja || prog(e.para).n} ${_bfFmt(e.v, cat)}`).join(' · ') : '';
+      return `<i${no.length ? ` style="--a:${(0.25 + 0.75 * v / maxCat).toFixed(2)}" class="on${d === '2025-11-28' ? ' bf' : ''}" data-dica="${esc(dica)}"` : d === '2025-11-28' ? ' class="bf"' : ''}></i>`;
+    }).join('');
+    return `<div class="bf-cal-l"><span>${nome}</span><div class="bf-cal-d">${cel}</div></div>`;
+  }).join('');
+
+  const cats = Object.keys(BLACK_CATS);
+  if (!cats.includes(bfCat)) bfCat = 'tr';
+  const daCat = ver.filter(x => x.r.cat === bfCat);
+  /* agrupa por destino (ou programa, nas lojas) e ordena pelo maior de 2025 */
+  const grupos = new Map();
+  daCat.forEach(x => { const g = bfCat === 'cp' ? 'cp' : (x.r.para || 'outros'); if (!grupos.has(g)) grupos.set(g, []); grupos.get(g).push(x); });
+  const gOrd = [...grupos.entries()].sort((a, b) => Math.max(...b[1].map(x => x.r.max)) - Math.max(...a[1].map(x => x.r.max)));
+  const SELO = {melhor:['jade', 'Melhor que 2025'], igual:['ouro', 'Igual a 2025'], pior:['brasa', 'Pior que 2025'], espera:['x', 'Ainda não saiu'], nao:['x', 'Não repetiu']};
+  const linha = ({r, v}) => {
+    const t = r.top, cat = r.cat;
+    const origem = cat === 'lj' ? `${esc(r.loja)}` : cat === 'cp' ? `Compra de ${esc(prog(r.para).n)}` : `${esc(r.deN || prog(r.de).n)}`;
+    const discos = cat === 'lj' ? (r.para ? discoProg(r.para) : '<span class="disco-prog" style="--marca:#7a8">CO</span>')
+      : cat === 'cp' ? discoProg(r.para) : (r.de ? discoProg(r.de) : `<span class="disco-prog" style="--marca:#8a93a6">${esc((r.deN || '?').replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 2).toUpperCase())}</span>`) + '<svg class="bf-seta"><use href="#i-seta"/></svg>' + discoProg(r.para);
+    const fx = (t.fx || []).map(([q, n]) => `<span class="bf-fx${n === t.v || n === r.max ? ' top' : ''}"><em>${esc(q)}</em><b>${esc(typeof n === 'number' ? (cat === 'lj' ? n : n + '%') : n)}</b></span>`).join('');
+    const vezes = r.vezes.length > 1 ? `<span class="bf-vezes" data-dica="${esc(r.vezes.map(e => `${_bfDM(e.pub) || '?'}: ${_bfFmt(e.v, cat)}`).join(' · '))}">${r.vezes.length} vezes em nov/2025</span>` : '';
+    const [cor, rot] = SELO[v.k];
+    const lado26 = v.achadas && v.achadas.length
+      ? `<div class="bf-26-v ${cor}">${_bfFmt(v.v, cat)}</div><div class="bf-26-s">${Math.abs(v.d) <= 0.5 ? 'o mesmo de 2025' : `${v.d > 0 ? '+' : ''}${nBRdec(v.d)} ${cat === 'lj' ? 'pts/real' : 'pontos percentuais'}`} · ${esc((v.achadas[0].c.titulo || '').slice(0, 60))}</div>`
+      : `<div class="bf-26-v x">—</div><div class="bf-26-s">${v.k === 'nao' ? 'Não apareceu na Black 2026.' : 'Quando sair, cadastre em Campanhas: ela aparece aqui sozinha.'}</div>
+         ${v.k === 'espera' ? `<button type="button" class="bt p fantasma" data-bf-nova="${esc(r.k)}"><svg><use href="#i-mais"/></svg>Cadastrar a de 2026</button>` : ''}`;
+    return `<article class="bf-rota ${cor}">
+      <div class="bf-25">
+        <div class="bf-rt">${discos}<div><div class="bf-nome">${origem}${cat === 'cp' && t.bonus ? ` <span class="bf-chip">bônus de ${t.bonus}%</span>` : ''}</div>
+          <div class="bf-data">${t.pub ? `${_bfDM(t.pub)}${t.fim && t.fim !== t.pub ? ' a ' + _bfDM(t.fim) : ''} de 2025` : 'novembro de 2025'} ${vezes}</div></div></div>
+        <div class="bf-max"><b>${_bfFmt(r.max, cat)}</b><span>${cat === 'cp' && t.bonus ? 'desconto equivalente ao bônus' : 'máximo em 2025'}</span></div>
+        <div class="bf-fxs">${fx}</div>
+        <div class="bf-reg">${t.mil ? `<span>Milheiro: ${esc(t.mil)}</span>` : ''}${t.lim ? `<span>${esc(t.lim)}</span>` : ''}${t.r ? `<span>${esc(t.r)}</span>` : ''}</div>
+        <a class="bf-link" href="${esc(t.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ver a matéria</a>
+      </div>
+      <div class="bf-26"><div class="bf-26-rot">2026 <span class="bf-selo ${cor}">${rot}</span></div>${lado26}</div>
+    </article>`;
+  };
+
+  alvo.innerHTML = `
+    <section class="bf-heroi">
+      <div class="bf-h-txt"><div class="bf-eyebrow">Black Friday · régua de 2025</div>
+        <h2>2026 contra 2025, campanha por campanha</h2>
+        <p>${BLACK_2025.length} campanhas da Black de 2025, com as faixas e as regras de cada matéria. Quando a de 2026 for cadastrada em Campanhas, ela entra ao lado da do ano passado e a Torre diz se está melhor ou pior.</p></div>
+      <div class="bf-cont">${contagem}<small>${dataBR(BLACK_DIA_2026)}</small></div>
+      <div class="bf-placar">
+        <div class="jade"><b>${conta('melhor')}</b><span>melhores</span></div>
+        <div class="ouro"><b>${conta('igual')}</b><span>iguais</span></div>
+        <div class="brasa"><b>${conta('pior')}</b><span>piores</span></div>
+        <div><b>${conta('espera') + conta('nao')}</b><span>${conta('nao') ? 'sem campanha' : 'ainda não saíram'}</span></div>
+      </div>
+    </section>
+    <section class="bf-bloco"><div class="bf-tit">O que a Black 2025 ensinou</div><ul class="bf-licoes">${licoes.map(l => `<li>${l}</li>`).join('')}</ul></section>
+    <section class="bf-bloco"><div class="bf-tit">Novembro de 2025, dia a dia <small>quanto mais forte a cor, maior o bônus · o quadro marcado é a sexta da Black (28/11)</small></div>
+      <div class="bf-cal"><div class="bf-cal-l bf-cal-cab"><span></span><div class="bf-cal-d">${Array.from({length:30}, (_, i) => `<i>${(i + 1) % 5 === 1 || i === 29 ? i + 1 : ''}</i>`).join('')}</div></div>${cal}</div></section>
+    <div class="seg bf-seg" id="bfSeg">${cats.map(c => `<button type="button" data-c="${c}" class="${c === bfCat ? 'on' : ''}">${BLACK_CATS[c]} <span class="cont">${new Set(BLACK_2025.filter(e => e.cat === c).map(bfRotaKey)).size}</span></button>`).join('')}</div>
+    ${gOrd.map(([g, xs]) => `<section class="bf-grupo"><div class="bf-g-cab">${g !== 'outros' && bfCat !== 'cp' ? discoProg(g) : ''}<h3>${bfCat === 'cp' ? 'Compra de pontos' : bfCat === 'lj' ? (g === 'outros' ? 'Outros programas' : 'Pontos ' + esc(prog(g).n)) : 'Para ' + esc(prog(g).n)}</h3><span>${xs.length} ${xs.length === 1 ? 'rota' : 'rotas'}</span></div>
+      ${xs.sort((a, b) => b.r.max - a.r.max).map(linha).join('')}</section>`).join('')}
+    <section class="bf-bloco"><div class="bf-tit">Outros descontos da Black 2025</div>
+      <ul class="bf-outros">${BLACK_OUTROS.map(([t, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}<svg><use href="#i-link"/></svg></a></li>`).join('')}</ul>
+      <p class="bf-fonte">Fonte: <a href="${BLACK_FONTE}" target="_blank" rel="noopener">Cartões de Crédito & Milhas, "Black Friday: veja o que rolou em 2025"</a>, e a matéria de cada campanha.</p></section>`;
+
+  alvo.querySelectorAll('#bfSeg button').forEach(b => b.onclick = () => { bfCat = b.dataset.c; try { localStorage.setItem('torre-bf-cat', bfCat); } catch(_){} renderBlack(); });
+  alvo.querySelectorAll('[data-bf-nova]').forEach(b => b.onclick = () => {
+    const r = rotas.find(x => x.k === b.dataset.bfNova); if (!r) return;
+    const tipo = r.cat === 'cp' ? 'compra' : r.cat === 'lj' ? 'bonificada' : 'transferencia';
+    editarCampanha(null, tipo);
+    setTimeout(() => {
+      const set = (id, v) => { const e = document.getElementById(id); if (e && v && [...e.options].some(o => o.value === v)){ e.value = v; e.dispatchEvent(new Event('change', {bubbles:true})); } };
+      set('cpTipo', tipo); set('cpPara', r.para); if (r.de) set('cpDe', r.de);
+    }, 60);
+  });
+}
+(function(){
+  const _rf = renderFabrica;
+  renderFabrica = function(){ const x = _rf.apply(this, arguments); try { renderBlack(); } catch(e){ console.error(e); } return x; };
+  try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === _rf) RENDER[k] = renderFabrica; }); } catch(_){}
+  const ligar = () => { try { renderBlack(); } catch(e){ console.error(e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ligar, 120)); else setTimeout(ligar, 120);
 })();
 </script>
 </body>
