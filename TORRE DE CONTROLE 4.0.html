@@ -11791,7 +11791,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-14 23:40';
+const BUILD = '2026-10-15 01:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -49754,9 +49754,10 @@ function cqRenderAchados(){
         return `<label class="cq-achado${a.marcado ? ' on' : ''}">
           <span class="cq-ach-ck"><input type="checkbox" data-cq-marcar="${a.id}"${a.marcado ? ' checked' : ''}></span>
           <span class="cq-ach-prog">${a.prog ? discoProg(ccProg(a.prog), 'p') : '<span class="cq-sem-prog">?</span>'}<span><b>${esc(/pelo mundo/i.test(a.progNome || '') ? 'Azul pelo Mundo' : a.prog ? cqNomeProg(a.prog) : (a.progNome || 'programa a definir'))}</b><small>${esc(CQ_FONTE[a.fonte] || '')}</small></span></span>
-          <span class="cq-ach-voo"><span class="cq-ach-rota">${cqRotaAchado(a)}</span><small>${esc([voos, a.paradas, (a.trechos[0] || {}).data ? dataBR(a.trechos[0].data) : ''].filter(Boolean).join(' · '))}</small>${a.aviso ? `<small class="cq-ach-aviso">${esc(a.aviso)}</small>` : ''}</span>
-          <span class="cq-ach-num">${a.milhas ? `<b>${nBR(a.milhas)} milhas</b>` : '<b class="fraco">milhas a informar</b>'}<small>${a.taxas != null && a.taxas !== '' ? '+ ' + brl(a.taxas) + ' de taxas' : 'taxas a informar'}</small>${custo ? `<small>custa ${brl(custo)} ao seu milheiro${a.prog && (sal[a.prog] || 0) >= a.milhas ? ' · tem saldo' : ''}</small>` : ''}${custo != null && venda != null ? `<small>${cqResTxt(venda - custo)} na venda</small>` : ''}</span>
-          <button type="button" class="cq-ach-x" data-cq-tirar="${a.id}" aria-label="Tirar este voo" data-dica="Tirar"><svg><use href="#i-x"/></svg></button>
+          <span class="cq-ach-voo"><span class="cq-ach-rota">${cqRotaAchado(a)}</span><small>${esc([voos, a.paradas, a.duracao, a.cabine, (a.trechos[0] || {}).data ? dataBR(a.trechos[0].data) : ''].filter(Boolean).join(' · '))}</small>${a.aviso ? `<small class="cq-ach-aviso">${esc(a.aviso)}</small>` : ''}</span>
+          <span class="cq-ach-num">${a.milhas ? `<b>${nBR(a.milhas)} milhas</b>` : '<b class="fraco">milhas a informar</b>'}<small>${a.taxas != null && a.taxas !== '' ? '+ ' + brl(a.taxas) + ' de taxas' + (a.taxasMoeda && a.taxasMoeda !== 'BRL' ? ` <span class="cq-moeda-orig">(${esc(rvFmtMoeda(a.taxasOrig, a.taxasMoeda))} × ${String(a.cambio || '').replace('.', ',')})</span>` : '') : a.taxasMoeda && a.taxasMoeda !== 'BRL' && a.taxasOrig ? `<button type="button" class="cq-converter" data-cqb-ajustar="${a.id}">+ ${esc(rvFmtMoeda(a.taxasOrig, a.taxasMoeda))} de taxas · converter para reais</button>` : 'taxas a informar'}</small>${a.totalPax ? `<small>total para ${a.totalPax} passageiro${a.totalPax > 1 ? 's' : ''}</small>` : ''}${custo ? `<small>custa ${brl(custo)} ao seu milheiro${a.prog && (sal[a.prog] || 0) >= a.milhas ? ' · tem saldo' : ''}</small>` : ''}${custo != null && venda != null ? `<small>${cqResTxt(venda - custo)} na venda</small>` : ''}</span>
+          <span class="cq-ach-bts"><button type="button" class="cq-ach-x" data-cqb-ajustar="${a.id}" aria-label="Ajustar este voo" data-dica="Ajustar milhas, taxas e horários"><svg><use href="#i-lapis"/></svg></button>
+          <button type="button" class="cq-ach-x" data-cq-tirar="${a.id}" aria-label="Tirar este voo" data-dica="Tirar"><svg><use href="#i-x"/></svg></button></span>
         </label>`;
       }).join('')}</div>`;
   };
@@ -49764,7 +49765,8 @@ function cqRenderAchados(){
   const idas = m.filter(a => a.sentido !== 'VOLTA').length || (m.length ? m.length : 0);
   cx.innerHTML = `<div class="cq-achados">
     <div class="cq-achados-cab"><div><b>O que foi encontrado</b><div class="fraco">Marque a ida e a volta que vão para o cliente. Marque mais de uma ida para ele comparar.</div></div>
-      <button type="button" class="bt p fantasma" data-cq="limpar-achados">Limpar</button></div>
+      <div class="linha" style="gap:8px">${typeof cqPodeJuntarMarcados === 'function' && cqPodeJuntarMarcados() ? `<button type="button" class="bt p fantasma" data-cqb="juntar-marcados"><svg><use href="#i-link"/></svg>Juntar marcados em um voo</button>` : ''}<button type="button" class="bt p fantasma" data-cq="limpar-achados">Limpar</button></div></div>
+    ${typeof cqAvisoParecidos === 'function' ? cqAvisoParecidos() : ''}
     ${grupo('IDA')}${grupo('VOLTA')}
     <div class="cq-barra"><span><b>${m.length}</b> ${m.length === 1 ? 'voo marcado' : 'voos marcados'}${m.length ? ` · ${idas} ${idas === 1 ? 'opção' : 'opções'} na página` : ''}</span>
       <button type="button" class="bt primario" data-cq="montar"${m.length ? '' : ' disabled'}>Montar a página<svg><use href="#i-seta-d"/></svg></button></div>
@@ -56194,5 +56196,515 @@ function assinarDaEspera(id){
 .ct-foto-linha{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:4px; }
 .ct-foto-linha .perfil-foto{ width:72px; height:72px; flex:0 0 72px; }
 </style>
+
+<style>
+/* ══ bandeja de prints (14/10/2026) ══ */
+.cq-band-dica{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 2px 0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.cq-band-dica label{ display:inline-flex; align-items:center; gap:7px; cursor:pointer; color:var(--giz-2, var(--giz)); }
+.cq-band{ margin-top:12px; border:1px solid color-mix(in srgb, var(--ouro) 40%, var(--fio)); border-radius:18px; padding:14px 16px;
+  background:linear-gradient(120deg, color-mix(in srgb, var(--ouro) 8%, transparent), transparent 60%); }
+.cq-band-cab{ display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.cq-band-cab b{ color:var(--giz); font-size:calc(15px * var(--esc)); }
+.cq-band-cab p{ margin:2px 0 0; color:var(--grafite); font-size:calc(12.5px * var(--esc)); max-width:62ch; }
+.cq-band-fila{ display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; }
+.cq-band-item{ position:relative; width:96px; height:96px; border-radius:14px; overflow:hidden; border:1px solid var(--fio); background:var(--sup-1); cursor:zoom-in; padding:0; }
+.cq-band-item img{ width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
+.cq-band-item.pdf{ display:grid; place-items:center; color:var(--grafite); font-size:calc(11px * var(--esc)); cursor:default; }
+.cq-band-n{ position:absolute; left:6px; top:6px; min-width:20px; height:20px; border-radius:99px; background:rgba(8,16,28,.82); color:#fff; font:700 11px/20px var(--f-b, inherit); text-align:center; padding:0 6px; }
+.cq-band-x{ position:absolute; right:5px; top:5px; width:24px; height:24px; border-radius:50%; border:0; background:rgba(8,16,28,.82); color:#fff; display:grid; place-items:center; cursor:pointer; }
+.cq-band-x svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.cq-band-mais{ width:96px; height:96px; border-radius:14px; border:1.5px dashed var(--fio-forte, var(--fio)); display:grid; place-items:center; text-align:center; color:var(--grafite); font-size:calc(11.5px * var(--esc)); padding:8px; line-height:1.3; cursor:pointer; background:none; }
+.cq-band-acoes{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+.cq-contrib{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(210px, 100%), 1fr)); gap:8px; margin-top:8px; }
+.cq-contrib > div{ display:flex; gap:10px; align-items:center; border:1px solid var(--fio); border-radius:12px; padding:7px 9px; background:var(--sup-0, transparent); }
+.cq-contrib img{ width:38px; height:38px; border-radius:8px; object-fit:cover; object-position:top; flex-shrink:0; }
+.cq-contrib small{ color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.35; }
+.cq-contrib small b{ color:var(--giz); font-weight:600; }
+.cq-parecidos{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; border:1px solid color-mix(in srgb, var(--anil) 45%, var(--fio)); background:color-mix(in srgb, var(--anil) 8%, transparent); border-radius:14px; padding:10px 14px; margin:0 0 12px; font-size:calc(13px * var(--esc)); color:var(--giz-2, var(--giz)); }
+.cq-parecidos svg{ width:17px; height:17px; fill:none; stroke:var(--anil-claro, var(--anil)); stroke-width:1.8; flex-shrink:0; }
+.cq-parecidos span{ flex:1; min-width:200px; }
+.cq-ach-bts{ display:flex; flex-direction:column; gap:4px; align-items:center; }
+.cq-converter{ border:0; background:none; padding:0; font:inherit; color:var(--ouro); text-decoration:underline dotted; text-underline-offset:3px; cursor:pointer; text-align:right; }
+.cq-moeda-orig{ color:var(--grafite); }
+.cq-aj-grade{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap:12px; }
+.cq-aj-tx{ margin-top:14px; border:1px solid var(--fio); border-radius:14px; padding:12px 14px; }
+.cq-aj-tx .olho{ margin:0 0 10px; }
+.cq-aj-conta{ margin-top:10px; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.cq-aj-conta b{ color:var(--giz); font-family:var(--f-m, inherit); font-weight:500; }
+.cq-cambio-linha{ display:flex; gap:8px; align-items:flex-end; }
+.cq-cambio-linha .campo{ flex:1; }
+.cq-zoom img{ max-width:100%; border-radius:12px; display:block; margin:0 auto; }
+</style>
+<script>
+/* ══ BANDEJA DE PRINTS E LEITURA EM CONJUNTO (14/10/2026, pedido do Jadiel) ═══════
+   Um voo costuma vir em pedaços: um print com a rota e a data, outro com o
+   horário, a cabine e as milhas, outro com as taxas. Antes cada print colado
+   era lido na hora e virava um voo separado. Agora os prints vão para uma
+   bandeja: cole quantos quiser e toque em "Ler e juntar em um voo". A Torre lê
+   cada print, guarda o que cada um trouxe e monta um voo só, mostrando de onde
+   veio cada informação. Taxa em outra moeda vem marcada para converter, com a
+   cotação do dia ou o câmbio que você digitar. */
+let cqBandeja = [];
+const cqLerNaHora = () => !!(DB.cfg && DB.cfg.cqLerNaHora);
+const _cqLerArquivosAgora = cqReceberArquivos;
+cqReceberArquivos = async function(lista){
+  const fs = [...lista].filter(f => (f.type || '').startsWith('image/') || ehPDF(f));
+  if (!fs.length){ avisar('Use imagens (PNG, JPG, WEBP) ou PDF.', 'alerta'); return; }
+  if (cqLerNaHora()) return _cqLerArquivosAgora(fs);
+  cqIrPasso(1, true);
+  const urls = await Promise.all(fs.map(f => ehPDF(f) ? '' : new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = () => ok(''); fr.readAsDataURL(f); })));
+  let repetidos = 0;
+  fs.forEach((f, i) => {
+    if (cqBandeja.length >= 12) return;
+    if (urls[i] && cqBandeja.some(b => b.url === urls[i])){ repetidos++; return; }
+    cqBandeja.push({id:uid(), f, url:urls[i], pdf:ehPDF(f), nome:f.name || '', texto:null});
+  });
+  if (repetidos) avisar(repetidos === 1 ? 'Esse print já estava na bandeja. Não entrou em dobro.' : `${repetidos} prints já estavam na bandeja e não entraram em dobro.`, 'alerta', 4500);
+  if (cqLeitura && cqLeitura.fase !== 'lendo'){ cqLeitura = null; cqRenderLeitura(); }
+  cqRenderBandeja();
+  const bx = document.getElementById('cqBandeja'); if (bx && bx.scrollIntoView) bx.scrollIntoView({block:'nearest', behavior:'smooth'});
+};
+
+function cqRenderBandeja(){
+  let cx = document.getElementById('cqBandeja');
+  const lendo = document.getElementById('cqLendo');
+  if (!cx && lendo){ cx = document.createElement('div'); cx.id = 'cqBandeja'; lendo.parentNode.insertBefore(cx, lendo); }
+  if (!cx) return;
+  const n = cqBandeja.length;
+  const dica = `<div class="cq-band-dica"><span>Os prints colados ficam na bandeja e são lidos juntos, num voo só.</span>
+    <label><input type="checkbox" data-cqb="ler-na-hora"${cqLerNaHora() ? ' checked' : ''}> Ler cada print assim que colar</label></div>`;
+  if (!n){ cx.innerHTML = cqLerNaHora() ? dica : dica; return; }
+  cx.innerHTML = `${dica}<section class="cq-band" aria-label="Bandeja de prints">
+    <div class="cq-band-cab"><div class="esticar"><b>${n} ${n === 1 ? 'print na bandeja' : 'prints na bandeja'}</b>
+      <p>${n === 1 ? 'Cole os outros prints deste voo (Ctrl+V): rota e data, horário e milhas, taxas. Depois, leia.' : 'Cada print pode trazer um pedaço do mesmo voo. A Torre lê todos e junta num voo só, dizendo o que veio de cada um.'}</p></div>
+      <button type="button" class="bt p perigo" data-cqb="limpar">Limpar bandeja</button></div>
+    <div class="cq-band-fila">${cqBandeja.map((b, i) => b.pdf
+      ? `<div class="cq-band-item pdf"><span class="cq-band-n">${i + 1}</span><div><svg style="width:22px;height:22px"><use href="#i-livro"/></svg><br>${esc((b.nome || 'PDF').slice(0, 14))}</div><button type="button" class="cq-band-x" data-cqb-tirar="${b.id}" aria-label="Tirar da bandeja"><svg><use href="#i-x"/></svg></button></div>`
+      : `<div class="cq-band-item" data-cqb-ver="${b.id}" role="button" tabindex="0" aria-label="Ver o print ${i + 1}"><img src="${b.url}" alt=""><span class="cq-band-n">${i + 1}</span><button type="button" class="cq-band-x" data-cqb-tirar="${b.id}" aria-label="Tirar da bandeja"><svg><use href="#i-x"/></svg></button></div>`).join('')}
+      ${n < 12 ? `<button type="button" class="cq-band-mais" data-cqb="mais">+ colar ou escolher outro print</button>` : ''}</div>
+    <div class="cq-band-acoes">
+      <button type="button" class="bt primario" data-cqb="ler-juntar"><svg><use href="#i-faisca"/></svg>${n === 1 ? 'Ler o print' : `Ler e juntar em um voo`}</button>
+      ${n > 1 ? `<button type="button" class="bt fantasma" data-cqb="ler-separado">Ler cada um como um voo</button>` : ''}
+    </div></section>`;
+}
+
+/* ── o que cada print traz ─────────────────────────────────────────────────── */
+const CQ_SIMB_MOEDA = [[/R\$|BRL/i, 'BRL'], [/US\$|U\$S?|USD/i, 'USD'], [/€|EUR/i, 'EUR'], [/£|GBP/i, 'GBP'], [/CHF/i, 'CHF'], [/C\$|CAD/i, 'CAD'],
+  [/ARS/i, 'ARS'], [/CLP/i, 'CLP'], [/MXN/i, 'MXN'], [/QAR/i, 'QAR'], [/AED/i, 'AED'], [/JPY|¥/i, 'JPY'], [/COP/i, 'COP'], [/PEN/i, 'PEN']];
+const CQ_MOEDA_RE = 'R\\$|BRL|US\\$|U\\$S?|USD|€|EUR|£|GBP|CHF|C\\$|CAD|ARS|CLP|MXN|QAR|AED|JPY|¥|COP|PEN';
+function cqNumMoeda(s){
+  let t = String(s || '').replace(/[^\d.,]/g, '');
+  if (!t) return 0;
+  const ip = t.lastIndexOf('.'), iv = t.lastIndexOf(',');
+  if (ip >= 0 && iv >= 0) t = iv > ip ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (iv >= 0) t = /,\d{1,2}$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (ip >= 0) t = /\.\d{3}$/.test(t) && !/\.\d{1,2}$/.test(t) ? t.replace(/\./g, '') : t;
+  return Number(t) || 0;
+}
+const cqCodMoeda = simb => { for (const [re, c] of CQ_SIMB_MOEDA) if (re.test(simb)) return c; return 'BRL'; };
+const CQ_NAO_IATA = /^(BRL|USD|EUR|GBP|CHF|CAD|ARS|CLP|MXN|QAR|AED|JPY|COP|PEN|PIX|CPF|VIP|TAX|KG|WIFI|QR)$/;
+function cqFragmento(texto){
+  const T = String(texto || ''), f = {};
+  const linhas = T.split('\n');
+  /* rota: "GRU → DOH", "GRU > DOH", "GRU - DOH" */
+  const mr = T.match(/\b([A-Z]{3})\s*(?:→|->|>|–|—|-|➔|✈|para|to)\s*([A-Z]{3})\b/);
+  if (mr && !CQ_NAO_IATA.test(mr[1]) && !CQ_NAO_IATA.test(mr[2]) && mr[1] !== mr[2]){ f.de = mr[1]; f.para = mr[2]; }
+  if (!f.de){
+    const l = linhas.find(x => /escala|direto|nonstop|conex|\d+\s?h\s?\d*\s?m?/i.test(x) && (x.match(/\b[A-Z]{3}\b/g) || []).filter(c => !CQ_NAO_IATA.test(c)).length >= 2);
+    if (l){ const cs = l.match(/\b[A-Z]{3}\b/g).filter(c => !CQ_NAO_IATA.test(c)); f.de = cs[0]; f.para = cs[cs.length - 1]; }
+  }
+  /* data */
+  try { const d = dataDoTexto(T, ''); if (d) f.data = d; } catch(_){}
+  /* horários: dois na mesma linha (saída e chegada); "+1" logo depois do segundo */
+  for (const l of linhas){
+    const hs = [...l.matchAll(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g)];
+    if (hs.length >= 2){ f.sai = hs[0][0].padStart(5, '0'); f.chega = hs[1][0].padStart(5, '0');
+      const depois = l.slice(hs[1].index + hs[1][0].length, hs[1].index + hs[1][0].length + 4); if (/^\s?(\+\s?1|\*\s?[!1lI]|¹)/.test(depois)) f.mais1 = true; break; }
+  }
+  const du = T.match(/\b(\d{1,2})\s?h\s?(\d{1,2})\s?m(?:in)?\b/i); if (du) f.duracao = `${du[1]}h ${du[2].padStart(2, '0')}m`;
+  if (/sem escalas|\bdireto\b|nonstop|non-stop|voo direto/i.test(T)) f.paradas = 'direto';
+  else { const pe = T.match(/\b(\d)\s+(?:escalas?|paradas?|conex(?:ão|oes|ões)|stops?)\b/i); if (pe) f.paradas = `${pe[1]} ${+pe[1] === 1 ? 'parada' : 'paradas'}`; }
+  if (/primeira classe|\bfirst class\b/i.test(T)) f.cabine = 'Primeira classe';
+  else if (/premium economy|econ[oô]mica premium|premium/i.test(T)) f.cabine = 'Premium Economy';
+  else if (/\bexecutiva\b|\bbusiness\b|qsuite/i.test(T)) f.cabine = 'Executiva';
+  else if (/\becon[oô]mica\b|\beconomy\b/i.test(T)) f.cabine = 'Econômica';
+  const px = T.match(/\b(\d{1,2})\s+(?:passageir|adult)/i); if (px) f.pax = +px[1];
+  if (/total para todos os passageiros|total for all passengers/i.test(T)) f.totalTodos = true;
+  /* milhas: número com a unidade, ou o número logo acima de "Total para todos os passageiros" */
+  const mm = T.match(/\b(\d{1,3}(?:[.,]\d{3})+|\d{4,7})\s*(avios|milhas|pontos|miles|points|pts|milhas smiles)\b/i);
+  if (mm){ f.milhas = cqNumMoeda(mm[1].replace(/,/g, '.')) || Number(mm[1].replace(/\D/g, '')); f.unidade = mm[2].toLowerCase(); }
+  else {
+    const i = linhas.findIndex(l => /total para todos|total for all/i.test(l));
+    if (i > 0){ const q = (linhas[i - 1].match(/\b(\d{1,3}(?:[.,]\d{3})+)\b/) || [])[1]; if (q) f.milhas = Number(q.replace(/\D/g, '')); }
+  }
+  /* taxas: "+ BRL 2.161,58", "+ R$ 312,40", "USD 150.20", "taxas: € 98,10" */
+  const RE1 = new RegExp(`(?:\\+|taxas?(?: de embarque)?[^\\n\\d]{0,24}|fees?[^\\n\\d]{0,16})\\s*(${CQ_MOEDA_RE})\\s*([\\d.,]+\\d)`, 'i');
+  const RE2 = new RegExp(`\\+\\s*([\\d.,]+\\d)\\s*(${CQ_MOEDA_RE})\\b`, 'i');
+  let mt = T.match(RE1), simb, val;
+  if (mt){ simb = mt[1]; val = mt[2]; } else if ((mt = T.match(RE2))){ simb = mt[2]; val = mt[1]; }
+  if (val){ f.taxa = cqNumMoeda(val); f.taxaMoeda = cqCodMoeda(simb); }
+  /* programa e companhia */
+  const pg = cqProgDoTexto(T); if (pg.prog) f.prog = pg.prog; else if (pg.nome) f.progNome = pg.nome;
+  if (/qsuite|qatar/i.test(T)) f.cia = 'Qatar Airways';
+  return f;
+}
+/* Avios é a moeda de quatro programas: quem decide é a companhia que aparece
+   em algum dos prints (Qsuite e Privilege Club são da Qatar). */
+function cqProgDoTexto(T){
+  if (/avios/i.test(T)){
+    const p = /qsuite|qatar|privilege club/i.test(T) ? 'qatar' : /iberia/i.test(T) ? 'iberia' : /british|executive club/i.test(T) ? 'british' : /finnair/i.test(T) ? 'finnair' : '';
+    return p ? {prog:p} : {nome:'Avios'};
+  }
+  if (typeof CIAS_PROG !== 'undefined'){ const c = CIAS_PROG.find(([re]) => re.test(T)); if (c && c[2]) return {prog:c[2]}; }
+  return {};
+}
+/* número digitado num campo: vírgula é decimal; ponto seguido de 3 dígitos é milhar (menos no câmbio) */
+function cqNumForm(v, cambio){
+  let t = String(v || '').trim().replace(/[^\d.,]/g, '');
+  if (!t) return 0;
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  else if ((t.match(/\./g) || []).length > 1 || (!cambio && /^\d{1,3}\.\d{3}$/.test(t))) t = t.replace(/\./g, '');
+  return Number(t) || 0;
+}
+const CQ_CAMPOS_FRAG = [['de', 'rota'], ['data', 'data'], ['sai', 'horários'], ['duracao', 'duração'], ['paradas', 'escalas'], ['cabine', 'cabine'], ['pax', 'passageiros'], ['milhas', 'milhas'], ['taxa', 'taxas'], ['prog', 'programa']];
+function cqResumoFrag(f){
+  const p = [];
+  if (f.de) p.push(`<b>${esc(f.de)} → ${esc(f.para)}</b>`);
+  if (f.data) p.push(`<b>${dataBR(f.data)}</b>`);
+  if (f.sai) p.push(`<b>${f.sai} → ${f.chega}${f.mais1 ? ' +1' : ''}</b>`);
+  if (f.cabine) p.push(esc(f.cabine));
+  if (f.pax) p.push(`${f.pax} passageiros`);
+  if (f.milhas) p.push(`<b>${nBR(f.milhas)} ${esc(f.unidade || 'milhas')}</b>`);
+  if (f.taxa) p.push(`taxas <b>${esc(rvFmtMoeda(f.taxa, f.taxaMoeda))}</b>`);
+  if (f.prog) p.push(esc(cqNomeProg(f.prog)));
+  return p.length ? p.join(' · ') : 'nada aproveitável';
+}
+function cqFundirFrags(frs){
+  const F = {};
+  frs.forEach(f => {
+    Object.keys(f).forEach(k => {
+      if (F[k] == null || F[k] === '') F[k] = f[k];
+      /* milhas com unidade escrita valem mais que um número solto */
+      if (k === 'milhas' && f.unidade && !F.unidade){ F.milhas = f.milhas; F.unidade = f.unidade; }
+    });
+  });
+  if (frs.some(f => f.de)){ const r = frs.find(f => f.de); F.de = r.de; F.para = r.para; }
+  if (frs.some(f => f.sai)){ const r = frs.find(f => f.sai); F.sai = r.sai; F.chega = r.chega; F.mais1 = !!r.mais1; }
+  return F;
+}
+const CQ_CAB_COD = {'Executiva':'C', 'Primeira classe':'F', 'Premium Economy':'W', 'Econômica':'Y'};
+function cqLimparTrecho(t){ if (/^X{1,2}$/i.test(t.cia || '')) t.cia = ''; if (!Number(t.numero)) t.numero = ''; return t; }
+/* aplica o que os prints trouxeram ao voo lido (ou monta o voo, se o leitor não achou) */
+function cqEnriquecer(r, F){
+  r.achados = r.achados || []; r.pagante = r.pagante || [];
+  let a = r.achados.find(x => x.sentido !== 'VOLTA');
+  if (!a && F.de && F.para){
+    a = {id:uid(), fonte:'leitor', sentido:'IDA', prog:'', milhas:0, taxas:null, trechos:[{de:F.de, para:F.para, cia:F.cia || '', numero:'', data:F.data || '', sai:F.sai || '', chega:F.chega || '', cData:''}],
+      paradas:F.paradas || 'direto', marcado:true, aviso:''};
+    r.achados.unshift(a);
+  }
+  r.achados.forEach(x => (x.trechos || []).forEach(cqLimparTrecho));
+  if (!a) return r;
+  const tr = a.trechos, t0 = tr[0], tn = tr[tr.length - 1];
+  if (!t0.de && F.de) t0.de = F.de;
+  if (!tn.para && F.para) tn.para = F.para;
+  if (!t0.data && F.data) t0.data = F.data;
+  if (!t0.sai && F.sai) t0.sai = F.sai;
+  if (!tn.chega && F.chega) tn.chega = F.chega;
+  if (tr.length === 1 && t0.data && t0.chega) t0.cData = F.mais1 || (t0.sai && t0.chega < t0.sai) ? cqSomaDia(t0.data, 1) : t0.data;
+  if (F.cia) tr.forEach(t => { if (!t.cia) t.cia = F.cia; });
+  if (!a.milhas && F.milhas) a.milhas = F.milhas;
+  if (!a.prog && F.prog) a.prog = F.prog;
+  if (!a.prog && !a.progNome && F.progNome) a.progNome = F.progNome;
+  if (F.taxa){
+    if (F.taxaMoeda === 'BRL'){ if (a.taxas == null || a.taxas === '') a.taxas = F.taxa; }
+    else { a.taxasMoeda = F.taxaMoeda; a.taxasOrig = F.taxa; a.taxas = null; }
+    /* a taxa não é preço de passagem paga: o leitor às vezes a tomava como pagante */
+    r.pagante = r.pagante.filter(p => Math.abs(Number(p.preco) - F.taxa) > 0.01);
+  }
+  if (F.paradas) a.paradas = F.paradas;
+  if (F.duracao) a.duracao = F.duracao;
+  if (F.cabine) a.cabine = F.cabine;
+  if (F.totalTodos && (F.pax || r.pax) > 1) a.totalPax = F.pax || r.pax;
+  if (F.pax && !r.pax) r.pax = F.pax;
+  if (F.cabine) r.cabine = CQ_CAB_COD[F.cabine];
+  const falta = [];
+  if (!a.milhas) falta.push('as milhas');
+  if (a.taxasMoeda && a.taxas == null) falta.push(`converter as taxas de ${a.taxasMoeda} para reais`);
+  a.aviso = falta.length ? `Falta ${falta.join(' e ')}: toque no lápis.` : '';
+  return r;
+}
+
+async function cqLerBandeja(modo){
+  const itens = cqBandeja.slice(); if (!itens.length) return;
+  cqIrPasso(1, true);
+  cqLeitura = {fase:'lendo', msg:'Preparando o leitor', arquivos:itens.map(b => ({url:b.url, pdf:b.pdf, nome:b.nome})), ultimos:itens.map(b => b.f)};
+  cqRenderLeitura();
+  try {
+    const w = await prepararLeitorOCR();
+    for (let k = 0; k < itens.length; k++){ cqLeitura.msg = `Lendo ${k + 1} de ${itens.length}`; cqRenderLeitura(); if (itens[k].texto == null) itens[k].texto = await textoDoArquivo(itens[k].f, w); }
+    const grupos = modo === 'separado' ? itens.map(b => [b]) : [itens];
+    let voos = 0, contrib = [], resumoVoo = '';
+    for (const g of grupos){
+      const textos = g.map(b => b.texto || '');
+      const frs = textos.map(cqFragmento);
+      const F = cqFundirFrags(frs);
+      if (!F.prog){ const pg = cqProgDoTexto(textos.join('\n')); if (pg.prog){ F.prog = pg.prog; delete F.progNome; } }
+      const r = cqEnriquecer(cqDoLeitor(segmentosDoTexto(textos, '')), F);
+      if (!r.achados.length) continue;
+      voos += cqJuntar(r, 'leitor');
+      if (F.cabine && vemEst && vemEst.comum) vemEst.comum.cabine = F.cabine;
+      if (modo !== 'separado' && g.length > 1){
+        contrib = g.map((b, k) => ({url:b.url, n:itens.indexOf(b) + 1, txt:cqResumoFrag(frs[k])}));
+        const a = r.achados[0], t0 = a.trechos[0] || {};
+        resumoVoo = [`${t0.de || '?'} → ${(a.trechos[a.trechos.length - 1] || {}).para || '?'}`, t0.data ? dataBR(t0.data) : '', t0.sai ? `${t0.sai} → ${t0.chega || '?'}` : '', a.milhas ? `${nBR(a.milhas)} milhas` : '', a.taxas != null ? `+ ${brl(a.taxas)}` : a.taxasMoeda ? `+ ${rvFmtMoeda(a.taxasOrig, a.taxasMoeda)}` : ''].filter(Boolean).join(' · ');
+      }
+    }
+    if (!voos){
+      cqLeitura = Object.assign(cqLeitura, {fase:'nada', msg:'Não consegui tirar os voos destes prints sozinho.'});
+    } else {
+      cqLeitura = Object.assign(cqLeitura, {fase:'ok', contrib,
+        msg: modo !== 'separado' && itens.length > 1 ? `${itens.length} prints lidos e juntos num voo só: ${resumoVoo}.` : voos === 1 ? 'Voo lido no seu navegador.' : `${voos} voos lidos no seu navegador.`, avisos:[]});
+      cqBandeja = [];
+    }
+  } catch (err){
+    cqLeitura = Object.assign(cqLeitura || {}, {fase:'nada', msg:'Não deu para ler aqui: ' + (err.message || err)});
+  }
+  cqRender();
+}
+
+/* ── juntar voos que já estão na lista ─────────────────────────────────────── */
+function cqNota(a){ let n = 0; (a.trechos || []).forEach(t => ['de', 'para', 'data', 'sai', 'chega', 'cia', 'numero'].forEach(k => { if (t[k]) n++; })); return n + (a.milhas ? 3 : 0) + (a.taxas != null ? 2 : 0) + (a.prog ? 2 : 0); }
+function cqCompativeis(x, y){
+  if (x.sem || y.sem || x.sentido !== y.sentido) return false;
+  const r = a => { const t = a.trechos || []; return t.length ? [t[0].de, t[t.length - 1].para] : ['', '']; };
+  const [xd, xp] = r(x), [yd, yp] = r(y);
+  if (xd && yd && xd !== yd) return false;
+  if (xp && yp && xp !== yp) return false;
+  const c = (u, v) => !u || !v || u === v;
+  const t0 = a => (a.trechos || [])[0] || {};
+  return c(t0(x).data, t0(y).data) && c(t0(x).sai, t0(y).sai) && c(x.prog, y.prog) && (!x.milhas || !y.milhas || x.milhas === y.milhas);
+}
+function cqFundirAchados(lista){
+  const base = cqClone(lista.slice().sort((a, b) => cqNota(b) - cqNota(a))[0]);
+  lista.forEach(o => {
+    if (o.id === base.id) return;
+    const bt = base.trechos || [], ot = o.trechos || [];
+    if (ot.length > bt.length && ot.every(t => t.de && t.para)) base.trechos = cqClone(ot).map((t, i) => Object.assign(t, Object.fromEntries(Object.entries(bt[i] || {}).filter(([, v]) => v))));
+    else bt.forEach((t, i) => { const u = ot[i] || (i === bt.length - 1 ? ot[ot.length - 1] : null); if (u) ['de', 'para', 'data', 'sai', 'chega', 'cData', 'cia', 'numero'].forEach(k => { if (!t[k] && u[k]) t[k] = u[k]; }); });
+    if (!base.milhas && o.milhas) base.milhas = o.milhas;
+    if ((base.taxas == null || base.taxas === '') && o.taxas != null && o.taxas !== ''){ base.taxas = o.taxas; }
+    ['prog', 'progNome', 'taxasMoeda', 'taxasOrig', 'cambio', 'duracao', 'cabine', 'totalPax'].forEach(k => { if (!base[k] && o[k]) base[k] = o[k]; });
+    if ((!base.paradas || base.paradas === 'direto') && o.paradas && o.paradas !== 'direto') base.paradas = o.paradas;
+  });
+  const t0 = base.trechos[0], tn = base.trechos[base.trechos.length - 1];
+  if (base.trechos.length === 1 && t0.data && t0.chega && !t0.cData) t0.cData = t0.sai && t0.chega < t0.sai ? cqSomaDia(t0.data, 1) : t0.data;
+  base.id = uid(); base.marcado = true;
+  const falta = []; if (!base.milhas) falta.push('as milhas'); if (base.taxasMoeda && base.taxas == null) falta.push('converter as taxas');
+  base.aviso = falta.length ? `Falta ${falta.join(' e ')}: toque no lápis.` : '';
+  vemEst.achados = (vemEst.achados || []).filter(a => !lista.some(o => o.id === a.id));
+  vemEst.achados.push(base);
+  cqSalvarAgora(); cqRenderAchados();
+  avisar(`${lista.length} leituras juntas num voo só.`, 'ok');
+  return base;
+}
+function cqPodeJuntarMarcados(){
+  const m = (vemEst && vemEst.achados || []).filter(a => a.marcado && !a.sem);
+  return ['IDA', 'VOLTA'].some(s => m.filter(a => a.sentido === s).length >= 2);
+}
+function cqGruposParecidos(){
+  const ach = (vemEst && vemEst.achados || []).filter(a => !a.sem), usados = new Set(), grupos = [];
+  ach.forEach(a => {
+    if (usados.has(a.id)) return;
+    const g = [a].concat(ach.filter(b => b.id !== a.id && !usados.has(b.id) && cqCompativeis(a, b)));
+    /* só sugere quando um completa o outro: um sem milhas e outro sem horário, por exemplo */
+    if (g.length > 1 && g.some(x => !x.milhas || !((x.trechos || [])[0] || {}).sai || !((x.trechos || [])[0] || {}).data)){ g.forEach(x => usados.add(x.id)); grupos.push(g); }
+  });
+  return grupos;
+}
+function cqAvisoParecidos(){
+  const gs = cqGruposParecidos(); if (!gs.length) return '';
+  return gs.map((g, i) => { const t = (g[0].trechos || [])[0] || {}, tn = (g[0].trechos || []).slice(-1)[0] || {};
+    return `<div class="cq-parecidos"><svg><use href="#i-info"/></svg><span><b>${g.length} leituras parecem o mesmo voo em pedaços</b> (${esc(t.de || '?')} → ${esc(tn.para || '?')}): uma completa a outra.</span>
+      <button type="button" class="bt p primario" data-cqb-juntar-grupo="${i}">Juntar em um voo</button></div>`; }).join('');
+}
+
+/* ── ajustar um voo: programa, milhas, horário e taxas (em qualquer moeda) ──── */
+const CQ_MOEDAS_TX = {BRL:'Real (R$)', USD:'Dólar (US$)', EUR:'Euro (€)', GBP:'Libra (£)', CHF:'Franco suíço', CAD:'Dólar canadense', ARS:'Peso argentino', CLP:'Peso chileno', MXN:'Peso mexicano', COP:'Peso colombiano', PEN:'Sol peruano', QAR:'Rial do Catar', AED:'Dirham dos Emirados', JPY:'Iene'};
+function cqAjustarAchado(id){
+  const a = (vemEst.achados || []).find(x => x.id === id); if (!a) return;
+  const t0 = (a.trechos || [])[0] || {}, tn = (a.trechos || []).slice(-1)[0] || {};
+  const moeda = a.taxasMoeda || 'BRL';
+  const progs = (typeof CC_ORDEM !== 'undefined' ? CC_ORDEM : PROG_IDS).filter(p => PROGRAMAS[p]);
+  abrirFolha({titulo:'Ajustar o voo', largura:'media', tipo:'formulario', corpo:`
+    <p class="fraco" style="margin:0 0 12px">${esc(t0.de || '?')} → ${esc(tn.para || '?')}${t0.data ? ' · ' + dataBR(t0.data) : ''}. Corrija o que a leitura não trouxe.</p>
+    <div class="cq-aj-grade">
+      <div class="campo"><label>Programa</label><select id="ajProg"><option value="">a definir</option>${progs.map(p => `<option value="${p}"${p === a.prog ? ' selected' : ''}>${esc(cqNomeProg(p))}</option>`).join('')}</select></div>
+      <div class="campo"><label>Milhas (total)</label><input type="text" inputmode="numeric" id="ajMilhas" value="${a.milhas ? nBR(a.milhas) : ''}" placeholder="0"></div>
+      <div class="campo"><label>Data</label><input type="date" id="ajData" value="${t0.data || ''}"></div>
+      <div class="campo"><label>Saída</label><input type="time" id="ajSai" value="${t0.sai || ''}"></div>
+      <div class="campo"><label>Chegada</label><input type="time" id="ajChega" value="${tn.chega || ''}"></div>
+    </div>
+    <div class="cq-aj-tx">
+      <div class="olho">Taxas</div>
+      <div class="cq-aj-grade">
+        <div class="campo"><label>Moeda</label><select id="ajMoeda" data-ordem="natural">${Object.entries(CQ_MOEDAS_TX).map(([k, n]) => `<option value="${k}"${k === moeda ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+        <div class="campo"><label id="ajValorRot">Valor das taxas</label><input type="text" inputmode="decimal" id="ajValor" value="${moeda === 'BRL' ? (a.taxas != null && a.taxas !== '' ? moedaTxt(a.taxas) : '') : (a.taxasOrig ? String(a.taxasOrig).replace('.', ',') : '')}" placeholder="0,00"></div>
+        <div class="campo aj-fx"><label>Câmbio (R$ por 1)</label><div class="cq-cambio-linha"><input type="text" inputmode="decimal" id="ajCambio" value="${a.cambio ? String(a.cambio).replace('.', ',') : ''}" placeholder="ex.: 5,4321"><button type="button" class="bt p fantasma" id="ajHoje" data-dica="Busca a cotação de agora">Hoje</button></div></div>
+        <div class="campo aj-fx"><label>Em reais</label><input type="text" inputmode="decimal" id="ajReais" value="${moeda !== 'BRL' && a.taxas != null ? moedaTxt(a.taxas) : ''}" placeholder="calcula sozinho"></div>
+      </div>
+      <div class="cq-aj-conta" id="ajConta"></div>
+    </div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="ajOk"><svg><use href="#i-ok"/></svg>Salvar</button>`});
+  let reaisManual = moeda !== 'BRL' && a.taxas != null && a.cambio == null;
+  const n = v => cqNumForm(v);
+  const conta = () => {
+    const m = $('#ajMoeda').value, fx = m !== 'BRL';
+    $$('#folhaCorpo .aj-fx').forEach(e => e.style.display = fx ? '' : 'none');
+    $('#ajValorRot').textContent = fx ? `Valor em ${m}` : 'Valor das taxas (R$)';
+    if (fx && !reaisManual){ const v = n($('#ajValor').value), c = cqNumForm($('#ajCambio').value, true); $('#ajReais').value = v && c ? moedaTxt(Math.round(v * c * 100) / 100) : ''; }
+    const v = n($('#ajValor').value), c = cqNumForm($('#ajCambio').value, true), r = fx ? n($('#ajReais').value) : v;
+    $('#ajConta').innerHTML = !v ? '' : fx
+      ? (r ? `Entra na cotação como <b>${brl(r)}</b>${c && !reaisManual ? ` (${esc(rvFmtMoeda(v, m))} × ${String(c).replace('.', ',')})` : ' (valor em reais digitado)'}.` : `<span style="color:var(--ouro)">Informe o câmbio, toque em Hoje ou digite o valor em reais.</span>`)
+      : `Entra na cotação como <b>${brl(v)}</b>.`;
+  };
+  ['ajValor', 'ajCambio'].forEach(i => $('#' + i).addEventListener('input', () => { reaisManual = false; conta(); }));
+  $('#ajReais').addEventListener('input', () => { reaisManual = true; conta(); });
+  $('#ajMoeda').addEventListener('change', () => { reaisManual = false; $('#ajCambio').value = ''; conta(); });
+  $('#ajHoje').onclick = async () => {
+    const m = $('#ajMoeda').value; if (m === 'BRL') return;
+    $('#ajHoje').disabled = true;
+    try {
+      const r2 = await fetch(`https://economia.awesomeapi.com.br/json/last/${m}-BRL`, {cache:'no-store'});
+      const j = await r2.json(); const v = Number((j[m + 'BRL'] || {}).bid);
+      if (!(v > 0)) throw new Error('sem cotação');
+      $('#ajCambio').value = v.toFixed(4).replace('.', ','); reaisManual = false; conta();
+      avisar(`Cotação de agora: 1 ${m} = R$ ${v.toFixed(4).replace('.', ',')}.`, 'ok');
+    } catch(e){ avisar('Não deu para buscar a cotação agora. Digite o câmbio (o da fatura do cartão é o mais exato) ou o valor em reais.', 'alerta', 6000); }
+    finally { $('#ajHoje').disabled = false; }
+  };
+  conta();
+  $('#ajOk').onclick = () => {
+    const m = $('#ajMoeda').value, v = n($('#ajValor').value), c = cqNumForm($('#ajCambio').value, true), r = n($('#ajReais').value);
+    a.prog = $('#ajProg').value; if (a.prog) delete a.progNome;
+    a.milhas = Number(String($('#ajMilhas').value).replace(/\D/g, '')) || 0;
+    t0.data = $('#ajData').value; t0.sai = $('#ajSai').value; tn.chega = $('#ajChega').value;
+    if (a.trechos.length === 1 && t0.data && tn.chega) t0.cData = t0.sai && tn.chega < t0.sai ? cqSomaDia(t0.data, 1) : t0.data;
+    if (m === 'BRL'){ a.taxas = v ? v : (String($('#ajValor').value).trim() === '' ? null : 0); delete a.taxasMoeda; delete a.taxasOrig; delete a.cambio; }
+    else {
+      a.taxasMoeda = m; a.taxasOrig = v || null;
+      if (reaisManual && r){ a.taxas = r; delete a.cambio; }
+      else if (v && c){ a.cambio = c; a.taxas = Math.round(v * c * 100) / 100; }
+      else { a.taxas = null; delete a.cambio; }
+    }
+    const falta = []; if (!a.milhas) falta.push('as milhas'); if (a.taxasMoeda && a.taxas == null) falta.push('converter as taxas');
+    a.aviso = falta.length ? `Falta ${falta.join(' e ')}: toque no lápis.` : '';
+    cqSalvarAgora(); fecharFolha(); cqRenderAchados(); avisar('Voo ajustado.', 'ok');
+  };
+}
+
+/* ── ligações ──────────────────────────────────────────────────────────────── */
+(function(){
+  const _p1 = cqRenderP1;
+  cqRenderP1 = function(){ const r = _p1.apply(this, arguments); try { cqRenderBandeja(); } catch(e){ console.error(e); } return r; };
+  const _rl = cqRenderLeitura;
+  cqRenderLeitura = function(){
+    const r = _rl.apply(this, arguments);
+    const L = cqLeitura, cx = document.getElementById('cqLendo');
+    if (L && L.fase === 'ok' && (L.contrib || []).length && cx){
+      const alvo = cx.querySelector('.pilha') || cx;
+      alvo.insertAdjacentHTML('beforeend', `<div class="cq-contrib" aria-label="O que veio de cada print">${L.contrib.map(c => `<div>${c.url ? `<img src="${c.url}" alt="">` : ''}<small><b>Print ${c.n}:</b> ${c.txt}</small></div>`).join('')}</div>`);
+    }
+    return r;
+  };
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-cqb], [data-cqb-tirar], [data-cqb-ver], [data-cqb-ajustar], [data-cqb-juntar-grupo]'); if (!el) return;
+    if (el.dataset.cqbAjustar){ e.preventDefault(); e.stopPropagation(); cqAjustarAchado(el.dataset.cqbAjustar); return; }
+    if (el.dataset.cqbJuntarGrupo != null){ e.preventDefault(); const g = cqGruposParecidos()[Number(el.dataset.cqbJuntarGrupo)]; if (g) cqFundirAchados(g); return; }
+    if (el.dataset.cqbTirar){ e.preventDefault(); e.stopPropagation(); cqBandeja = cqBandeja.filter(b => b.id !== el.dataset.cqbTirar); cqRenderBandeja(); return; }
+    if (el.dataset.cqbVer){ const b = cqBandeja.find(x => x.id === el.dataset.cqbVer); if (b) abrirFolha({titulo:`Print ${cqBandeja.indexOf(b) + 1}`, largura:'larga', corpo:`<div class="cq-zoom"><img src="${b.url}" alt=""></div>`, pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`}); return; }
+    const a = el.dataset.cqb;
+    if (a === 'ler-na-hora'){ DB.cfg.cqLerNaHora = el.checked; salvar(); avisar(el.checked ? 'Cada print colado será lido na hora, sozinho.' : 'Os prints colados vão para a bandeja e são lidos juntos.', 'ok', 3500); return; }
+    if (a === 'limpar'){ cqBandeja = []; cqRenderBandeja(); return; }
+    if (a === 'mais'){ const f = document.getElementById('cqArq'); if (f) f.click(); return; }
+    if (a === 'ler-juntar'){ cqLerBandeja('juntar'); return; }
+    if (a === 'ler-separado'){ cqLerBandeja('separado'); return; }
+    if (a === 'juntar-marcados'){
+      const m = (vemEst.achados || []).filter(x => x.marcado && !x.sem);
+      const s = ['IDA', 'VOLTA'].find(k => m.filter(x => x.sentido === k).length >= 2);
+      const lista = m.filter(x => x.sentido === s);
+      if (lista.length >= 2) confirmar('Juntar em um voo?', `${lista.length} voos marcados viram um só, somando o que cada um tem. Use quando forem pedaços do mesmo voo.`, () => cqFundirAchados(lista), 'Juntar', false);
+    }
+  });
+  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.cqbVer){ e.preventDefault(); e.target.click(); } });
+  /* Na etapa de captura, o print colado vai só para a bandeja. Antes, um leitor
+     antigo desta mesma tela também lia cada print em segundo plano: trabalho
+     dobrado e uma leitura solta que ninguém via. */
+  document.addEventListener('paste', e => {
+    if (typeof vistaAtual === 'undefined' || vistaAtual !== 'cotacoes' || cqPasso !== 1) return;
+    if ((typeof ponteAberta === 'function' && ponteAberta()) || ($('#veu') && $('#veu').classList.contains('aberto'))) return;
+    const dados = e.clipboardData; if (!dados) return;
+    const fs = [...(dados.files || [])].filter(f => (f.type || '').startsWith('image/') || ehPDF(f));
+    if (!fs.length) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    cqReceberArquivos(fs);
+  }, true);
+  setTimeout(() => { try { cqRenderBandeja(); } catch(_){} }, 120);
+})();
+</script>
+
+<style>
+/* ══ cotação que não fechou: recolhida (14/10/2026) ══ */
+#cqMesa.cq-recolhida .cq-trilho, #cqMesa.cq-recolhida .cq-passo, #cqMesa.cq-recolhida .cq-tempo{ display:none !important; }
+.cq-resumo-perdida{ grid-column:1 / -1; flex-basis:100%; width:100%; box-sizing:border-box; display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; padding:12px 14px; border:1px solid var(--fio); border-radius:14px; background:var(--sup-0, transparent); }
+.cq-resumo-perdida .cq-rp-rota{ font:500 calc(15px * var(--esc)) var(--f-m, inherit); color:var(--giz); }
+.cq-resumo-perdida .cq-rp-sub{ color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.cq-resumo-perdida .cq-rp-preco{ font:500 calc(15px * var(--esc)) var(--f-m, inherit); color:var(--giz); }
+.cq-resumo-perdida .cq-rp-preco small{ color:var(--grafite); font-family:var(--f-b, inherit); margin-left:5px; font-size:calc(12px * var(--esc)); }
+.cq-resumo-perdida .esticar{ flex:1; min-width:10px; }
+.cq-rp-bt{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--fio); background:none; color:var(--giz-2, var(--giz)); border-radius:99px; padding:6px 8px 6px 14px; font:inherit; font-size:calc(13px * var(--esc)); cursor:pointer; }
+.cq-rp-bt:hover{ border-color:var(--ouro); }
+.cq-rp-bt i{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--fio); transition:transform .25s; }
+.cq-rp-bt i svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; transform:rotate(90deg); }
+.cq-rp-bt[aria-expanded="true"] i{ transform:rotate(180deg); }
+@media (max-width:560px){ .cq-resumo-perdida{ gap:8px 12px; } .cq-rp-bt{ margin-left:auto; } }
+</style>
+<script>
+/* Cotação que o cliente não fechou fica recolhida: só o principal (rota,
+   companhia, data, preço e quando foi marcada). O botão com a seta abre os
+   detalhes e fecha de novo. A escolha vale enquanto a tela estiver aberta. */
+const cqAbertasPerdidas = new Set();
+(function(){
+  const _cab = cqRenderCab;
+  cqRenderCab = function(){
+    const r = _cab.apply(this, arguments);
+    try {
+      const mesa = document.getElementById('cqMesa'), cx = document.getElementById('cqCab');
+      const reg = cqAtual(), perdida = !!reg && cqStatus(reg) === 'perdida';
+      const aberta = perdida && cqAbertasPerdidas.has(reg.id);
+      if (mesa) mesa.classList.toggle('cq-recolhida', perdida && !aberta);
+      if (perdida && cx){
+        const x = (cqOpcoes(reg) || [])[0];
+        const quando = [...(reg.hist || [])].reverse().find(h => h.s === 'perdida');
+        const n = (cqOpcoes(reg) || []).length;
+        cx.insertAdjacentHTML('beforeend', `<div class="cq-resumo-perdida">
+          ${x ? `<span class="cq-rp-rota">${esc(x.ida)}</span><span class="cq-rp-sub">${esc([x.cia || ((x.o.ida || [])[0] || {}).cia || '', x.datas || (((x.o.ida || [])[0] || {}).pData ? dataBR(x.o.ida[0].pData) : '')].filter(Boolean).join(' · '))}${n > 1 ? ` · ${n} opções` : ''}</span>
+          ${x.c ? `<span class="cq-rp-preco">${window.VEM.brl(x.c.pix)}<small>no PIX</small></span>` : ''}` : '<span class="cq-rp-sub">Sem opção montada.</span>'}
+          ${quando ? `<span class="cq-rp-sub">não fechou em ${esc(cqHora(quando.em))}</span>` : ''}
+          <span class="esticar"></span>
+          <button type="button" class="cq-rp-bt" data-cq-rp="${esc(reg.id)}" aria-expanded="${aberta}">${aberta ? 'Recolher' : 'Ver detalhes'}<i><svg><use href="#i-seta-d"/></svg></i></button>
+        </div>`);
+      }
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-cq-rp]'); if (!b) return;
+    const id = b.dataset.cqRp;
+    if (cqAbertasPerdidas.has(id)) cqAbertasPerdidas.delete(id); else cqAbertasPerdidas.add(id);
+    cqRender();
+  });
+})();
+</script>
 </body>
 </html>
