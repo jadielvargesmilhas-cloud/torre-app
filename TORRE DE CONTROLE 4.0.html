@@ -10753,7 +10753,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               <div class="cartao-cab" style="padding:20px 20px 0;margin-bottom:14px">
                 <h3 style="color:var(--anil-claro)">Seus itens
                   <div class="sub">Cadastre o que você vai comprar de qualquer jeito.<br>A Torre procura pelos quatro caminhos abaixo, avisa quando a oferta bate o seu alvo e acompanha os pontos até caírem na conta.</div></h3>
-                <div class="linha" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="bt p fantasma" onclick="ativarAvisosDesejos()" data-dica="O celular ou o computador avisa quando um item chegar na hora de comprar"><svg><use href="#i-sino"/></svg>Avisar no aparelho</button>
+                <div class="linha ds-bts-topo" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="bt p fantasma" onclick="ativarAvisosDesejos()" data-dica="O celular ou o computador avisa quando um item chegar na hora de comprar"><svg><use href="#i-sino"/></svg>Avisar no Aparelho</button>
                 <button class="bt p primario" id="btNovoDesejo"><svg><use href="#i-mais"/></svg>Item</button></div>
               </div>
               <div id="lcCaminhos"></div>
@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 09:30';
+const BUILD = '2026-10-16 10:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -45359,7 +45359,11 @@ function formCompraPendente({desejo, compra, cands}){
     if (origem !== 'prev') $('#lcPrev').value = somaDiasISO($('#lcData').value || hojeISO(), Number($('#lcPrazo').value) || 30);
     const pts = qtdNum($('#lcPts').value), pg = $('#lcProg').value, ret = pts / 1000 * valorMilheiro(pg);
     const prod = moedaNum($('#lcValor').value), fr = moedaNum($('#lcFrete').value), tot = prod + fr;
-    $('#lcPrevia').innerHTML = `<svg><use href="#i-faisca"/></svg><div>Total pago: <b>${brl(tot)}</b>${fr ? ` (produto ${brl(prod)} + frete ${brl(fr)}; o frete não pontua)` : ''}${ret && tot ? `. Voltam ${brl(ret)}, ${pct(ret / tot * 100, 1)} do total` : ''}.<br><b>${nBR(pts)} pontos ${esc(prog(pg).n)}</b> ficam como <b>pendentes</b> até ${dataBR($('#lcPrev').value)}${ret ? `, valendo ${brl(ret)}` : ''}. Eles aparecem em Saldos como "a receber" e só entram no saldo quando você confirmar que caíram.</div>`;
+    $('#lcPrevia').innerHTML = `<svg><use href="#i-faisca"/></svg><div class="lc-prev-linhas">
+      <span>Total pago: <b>${brl(tot)}</b>${fr ? ` (produto ${brl(prod)} + frete ${brl(fr)}; o frete não pontua).` : '.'}</span>
+      ${ret && tot ? `<span>Voltam <b>${brl(ret)}</b>, ${pct(ret / tot * 100, 1)} do total.</span>` : ''}
+      <span><b>${nBR(pts)} pontos ${esc(prog(pg).n)}</b> ficam como <b>pendentes</b> até ${dataBR($('#lcPrev').value)}${ret ? `, valendo ${brl(ret)}` : ''}.</span>
+      <span>Eles aparecem em Saldos como "a receber" e só entram no saldo quando você confirmar que caíram.</span></div>`;
   };
   $('#lcPts').addEventListener('input', () => { ptsManual = true; recalc('pts'); });
   ['#lcValor', '#lcFrete', '#lcMult', '#lcProg', '#lcData', '#lcPrazo'].forEach(s => { $(s).addEventListener('input', () => recalc(s)); $(s).addEventListener('change', () => recalc(s)); });
@@ -60298,6 +60302,9 @@ function foraDoItemHTML(x){
 .pg-parc{ display:grid !important; grid-template-columns:1fr 1fr; }
 @media (max-width:480px){ .pg-forma{ grid-template-columns:1fr 1fr; } }
 .pg-grade{ grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); margin-top:10px; align-items:end; }
+.ds-bts-topo{ flex-wrap:nowrap !important; }
+@media (max-width:640px){ .ds-bts-topo{ display:grid !important; grid-template-columns:1fr 1fr; width:100%; } .ds-bts-topo > .bt{ width:100%; justify-content:center; } }
+.lc-prev-linhas{ display:flex; flex-direction:column; gap:3px; }
 .pg-resumo{ margin:10px 0 0; font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.5; }
 .pg-resumo b{ color:var(--giz); }
 </style>
