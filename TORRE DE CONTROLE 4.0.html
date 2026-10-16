@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 13:40';
+const BUILD = '2026-10-16 13:55';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -61053,5 +61053,25 @@ function _dzAvisoDesfazer(id){
 })();
 </script>
 
+<script id="semcam-js">
+/* 16/10/2026, pedido do Jadiel: item sem nenhuma oferta (os quatro caminhos em
+   "nada agora") não mostra a lista Programa de pontos / Programa de milhas /
+   Campanha com a companhia / Desconto ou cashback. Basta um caminho com oferta
+   para a lista voltar inteira. */
+(function(){
+  if (typeof caminhosItemHTML !== 'function') return;
+  const orig = caminhosItemHTML;
+  caminhosItemHTML = function(x){
+    const h = orig.apply(this, arguments);
+    if (!h || h.indexOf('lc-cams') < 0) return h;
+    const t = document.createElement('template'); t.innerHTML = h;
+    t.content.querySelectorAll('.lc-cams').forEach(b => {
+      const ls = b.querySelectorAll('.lc-cam');
+      if (ls.length && [...ls].every(l => l.classList.contains('cam-off'))) b.remove();
+    });
+    return t.innerHTML;
+  };
+})();
+</script>
 </body>
 </html>
