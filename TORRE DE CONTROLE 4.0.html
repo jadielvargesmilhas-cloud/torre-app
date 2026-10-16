@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 12:10';
+const BUILD = '2026-10-16 12:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -60937,6 +60937,110 @@ function _rclStatusHTML(c){
         }
         return out;
       };
+      return res;
+    };
+  }
+})();
+</script>
+
+<style id="dz-css">
+.dz-aviso{ display:flex; align-items:center; gap:10px; }
+.dz-aviso .bt{ flex:none; }
+.fp-desfazer{ all:unset; display:inline-block; margin-top:10px; font-size:12.5px; font-weight:600; color:#fff; opacity:.8; text-decoration:underline; cursor:pointer; }
+.fp-desfazer:hover{ opacity:1; }
+.lc-feita.tem-dz{ grid-template-columns:auto minmax(0, 1fr) auto auto auto; }
+.lc-feita.tem-dz.tem-rcl{ grid-template-columns:auto minmax(0, 1fr) auto auto auto auto; }
+.lc-feita .dz-bt{ height:28px; }
+.lc-feita .dz-bt svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width:560px){
+  .lc-feita.tem-dz, .lc-feita.tem-dz.tem-rcl{ grid-template-columns:auto minmax(0, 1fr) auto; }
+  .lc-feita.tem-dz > span.fraco{ grid-column:2 / -1; grid-row:2; }
+  .lc-feita.tem-dz .dz-bt, .lc-feita.tem-dz .rcl-bt{ grid-row:3; }
+  .lc-feita.tem-dz .dz-bt{ grid-column:2 / 3; justify-self:end; }
+}
+</style>
+<script id="dz-js">
+/* Desfazer o "Caiu na conta": tira o lançamento que o crédito criou, devolve o
+   saldo ao que era e a compra volta para "Pontos a receber" com os pontos
+   previstos. Logo depois de confirmar há um "Desfazer" no aviso e no cartão da
+   festa; depois disso, o botão fica em "Já caíram na conta". */
+function desfazerCredito(id, silencioso){
+  const c = (DB.compras || []).find(x => x.id === id); if (!c || c.status !== 'creditado') return false;
+  const li = (DB.lancamentos || []).findIndex(l => l.id === c.lancId);
+  const lanc = li >= 0 ? DB.lancamentos[li] : null;
+  if (lanc){
+    DB.lancamentos.splice(li, 1);
+    const resto = DB.lancamentos.some(l => l.contaId === lanc.contaId && l.prog === lanc.prog && (typeof jaAconteceu !== 'function' || jaAconteceu(l)));
+    if (resto){ if (typeof acertarSaldoDe === 'function') try{ acertarSaldoDe(lanc.contaId, lanc.prog); }catch(e){} }
+    else {
+      const s = (DB.saldos || []).find(x => x.contaId === lanc.contaId && x.prog === lanc.prog);
+      if (s){ s.qtd = Math.max(0, (Number(s.qtd) || 0) - (Number(lanc.qtd) || 0));
+        /* o saldo que o próprio crédito criou some junto, para não sobrar um zero */
+        if (!s.qtd && s.digitado === undefined && !DB.lancamentos.some(l => l.contaId === lanc.contaId && l.prog === lanc.prog)) DB.saldos.splice(DB.saldos.indexOf(s), 1); }
+    }
+  }
+  const pts = c.ptsPrevistos != null ? c.ptsPrevistos : c.pts;
+  c.status = 'pendente'; c.pts = pts;
+  delete c.creditadoEm; delete c.lancId; delete c.ptsPrevistos;
+  if (c.reclamacao && c.reclamacao.status === 'resolvida'){ c.reclamacao.status = 'aberta'; delete c.reclamacao.resolvidaEm; }
+  const festa = document.querySelector('.fp-tela'); if (festa && festa._encerrar) festa._encerrar();
+  document.querySelectorAll('.dz-aviso').forEach(a => { const v = a.closest('.aviso'); if (v) v.remove(); });
+  salvar(); renderCompras(); renderLancamentos(); renderFita(); if (typeof renderSaldoSeAberto === 'function') renderSaldoSeAberto(); if (typeof renderMesa === 'function') renderMesa();
+  if (!silencioso) avisar(`Desfeito. ${esc(c.item || nomeLojaCompra(c))} voltou para Pontos a receber e o saldo do ${esc(prog(c.prog).n)} voltou ao que era.`, 'ok', 5000);
+  return true;
+}
+function pedirDesfazerCredito(id){
+  const c = (DB.compras || []).find(x => x.id === id); if (!c) return;
+  confirmar('Desfazer o "Caiu na conta"?',
+    `${esc(c.item || nomeLojaCompra(c))}: os ${nBR(c.pts)} pontos ${esc(prog(c.prog).n)} saem do saldo e a compra volta para Pontos a receber. Use quando marcou por engano.`,
+    () => desfazerCredito(id), 'Desfazer', false);
+}
+function _dzAvisoDesfazer(id){
+  const host = document.getElementById('avisos'); if (!host) return;
+  const el = document.createElement('div'); el.className = 'aviso info';
+  el.innerHTML = `<svg><use href="#i-info"/></svg><div class="dz-aviso"><span>Marcou por engano?</span><button type="button" class="bt p fantasma">Desfazer</button></div>`;
+  el.querySelector('button').onclick = () => desfazerCredito(id);
+  host.appendChild(el);
+  setTimeout(() => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); }, 12000);
+}
+(function(){
+  // depois de confirmar: "Desfazer" no aviso e no cartão da festa
+  if (typeof creditarCompra === 'function'){
+    const oc = creditarCompra;
+    creditarCompra = function(id){
+      const res = oc.apply(this, arguments);
+      const bt = document.getElementById('crOk'); if (!bt || !bt.onclick) return res;
+      const clique = bt.onclick;
+      bt.onclick = function(ev){
+        const c = (DB.compras || []).find(y => y.id === id); const antes = c && c.status;
+        const out = clique.call(this, ev);
+        if (c && antes !== 'creditado' && c.status === 'creditado'){
+          _dzAvisoDesfazer(id);
+          const card = document.querySelector('.fp-tela .fp-card');
+          if (card && !card.querySelector('.fp-desfazer')){
+            const toque = card.querySelector('.fp-toque');
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'fp-desfazer'; b.textContent = 'Foi engano? Desfazer';
+            b.onclick = e => { e.stopPropagation(); desfazerCredito(id); };
+            card.insertBefore(b, toque);
+          }
+        }
+        return out;
+      };
+      return res;
+    };
+  }
+  // em "Já caíram na conta": botão Desfazer em cada linha
+  if (typeof renderReceber === 'function'){
+    const orig = renderReceber;
+    renderReceber = function(){
+      const res = orig.apply(this, arguments);
+      const cx = document.getElementById('lcReceber'); if (!cx) return res;
+      const feitas = (DB.compras || []).filter(c => c.status === 'creditado').sort((a, b) => String(b.creditadoEm || b.data).localeCompare(String(a.creditadoEm || a.data))).slice(0, 8);
+      cx.querySelectorAll('.lc-feita').forEach((el, i) => {
+        const c = feitas[i]; if (!c || el.querySelector('.dz-bt')) return;
+        el.classList.add('tem-dz');
+        el.insertAdjacentHTML('beforeend', `<button type="button" class="bt p fantasma dz-bt" onclick="pedirDesfazerCredito('${c.id}')" data-dica="Marcou por engano? Volta para Pontos a receber"><svg><use href="#i-seta-e"/></svg>Desfazer</button>`);
+      });
       return res;
     };
   }
