@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 06:30';
+const BUILD = '2026-10-16 07:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -59737,15 +59737,19 @@ document.addEventListener('click', e => {
 const _ctEscolha = {};
 const _chaveOf = o => o.loja.id + '|' + o.prog;
 function ofertasComparadas(x){
+  /* Sempre 3 opções quando houver 3 (pedido do Jadiel, 16/10/2026): a melhor,
+     a loja da própria marca, a melhor de outro programa, e completa com as
+     seguintes da lista. Uma loja aparece uma vez só, no programa que dá mais. */
   const t = (x.todas || []).slice().sort((a, b) => b.retorno - a.retorno);
-  if (t.length < 2) return [];
-  const out = [t[0]], tem = o => out.some(y => _chaveOf(y) === _chaveOf(o));
-  const progs = new Set([t[0].prog]);
-  t.forEach(o => { if (!progs.has(o.prog) && out.length < 4){ progs.add(o.prog); out.push(o); } });
-  const m = typeof lojaDaMarca === 'function' ? lojaDaMarca(x.d, t) : null;
-  if (m && !tem(m) && out.length < 4) out.push(m);
-  if (out.length < 2 && t[1]) out.push(t[1]);
-  return out.sort((a, b) => b.retorno - a.retorno);
+  const porNome = []; t.forEach(o => { if (!porNome.some(y => normLoja(y.loja.n) === normLoja(o.loja.n))) porNome.push(o); });
+  if (!porNome.length) return [];
+  const MAX = 3, out = [porNome[0]], tem = o => out.some(y => normLoja(y.loja.n) === normLoja(o.loja.n));
+  const m = typeof lojaDaMarca === 'function' ? lojaDaMarca(x.d, porNome) : null;
+  if (m && !tem(m)) out.push(m);
+  const outroProg = porNome.find(o => !tem(o) && !out.some(y => y.prog === o.prog));
+  if (outroProg && out.length < MAX) out.push(outroProg);
+  porNome.forEach(o => { if (out.length < MAX && !tem(o)) out.push(o); });
+  return out.slice(0, MAX).sort((a, b) => b.retorno - a.retorno);
 }
 function _lojaDeOferta(o){
   return {...o.loja, n:o.loja.n, prog:o.prog, fim:o.fim, origem:o.fonte === 'campanha' ? 'bonificada' : 'loja', campId:o.camp ? o.camp.id : (o.loja.campId || ''),
@@ -60025,6 +60029,24 @@ document.addEventListener('click', e => {
 }
 .ds-item.pronto:has(.op) > .ds-corpo > .ds-conta, .ds-item.pronto:has(.op) > .ds-corpo > .lc-fonte{ display:none !important; }
 .ds-item.pronto:has(.op) .ds-acoes a[target="_blank"]:not(.rv-ir){ display:none !important; }
+
+/* cabeçalho do item: nome numa linha, etiquetas na de baixo (16/10/2026) */
+.ds-item.pronto:has(.op) .ds-cab{ display:flex !important; flex-wrap:wrap; align-items:center; justify-content:flex-start !important; gap:6px; }
+.ds-item.pronto:has(.op) .ds-cab .ds-nome{ flex:0 0 100%; }
+.ds-item.pronto:has(.op) .ds-cab .etq{ margin:0 !important; }
+/* "Ir para" à esquerda de "Registrar a compra" */
+.ds-acoes .rv-ir{ width:auto !important; margin:0 !important; }
+.ds-item.pronto:has(.op) .ds-acoes{ container-type:inline-size; container-name:dsac; flex-wrap:wrap; }
+@container dsac (max-width:460px){
+  .ds-acoes .rv-ir, .ds-acoes [onclick^="comprarDesejo"]{ flex:1 1 calc(50% - 4px); justify-content:center; white-space:normal; text-align:center; line-height:1.25; min-height:38px; }
+  .ds-acoes .rv-ir ~ .icone:not([onclick^="comprarDesejo"]){ order:3; }
+  .ds-acoes [onclick^="dispensarOfertaDesejo"]{ margin-left:auto; }
+}
+.op-c-n svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
+.op-c.caro{ border-color:color-mix(in srgb, var(--ouro) 55%, var(--fio)); }
+.op-c.caro .op-c-n{ color:var(--ouro); }
+.op-c-rot{ font-style:normal; font-size:calc(11px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--jade); line-height:1.3; }
+.op-c.caro .op-c-rot{ color:var(--ouro); }
 </style>
 <script id="op-js">
 /* ══ Cartão do item: as opções lado a lado, e as contas de cada uma (16/10/2026) ══
@@ -60054,13 +60076,20 @@ function opcoesItemHTML(x){
   }).join('');
   let contas = '';
   if (sel){
-    const rs = (DB.contas || []).length ? _contasOrdenadas(sel, valor) : [];
+    const todas = (DB.contas || []).length ? _contasOrdenadas(sel, valor) : [];
+    /* só duas: a que gera mais e a do clube com o milheiro mais caro (16/10/2026) */
+    const mais = todas[0] || null;
+    const comClube = todas.filter(r => r.clube && r.clube.cpm > 0 && r.pts > 0);
+    const caro = (comClube.sort((a, b) => b.clube.cpm - a.clube.cpm)[0])
+      || todas.filter(r => r.antes > 0 && r.pts > 0).sort((a, b) => b.antes - a.antes)[0] || null;
+    const rs = []; if (mais) rs.push({...mais, _rot:caro && caro.id === mais.id ? 'Gera mais · clube mais caro' : 'Gera mais pontos'});
+    if (caro && (!mais || caro.id !== mais.id)) rs.push({...caro, _rot:caro.clube && caro.clube.cpm ? 'Clube mais caro' : 'Milheiro mais caro'});
     contas = rs.length ? `<div class="op-contas">
-      <div class="op-ct">Contas para comprar na ${esc(sel.loja.n)} <small>da mais vantajosa para a menos</small></div>
-      ${rs.map((r, i) => `<div class="op-c${i === 0 ? ' top' : ''}">
-        <span class="op-c-n">${i + 1}º</span>
+      <div class="op-ct">Em qual conta comprar na ${esc(sel.loja.n)}</div>
+      ${rs.map((r, i) => `<div class="op-c${i === 0 ? ' top' : ' caro'}">
+        <span class="op-c-n">${i === 0 ? '<svg><use href="#i-estrela"/></svg>' : '<svg><use href="#i-baixar"/></svg>'}</span>
         ${avatarDe(r.id, 'tit-av op-av')}
-        <span class="op-c-nome"><b>${esc(nomeCurto(r.nome))}</b><small>${r.clube ? esc(_ctPlano(r.clube)) : (r.semPrograma ? 'sem conta na ' + esc(prog(sel.prog).n) : 'sem clube')}</small></span>
+        <span class="op-c-nome"><em class="op-c-rot">${esc(r._rot)}</em><b>${esc(nomeCurto(r.nome))}</b><small>${r.clube ? esc(_ctPlano(r.clube)) + (r.clube.cpm ? ' · ' + brl2(r.clube.cpm) + ' o milheiro' : '') : (r.semPrograma ? 'sem conta na ' + esc(prog(sel.prog).n) : 'sem clube')}</small></span>
         <span class="op-c-p"><b>+${nBR(r.pts)}</b><small>pontos${r.incerto ? ' (até)' : ''}</small></span>
         <span class="op-c-m">${r.antes != null ? `<s>${brl2(r.antes)}</s><b>${brl2(r.depois)}${r.queda > 0 ? _CT_SETA : ''}</b>` : '<small>sem estoque</small><b>n/d</b>'}</span>
         <span class="op-c-q"><b class="${r.queda > 0 ? 'jade' : ''}">${_ctPct(r)}</b><small>no milheiro</small></span>
@@ -60069,7 +60098,7 @@ function opcoesItemHTML(x){
   }
   const ir = sel || of[0];
   return `<div class="op">
-    <div class="op-tit">${(() => { const tot = new Set((x.todas || []).map(o => normLoja(o.loja.n))).size; return tot > of.length ? `${tot} lojas vendem · as ${of.length} melhores` : of.length > 1 ? `${of.length} lojas vendem este item` : 'Onde comprar'; })()}<small>${sel ? 'toque de novo para fechar' : 'toque numa opção para ver as contas'}</small></div>
+    <div class="op-tit">${(() => { const tot = new Set((x.todas || []).map(o => normLoja(o.loja.n))).size; return tot > of.length ? `${tot} lojas vendem · ${of.length} opções` : of.length > 1 ? `${of.length} lojas vendem este item` : 'Onde comprar'; })()}<small>${sel ? 'toque de novo para fechar' : 'toque numa opção para ver as contas'}</small></div>
     <div class="op-linha" style="--n:${of.length}">${tiles}</div>
     ${contas}
     ${ir.link ? `<a class="bt primario rv-ir" href="${esc(ir.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a ${esc(ir.loja.n)}</a>` : ''}
@@ -60086,6 +60115,18 @@ document.addEventListener('click', e => {
   renderCompras();
   const it2 = document.querySelector(`.ds-item[data-id="${id}"]`); if (it2) window.scrollBy(0, it2.getBoundingClientRect().top - y);
 });
+
+(function(){
+  const orig = renderCompras;
+  renderCompras = function(){
+    const r = orig.apply(this, arguments);
+    document.querySelectorAll('.ds-item.pronto').forEach(it => {
+      const ir = it.querySelector('.op .rv-ir'), ac = it.querySelector('.ds-acoes');
+      if (ir && ac){ ir.classList.add('p'); ac.insertBefore(ir, ac.firstChild); }
+    });
+    return r;
+  };
+})();
 </script>
 <style id="li-css">
 .li{ border:1px solid var(--fio); border-radius:12px; padding:10px; background:var(--sup-1); }
