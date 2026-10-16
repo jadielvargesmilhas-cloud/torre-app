@@ -10752,7 +10752,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
             <div class="cartao" style="padding:0;overflow:hidden">
               <div class="cartao-cab" style="padding:20px 20px 0;margin-bottom:14px">
                 <h3 style="color:var(--anil-claro)">Seus itens
-                  <div class="sub">Cadastre o que você vai comprar de qualquer jeito. A Torre procura pelos quatro caminhos abaixo, avisa quando a oferta bate o seu alvo e acompanha os pontos até caírem na conta.</div></h3>
+                  <div class="sub">Cadastre o que você vai comprar de qualquer jeito.<br>A Torre procura pelos quatro caminhos abaixo, avisa quando a oferta bate o seu alvo e acompanha os pontos até caírem na conta.</div></h3>
                 <div class="linha" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="bt p fantasma" onclick="ativarAvisosDesejos()" data-dica="O celular ou o computador avisa quando um item chegar na hora de comprar"><svg><use href="#i-sino"/></svg>Avisar no aparelho</button>
                 <button class="bt p primario" id="btNovoDesejo"><svg><use href="#i-mais"/></svg>Item</button></div>
               </div>
@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 07:30';
+const BUILD = '2026-10-16 08:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -26906,6 +26906,7 @@ function editarLoja(id){
     corpo:`<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
       <div class="campo"><label>Nome</label><input type="text" id="ljN" value="${esc(l.n)}" placeholder="Casas Bahia"></div>
       <div class="campo"><label>Programa</label><select id="ljProg">${PROG_IDS.map(p => `<option value="${p}"${p === l.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo" style="grid-column:1 / -1"><label>Link da loja dentro do programa <span class="fraco">o endereço da página da loja na Livelo, Esfera...</span></label><input type="url" id="ljLink" value="${esc(l.link || '')}" placeholder="https://www.livelo.com.br/juntar-pontos/parceiros/..."></div>
       <div class="campo"><label>Onde a compra acontece</label><select id="ljCompraModo" data-ordem="natural">
         <option value="parceiro"${l.modo !== 'shopping' ? ' selected' : ''}>Loja parceira: no site da loja, pelo link do programa</option>
         <option value="shopping"${l.modo === 'shopping' ? ' selected' : ''}>Shopping do programa: dentro do site ou app do programa</option></select></div>
@@ -26957,7 +26958,9 @@ function editarLoja(id){
     const novo = { id:l.id || uid(), n:$('#ljN').value.trim() || 'Loja', prog:$('#ljProg').value, cat:$('#ljCat').value,
       base:Number($('#ljBase').value) || 0, promo:Number($('#ljPromo').value) || 0, fim:$('#ljFim').value, obs:$('#ljObs').value.trim(),
       faixas: faixas.filter(f => f.cat), em:$('#ljEm').value, conf:$('#ljConf').value, fonte:$('#ljFonte').value.trim(),
-      modo:(($('#ljCompraModo') || {}).value === 'shopping') ? 'shopping' : 'parceiro' };
+      modo:(($('#ljCompraModo') || {}).value === 'shopping') ? 'shopping' : 'parceiro',
+      link:linkLimpo((($('#ljLink') || {}).value || '').trim()) || l.link || '', porDolar:l.porDolar };
+    if (novo.link && novo.link !== l.link) guardarLinkLoja(novo.prog, novo.n, novo.link);
     if (!conferirAntesDeSalvar('lojas', novo, 'uma loja')) return;
     if (id) DB.lojas[DB.lojas.findIndex(x => x.id === id)] = novo; else DB.lojas.push(novo);
     /* A loja aparece em duas telas: a vitrine desta aba e a lista de Compras
@@ -60049,6 +60052,39 @@ document.addEventListener('click', e => {
 .op-c.caro .op-c-rot{ color:var(--ouro); }
 </style>
 <script id="op-js">
+
+/* ══ Link certo de cada loja no programa (16/10/2026) ══════════════════════════
+   A lista do dia traz um link só, o geral ("ganhe-pontos-compre-e-pontue"), e
+   ele ia para todas as lojas. O link certo é o da página da loja no programa
+   (Havaianas na Livelo: /juntar-pontos/parceiros/havaianas/ALP), e o código do
+   fim (ALP) é de cada parceiro: não dá para adivinhar. Por isso a Torre guarda
+   um caderno de links: o que você corrige numa loja vale para sempre, e a lista
+   do dia seguinte não apaga. Links copiados do navegador vêm com rastreio do
+   Google (?_gl=...); a Torre tira essa parte, que não muda a página. */
+const LINKS_CONHECIDOS = {
+  'livelo|havaianas':'https://www.livelo.com.br/juntar-pontos/parceiros/havaianas/ALP'
+};
+function linkLimpo(u){
+  u = String(u || '').trim(); if (!u) return '';
+  try { const x = new URL(u); ['_gl', 'gclid', 'fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(k => x.searchParams.delete(k)); x.hash = ''; let r = x.toString(); if (r.endsWith('?')) r = r.slice(0, -1); return r; }
+  catch(e){ return u; }
+}
+const _chaveLink = (p, n) => p + '|' + normLoja(n);
+function linksLoja(){ if (typeof DB === 'undefined' || !DB) return {}; DB.cfg = DB.cfg || {}; DB.cfg.linksLoja = DB.cfg.linksLoja || {}; return DB.cfg.linksLoja; }
+function guardarLinkLoja(p, n, u){ const m = linksLoja(); m[_chaveLink(p, n)] = linkLimpo(u); }
+function linkCertoDe(p, n){ return linksLoja()[_chaveLink(p, n)] || LINKS_CONHECIDOS[_chaveLink(p, n)] || ''; }
+function aplicarLinksConhecidos(){
+  if (typeof DB === 'undefined' || !DB || !Array.isArray(DB.lojas)) return false;
+  let mudou = false;
+  (DB.lojas || []).forEach(l => { const c = linkCertoDe(l.prog, l.n); if (c && l.link !== c){ l.link = c; mudou = true; } });
+  if (mudou) try { salvar(); } catch(e){}
+  return mudou;
+}
+(function(){
+  const g = gravarAnuncios;
+  gravarAnuncios = function(){ const r = g.apply(this, arguments); if (aplicarLinksConhecidos()){ try { renderLojasParceiras(); } catch(e){} try { renderCompras(); } catch(e){} } return r; };
+  setTimeout(() => { if (aplicarLinksConhecidos()){ try { renderLojasParceiras(); } catch(e){} try { renderCompras(); } catch(e){} } }, 0);
+})();
 /* ══ Cartão do item: as opções lado a lado, e as contas de cada uma (16/10/2026) ══
    Pedido do Jadiel, nas palavras dele: "coloca as três possibilidades, uma ao
    lado da outra, na mesma linha. Clico na possibilidade 1 e abre primeira,
