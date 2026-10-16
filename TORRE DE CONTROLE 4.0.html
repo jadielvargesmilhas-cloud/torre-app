@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 05:30';
+const BUILD = '2026-10-16 06:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -52316,7 +52316,7 @@ function ajustarUmaLinha(){
 /* "Não me interessa" com o porquê (10/10/2026, pedido do Jadiel): um toque no
    motivo marca a caixinha e o aviso sai do Início. O motivo fica guardado e
    aparece na lista dos ocultos. */
-const AV_MOTIVOS = ['Não compensa para mim', 'Não uso este programa', 'Sem pontos ou dinheiro agora', 'O prazo não dá para mim', 'Esperar uma campanha melhor', 'Já resolvi de outro jeito', 'Outro motivo'];
+const AV_MOTIVOS = ['Não compensa para mim', 'Não encontrei o produto exato', 'O prazo não dá para mim', 'Sem pontos ou dinheiro agora', 'Esperar uma campanha melhor', 'Já resolvi de outro jeito', 'Outro motivo'];
 function avMenuMotivo(k, btn, opts){
   opts = opts || {};
   if (typeof fecharSeletorLista === 'function') fecharSeletorLista();
@@ -52364,7 +52364,8 @@ function avMenuMotivo(k, btn, opts){
    o nível dispensado (14 por real na Azul, por exemplo) e só volta a chamar
    quando aparecer coisa melhor no mesmo programa, para os itens que aquela
    oferta servia. O item continua na lista, com o porquê escrito. */
-const MOTIVOS_DISPENSA = ['Não compensa para mim', 'Não uso este programa', 'O prazo não dá para mim', 'Esperar uma campanha melhor'];
+/* "Não uso este programa" saiu da lista (15/10/2026), mas fica aqui para os avisos já dispensados com ele. */
+const MOTIVOS_DISPENSA = ['Não compensa para mim', 'Não encontrei o produto exato', 'Não uso este programa', 'O prazo não dá para mim', 'Esperar uma campanha melhor'];
 const MOTIVO_ESPERA = 'Esperar uma campanha melhor';
 const _candOrig = candidatosDesejo;
 function _chaveDesejo(d){ return String(d.id || d.n); }
@@ -60068,7 +60069,7 @@ function opcoesItemHTML(x){
   }
   const ir = sel || of[0];
   return `<div class="op">
-    <div class="op-tit">${of.length > 1 ? `${of.length} lojas vendem este item` : 'Onde comprar'}<small>${sel ? 'toque de novo para fechar' : 'toque numa opção para ver as contas'}</small></div>
+    <div class="op-tit">${(() => { const tot = new Set((x.todas || []).map(o => normLoja(o.loja.n))).size; return tot > of.length ? `${tot} lojas vendem · as ${of.length} melhores` : of.length > 1 ? `${of.length} lojas vendem este item` : 'Onde comprar'; })()}<small>${sel ? 'toque de novo para fechar' : 'toque numa opção para ver as contas'}</small></div>
     <div class="op-linha" style="--n:${of.length}">${tiles}</div>
     ${contas}
     ${ir.link ? `<a class="bt primario rv-ir" href="${esc(ir.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a ${esc(ir.loja.n)}</a>` : ''}
@@ -60085,6 +60086,124 @@ document.addEventListener('click', e => {
   renderCompras();
   const it2 = document.querySelector(`.ds-item[data-id="${id}"]`); if (it2) window.scrollBy(0, it2.getBoundingClientRect().top - y);
 });
+</script>
+<style id="li-css">
+.li{ border:1px solid var(--fio); border-radius:12px; padding:10px; background:var(--sup-1); }
+.li-cab{ display:flex; flex-direction:column; gap:2px; margin-bottom:8px; }
+.li-cab b{ font-size:calc(14px * var(--esc)); color:var(--giz); }
+.li-cab small{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.li-barra{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.li-barra input{ flex:1 1 160px; min-width:0; }
+.li-lista{ display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:6px; max-height:320px; overflow:auto; padding-right:2px; }
+.li-l{ display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; border:1px solid var(--fio); cursor:pointer; min-width:0; }
+.li-l.on{ border-color:color-mix(in srgb, var(--jade) 55%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, transparent); }
+.li-l input{ width:18px; height:18px; flex:0 0 18px; accent-color:var(--jade); margin:0; }
+.li-n{ display:flex; flex-direction:column; min-width:0; flex:1; }
+.li-n b{ font-size:calc(13.5px * var(--esc)); color:var(--giz); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.li-n small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.li-sug{ font-style:normal; font-size:calc(10.5px * var(--esc)); font-weight:600; color:var(--jade); border:1px solid currentColor; border-radius:99px; padding:0 6px; flex:0 0 auto; }
+.li-fora{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:8px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.li-fora b{ color:var(--giz); }
+.li-aj{ margin-left:auto; }
+</style>
+<script id="li-js">
+/* ══ Lojas de cada item: você marca onde procurar (16/10/2026) ══════════════════
+   Antes, a Torre decidia sozinha (pela tabela do que cada loja vende) e o campo
+   "Lojas onde você compraria" era texto livre: escrever "Havaianas" ali deixava
+   SÓ a Havaianas, e a Centauro e a Netshoes sumiam sem aviso. Agora o cadastro
+   mostra todas as lojas em promoção hoje, já marcadas as que vendem esse tipo
+   de produto; você marca ou desmarca. O que você muda fica guardado no item
+   (lojasSim / lojasNao); loja nova que aparecer amanhã segue a regra da Torre. */
+const _nL = n => normLoja(String(n || ''));
+(function(){
+  const orig = lojaVendeItem;
+  lojaVendeItem = function(nome, d, cat){
+    if (d && Array.isArray(d.lojasNao) && d.lojasNao.some(x => _nL(x) === _nL(nome))) return false;
+    if (d && Array.isArray(d.lojasSim) && d.lojasSim.some(x => _nL(x) === _nL(nome))) return true;
+    return orig.apply(this, arguments);
+  };
+})();
+/* todas as lojas com oferta viva hoje, uma por nome, com o melhor de cada programa */
+function lojasVivasParaItem(){
+  const m = {};
+  (typeof ofertasVitrine === 'function' ? ofertasVitrine() : []).forEach(o => {
+    const k = _nL(o.n); const t = tetoLoja(o).promo || tetoLoja(o).base || 0;
+    const e = m[k] = m[k] || {n:o.n, cat:o.cat, progs:{}};
+    if (!e.progs[o.prog] || e.progs[o.prog] < t) e.progs[o.prog] = t;
+  });
+  return Object.values(m).sort((a, b) => a.n.localeCompare(b.n, 'pt'));
+}
+function _autoVende(nome, cat, dTmp){ const d = {...dTmp, lojasSim:[], lojasNao:[]}; try { return !!lojaVendeItem(nome, d, cat); } catch(e){ return false; } }
+function montarLojasItem(dOrig){
+  const box = document.getElementById('dsLojasBox'); if (!box) return;
+  const nome = ($('#dsN') || {}).value || '', cat = ($('#dsCat') || {}).value || 'geral';
+  const dTmp = {n:nome, cat};
+  const sim = new Set((box._sim || dOrig.lojasSim || []).map(_nL)), nao = new Set((box._nao || dOrig.lojasNao || []).map(_nL));
+  const prefs = box._sim ? [] : prefsDoDesejo(dOrig);
+  const lojas = lojasVivasParaItem().map(l => {
+    const auto = _autoVende(l.n, l.cat, dTmp), k = _nL(l.n);
+    let on = nao.has(k) ? false : sim.has(k) ? true : auto;
+    if (prefs.length) on = prefs.some(p => _nL(l.n).includes(_nL(p)) || _nL(p).includes(_nL(l.n)));   /* item antigo com texto livre */
+    return {...l, k, auto, on};
+  });
+  const busca = _nL(box._busca || '');
+  const vis = lojas.filter(l => !busca || l.k.includes(busca));
+  const ord = vis.sort((a, b) => (b.auto - a.auto) || a.n.localeCompare(b.n, 'pt'));
+  const nOn = lojas.filter(l => l.on).length;
+  box._estado = lojas;
+  box.innerHTML = `<div class="li-cab"><b>${nOn} de ${lojas.length} lojas marcadas</b><small>Marcadas = a Torre procura o item nelas. Já vêm marcadas as que vendem ${esc(cat)}${nome ? ` (${esc(nome)})` : ''}.</small></div>
+    <div class="li-barra"><input type="search" id="dsLojasBusca" placeholder="Procurar loja" value="${esc(box._busca || '')}">
+      <button type="button" class="bt p fantasma" data-li="sug">Só as sugeridas</button><button type="button" class="bt p fantasma" data-li="todas">Todas</button><button type="button" class="bt p fantasma" data-li="nenhuma">Nenhuma</button></div>
+    <div class="li-lista">${ord.map(l => `<label class="li-l${l.on ? ' on' : ''}"><input type="checkbox" data-lk="${esc(l.k)}"${l.on ? ' checked' : ''}>
+      <span class="li-n"><b>${esc(l.n)}</b><small>${Object.entries(l.progs).map(([p, v]) => `${esc(prog(p).n)} ${nBRdec(v)}`).join(' · ')}</small></span>
+      ${l.auto ? '<em class="li-sug">vende o tipo</em>' : ''}</label>`).join('') || '<p class="fraco">Nenhuma loja com esse nome em promoção hoje.</p>'}</div>`;
+  const grava = () => { const st = box._estado; box._sim = st.filter(l => l.on && !l.auto).map(l => l.n); box._nao = st.filter(l => !l.on && l.auto).map(l => l.n); };
+  box.querySelectorAll('[data-lk]').forEach(c => c.onchange = () => { const l = box._estado.find(x => x.k === c.dataset.lk); l.on = c.checked; grava(); montarLojasItem(dOrig); });
+  box.querySelectorAll('[data-li]').forEach(b => b.onclick = () => { const a = b.dataset.li; box._estado.forEach(l => { l.on = a === 'todas' ? true : a === 'nenhuma' ? false : l.auto; }); grava(); montarLojasItem(dOrig); });
+  const bs = box.querySelector('#dsLojasBusca'); bs.oninput = () => { box._busca = bs.value; const pos = bs.selectionStart; grava(); montarLojasItem(dOrig); const n = document.getElementById('dsLojasBusca'); n.focus(); n.setSelectionRange(pos, pos); };
+  if (!box._sim) grava();
+}
+(function(){
+  const orig = editarDesejo;
+  editarDesejo = function(id){
+    const r = orig.apply(this, arguments);
+    const d = id ? (DB.desejos || []).find(x => x.id === id) || {} : {};
+    const inp = document.getElementById('dsLojas'); if (!inp) return r;
+    const campo = inp.closest('.campo');
+    campo.innerHTML = `<label>Lojas onde procurar</label><div id="dsLojasBox" class="li"></div>`;
+    campo.insertAdjacentHTML('beforeend', '<input type="hidden" id="dsLojas" value="">');
+    const box = document.getElementById('dsLojasBox');
+    montarLojasItem(d);
+    let t; ['#dsN', '#dsCat'].forEach(s => { const el = $(s); if (el) el.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => montarLojasItem(d), 250); }); if (el) el.addEventListener('change', () => montarLojasItem(d)); });
+    /* ao salvar: guarda o que você mudou e tira o texto livre antigo */
+    const bt = document.getElementById('btSalvarDesejo'), salvarOrig = bt.onclick;
+    bt.onclick = function(){
+      const antes = (DB.desejos || []).length, ids = new Set((DB.desejos || []).map(x => x.id));
+      salvarOrig.apply(this, arguments);
+      const alvo = id ? (DB.desejos || []).find(x => x.id === id) : (DB.desejos || []).find(x => !ids.has(x.id));
+      if (alvo && (DB.desejos || []).length >= antes){
+        alvo.lojasSim = (box._sim || []).slice(); alvo.lojasNao = (box._nao || []).slice(); alvo.lojasPref = '';
+        salvar(); try { renderCompras(); } catch(e){}
+      }
+    };
+    if (location.hash === '#lojas' || editarDesejo._focoLojas){ editarDesejo._focoLojas = false; setTimeout(() => box.scrollIntoView({block:'center'}), 50); }
+    return r;
+  };
+})();
+function ajustarLojasItem(id){ editarDesejo._focoLojas = true; editarDesejo(id); }
+/* no cartão: quem ficou de fora e por quê, com desfazer */
+function foraDoItemHTML(x){
+  const d = x.d; let zs = []; try { zs = dispensasAtivas(); } catch(e){}
+  const fora = [];
+  if (zs.length) _candOrig(d, true).forEach(o => { const z = dispensaDe(d, o, zs); if (z && !fora.some(f => _nL(f.o.loja.n) === _nL(o.loja.n))) fora.push({o, z}); });
+  const pref = prefsDoDesejo(d);
+  return `<div class="li-fora">${pref.length ? `<span>Só procura em: <b>${esc(pref.join(', '))}</b> (escrito no cadastro)</span>` : ''}${fora.map(f => `<span>Fora: <b>${esc(f.o.loja.n)}</b> (${esc((f.z.motivo || 'não me interessa').toLowerCase())}) <button type="button" class="link-reconsiderar" onclick="reconsiderarOferta('${esc(f.z.k)}')">Desfazer</button></span>`).join('')}
+    <button type="button" class="link-reconsiderar li-aj" onclick="ajustarLojasItem('${esc(d.id)}')">Ajustar lojas deste item</button></div>`;
+}
+(function(){
+  const orig = caminhosItemHTML;
+  caminhosItemHTML = function(x){ const h = orig.apply(this, arguments); return x && x.d && x.d.id !== '__qc' ? h + foraDoItemHTML(x) : h; };
+})();
 </script>
 </body>
 </html>
