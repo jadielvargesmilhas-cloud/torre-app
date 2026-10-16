@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 12:40';
+const BUILD = '2026-10-16 13:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -45244,7 +45244,7 @@ function renderDesejos(){
       : x.esperando ? '' : `<div class="lc-sem">
           <b>Nenhum caminho com pontos para ${esc(d.cat)}${d.prog ? ' na ' + esc(prog(d.prog).n) : ''} agora.</b>
           ${ultima ? ultimaOfertaTxt(ultima) : ''}
-          <span>A Torre avisa quando ${sug.slice(0, 4).join(', ')} ou outra loja que venda ${esc(d.cat)} abrir campanha${prefsDoDesejo(d).length ? ' (só nas lojas que você escolheu)' : ''}.</span></div>`}
+          <div class="lc-alerta" role="note"><svg><use href="#i-sino"/></svg><span>A Torre avisa quando uma loja que venda ${esc(d.cat)} abrir campanha${prefsDoDesejo(d).length ? ' (só nas lojas que você escolheu)' : ''}.</span></div></div>`}
       <div class="ds-acoes">
         <button class="bt p fantasma icone" onclick="abrirFicha('${d.id}')" data-dica="Ficha do produto"><svg><use href="#i-livro"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -60055,17 +60055,23 @@ document.addEventListener('click', e => {
 .op-c-rot{ font-style:normal; font-size:calc(11px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--jade); line-height:1.3; }
 .op-c.caro .op-c-rot{ color:var(--ouro); }
 
-.lc-ult{ display:flex; flex-direction:column; gap:1px; }
+.lc-ult{ display:block; }
+.lc-alerta{ display:grid; grid-template-columns:18px minmax(0, 1fr); gap:9px; align-items:start; margin-top:6px; padding:9px 11px; border-radius:10px;
+  background:color-mix(in srgb, var(--ouro) 10%, var(--sup-1)); border:1px solid color-mix(in srgb, var(--ouro) 45%, var(--fio)); border-left:3px solid var(--ouro); color:var(--giz); }
+.lc-alerta svg{ width:17px; height:17px; margin-top:1px; fill:none; stroke:var(--ouro); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.lc-alerta span{ font-weight:600; color:var(--giz); }
 </style>
 <script id="op-js">
 
 /* "A última: …" em linhas próprias (16/10/2026): a loja e o programa numa linha,
    onde a compra acontece e até quando na de baixo. */
 function ultimaOfertaTxt(m){
-  const pg = esc(prog(m.prog).n), lj = esc(m.loja.n), md = modoCompra(m), ate = m.fim ? `, até ${dataBR(m.fim)}` : '';
-  const l1 = md === 'campanha' ? `Campanha ${lj} → ${pg}` : md === 'shopping' ? `Shopping ${pg} · ${lj}` : `Loja parceira da ${pg} · ${lj}`;
-  const l2 = md === 'campanha' ? `compra bonificada${ate}.` : md === 'shopping' ? `compra dentro do site ou app da ${pg}${ate}.` : `compra no site da ${lj}, entrando pelo link da ${pg}${ate}.`;
-  return `<span class="lc-ult"><span>A última: <b>${nBRdec(m.mult)}×</b> em ${l1}</span><span>${l2}</span></span>`;
+  /* 16/10/2026, pedido do Jadiel: uma linha curta e simples, sem o "como
+     comprar" (esse aviso aparece só na hora da compra).
+     Ex.: "A última: 15× em Loja parceira da Livelo · Centauro, até 15/10/2026." */
+  const pg = esc(prog(m.prog).n), lj = esc(m.loja.n), md = modoCompra(m);
+  const onde = md === 'campanha' ? `Campanha ${lj} → ${pg}` : md === 'shopping' ? `Shopping ${pg} · ${lj}` : `Loja parceira da ${pg} · ${lj}`;
+  return `<span class="lc-ult">A última: <b>${nBRdec(m.mult)}×</b> em ${onde}${m.fim ? `, até ${dataBR(m.fim)}` : ''}.</span>`;
 }
 
 /* ══ Link certo de cada loja no programa (16/10/2026) ══════════════════════════
