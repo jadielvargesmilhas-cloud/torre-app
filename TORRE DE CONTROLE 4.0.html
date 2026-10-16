@@ -11807,7 +11807,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 14:35';
+const BUILD = '2026-10-16 15:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -61074,6 +61074,39 @@ function _dzAvisoDesfazer(id){
     });
     return t.innerHTML;
   };
+})();
+</script>
+<style id="ajl-css">
+/* 16/10/2026: "Ajustar lojas deste item" à direita da linha "R$ 200,00 · eletrônicos · alvo ...".
+   Onde não cabe (celular), desce para a linha de baixo, alinhado à direita. */
+.ds-sub.tem-aj{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px; }
+.ds-sub.tem-aj > .ds-sub-t{ flex:0 1 auto; min-width:0; }
+/* para caber na linha: os ícones ficam só na altura do nome e a linha do preço usa a largura toda */
+@media (min-width:561px){ .ds-item:not(.pronto):has(.ds-sub.tem-aj) .ds-corpo > .ds-acoes{ grid-row:1; } }
+/* celular: o texto fica inteiro na linha dele e o link desce, alinhado à direita */
+@media (max-width:560px){ .ds-sub.tem-aj > .ds-sub-t{ flex:1 1 100%; } }
+.ds-item:not(.pronto) .ds-corpo > .ds-cab + .ds-sub.tem-aj{ grid-column:2 / -1; }
+.ds-sub.tem-aj > .li-aj{ flex:0 0 auto; margin-left:auto; white-space:nowrap; }
+</style>
+<script id="ajl-js">
+(function(){
+  function arrumar(){
+    document.querySelectorAll('.ds-item:not(.pronto)').forEach(it => {
+      const aj = it.querySelector('.li-fora .li-aj'); if (!aj) return;
+      const sub = it.querySelector('.ds-corpo > .ds-cab + .ds-sub'); if (!sub || sub.classList.contains('tem-aj')) return;
+      const t = document.createElement('span'); t.className = 'ds-sub-t';
+      while (sub.firstChild) t.appendChild(sub.firstChild);
+      sub.appendChild(t); sub.appendChild(aj); sub.classList.add('tem-aj');
+      const fora = it.querySelector('.li-fora');
+      if (fora && !fora.children.length && !fora.textContent.trim()) fora.remove();
+    });
+  }
+  let pend = false;
+  new MutationObserver(ms => {
+    if (pend || !ms.some(m => m.addedNodes.length)) return;
+    pend = true; queueMicrotask(() => { pend = false; if (document.querySelector('.ds-item:not(.pronto) .li-fora .li-aj')) arrumar(); });
+  }).observe(document.documentElement, {childList:true, subtree:true});
+  if (document.body) arrumar();
 })();
 </script>
 </body>
