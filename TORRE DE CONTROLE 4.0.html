@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 02:30';
+const BUILD = '2026-10-16 03:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -59186,8 +59186,8 @@ function editarBonificada(id){
 .ct-cab{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
 .ct-cab h3{ margin:0; font-size:calc(15px * var(--esc)); font-weight:700; color:var(--giz); }
 .ct-rota{ font-size:calc(11.5px * var(--esc)); font-weight:700; letter-spacing:.02em; padding:3px 9px; border-radius:99px; color:#fff; background:#c2621a; white-space:nowrap; }
-.ct-grade{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
-.ct-grade.um{ grid-template-columns:minmax(0,1fr); }
+.ctl-grade{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+.ctl-grade.um{ grid-template-columns:minmax(0,1fr); }
 .ct-c{ display:flex; flex-direction:column; gap:10px; padding:12px 13px; border-radius:12px; background:var(--sup-1); border:1px solid var(--fio); min-width:0; }
 .ct-c.ct-jade{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
 .ct-c.ct-ouro{ border-color:color-mix(in srgb, var(--ouro) 50%, var(--fio)); }
@@ -59199,7 +59199,7 @@ function editarBonificada(id){
 .ct-n b{ font-size:calc(14.5px * var(--esc)); color:var(--giz); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ct-n small{ font-size:calc(12px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ct-num{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
-.ct-grade:not(.um) .ct-num{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+.ctl-grade:not(.um) .ct-num{ grid-template-columns:repeat(3, minmax(0,1fr)); }
 .ct-num li{ display:flex; flex-direction:column; gap:2px; min-width:0; }
 .ct-num span{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
 .ct-num b{ font-size:calc(15.5px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -59236,7 +59236,7 @@ function editarBonificada(id){
 .ctd-barra{ display:block; width:100%; height:5px; margin-top:4px; border-radius:99px; background:var(--fio); overflow:hidden; }
 .ctd-barra i{ display:block; height:100%; margin-left:auto; border-radius:99px; background:var(--jade); }
 @media (max-width:640px){
-  .ct-grade{ grid-template-columns:minmax(0,1fr); }
+  .ctl-grade{ grid-template-columns:minmax(0,1fr); }
   .ctd-h{ display:none; }
   .ctd-l{ grid-template-columns:34px repeat(3, minmax(0,1fr)); grid-template-areas:"av n n q" "av p m d"; row-gap:8px; column-gap:10px; align-items:start; }
   .ctd-l > .ct-av{ grid-area:av; } .ctd-n{ grid-area:n; } .ctd-q{ grid-area:q; } .ctd-p{ grid-area:p; } .ctd-m{ grid-area:m; } .ctd-d{ grid-area:d; }
@@ -59323,15 +59323,15 @@ function _ctCartao(r, rot, tom, ref, mult){
   const dif = ref && ref.id !== r.id ? r.pts - ref.pts : 0;
   return `<article class="ct-c ct-${tom}">
     <header><span class="ct-tag">${rot}</span></header>
-    <div class="ct-q"><span class="ct-av">${esc(mono(r.nome))}</span>
-      <div class="ct-n"><b>${esc(r.nome)}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' a ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : 'sem clube nesse programa'}</small></div></div>
+    <div class="ct-q">${avatarDe(r.id, 'tit-av ct-av')}
+      <div class="ct-n"><b title="${esc(r.nome)}">${esc(nomeCurto(r.nome))}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' a ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : 'sem clube nesse programa'}</small></div></div>
     <ul class="ct-num">
       <li><span>Pontos</span><small>${nBRdec(r.mult)} por real</small><b>+${nBR(r.pts)}</b></li>
       <li class="ct-mil"><span>Milheiro</span>${r.antes != null ? `<s title="milheiro de hoje">${brl2(r.antes)}</s>` : '<small>sem estoque hoje</small>'}
         <b>${r.depois != null ? brl2(r.depois) : 'n/d'}${r.queda > 0 ? _CT_SETA : ''}</b></li>
       <li class="ct-qd"><span>Queda</span><small>${r.queda > 0 ? '−' + brl2(r.queda) : '&nbsp;'}</small><b class="${r.queda > 0 ? 'jade' : ''}">${_ctPct(r)}</b></li>
     </ul>
-    ${dif < 0 ? `<p class="ct-obs">Rende ${nBR(-dif)} pontos a menos que a conta de ${esc(ref.nome)} (cerca de ${brl2(-dif * (mult || 0) / 1000)}).</p>` : ''}
+    ${dif < 0 ? `<p class="ct-obs">Rende ${nBR(-dif)} pontos a menos que a conta de ${esc(nomeCurto(ref.nome))} (cerca de ${brl2(-dif * (mult || 0) / 1000)}).</p>` : ''}
     ${r.incerto ? `<p class="ct-obs">A lista diz "até ${nBRdec(r.mult)}": sem clube, essa conta pode receber menos.</p>` : ''}
   </article>`;
 }
@@ -59351,9 +59351,9 @@ function secaoContasLoja(l, preco, outra){
   const custo = rs[0] ? rs[0].custoExtra : 0;
   return `<section class="ct">
     <div class="ct-cab"><h3>Em qual conta comprar</h3><span class="ct-rota">ROTA · Otimização</span></div>
-    <div class="ct-grade${mesma ? ' um' : ''}">
-      ${_ctCartao(mais, mesma ? 'Melhor conta: mais pontos e baixa o milheiro' : 'Rende mais pontos', 'jade', null, vRef)}
-      ${mesma ? '' : _ctCartao(caro, 'Baixa o milheiro mais caro', 'ouro', mais, vRef)}
+    <div class="ctl-grade${mesma ? ' um' : ''}">
+      ${_ctCartao(mais, mesma ? 'Melhor nas duas contas' : 'Rende mais pontos', 'jade', null, vRef)}
+      ${mesma ? '' : _ctCartao(caro, 'Milheiro mais caro', 'ouro', mais, vRef)}
     </div>
     <p class="ct-nota">${custo > 0 ? `Os pontos custam ${brl2(custo)}, o que você paga a mais que na outra loja; esse valor entra no milheiro.` : 'Sem pagar a mais que em outra loja, os pontos entram de graça e só baixam o milheiro.'} Lembre de entrar na loja logado no CPF escolhido.</p>
     ${contas.length > 1 ? `<button type="button" class="ct-todas" id="ctTodas"><svg><use href="#i-grafico"/></svg>Comparar as ${contas.length} contas</button>` : ''}
@@ -59376,8 +59376,8 @@ function abrirComparaContas(){
     rs.sort(ords[_ctOrdem]);
     const maxQ = Math.max(...rs.map(r => r.queda || 0), 0.01);
     d.querySelector('#ctdLista').innerHTML = rs.map((r, i) => `<div class="ctd-l${i === 0 ? ' top' : ''}">
-      <span class="ct-av">${esc(mono(r.nome))}</span>
-      <div class="ctd-n"><b>${esc(r.nome)}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' · ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : (r.semPrograma ? 'sem conta nesse programa' : 'sem clube')}</small></div>
+      ${avatarDe(r.id, 'tit-av ct-av')}
+      <div class="ctd-n"><b title="${esc(r.nome)}">${esc(nomeCurto(r.nome))}</b><small>${r.clube ? `${esc(_ctPlano(r.clube))}${r.clube.cpm ? ' · ' + brl2(r.clube.cpm) + ' o milheiro' : ''}` : (r.semPrograma ? 'sem conta nesse programa' : 'sem clube')}</small></div>
       <div class="ctd-p"><b>+${nBR(r.pts)}</b><small>${nBRdec(r.mult)}/real${r.incerto ? ' (até)' : ''}</small></div>
       <div class="ctd-m"><b>${r.antes != null ? brl2(r.antes) : 'n/d'}</b><small>${nBR(r.est.qtd)} pts</small></div>
       <div class="ctd-d"><b>${r.depois != null ? brl2(r.depois) : 'n/d'}${r.queda > 0 ? _CT_SETA : ''}</b><small>depois</small></div>
@@ -59513,7 +59513,7 @@ function _gaConta(l){
   try {
     if (!l || !l.id || (DB.contas || []).length < 2) return '';
     const {mais, caro} = escolherContas(contasParaLoja(l, gastoLojaV > 0 ? gastoLojaV : 100, 0));
-    const r = mais || caro; return r ? r.nome : '';
+    const r = mais || caro; return r ? nomeCurto(r.nome) : '';
   } catch(e){ return ''; }
 }
 function avisoGarantirPontos(modo, l, seguir){
@@ -59588,10 +59588,38 @@ document.addEventListener('click', e => {
 .ga .dr-corpo{ padding-top:16px; }
 .ct.ct-des{ margin-top:12px; padding:14px; border:1px solid var(--fio); border-radius:12px; background:var(--sup-1); }
 .ct.ct-des .ct-c{ background:var(--sup-2, var(--sup-1)); }
-.ct.ct-des .ct-grade{ grid-template-columns:minmax(0,1fr); }
-.ct-num, .ct-grade:not(.um) .ct-num{ grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,.75fr) !important; }
+.ct.ct-des .ctl-grade{ grid-template-columns:minmax(0,1fr); }
+.ct-num, .ctl-grade:not(.um) .ct-num{ grid-template-columns:minmax(0,1.05fr) minmax(0,1.15fr) minmax(0,.8fr) !important; }
 .ct-n small{ white-space:normal !important; }
-@media (max-width:560px){ .ct.ct-des{ padding:12px 10px; } .ct.ct-des .ct-c{ padding:11px 10px; } .ct.ct-des .ct-num{ gap:6px; } .ct.ct-des .ct-num b{ font-size:calc(14.5px * var(--esc)); } }
+@media (max-width:560px){ .ct.ct-des{ padding:12px 10px; } .ct.ct-des .ct-c{ padding:11px 10px; } .ct.ct-des .ct-num{ gap:6px; } .ct.ct-des .ct-num b{ font-size:calc(14px * var(--esc)) !important; } .ct.ct-des .ct-num b .ct-seta{ width:12px; height:12px; margin-left:2px; } }
+
+/* compacto: cartões lado a lado, avatar com a foto da conta, nome curto (16/10/2026) */
+.ct-av.tit-av{ width:32px; height:32px; flex:0 0 32px; border-radius:50%; font-size:calc(12px * var(--esc)); }
+.ct-c{ gap:7px !important; padding:10px 12px !important; }
+.ct-tag{ font-size:calc(11px * var(--esc)) !important; }
+.ct-q{ gap:9px !important; }
+.ct-n b{ font-size:calc(14px * var(--esc)) !important; }
+.ct-num{ gap:6px !important; }
+.ct-num b{ font-size:calc(15px * var(--esc)) !important; }
+/* lista de desejos: cada conta numa linha só, colunas medidas (no celular, cartão) */
+.ct.ct-des .ctl-grade{ grid-template-columns:minmax(0,1fr) !important; gap:8px !important; }
+@media (min-width:561px){
+  .ct.ct-des .ct-c{ display:grid !important; grid-template-columns:32px minmax(0,1fr) 76px 100px 62px; column-gap:12px; row-gap:2px; align-items:center; padding:10px 12px !important; }
+  .ct.ct-des .ct-c > header{ grid-column:2; grid-row:1; }
+  .ct.ct-des .ct-q, .ct.ct-des .ct-num{ display:contents !important; }
+  .ct.ct-des .ct-av{ grid-column:1; grid-row:1 / span 2; align-self:center; }
+  .ct.ct-des .ct-n{ grid-column:2 / -1; grid-row:2 / span 2; display:grid !important; grid-template-columns:minmax(0,1fr); }
+  .ct.ct-des .ct-n b{ grid-row:1; max-width:calc(100% - 262px); }
+  .ct.ct-des .ct-n small{ grid-row:2; }
+  .ct.ct-des .ct-av{ grid-row:1 / span 3 !important; }
+  .ct.ct-des .ct-num li{ grid-row:1 / span 2; align-self:center; }
+  .ct.ct-des .ct-num li:nth-child(1){ grid-column:3; } .ct.ct-des .ct-num li:nth-child(2){ grid-column:4; } .ct.ct-des .ct-num li:nth-child(3){ grid-column:5; text-align:right; align-items:flex-end; }
+  .ct.ct-des .ct-obs{ grid-column:2 / -1; margin-top:4px; }
+  .ct.ct-des .ct-tag{ white-space:nowrap; }
+}
+.ct.ct-des{ padding:12px !important; }
+.ct-cab{ margin-bottom:10px !important; }
+.ctd-l .ct-av.tit-av{ width:34px; height:34px; }
 </style>
 <script id="ctdes-js">
 /* Lista de desejos: "Em qual conta comprar" no cartão do item, com a mesma conta
