@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 03:00';
+const BUILD = '2026-10-16 04:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23016,7 +23016,7 @@ function renderLojasParceiras(){
   if (catLoja && !cats.includes(catLoja)) catLoja = '';
   const segT = $('#ljSegTipo');
   if (segT){ const n = k => vivas.filter(l => !k || caminhoDe(l) === k).length;
-    segT.innerHTML = [['', 'Todos os caminhos'], ['pontos', 'Shopping de pontos'], ['milhas', 'Shopping de milhas'], ['cia', 'Campanha com a companhia']]
+    segT.innerHTML = [['', 'Todos os caminhos'], ['pontos', 'Programas de pontos'], ['milhas', 'Programas de milhas'], ['cia', 'Campanha com a companhia']]
       .map(([k, nm]) => `<button class="${k === tipoShopV ? 'on' : ''} cam-${k || 'todos'}" data-t="${k}">${k ? '<i class="cam-ponto"></i>' : ''}${esc(nm)} <span class="cont-disco">${n(k)}</span></button>`).join(''); }
   const progs = [...new Set(vivas.filter(l => !tipoShopV || caminhoDe(l) === tipoShopV).map(l => l.prog))];
   if (progLojaV && !progs.includes(progLojaV)) progLojaV = '';
@@ -26906,6 +26906,9 @@ function editarLoja(id){
     corpo:`<div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
       <div class="campo"><label>Nome</label><input type="text" id="ljN" value="${esc(l.n)}" placeholder="Casas Bahia"></div>
       <div class="campo"><label>Programa</label><select id="ljProg">${PROG_IDS.map(p => `<option value="${p}"${p === l.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Onde a compra acontece</label><select id="ljCompraModo" data-ordem="natural">
+        <option value="parceiro"${l.modo !== 'shopping' ? ' selected' : ''}>Loja parceira: no site da loja, pelo link do programa</option>
+        <option value="shopping"${l.modo === 'shopping' ? ' selected' : ''}>Shopping do programa: dentro do site ou app do programa</option></select></div>
       <div class="campo"><label>Categoria</label><select id="ljCat">${CATEGORIAS_LOJA.map(c => `<option value="${c}"${c === l.cat ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
       <div class="campo"><label>Multiplicador de sempre</label><input type="number" id="ljBase" value="${l.base}" step="0.5"></div>
       <div class="campo"><label>Multiplicador em promoção</label><input type="number" id="ljPromo" value="${l.promo}" step="0.5"></div>
@@ -26953,7 +26956,8 @@ function editarLoja(id){
   $('#btSalvarLoja').onclick = () => {
     const novo = { id:l.id || uid(), n:$('#ljN').value.trim() || 'Loja', prog:$('#ljProg').value, cat:$('#ljCat').value,
       base:Number($('#ljBase').value) || 0, promo:Number($('#ljPromo').value) || 0, fim:$('#ljFim').value, obs:$('#ljObs').value.trim(),
-      faixas: faixas.filter(f => f.cat), em:$('#ljEm').value, conf:$('#ljConf').value, fonte:$('#ljFonte').value.trim() };
+      faixas: faixas.filter(f => f.cat), em:$('#ljEm').value, conf:$('#ljConf').value, fonte:$('#ljFonte').value.trim(),
+      modo:(($('#ljCompraModo') || {}).value === 'shopping') ? 'shopping' : 'parceiro' };
     if (!conferirAntesDeSalvar('lojas', novo, 'uma loja')) return;
     if (id) DB.lojas[DB.lojas.findIndex(x => x.id === id)] = novo; else DB.lojas.push(novo);
     /* A loja aparece em duas telas: a vitrine desta aba e a lista de Compras
@@ -45024,8 +45028,8 @@ function prazoCreditoDias(fonte){
      cia     · campanha de compra bonificada com a companhia (Magalu → Azul)
      desc    · desconto ou cashback que você mesmo achou (cupom, Méliuz) */
 const CAMINHOS_COMPRA = {
-  pontos:{n:'Shopping de pontos', c:'Pontos', ex:'Livelo, Esfera e bancos', ic:'#i-sacola'},
-  milhas:{n:'Shopping de milhas', c:'Milhas', ex:'Smiles, Azul, LATAM Pass', ic:'#i-aviao'},
+  pontos:{n:'Programa de pontos', c:'Pontos', ex:'Livelo, Esfera e bancos', ic:'#i-sacola'},
+  milhas:{n:'Programa de milhas', c:'Milhas', ex:'Smiles, Azul, LATAM Pass', ic:'#i-aviao'},
   cia:{n:'Campanha com a companhia', c:'Companhia', ex:'Magalu → Azul, Casas Bahia → Smiles', ic:'#i-brilho'},
   desc:{n:'Desconto ou cashback', c:'Desconto', ex:'Cupom, Méliuz, cartão', ic:'#i-etiqueta'}
 };
@@ -45057,7 +45061,7 @@ function caminhosItemHTML(x){
   return `<div class="lc-cams" aria-label="Ofertas por caminho">${['pontos', 'milhas', 'cia', 'desc'].map(k => {
     if (k === 'desc') return of ? linha(k, `<b>${esc(of.loja)}</b> ${pct(of.pct, 0)} de ${of.tipo === 'cashback' ? 'cashback' : 'desconto'}`, brl(pago * of.pct / 100), of.fim, top === k) : linha(k);
     const o = por[k];
-    return o ? linha(k, `<b>${esc(o.loja.n)}</b>${k === 'cia' ? ' → ' + esc(prog(o.prog).n) : ''} · ${nBRdec(o.mult)} por real${k !== 'cia' ? ' na ' + esc(prog(o.prog).n) : ''}`, brl(o.retorno), o.fim, top === k && o === x.melhor) : linha(k);
+    return o ? linha(k, `<b>${esc(o.loja.n)}</b>${k === 'cia' ? ' → ' + esc(prog(o.prog).n) : ''} · ${nBRdec(o.mult)} por real${k !== 'cia' ? ' na ' + esc(prog(o.prog).n) : ''}${k !== 'cia' ? ` <span class="lc-canal">${modoCompra(o) === 'shopping' ? 'shopping' : 'loja parceira'}</span>` : ''}`, brl(o.retorno), o.fim, top === k && o === x.melhor) : linha(k);
   }).join('')}</div>`;
 }
 /* item que bateu o alvo por desconto ou cashback (não por pontos) */
@@ -45203,7 +45207,7 @@ function renderDesejos(){
   const mira = av.filter(x => !x.atingiu).sort((a, b) => (b.d.prioridade - a.d.prioridade) || ((b.progresso || 0) - (a.progresso || 0)));
   const pend = comprasPendentes(), feitas = (DB.compras || []).filter(c => c.status === 'creditado');
   const alvoTexto = d => d.alvoTipo === 'mult' ? (d.alvos && Object.keys(d.alvos).some(k => Number(d.alvos[k]) > 0) ? 'alvo por programa' : nBRdec(d.alvo) + ' pts/R$') : pct(d.alvo, 0) + ' de volta';
-  const fonteTxt = m => m.fonte === 'campanha' ? `Campanha ${esc(m.loja.n)} → ${esc(prog(m.prog).n)}` : `Shopping ${esc(prog(m.prog).n)} · ${esc(m.loja.n)}`;
+  const fonteTxt = m => canalCompraTxt(m);
 
   const jornada = $('#lcJornada');
   if (jornada){
@@ -58942,7 +58946,7 @@ function linhaLojaHTML(l){
   const r = retornoLoja(l);
   return `<div class="ljl-l${des.length ? ' tem-des' : ''}" data-ljl="${esc(String(l.id))}">
     <span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>
-    <div class="ljl-n"><b>${esc(l.n)}</b><small>${esc(catRot(l.cat))}${prazo ? ' · ' + prazo : ''}</small>${(l._outros || []).length ? `<small class="ljl-tb">Também na ${l._outros.map(o => `${esc(curto(prog(o.prog).n))}: ${nBRdec(tetoLoja(o).promo || tetoLoja(o).base || 0)} por real`).join('; na ')}</small>` : ''}
+    <div class="ljl-n"><b>${esc(l.n)}</b><small>${esc(catRot(l.cat))}${l.modo === 'shopping' ? ' · <span class="ljl-shop">Shopping ' + esc(prog(l.prog).n) + '</span>' : ''}${prazo ? ' · ' + prazo : ''}</small>${(l._outros || []).length ? `<small class="ljl-tb">Também na ${l._outros.map(o => `${esc(curto(prog(o.prog).n))}: ${nBRdec(tetoLoja(o).promo || tetoLoja(o).base || 0)} por real`).join('; na ')}</small>` : ''}
       ${des.length ? `<span class="ljl-des"><svg><use href="#i-alvo"/></svg>${des[0].hora ? 'Hora de comprar' : 'Na sua lista'}: ${esc(des.map(x => x.d.n).join(', '))}</span>` : ''}</div>
     <span class="ljl-p">${discoProg(l.prog, 'p')}<span>${esc(prog(l.prog).n)}</span></span>
     <span class="ljl-m"><b>${nBRdec(mult)}</b><small>${l.porDolar ? 'por dólar' : 'por real'}</small></span>
@@ -59477,6 +59481,9 @@ function comparaMarcaHTML(x){
 })();
 </script>
 <style id="ga-css">
+.lc-onde{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); margin-top:1px; }
+.lc-canal{ display:inline-block; margin-left:4px; padding:0 7px; border-radius:99px; font-size:calc(11px * var(--esc)); font-weight:600; color:var(--grafite); border:1px solid var(--fio-forte); vertical-align:1px; }
+.ljl-shop{ color:var(--anil-claro, var(--anil)); font-weight:600; }
 .ga .dr-painel{ width:min(560px, calc(100vw - 32px)); }
 .ga-ic{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:color-mix(in srgb, var(--jade) 16%, transparent); flex:0 0 40px; }
 .ga-ic svg{ width:22px; height:22px; fill:none; stroke:var(--jade); stroke-width:2; }
@@ -59494,6 +59501,22 @@ function comparaMarcaHTML(x){
 #gaOk[disabled]{ opacity:.45; cursor:not-allowed; }
 </style>
 <script id="ga-js">
+/* ── Onde a compra acontece (15/10/2026) ────────────────────────────────────
+   Três jeitos diferentes, que o mercado mistura no nome:
+     loja parceira  · você clica no programa e compra NO SITE DA LOJA (Livelo
+                      "Compre e Pontue", Esfera "Junte pontos"). É o padrão das
+                      listas do dia.
+     shopping       · você compra DENTRO do site ou app do programa (Shopping
+                      Livelo): sem link de saída nem cupom.
+     campanha       · compra bonificada com a companhia (Magalu → Azul). */
+const modoCompra = o => { if (!o) return 'parceiro'; if (o.fonte === 'campanha' || o.origem === 'bonificada') return 'campanha';
+  const l = o.loja && typeof o.loja === 'object' ? o.loja : o; return l.modo === 'shopping' ? 'shopping' : 'parceiro'; };
+function canalCompraTxt(m){
+  const pg = esc(prog(m.prog).n), lj = esc(m.loja.n), md = modoCompra(m);
+  if (md === 'campanha') return `Campanha ${lj} → ${pg}`;
+  if (md === 'shopping') return `Shopping ${pg} · ${lj}<small class="lc-onde">compra dentro do site ou app da ${pg}</small>`;
+  return `Loja parceira da ${pg} · ${lj}<small class="lc-onde">compra no site da ${lj}, entrando pelo link da ${pg}</small>`;
+}
 /* ══ Como garantir seus pontos (15/10/2026) ════════════════════════════════════
    Antes de ir para a loja e antes de registrar a compra, a Torre mostra o que
    os programas pedem para a compra pontuar, no mesmo espírito do aviso da
@@ -59506,7 +59529,7 @@ function _gaContexto(el){
   const row = el.closest('[data-ljl]'); if (row) l = ofertasVitrine().find(x => String(x.id) === row.dataset.ljl) || null;
   const dlg = el.closest('#dlgValeLoja'); if (!l && dlg && dlg._id) l = ofertasVitrine().find(x => x.id === dlg._id) || null;
   const it = el.closest('.ds-item[data-id]');
-  if (!l && it){ d = (DB.desejos || []).find(x => x.id === it.dataset.id); if (d){ const x = avaliarDesejo(d); if (x.melhor) l = {n:x.melhor.loja.n, prog:x.melhor.prog, fim:x.melhor.fim, mult:x.melhor.mult}; } }
+  if (!l && it){ d = (DB.desejos || []).find(x => x.id === it.dataset.id); if (d){ const x = avaliarDesejo(d); if (x.melhor) l = {n:x.melhor.loja.n, prog:x.melhor.prog, fim:x.melhor.fim, mult:x.melhor.mult, modo:modoCompra(x.melhor)}; } }
   return l;
 }
 function _gaConta(l){
@@ -59524,7 +59547,13 @@ function avisoGarantirPontos(modo, l, seguir){
   const dd = l && l.fim ? diasAte(l.fim) : null;
   const conta = modo === 'ir' ? _gaConta(l) : '';
   const prazo = l && l.prog ? prazoCreditoDias({prog:l.prog}) : 30;
-  const itens = modo === 'ir' ? [
+  const shop = l && (l.modo === 'shopping' || (l.loja && l.loja.modo === 'shopping'));
+  const itens = modo === 'ir' && shop ? [
+    ['i-documento', `Conferi a oferta${mult ? `: <b>${nBRdec(mult)} pontos por real</b>` : ''}${dd === 0 ? ', <b>só até hoje</b>' : dd > 0 ? `, até ${dataBR(l.fim)}` : ''}.`],
+    ['i-usuarios', `Estou logado na <b>${esc(pg)}</b>${conta ? ` na conta de <b>${esc(conta)}</b>, a sugerida pela Torre` : ' na conta (CPF) certa'}.`],
+    ['i-sacola', `Vou comprar <b>dentro do Shopping ${esc(pg)}</b> (site ou app da ${esc(pg)}), e não no site da loja.`],
+    ['i-imagem', 'Vou tirar print da compra e guardar o número do pedido.']
+  ] : modo === 'ir' ? [
     ['i-documento', `Conferi a oferta${mult ? `: <b>${nBRdec(mult)} pontos por real</b>` : ''}${dd === 0 ? ', <b>só até hoje</b>' : dd > 0 ? `, até ${dataBR(l.fim)}` : ''}, e as regras do parceiro (o "até" pode exigir clube).`],
     ['i-usuarios', `Estou logado na <b>${esc(pg)}</b>${conta ? ` na conta de <b>${esc(conta)}</b>, a sugerida pela Torre` : ' na conta (CPF) certa'}.`],
     ['i-link', 'Vou entrar na loja por este botão, que é o link do programa, e não pelo Google ou pelo app da loja.'],
@@ -59532,7 +59561,7 @@ function avisoGarantirPontos(modo, l, seguir){
     ['i-alerta', 'Sem outras abas, comparador de preço, cupom de fora, aba anônima ou bloqueador de anúncio até terminar.'],
     ['i-imagem', 'Vou tirar print da compra e guardar o número do pedido.']
   ] : [
-    ['i-link', `Comprei entrando pelo link da <b>${esc(pg)}</b>, na mesma aba, do começo ao fim.`],
+    shop ? ['i-sacola', `Comprei dentro do <b>Shopping ${esc(pg)}</b>, logado na conta certa.`] : ['i-link', `Comprei entrando pelo link da <b>${esc(pg)}</b>, na mesma aba, do começo ao fim.`],
     ['i-imagem', 'Guardei o print e o número do pedido: é a prova se os pontos não caírem.'],
     ['i-relogio', `Sei o prazo: os pontos costumam cair em até <b>${prazo} dias</b>. A Torre avisa se passar disso.`]
   ];
@@ -59579,7 +59608,7 @@ document.addEventListener('click', e => {
 (function(){
   const envolver = (nome, ctx) => { const orig = window[nome]; if (typeof orig !== 'function') return;
     window[nome] = function(){ const args = arguments; avisoGarantirPontos('registrar', ctx.apply(null, args), () => orig.apply(this, args)); }; };
-  envolver('comprarDesejo', id => { const d = (DB.desejos || []).find(x => x.id === id); const x = d && avaliarDesejo(d); return x && x.melhor ? {n:x.melhor.loja.n, prog:x.melhor.prog} : null; });
+  envolver('comprarDesejo', id => { const d = (DB.desejos || []).find(x => x.id === id); const x = d && avaliarDesejo(d); return x && x.melhor ? {n:x.melhor.loja.n, prog:x.melhor.prog, modo:modoCompra(x.melhor)} : null; });
   envolver('comprarDesejoNaOferta', (id, ch) => { const d = (DB.desejos || []).find(x => x.id === id); const x = d && avaliarDesejo(d); const o = x && (x.todas || []).find(o => String(o.loja.id) === String(ch)) || (x && x.melhor); return o ? {n:o.loja.n, prog:o.prog} : null; });
   envolver('registrarCompraLoja', id => ofertasVitrine().find(x => x.id === id) || null);
 })();
@@ -59603,23 +59632,28 @@ document.addEventListener('click', e => {
 .ct-num b{ font-size:calc(15px * var(--esc)) !important; }
 /* lista de desejos: cada conta numa linha só, colunas medidas (no celular, cartão) */
 .ct.ct-des .ctl-grade{ grid-template-columns:minmax(0,1fr) !important; gap:8px !important; }
-@media (min-width:561px){
-  .ct.ct-des .ct-c{ display:grid !important; grid-template-columns:32px minmax(0,1fr) 76px 100px 62px; column-gap:12px; row-gap:2px; align-items:center; padding:10px 12px !important; }
-  .ct.ct-des .ct-c > header{ grid-column:2; grid-row:1; }
+.ct.ct-des .ctl-grade{ container-type:inline-size; container-name:ctdes; }
+@container ctdes (max-width:439px){ .ct.ct-des .ct-c{ padding:11px 10px !important; } .ct.ct-des .ct-num{ gap:6px !important; } .ct.ct-des .ct-num b{ font-size:calc(14px * var(--esc)) !important; } .ct.ct-des .ct-num b .ct-seta{ width:12px; height:12px; margin-left:2px; } }
+@container ctdes (min-width:440px){
+  .ct.ct-des .ct-c{ display:grid !important; grid-template-columns:32px minmax(0,1fr) 76px 100px 62px; column-gap:12px; row-gap:3px; align-items:end; padding:10px 12px !important; }
+  .ct.ct-des .ct-c > header{ grid-column:2; grid-row:1; min-width:0; }
   .ct.ct-des .ct-q, .ct.ct-des .ct-num{ display:contents !important; }
-  .ct.ct-des .ct-av{ grid-column:1; grid-row:1 / span 2; align-self:center; }
-  .ct.ct-des .ct-n{ grid-column:2 / -1; grid-row:2 / span 2; display:grid !important; grid-template-columns:minmax(0,1fr); }
-  .ct.ct-des .ct-n b{ grid-row:1; max-width:calc(100% - 262px); }
-  .ct.ct-des .ct-n small{ grid-row:2; }
-  .ct.ct-des .ct-av{ grid-row:1 / span 3 !important; }
-  .ct.ct-des .ct-num li{ grid-row:1 / span 2; align-self:center; }
+  .ct.ct-des .ct-av{ grid-column:1; grid-row:1 / span 3 !important; align-self:center; }
+  .ct.ct-des .ct-n{ display:contents !important; }
+  .ct.ct-des .ct-n b{ grid-column:2; grid-row:2; align-self:end; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ct.ct-des .ct-n small{ grid-column:2 / -1; grid-row:3; }
+  .ct.ct-des .ct-num li{ grid-row:1 / span 2; align-self:end; }
   .ct.ct-des .ct-num li:nth-child(1){ grid-column:3; } .ct.ct-des .ct-num li:nth-child(2){ grid-column:4; } .ct.ct-des .ct-num li:nth-child(3){ grid-column:5; text-align:right; align-items:flex-end; }
   .ct.ct-des .ct-obs{ grid-column:2 / -1; margin-top:4px; }
-  .ct.ct-des .ct-tag{ white-space:nowrap; }
+  .ct.ct-des .ct-tag{ white-space:normal; display:block; line-height:1.3; }
 }
+
 .ct.ct-des{ padding:12px !important; }
 .ct-cab{ margin-bottom:10px !important; }
 .ctd-l .ct-av.tit-av{ width:34px; height:34px; }
+
+/* Pontos e Milheiro centralizados no cartão da conta (15/10/2026) */
+.ct-num li:nth-child(1), .ct-num li:nth-child(2), .ct-num li:nth-child(3){ align-items:center !important; text-align:center !important; }
 </style>
 <script id="ctdes-js">
 /* Lista de desejos: "Em qual conta comprar" no cartão do item, com a mesma conta
@@ -59646,6 +59680,127 @@ document.addEventListener('click', e => {
   const x = avaliarDesejo(d), l = _ctLojaDoDesejo(x); if (!l) return;
   _ctL = l; _ctRs = contasParaLoja(l, Number(d.valor) || 0, 0);
   abrirComparaContas();
+});
+</script>
+<style id="oc-css">
+.oc{ margin-top:10px; padding:12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); container-type:inline-size; container-name:oc; }
+.oc-t{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.oc-t span{ display:flex; align-items:center; gap:7px; font-size:calc(12px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--grafite); }
+.oc-t svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.oc-t small{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.oc-h, .oc-l{ display:grid; grid-template-columns:minmax(0,1.3fr) 58px 86px minmax(0,1.15fr); column-gap:10px; align-items:center; }
+.oc.sem-contas .oc-h, .oc.sem-contas .oc-l{ grid-template-columns:minmax(0,1fr) 64px 96px; }
+.oc-h{ padding:0 10px 4px; font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.04em; color:var(--grafite); }
+.oc-h span:nth-child(2), .oc-h span:nth-child(3){ text-align:center; }
+.oc-l{ width:100%; margin:0 0 6px; padding:8px 10px; border-radius:10px; border:1px solid var(--fio); background:none; font:inherit; color:inherit; text-align:left; cursor:pointer; }
+.oc-l:hover{ background:color-mix(in srgb, var(--anil) 5%, transparent); }
+.oc-l.top{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+.oc-l.sel{ box-shadow:inset 3px 0 0 var(--anil); background:color-mix(in srgb, var(--anil) 7%, transparent); }
+.oc-loja, .oc-conta{ display:flex; align-items:center; gap:8px; min-width:0; }
+.oc-loja > span:last-child, .oc-conta > span:last-child{ display:flex; flex-direction:column; min-width:0; }
+.oc-l b{ font-size:calc(14px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
+.oc-l b.jade{ color:var(--jade); }
+.oc-l small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.oc-m, .oc-v{ display:flex; flex-direction:column; align-items:center; text-align:center; }
+.oc-av.tit-av{ width:26px; height:26px; flex:0 0 26px; font-size:calc(10.5px * var(--esc)); }
+.oc-v-t{ margin:6px 0 0; font-size:calc(13px * var(--esc)); line-height:1.5; color:var(--grafite); }
+.oc-v-t b{ color:var(--giz); } .oc-v-t b.jade{ color:var(--jade); }
+@keyframes ocPisca{ 0%{ box-shadow:0 0 0 2px var(--anil); } 100%{ box-shadow:0 0 0 0 transparent; } }
+.ct-des.oc-pisca{ animation:ocPisca 1.2s ease-out; }
+@container oc (max-width:619px){
+  .oc-h{ display:none; }
+  .oc-l, .oc.sem-contas .oc-l{ grid-template-columns:minmax(0,1fr) 54px 80px; row-gap:6px; }
+  .oc-conta{ grid-column:1 / -1; padding-top:6px; border-top:1px dashed var(--fio); }
+  .oc-conta:empty{ display:none; }
+  .oc-loja small{ white-space:normal; overflow:visible; }
+  .oc-loja b{ white-space:normal; overflow-wrap:anywhere; }
+}
+
+.oc-rot{ display:none; }
+@container oc (max-width:619px){ .oc-rot{ display:block; flex:0 0 auto; font-size:calc(11px * var(--esc)) !important; text-transform:uppercase; letter-spacing:.04em; margin-right:2px; } }
+@container oc (max-width:359px){
+  .oc-l, .oc.sem-contas .oc-l{ grid-template-columns:1fr 1fr; }
+  .oc-loja{ grid-column:1 / -1; }
+  .oc-loja b{ overflow-wrap:normal !important; }
+  .oc-conta{ flex-wrap:wrap; }
+  .oc-conta .oc-rot{ flex-basis:100%; }
+  .oc-t small{ display:none; }
+}
+</style>
+<script id="oc-js">
+/* ── Onde comprar: as ofertas do item lado a lado (15/10/2026) ───────────────
+   O mesmo item costuma estar em mais de um lugar (Centauro e Havaianas na
+   Livelo, Netshoes na Esfera). A tabela mostra até 4: a melhor, a melhor de
+   cada outro programa e a loja da própria marca. Cada linha já diz a conta
+   indicada; tocar numa linha troca o "Em qual conta comprar" para ela. */
+const _ctEscolha = {};
+const _chaveOf = o => o.loja.id + '|' + o.prog;
+function ofertasComparadas(x){
+  const t = (x.todas || []).slice().sort((a, b) => b.retorno - a.retorno);
+  if (t.length < 2) return [];
+  const out = [t[0]], tem = o => out.some(y => _chaveOf(y) === _chaveOf(o));
+  const progs = new Set([t[0].prog]);
+  t.forEach(o => { if (!progs.has(o.prog) && out.length < 4){ progs.add(o.prog); out.push(o); } });
+  const m = typeof lojaDaMarca === 'function' ? lojaDaMarca(x.d, t) : null;
+  if (m && !tem(m) && out.length < 4) out.push(m);
+  if (out.length < 2 && t[1]) out.push(t[1]);
+  return out.sort((a, b) => b.retorno - a.retorno);
+}
+function _lojaDeOferta(o){
+  return {...o.loja, n:o.loja.n, prog:o.prog, fim:o.fim, origem:o.fonte === 'campanha' ? 'bonificada' : 'loja', campId:o.camp ? o.camp.id : (o.loja.campId || ''),
+    base:o.fonte === 'campanha' ? 0 : o.loja.base, promo:o.fonte === 'campanha' ? o.mult : o.loja.promo, faixas:o.fonte === 'campanha' ? [] : (o.loja.faixas || [])};
+}
+function ofertaEscolhida(x){
+  const k = _ctEscolha[x.d.id];
+  return (k && (x.todas || []).find(o => _chaveOf(o) === k)) || x.melhor;
+}
+function ondeComprarHTML(x){
+  const of = ofertasComparadas(x), valor = Number(x.d.valor) || 0;
+  if (of.length < 2 || !(valor > 0)) return '';
+  const esc0 = ofertaEscolhida(x), marca = typeof lojaDaMarca === 'function' ? lojaDaMarca(x.d, x.todas) : null;
+  const temContas = (DB.contas || []).length > 0;
+  const linhas = of.map((o, i) => {
+    let conta = '';
+    if (temContas){ try { const {mais} = escolherContas(contasParaLoja(_lojaDeOferta(o), valor, 0));
+      if (mais) conta = `<span class="oc-conta"><small class="oc-rot">Conta indicada</small>${avatarDe(mais.id, 'tit-av oc-av')}<span><b>${esc(nomeCurto(mais.nome))}</b><small>${mais.antes != null ? `${brl2(mais.antes)} → ${brl2(mais.depois)}` : 'sem estoque'}</small></span></span>`; } catch(e){} }
+    const sel = esc0 && _chaveOf(esc0) === _chaveOf(o);
+    return `<button type="button" class="oc-l${i === 0 ? ' top' : ''}${sel ? ' sel' : ''}" data-oc-des="${esc(x.d.id)}" data-oc="${esc(_chaveOf(o))}" aria-pressed="${sel}">
+      <span class="oc-loja">${discoProg(o.prog, 'p')}<span><b>${esc(o.loja.n)}</b><small>${esc(prog(o.prog).n)} · ${modoCompra(o) === 'shopping' ? 'shopping' : modoCompra(o) === 'campanha' ? 'campanha' : 'loja parceira'}${marca && _chaveOf(marca) === _chaveOf(o) ? ' · marca' : ''}</small></span></span>
+      <span class="oc-m"><b>${nBRdec(o.mult)}</b><small>por real</small></span>
+      <span class="oc-v"><b class="${i === 0 ? 'jade' : ''}">${brl(o.retorno)}</b><small>${pct(o.retorno / valor * 100, 1)} de volta</small></span>
+      ${temContas ? conta || '<span class="oc-conta"></span>' : ''}
+    </button>`;
+  }).join('');
+  const a = of[0], b = (marca && _chaveOf(marca) !== _chaveOf(a) && of.find(o => _chaveOf(o) === _chaveOf(marca))) || of[1], kA = a.retorno / valor, kB = b.retorno / valor;
+  const teto = kA < 1 ? valor * (1 - kB) / (1 - kA) : null;
+  return `<div class="oc${temContas ? '' : ' sem-contas'}">
+    <div class="oc-t"><span><svg><use href="#i-troca"/></svg>Onde comprar</span><small>${of.length} ofertas para este item</small></div>
+    <div class="oc-h"><span>Loja e programa</span><span>Pontos</span><span>Volta</span>${temContas ? '<span>Conta indicada</span>' : ''}</div>
+    ${linhas}
+    <p class="oc-v-t"><b>${esc(a.loja.n)}</b> (${esc(prog(a.prog).n)}) devolve <b class="jade">${brl(a.retorno - b.retorno)} a mais</b> que ${esc(b.loja.n)} (${esc(prog(b.prog).n)}) numa compra de ${brl(valor)}.${teto ? ` Com preços diferentes, ${esc(a.loja.n)} continua melhor enquanto custar até <b>${brl(teto)}</b>.` : ''}${temContas ? ' Toque numa linha para ver as contas daquela oferta.' : ''}</p>
+  </div>`;
+}
+/* troca o "Em qual conta comprar" para a oferta escolhida */
+_ctLojaDoDesejo = function(x){ const o = ofertaEscolhida(x); return o ? _lojaDeOferta(o) : null; };
+(function(){
+  /* a tabela substitui o quadro "Loja da marca x melhor oferta": a marca vira uma linha dela */
+  const origMarca = comparaMarcaHTML;
+  comparaMarcaHTML = function(x){ return ofertasComparadas(x).length >= 2 ? '' : origMarca.apply(this, arguments); };
+  const orig = caminhosItemHTML;
+  caminhosItemHTML = function(x){
+    const h = orig.apply(this, arguments), oc = ondeComprarHTML(x);
+    if (!oc) return h;
+    const i = h.indexOf('<section class="ct ct-des">');
+    return i >= 0 ? h.slice(0, i) + oc + h.slice(i) : h + oc;
+  };
+})();
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-oc]'); if (!b) return;
+  _ctEscolha[b.dataset.ocDes] = b.dataset.oc;
+  const it = b.closest('.ds-item'), y = it ? it.getBoundingClientRect().top : 0;
+  renderCompras();
+  const it2 = document.querySelector(`.ds-item[data-id="${b.dataset.ocDes}"]`);
+  if (it2){ window.scrollBy(0, it2.getBoundingClientRect().top - y); const s = it2.querySelector('.ct-des'); if (s) s.classList.add('oc-pisca'); }
 });
 </script>
 </body>
