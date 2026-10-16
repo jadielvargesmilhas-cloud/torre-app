@@ -11804,7 +11804,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 10:15';
+const BUILD = '2026-10-16 12:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -60415,5 +60415,533 @@ function ligarBlocoPagto(totalFn){
   };
 })();
 </script>
+<style id="cc-css">
+.ccp-bt svg{ width:15px; height:15px; }
+.ccp .dr-painel{ width:min(640px, calc(100vw - 32px)); }
+.ccp .dr-corpo{ padding-top:14px; display:flex; flex-direction:column; gap:12px; }
+.ccp-tit{ display:flex; align-items:center; justify-content:flex-start; gap:8px; flex-wrap:wrap; text-align:left; }
+.ccp .dr-corpo{ text-align:left !important; align-items:stretch !important; }
+.ccp .ccp-tit{ justify-content:flex-start !important; width:100%; }
+.ccp .ccp-tit b{ text-align:left; }
+.ccp-tit b{ font-size:calc(16px * var(--esc)); color:var(--giz); }
+.ccp-sub{ margin:-6px 0 0; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.ccp-fx, .ccp-regra, .ccp-conf{ padding:12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); }
+.ccp-fx-t{ font-size:calc(11.5px * var(--esc)); font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--grafite); margin-bottom:8px; }
+.ccp-fx-l{ display:grid; grid-template-columns:minmax(0,1fr) 44px 52px; gap:8px; align-items:center; padding:7px 8px; border-radius:8px; }
+.ccp-fx-l + .ccp-fx-l{ border-top:1px solid var(--fio); }
+.ccp-fx-l.sua{ background:color-mix(in srgb, var(--jade) 9%, transparent); border-top-color:transparent; }
+.ccp-fx-l span{ display:flex; flex-direction:column; font-size:calc(13.5px * var(--esc)); color:var(--giz); }
+.ccp-fx-l small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.ccp-fx-l b{ text-align:center; font-size:calc(16px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.ccp-fx-l em{ font-style:normal; font-size:calc(11px * var(--esc)); font-weight:700; color:var(--jade); }
+.ccp-regra p{ margin:0 0 4px; font-size:calc(13.5px * var(--esc)); line-height:1.5; color:var(--giz-2, var(--giz)); }
+.ccp-num{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+.ccp-num > div{ display:flex; flex-direction:column; align-items:center; text-align:center; }
+.ccp-num span{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.ccp-num b{ font-size:calc(16px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.ccp-num small{ font-size:calc(11px * var(--esc)); color:var(--grafite); }
+.ccp-alerta{ display:flex; gap:8px; margin:10px 0 0; font-size:calc(13px * var(--esc)); color:var(--ouro); }
+.ccp-alerta svg{ width:16px; height:16px; flex:0 0 16px; fill:none; stroke:currentColor; stroke-width:2; }
+.ccp-nota{ margin:8px 0 0; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.ccp-faixa{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:12px; border-radius:12px; border:1px solid color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:color-mix(in srgb, var(--ouro) 7%, var(--sup-1)); }
+.ccp-faixa > svg{ width:20px; height:20px; flex:0 0 20px; fill:none; stroke:var(--ouro); stroke-width:2; }
+.ccp-faixa > div{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.ccp-faixa b{ font-size:calc(14px * var(--esc)); color:var(--giz); }
+.ccp-faixa small{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+@media (max-width:480px){ .ccp-faixa{ flex-wrap:wrap; } .ccp-faixa .bt{ width:100%; justify-content:center; } }
+</style>
+<script id="cc-js">
+/* ══ A campanha de cada compra (16/10/2026) ═════════════════════════════════════
+   Para conferir se os pontos vieram certos, é preciso ver a regra da promoção
+   de quando você comprou, mesmo depois que ela acabou. A Torre acha a campanha
+   (ou a loja da lista do dia) pela loja, pelo programa e pela data da compra, e
+   guarda uma cópia na própria compra: se a campanha for apagada ou a lista do
+   dia trocar, a regra da sua compra continua lá. */
+function _campDaCompra(c){
+  if (c.oferta) return c.oferta;
+  const nome = normLoja(c.lojaNome || (typeof nomeLojaCompra === 'function' ? nomeLojaCompra(c) : '')), dt = c.data || '';
+  const cs = (DB.campanhas || []).filter(k => k.tipo === 'bonificada' && k.para === c.prog && normLoja(k.parceiro || '') === nome
+    && (!k.inicio || k.inicio <= dt) && (!k.fim || k.fim >= dt));
+  const k = cs.sort((a, b) => Math.abs((Number(a.ptsPorReal) || 0) - (Number(c.mult) || 0)) - Math.abs((Number(b.ptsPorReal) || 0) - (Number(c.mult) || 0)) || String(a.fim || '').localeCompare(String(b.fim || '')))[0];
+  if (k) return {tipo:'campanha', id:k.id, titulo:k.titulo || `${k.parceiro} → ${prog(k.para).n}`, n:k.parceiro, prog:k.para, mult:Number(k.ptsPorReal) || 0,
+    faixas:(k.faixas || []).map(f => ({rot:f.rot, v:f.v, obs:f.obs || ''})), inicio:k.inicio || '', fim:k.fim || '', link:k.link || '',
+    regra:Array.isArray(k.regra) ? k.regra.join('\n') : String(k.regra || ''), copiadoEm:hojeISO()};
+  const l = (DB.lojas || []).find(x => x.id === c.lojaId) || (DB.lojas || []).find(x => x.prog === c.prog && normLoja(x.n) === nome);
+  if (l) return {tipo:'loja', id:l.id, titulo:`${l.n} na ${prog(l.prog).n}`, n:l.n, prog:l.prog, mult:Number(l.promo) || Number(l.base) || 0, faixas:[],
+    inicio:'', fim:l.fim || '', link:l.link || '', regra:l.obs || '', fonte:l.fonte || '', modo:l.modo || 'parceiro', copiadoEm:hojeISO()};
+  return null;
+}
+/* guarda a cópia nas compras que ainda não têm */
+function guardarCampanhasDasCompras(){
+  let mudou = false;
+  (DB.compras || []).forEach(c => { if (!c.oferta){ const o = _campDaCompra(c); if (o){ c.oferta = o; mudou = true; } } });
+  if (mudou) try { salvar(); } catch(e){}
+}
+function abrirCampanhaDaCompra(id){
+  const c = (DB.compras || []).find(x => x.id === id); if (!c) return;
+  const o = _campDaCompra(c);
+  if (o && !c.oferta){ c.oferta = o; try { salvar(); } catch(e){} }
+  const acabou = o && o.fim && o.fim < hojeISO();
+  const mult = Number(c.mult) || 0;
+  const d = _janela('dlgCampCompra', 'vl ccp');
+  const regra = o && o.regra ? o.regra.split(/\n+/).map(s => s.trim()).filter(Boolean) : [];
+  d.innerHTML = `<div class="dr-painel">
+    <header class="dr-cab"><div class="dr-rota"><span class="ga-ic"><svg><use href="#i-fogo"/></svg></span>
+      <div class="dr-rota-txt"><h2>Campanha desta compra</h2><span class="rc-sub">${esc(c.item || nomeLojaCompra(c))} · comprado em ${dataBR(c.data)}</span></div></div></header>
+    <div class="dr-corpo">${!o ? `<p class="vl-dica"><svg><use href="#i-info"/></svg><span>A Torre não achou campanha nem loja da ${esc(nomeLojaCompra(c))} na ${esc(prog(c.prog).n)} na data da compra. Os números abaixo são os que você registrou.</span></p>` : `
+      <div class="ccp-tit"><b>${esc(o.titulo)}</b><span class="etq ${acabou ? '' : 'jade'}">${acabou ? 'encerrada' : 'no ar'}</span></div>
+      <p class="ccp-sub">${o.tipo === 'campanha' ? 'Compra bonificada' : o.modo === 'shopping' ? 'Shopping do programa' : 'Loja parceira'} · ${esc(prog(o.prog).n)}${o.inicio ? ` · de ${dataBR(o.inicio)}` : ''}${o.fim ? ` ${o.inicio ? 'a' : 'até'} ${dataBR(o.fim)}` : ''}</p>
+      ${o.faixas.length ? `<div class="ccp-fx"><div class="ccp-fx-t">Pontos por real de cada público</div>${o.faixas.map(f => `<div class="ccp-fx-l${Number(f.v) === mult ? ' sua' : ''}"><span>${esc(f.rot || '')}${f.obs ? `<small>${esc(f.obs)}</small>` : ''}</span><b>${nBRdec(f.v)}</b>${Number(f.v) === mult ? '<em>a sua</em>' : ''}</div>`).join('')}</div>`
+        : `<div class="ccp-fx"><div class="ccp-fx-l sua"><span>Oferta do dia</span><b>${nBRdec(o.mult)}</b><em>por real</em></div></div>`}
+      ${regra.length ? `<div class="ccp-regra"><div class="ccp-fx-t">Regra da promoção</div>${regra.map(r => `<p>${esc(r)}</p>`).join('')}</div>` : ''}`}
+      <div class="ccp-conf"><div class="ccp-fx-t">Conferência da sua compra</div>
+        <div class="ccp-num"><div><span>Produto</span><b>${brl(c.valor)}</b><small>o frete não pontua</small></div>
+          <div><span>Pontos por real</span><b>${nBRdec(mult)}</b><small>o que você registrou</small></div>
+          <div><span>Pontos esperados</span><b>${nBR(c.pts)}</b><small>${esc(prog(c.prog).n)}</small></div></div>
+        ${o && o.faixas.length && !o.faixas.some(f => Number(f.v) === mult) ? `<p class="ccp-alerta"><svg><use href="#i-alerta"/></svg>Os ${nBRdec(mult)} pontos por real que você registrou não batem com nenhum público da campanha. Confira qual vale para você.</p>` : ''}
+        ${o && o.copiadoEm ? `<p class="ccp-nota">Cópia da regra guardada nesta compra em ${dataBR(o.copiadoEm)}: continua aqui mesmo que a campanha seja apagada.</p>` : ''}</div>
+    </div>
+    <footer class="dr-pe"><button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgCampCompra').close()">Fechar</button>
+      ${o && o.link ? `<a class="bt primario" href="${esc(o.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Página da oferta</a>` : ''}</footer>
+  </div>`;
+  if (!d.open){ d.showModal(); travarFundo(true); }
+}
+/* botão na lista de compras e no editar */
+(function(){
+  const orig = renderReceber;
+  renderReceber = function(){
+    const r = orig.apply(this, arguments);
+    guardarCampanhasDasCompras();
+    document.querySelectorAll('#lcReceber .lc-rec').forEach(el => {
+      const ed = el.querySelector('[onclick^="editarCompraPendente"]'); if (!ed) return;
+      const id = (ed.getAttribute('onclick').match(/'([^']+)'/) || [])[1]; if (!id || el.querySelector('.ccp-bt')) return;
+      ed.insertAdjacentHTML('beforebegin', `<button class="bt p fantasma ccp-bt" onclick="abrirCampanhaDaCompra('${id}')" data-dica="Ver a regra da promoção desta compra"><svg><use href="#i-fogo"/></svg>Campanha</button>`);
+    });
+    return r;
+  };
+  const origF = formCompraPendente;
+  formCompraPendente = function(args){
+    const r = origF.apply(this, arguments);
+    const c0 = args && args.compra; if (!c0) return r;
+    const o = _campDaCompra(c0); const corpo = document.getElementById('folhaCorpo'); if (!corpo) return r;
+    corpo.insertAdjacentHTML('afterbegin', `<div class="ccp-faixa"><svg><use href="#i-fogo"/></svg><div><b>${o ? esc(o.titulo) : 'Campanha não encontrada'}</b><small>${o ? `${o.fim ? (o.fim < hojeISO() ? 'encerrada em ' : 'vale até ') + dataBR(o.fim) : ''}${o.faixas && o.faixas.length ? ` · ${o.faixas.length} públicos` : ''}` : 'Sem campanha ou loja na data da compra'}</small></div>
+      <button type="button" class="bt p fantasma" onclick="abrirCampanhaDaCompra('${c0.id}')">Ver a campanha</button></div>`);
+    return r;
+  };
+})();
+</script>
+<style id="fp-css">
+.fp-tela{ position:fixed; inset:0; z-index:10000; pointer-events:none; }
+.fp-tela canvas{ position:absolute; inset:0; width:100%; height:100%; }
+.fp-tela::before{ content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 40%, rgba(8,10,28,.25), rgba(4,6,18,.62)); opacity:0; transition:opacity .5s ease; }
+.fp-tela.on::before{ opacity:1; } .fp-tela.sai::before{ opacity:0; }
+.fp-card{ position:absolute; left:50%; top:46%; transform:translate(-50%,-50%) scale(.6); opacity:0; pointer-events:auto; cursor:pointer;
+  min-width:min(330px, calc(100vw - 32px)); max-width:calc(100vw - 32px); box-sizing:border-box; text-align:center; padding:22px 26px 18px;
+  border-radius:22px; color:#fff; background:linear-gradient(160deg, rgba(20,24,44,.86), rgba(12,14,28,.92));
+  border:1px solid rgba(255,255,255,.14); box-shadow:0 30px 80px rgba(0,0,0,.45), 0 0 0 1px var(--fp-cor, #f5c542) inset, 0 0 60px -10px var(--fp-cor, #f5c542);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  transition:transform .55s cubic-bezier(.2,1.5,.4,1), opacity .35s ease; }
+.fp-tela.on .fp-card{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+.fp-tela.sai .fp-card{ transform:translate(-50%,-60%) scale(.92); opacity:0; transition:transform .5s ease, opacity .45s ease; }
+.fp-selo{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--fp-cor, #f5c542); }
+.fp-selo i{ width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 12px currentColor; animation:fp-pisca 1s ease-in-out infinite; }
+.fp-num{ font-size:46px; line-height:1.05; font-weight:800; letter-spacing:-.02em; margin:8px 0 2px; font-variant-numeric:tabular-nums;
+  background:linear-gradient(90deg, #fff 0%, #ffe9a8 30%, #fff 50%, #ffe9a8 70%, #fff 100%); background-size:200% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent; animation:fp-brilho 2.2s linear infinite; }
+.fp-sub{ font-size:15px; font-weight:600; opacity:.95; }
+.fp-det{ font-size:13px; opacity:.7; margin-top:6px; line-height:1.4; }
+.fp-toque{ font-size:11.5px; opacity:.45; margin-top:12px; }
+@keyframes fp-brilho{ to{ background-position:-200% 0; } }
+@keyframes fp-pisca{ 50%{ opacity:.35; } }
+@media (max-width:480px){ .fp-num{ font-size:38px; } .fp-card{ padding:20px 18px 16px; } }
+@media (prefers-reduced-motion:reduce){ .fp-card, .fp-tela.sai .fp-card{ transition:opacity .3s; transform:translate(-50%,-50%); } .fp-num, .fp-selo i{ animation:none; } }
+</style>
+<script id="fp-js">
+/* Festa dos pontos: quando a compra bonificada cai na conta, fogos de
+   artifício e balões que estouram, com o número de pontos subindo no centro.
+   Tudo num canvas por cima da tela, sem bloquear cliques. Toque no cartão
+   para fechar antes. Quem pede menos movimento vê só o cartão. */
+function festaPontos(o){
+  o = o || {};
+  const velha = document.querySelector('.fp-tela'); if (velha) velha.remove();
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cor = o.cor || '#F5C542';
+  const tela = document.createElement('div'); tela.className = 'fp-tela'; tela.style.setProperty('--fp-cor', cor);
+  tela.innerHTML = `<canvas class="fp-fx"></canvas><canvas class="fp-bl"></canvas><div class="fp-card" role="status" aria-live="polite">
+      <div class="fp-selo"><i></i>Caiu na conta</div>
+      <div class="fp-num">+0</div>
+      <div class="fp-sub">pontos ${esc(o.prog || '')}</div>
+      ${o.det ? `<div class="fp-det">${esc(o.det)}</div>` : ''}
+      <div class="fp-toque">toque para fechar</div></div>`;
+  document.body.appendChild(tela);
+  const cv = tela.querySelector('.fp-fx'), ctx = cv.getContext('2d'), cb = tela.querySelector('.fp-bl'), bx2 = cb.getContext('2d'), num = tela.querySelector('.fp-num');
+  const alvo = Math.max(0, Math.round(Number(o.pts) || 0));
+  let W = 0, H = 0, dpr = 1;
+  const medir = () => { dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; [[cv, ctx], [cb, bx2]].forEach(([k, x]) => { k.width = W * dpr; k.height = H * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }); };
+  medir(); addEventListener('resize', medir);
+  requestAnimationFrame(() => tela.classList.add('on'));
+  try{ if (navigator.vibrate) navigator.vibrate([25, 60, 25, 60, 40]); }catch(e){}
+
+  const DUR = calmo ? 3200 : 5200, t0 = performance.now();
+  let raf = 0, fim = false;
+  const encerrar = () => {
+    if (fim) return; fim = true; tela.classList.add('sai');
+    setTimeout(() => { cancelAnimationFrame(raf); removeEventListener('resize', medir); tela.remove(); }, 550);
+  };
+  tela.querySelector('.fp-card').onclick = encerrar;
+  tela._encerrar = encerrar;
+
+  // contador do número
+  const contar = (agora) => {
+    const p = Math.min(1, (agora - t0 - 250) / 1400), e = p <= 0 ? 0 : 1 - Math.pow(1 - p, 4);
+    num.textContent = '+' + nBR(Math.round(alvo * e));
+  };
+  if (calmo){ num.textContent = '+' + nBR(alvo); setTimeout(encerrar, DUR); return tela; }
+  setTimeout(() => { num.textContent = '+' + nBR(alvo); }, 1800);
+  setTimeout(encerrar, DUR + 300); // garante a saída mesmo se a aba ficar em segundo plano
+
+  const CORES = [cor, '#F5C542', '#FF6B6B', '#4ADE80', '#60A5FA', '#C084FC', '#FFFFFF', '#FB923C'];
+  const pick = a => a[(Math.random() * a.length) | 0];
+  const fogos = [], fais = [], baloes = [], flashes = [];
+
+  function lancar(x, cor1, cor2, forma){
+    const ty = H * (.14 + Math.random() * .26);
+    fogos.push({x, y:H + 10, vx:(Math.random() - .5) * 1.4, vy:-Math.sqrt(2 * .3 * (H + 10 - ty)), cor1, cor2, forma, rastro:[]});
+  }
+  function explodir(f){
+    const n = f.forma === 'anel' ? 70 : f.forma === 'salgueiro' ? 90 : 120;
+    flashes.push({x:f.x, y:f.y, r:0, a:.55, cor:f.cor1});
+    for (let i = 0; i < n; i++){
+      const ang = (i / n) * Math.PI * 2 + Math.random() * .08;
+      let v = f.forma === 'anel' ? 5.2 : f.forma === 'salgueiro' ? 2 + Math.random() * 3.2 : 1 + Math.random() * 6;
+      fais.push({x:f.x, y:f.y, vx:Math.cos(ang) * v, vy:Math.sin(ang) * v, vida:1, dec:f.forma === 'salgueiro' ? .0075 : .012 + Math.random() * .01,
+        cor:i % 3 ? f.cor1 : f.cor2, tam:f.forma === 'salgueiro' ? 1.6 : 2.2, brilha:Math.random() < .35, arrasto:f.forma === 'salgueiro' ? .975 : .955,
+        gravidade:f.forma === 'salgueiro' ? .045 : .06, rastro:[], estala:f.forma !== 'salgueiro' && Math.random() < .18});
+    }
+  }
+  function balao(i, total){
+    const x = W * (.08 + .84 * (i + Math.random() * .6) / total);
+    baloes.push({x, y:H + 60 + Math.random() * 160, vy:-(1.6 + Math.random() * 1.3), fase:Math.random() * 6, r:16 + Math.random() * 9,
+      cor:pick(CORES.filter(c => c !== '#FFFFFF')), estoura:H * (.12 + Math.random() * .4)});
+  }
+  function estourar(b){
+    flashes.push({x:b.x, y:b.y, r:0, a:.4, cor:b.cor, anel:true});
+    for (let i = 0; i < 28; i++){
+      const ang = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 4;
+      fais.push({x:b.x, y:b.y, vx:Math.cos(ang) * v, vy:Math.sin(ang) * v - 1, vida:1, dec:.018, cor:i % 2 ? b.cor : pick(CORES), tam:3,
+        confete:true, giro:Math.random() * 6, vg:(Math.random() - .5) * .4, arrasto:.96, gravidade:.09, rastro:[]});
+    }
+  }
+  // roteiro: 3 fogos já, depois em ondas; balões sobem juntos
+  const formas = ['peonia', 'anel', 'salgueiro'];
+  const agenda = [];
+  [[0, .5], [180, .25], [320, .75], [900, .38], [1050, .62], [1600, .18], [1700, .82], [2300, .5], [2450, .3], [2550, .7]]
+    .forEach(([t, px], k) => agenda.push({t, f:() => lancar(W * px, k === 0 ? cor : pick(CORES), pick(CORES), formas[k % 3])}));
+  const nb = W < 600 ? 7 : 12;
+  for (let i = 0; i < nb; i++) balao(i, nb);
+
+  let ult = t0;
+  function quadro(agora){
+    const dt = Math.min(2.5, (agora - ult) / 16.67); ult = agora;
+    const el = agora - t0;
+    contar(agora);
+    while (agenda.length && agenda[0].t <= el) agenda.shift().f();
+    // rastro que esmaece: as faíscas deixam cauda luminosa
+    ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(0,0,0,.24)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+    bx2.clearRect(0, 0, W, H);
+    // balões
+    for (let i = baloes.length - 1; i >= 0; i--){
+      const b = baloes[i]; b.y += b.vy * dt; b.fase += .04 * dt; const bx = b.x + Math.sin(b.fase) * 12;
+      if (b.y < b.estoura || (el > DUR - 1300 && b.y < H * .8)){ b.x = bx; estourar(b); baloes.splice(i, 1); continue; }
+      bx2.save(); bx2.translate(bx, b.y); bx2.rotate(Math.sin(b.fase) * .08);
+      bx2.strokeStyle = 'rgba(255,255,255,.45)'; bx2.lineWidth = 1; bx2.beginPath(); bx2.moveTo(0, b.r * 1.2);
+      bx2.bezierCurveTo(6, b.r * 1.8, -6, b.r * 2.4, 2, b.r * 3.2); bx2.stroke();
+      const g = bx2.createRadialGradient(-b.r * .35, -b.r * .45, b.r * .1, 0, 0, b.r * 1.25);
+      g.addColorStop(0, 'rgba(255,255,255,.85)'); g.addColorStop(.25, b.cor); g.addColorStop(1, b.cor);
+      bx2.fillStyle = g; bx2.globalAlpha = .93; bx2.beginPath(); bx2.ellipse(0, 0, b.r, b.r * 1.18, 0, 0, Math.PI * 2); bx2.fill();
+      bx2.beginPath(); bx2.moveTo(-3, b.r * 1.15); bx2.lineTo(3, b.r * 1.15); bx2.lineTo(0, b.r * 1.32); bx2.closePath(); bx2.fill();
+      bx2.restore(); bx2.globalAlpha = 1;
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    // foguetes subindo
+    for (let i = fogos.length - 1; i >= 0; i--){
+      const f = fogos[i]; f.rastro.push([f.x, f.y]); if (f.rastro.length > 10) f.rastro.shift();
+      f.x += f.vx * dt; f.y += f.vy * dt; f.vy += .3 * dt;
+      ctx.strokeStyle = f.cor1; ctx.lineWidth = 2; ctx.globalAlpha = .8; ctx.beginPath();
+      f.rastro.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.lineTo(f.x, f.y); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(f.x, f.y, 2.2, 0, Math.PI * 2); ctx.fill();
+      if (f.vy >= -.6){ explodir(f); fogos.splice(i, 1); }
+    }
+    // clarões
+    for (let i = flashes.length - 1; i >= 0; i--){
+      const c = flashes[i]; c.r += (c.anel ? 3 : 9) * dt; c.a -= .03 * dt; if (c.a <= 0){ flashes.splice(i, 1); continue; }
+      ctx.globalAlpha = c.a;
+      if (c.anel){ ctx.strokeStyle = c.cor; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.stroke(); }
+      else { const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r); g.addColorStop(0, c.cor); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill(); }
+    }
+    // faíscas e confetes
+    for (let i = fais.length - 1; i >= 0; i--){
+      const p = fais[i];
+      p.vx *= Math.pow(p.arrasto, dt); p.vy = p.vy * Math.pow(p.arrasto, dt) + p.gravidade * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= p.dec * dt;
+      if (p.vida <= 0 || p.y > H + 20){ fais.splice(i, 1); continue; }
+      let a = Math.max(0, p.vida); if (p.brilha && p.vida < .5) a *= Math.random() < .5 ? 1 : .15;
+      ctx.globalAlpha = a; ctx.fillStyle = p.cor;
+      if (p.confete){
+        ctx.globalCompositeOperation = 'source-over'; p.giro += p.vg * dt;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.giro); ctx.scale(1, Math.cos(p.giro * 2)); ctx.fillRect(-3, -1.8, 6, 3.6); ctx.restore();
+        ctx.globalCompositeOperation = 'lighter';
+      } else {
+        p.rastro.push([p.x, p.y]); if (p.rastro.length > 4) p.rastro.shift();
+        ctx.strokeStyle = p.cor; ctx.lineWidth = p.tam * .8; ctx.lineCap = 'round'; ctx.beginPath();
+        p.rastro.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.tam * (p.vida > .7 ? 1.25 : .95), 0, Math.PI * 2); ctx.fill();
+        if (p.vida > .6){ ctx.globalAlpha = a * .5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.tam * .55, 0, Math.PI * 2); ctx.fill(); }
+        // estalo: no fim, algumas faíscas viram brilhinhos brancos
+        if (p.estala && p.vida < .32){ p.estala = false;
+          for (let q = 0; q < 4; q++){ const ag = Math.random() * 6.28, vv = 1 + Math.random() * 1.6;
+            fais.push({x:p.x, y:p.y, vx:Math.cos(ag) * vv, vy:Math.sin(ag) * vv, vida:.55, dec:.03, cor:'#FFF6D8', tam:1.1, brilha:true, arrasto:.92, gravidade:.03, rastro:[]}); } }
+      }
+    }
+    ctx.globalAlpha = 1;
+    if (el > DUR && !fim) encerrar();
+    if (!fim || fais.length) raf = requestAnimationFrame(quadro);
+  }
+  raf = requestAnimationFrame(quadro);
+  tela._estado = () => ({fogos:fogos.length, faiscas:fais.length, baloes:baloes.length});
+  return tela;
+}
+
+(function(){
+  if (typeof creditarCompra !== 'function') return;
+  const orig = creditarCompra;
+  creditarCompra = function(id){
+    const r = orig.apply(this, arguments);
+    const bt = document.getElementById('crOk'); if (!bt || !bt.onclick) return r;
+    const clique = bt.onclick;
+    bt.onclick = function(ev){
+      const c = (DB.compras || []).find(y => y.id === id);
+      const antes = c && c.status;
+      const res = clique.call(this, ev);
+      if (c && antes !== 'creditado' && c.status === 'creditado'){
+        try{
+          const p = typeof prog === 'function' ? prog(c.prog) : {};
+          const k = (DB.contas || []).find(x => x.id === (DB.lancamentos.find(l => l.id === c.lancId) || {}).contaId) || (DB.contas || []).find(x => x.id === c.contaId);
+          const det = [c.item || (typeof nomeLojaCompra === 'function' ? nomeLojaCompra(c) : c.lojaNome), k ? 'conta ' + nomeCurto(k.nome) : ''].filter(Boolean).join(' · ');
+          festaPontos({pts:c.pts, prog:p.n || '', cor:p.cor, det});
+        }catch(e){ console.warn('festa', e); }
+      }
+      return res;
+    };
+    return r;
+  };
+})();
+</script>
+
+<style id="rcl-css">
+.rcl-bt{ color:var(--brasa); border-color:color-mix(in oklab, var(--brasa) 35%, var(--fio)); }
+.rcl-bt svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.rcl-st b{ white-space:nowrap; }
+.rcl-bt.aberta{ background:var(--lavagem-brasa); }
+.rcl-bt.aberta::after{ content:''; position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:var(--brasa); }
+.rcl-bt{ position:relative; }
+.rcl-st{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; margin-top:5px; font-size:calc(12.5px * var(--esc)); color:var(--brasa); }
+.rcl-st button{ all:unset; cursor:pointer; text-decoration:underline; font-weight:600; }
+.rcl-st{ display:grid; grid-template-columns:15px minmax(0, 1fr); gap:6px; align-items:start; line-height:1.4; }
+.rcl-st svg, .rcl-prazo svg{ fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.rcl-st svg{ margin-top:2px; }
+.rcl-prazo.vencido svg{ color:var(--brasa); } .rcl-prazo.cedo svg{ color:var(--ouro); }
+.rcl .ga-ic{ background:var(--lavagem-brasa); } .rcl .ga-ic svg{ stroke:var(--brasa); }
+.lc-rec-s .rcl-link{ all:unset; cursor:pointer; text-decoration:underline; font-weight:600; color:var(--brasa); }
+.lc-feita.tem-rcl{ grid-template-columns:auto minmax(0, 1fr) auto auto auto; }
+.lc-feita .rcl-bt{ width:30px; height:28px; }
+.rcl .dr-painel{ max-width:640px; }
+.rcl-prazo{ display:flex; gap:10px; align-items:flex-start; padding:11px 13px; border-radius:12px; margin:0 0 14px; font-size:calc(13.5px * var(--esc)); line-height:1.45; }
+.rcl-prazo svg{ width:18px; height:18px; flex:none; margin-top:1px; }
+.rcl-prazo.cedo{ background:color-mix(in srgb, var(--ouro) 10%, var(--sup-1)); border:1px solid color-mix(in srgb, var(--ouro) 40%, var(--fio)); }
+.rcl-prazo.vencido{ background:var(--lavagem-brasa); border:1px solid color-mix(in oklab, var(--brasa) 40%, transparent); }
+.rcl-prazo b{ color:var(--giz); }
+.rcl-t{ font-size:calc(12px * var(--esc)); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); margin:16px 0 8px; }
+.rcl-passos{ list-style:none; margin:0; padding:0; counter-reset:p; display:grid; gap:10px; }
+.rcl-passos li{ counter-increment:p; display:grid; grid-template-columns:28px minmax(0, 1fr); gap:10px; align-items:start; font-size:calc(13.5px * var(--esc)); line-height:1.45; }
+.rcl-passos li::before{ content:counter(p); width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:13px; background:var(--sup-2); border:1px solid var(--fio); color:var(--giz); }
+.rcl-passos li b{ color:var(--giz); display:block; margin-bottom:1px; }
+.rcl-passos li .fraco{ display:block; }
+.rcl-passos li .bt{ margin-top:7px; }
+.rcl-dados{ white-space:pre-wrap; font:calc(12.5px * var(--esc))/1.5 ui-monospace, Menlo, Consolas, monospace; background:var(--sup-2); border:1px solid var(--fio); border-radius:10px; padding:10px 12px; margin:8px 0 0; color:var(--giz); max-height:220px; overflow:auto; }
+.rcl-seg{ display:flex; gap:6px; flex-wrap:wrap; }
+.rcl-seg button{ flex:1 1 140px; }
+.rcl-seg button.on{ border-color:var(--ouro); color:var(--giz); background:color-mix(in srgb, var(--ouro) 12%, transparent); font-weight:600; }
+.rcl-grade{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px 12px; }
+.rcl-grade .largo{ grid-column:1 / -1; }
+.rcl .dr-pe .esticar{ flex:1; }
+@media (max-width:520px){ .rcl-grade{ grid-template-columns:minmax(0, 1fr); } .rcl .dr-pe{ flex-wrap:wrap; } .rcl .dr-pe .bt{ flex:1 1 auto; justify-content:center; } .rcl .dr-pe .esticar{ display:none; } }
+</style>
+<script id="rcl-js">
+/* Reivindicar pontos: quando a compra não pontuou certo. Passo a passo,
+   dados prontos para colar no atendimento e o protocolo guardado na compra.
+   O caminho da Livelo foi conferido (app: Extrato > Receber meus pontos >
+   Comprei em um parceiro, resposta em até 10 dias corridos). Para os outros
+   programas a Torre não inventa menu: indica a área de ajuda oficial. */
+const RCL_ONDE = [['programa', 'App ou site do programa'], ['loja', 'Atendimento da loja'], ['reclameaqui', 'Reclame Aqui'], ['consumidor', 'consumidor.gov.br'], ['outro', 'Outro canal']];
+function _rclSomaDias(iso, n){ const d = new Date((iso || hojeISO()) + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function rclDadosTxt(c, tipo, veio){
+  const o = typeof _campDaCompra === 'function' ? _campDaCompra(c) : null;
+  const k = (DB.contas || []).find(x => x.id === c.contaId);
+  const esperados = Number(c.ptsPrevistos) || Number(c.pts) || 0;
+  return [
+    tipo === 'menos' ? 'Solicito o crédito dos pontos que faltaram na compra abaixo.' : 'Solicito o crédito dos pontos da compra abaixo, que não entraram na minha conta.',
+    `Programa: ${prog(c.prog).n}`,
+    `Loja: ${nomeLojaCompra(c)}`,
+    c.pedido ? `Número do pedido: ${c.pedido}` : 'Número do pedido: (preencha)',
+    `Data da compra: ${dataBR(c.data)}`,
+    `Valor do produto, sem frete: ${brl(c.valor)}`,
+    o ? `Campanha: ${o.titulo}${o.fim ? ` (até ${dataBR(o.fim)})` : ''}` : '',
+    Number(c.mult) ? `Pontos por real: ${nBRdec(c.mult)}` : '',
+    `Pontos esperados: ${nBR(esperados)}`,
+    `Pontos recebidos: ${nBR(tipo === 'menos' ? (Number(veio) || 0) : 0)}`,
+    c.previsto ? `Prazo informado para o crédito: ${dataBR(c.previsto)}` : '',
+    k ? `Titular da conta: ${k.nome}` : ''
+  ].filter(Boolean).join('\n');
+}
+async function _rclCopiar(txt, bt){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(txt); ok = true; }catch(e){
+    try{ const t = document.createElement('textarea'); t.value = txt; t.style.cssText = 'position:fixed;opacity:0'; (bt.closest('dialog') || document.body).appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); }catch(e2){}
+  }
+  if (bt){ const v = bt.innerHTML; bt.innerHTML = ok ? '<svg><use href="#i-ok"/></svg>Copiado' : 'Selecione e copie'; setTimeout(() => { if (document.body.contains(bt)) bt.innerHTML = v; }, 1800); }
+  return ok;
+}
+function abrirReivindicacao(id){
+  const c = (DB.compras || []).find(x => x.id === id); if (!c) return;
+  const r = c.reclamacao || {};
+  const esperados = Number(c.ptsPrevistos) || Number(c.pts) || 0;
+  const tipo0 = r.tipo || (c.status === 'creditado' && Number(c.pts) < esperados ? 'menos' : 'nada');
+  const veio0 = r.veio != null ? r.veio : (c.status === 'creditado' ? Number(c.pts) || 0 : 0);
+  const d = typeof diasAte === 'function' && c.previsto ? diasAte(c.previsto) : null;
+  const P = prog(c.prog).n, livelo = c.prog === 'livelo';
+  const o = typeof _campDaCompra === 'function' ? _campDaCompra(c) : null;
+  const daLoja = o && o.tipo === 'campanha';
+  const dl = _janela('dlgRecl', 'vl rcl');
+  const prazo = d == null ? '' : d > 0
+    ? `<div class="rcl-prazo cedo"><svg><use href="#i-relogio"/></svg><span><b>Ainda está no prazo: o crédito está previsto para ${dataBR(c.previsto)} (faltam ${d} ${d === 1 ? 'dia' : 'dias'}).</b><br>Antes dessa data a reclamação costuma ser recusada. Confira o extrato e, se não cair até lá, volte aqui.</span></div>`
+    : `<div class="rcl-prazo vencido"><svg><use href="#i-alerta"/></svg><span><b>${d === 0 ? 'O prazo termina hoje.' : `O prazo venceu em ${dataBR(c.previsto)}, há ${-d} ${d === -1 ? 'dia' : 'dias'}.`}</b><br>Já pode reivindicar. Siga os passos abaixo.</span></div>`;
+  dl.innerHTML = `<div class="dr-painel">
+    <header class="dr-cab"><div class="dr-rota"><span class="ga-ic" style="color:var(--brasa)"><svg><use href="#i-alerta"/></svg></span>
+      <div class="dr-rota-txt"><h2>Reivindicar pontos</h2><span class="rc-sub">${esc(c.item || nomeLojaCompra(c))} · ${esc(nomeLojaCompra(c))} · ${nBR(esperados)} pontos ${esc(P)}</span></div></div></header>
+    <div class="dr-corpo">
+      ${prazo}
+      <div class="rcl-t">O que aconteceu?</div>
+      <div class="rcl-seg"><button type="button" class="bt fantasma${tipo0 === 'nada' ? ' on' : ''}" data-t="nada">Não caiu nada</button><button type="button" class="bt fantasma${tipo0 === 'menos' ? ' on' : ''}" data-t="menos">Caiu menos que o previsto</button></div>
+      <div class="campo" id="rclVeioCx" style="margin-top:10px${tipo0 === 'menos' ? '' : ';display:none'}"><label>Quantos pontos caíram</label><input type="text" inputmode="numeric" data-milhar id="rclVeio" value="${qtdTxt(veio0)}"></div>
+
+      <div class="rcl-t">Passo a passo</div>
+      <ol class="rcl-passos">
+        <li><span><b>Confira o extrato do ${esc(P)}</b><span class="fraco">Olhe também os pontos pendentes ou a confirmar: às vezes já estão lá, só não liberados.</span></span></li>
+        <li><span><b>Junte as provas</b><span class="fraco">Número do pedido, e-mail de confirmação, nota fiscal e a regra da campanha. A Torre guardou a regra desta compra.</span>
+          <button type="button" class="bt p fantasma" onclick="abrirCampanhaDaCompra('${c.id}')"><svg><use href="#i-fogo"/></svg>Ver a campanha</button></span></li>
+        <li><span><b>Copie os dados prontos</b><span class="fraco">Cole no atendimento. Confira o número do pedido antes de enviar.</span>
+          <pre class="rcl-dados" id="rclDados"></pre>
+          <button type="button" class="bt p primario" id="rclCopiar"><svg><use href="#i-copiar"/></svg>Copiar os dados</button></span></li>
+        <li><span><b>${livelo ? 'Abra a solicitação no app Livelo' : `Abra a solicitação no ${esc(P)}`}</b><span class="fraco">${livelo
+          ? 'No app, toque em <b style="display:inline">Extrato</b>, depois em <b style="display:inline">Receber meus pontos</b> e escolha <b style="display:inline">Comprei em um parceiro</b>. Responda às perguntas. A Livelo informa resposta em até 10 dias corridos.'
+          : `No app ou no site oficial do ${esc(P)}, entre na área de ajuda (Central de ajuda ou Fale conosco) e escolha o assunto de pontos de compra em parceiro. Cole os dados copiados.`}${daLoja ? ` Como a campanha foi da ${esc(nomeLojaCompra(c))}, abra também no atendimento da loja.` : ''}</span></span></li>
+        <li><span><b>Anote o protocolo aqui embaixo</b><span class="fraco">A Torre guarda na compra e lembra de cobrar a resposta em 10 dias.</span></span></li>
+        <li><span><b>Sem resposta ou com recusa?</b><span class="fraco">Registre no Reclame Aqui ou no consumidor.gov.br com o protocolo e as provas. Costuma acelerar.</span>
+          <span style="display:flex;gap:6px;flex-wrap:wrap"><a class="bt p fantasma" href="https://www.reclameaqui.com.br/" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Reclame Aqui</a><a class="bt p fantasma" href="https://www.consumidor.gov.br/" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>consumidor.gov.br</a></span></span></li>
+      </ol>
+
+      <div class="rcl-t">Registro da reivindicação</div>
+      <div class="rcl-grade">
+        <div class="campo"><label>Protocolo</label><input type="text" id="rclProt" value="${esc(r.protocolo || '')}" placeholder="ex.: 2026101600123"></div>
+        <div class="campo"><label>Aberta em</label><input type="date" id="rclData" value="${r.data || hojeISO()}"></div>
+        <div class="campo largo"><label>Onde abriu</label><select id="rclOnde">${RCL_ONDE.map(([v, t]) => `<option value="${v}"${(r.onde || 'programa') === v ? ' selected' : ''}>${t === 'App ou site do programa' ? `App ou site do ${esc(P)}` : t}</option>`).join('')}</select></div>
+        <div class="campo largo"><label>Anotação</label><input type="text" id="rclObs" value="${esc(r.obs || '')}" placeholder="ex.: atendente pediu a nota fiscal"></div>
+      </div>
+    </div>
+    <footer class="dr-pe"><button type="button" class="bt perigo sair" onclick="document.getElementById('dlgRecl').close()">Fechar</button>
+      ${c.reclamacao ? `<button type="button" class="bt vermelho-solido" id="rclExcluir"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}
+      <span class="esticar"></span>
+      <button type="button" class="bt primario" id="rclSalvar"><svg><use href="#i-ok"/></svg>Salvar reivindicação</button></footer>
+  </div>`;
+  let tipo = tipo0;
+  const atualizar = () => { dl.querySelector('#rclDados').textContent = rclDadosTxt(c, tipo, qtdNum(dl.querySelector('#rclVeio').value)); };
+  dl.querySelectorAll('.rcl-seg button').forEach(b => b.onclick = () => {
+    tipo = b.dataset.t; dl.querySelectorAll('.rcl-seg button').forEach(x => x.classList.toggle('on', x === b));
+    dl.querySelector('#rclVeioCx').style.display = tipo === 'menos' ? '' : 'none'; atualizar();
+  });
+  if (typeof ligarCampoContagem === 'function') try{ ligarCampoContagem('#rclVeio'); }catch(e){}
+  dl.querySelector('#rclVeio').addEventListener('input', atualizar);
+  if (typeof prepararCamposData === 'function') try{ prepararCamposData(dl); }catch(e){}
+  atualizar();
+  dl.querySelector('#rclCopiar').onclick = ev => _rclCopiar(dl.querySelector('#rclDados').textContent, ev.currentTarget);
+  dl.querySelector('#rclSalvar').onclick = () => {
+    const data = dl.querySelector('#rclData').value || hojeISO();
+    c.reclamacao = {tipo, veio:tipo === 'menos' ? qtdNum(dl.querySelector('#rclVeio').value) : 0, protocolo:dl.querySelector('#rclProt').value.trim(),
+      data, onde:dl.querySelector('#rclOnde').value, obs:dl.querySelector('#rclObs').value.trim(), cobrarEm:_rclSomaDias(data, 10), status:'aberta', criadaEm:(r.criadaEm || Date.now())};
+    salvar(); dl.close(); renderReceber();
+    avisar(`Reivindicação guardada${c.reclamacao.protocolo ? ', protocolo ' + c.reclamacao.protocolo : ''}. A Torre lembra de cobrar em ${dataBR(c.reclamacao.cobrarEm)}.`, 'ok', 6000);
+  };
+  const ex = dl.querySelector('#rclExcluir');
+  if (ex) ex.onclick = () => { delete c.reclamacao; salvar(); dl.close(); renderReceber(); avisar('Reivindicação excluída.', 'ok'); };
+  if (!dl.open){ dl.showModal(); travarFundo(true); }
+}
+function _rclStatusHTML(c){
+  const r = c.reclamacao; if (!r || r.status !== 'aberta') return '';
+  const atraso = r.cobrarEm && r.cobrarEm <= hojeISO();
+  return `<div class="rcl-st"><svg style="width:14px;height:14px"><use href="#i-alerta"/></svg><span>Reivindicação aberta em ${dataBR(r.data)}${r.protocolo ? ` · protocolo <b>${esc(r.protocolo)}</b>` : ''} · ${atraso ? '<b>já pode cobrar a resposta</b>' : 'cobrar resposta em ' + dataBR(r.cobrarEm)} · <button type="button" onclick="abrirReivindicacao('${c.id}')">ver ou atualizar</button></span></div>`;
+}
+(function(){
+  if (typeof renderReceber !== 'function') return;
+  const orig = renderReceber;
+  renderReceber = function(){
+    const res = orig.apply(this, arguments);
+    const cx = document.getElementById('lcReceber'); if (!cx) return res;
+    cx.querySelectorAll('.lc-rec').forEach(el => {
+      const bt = el.querySelector('[onclick^="creditarCompra"]'); if (!bt || el.querySelector('.rcl-bt')) return;
+      const id = (bt.getAttribute('onclick').match(/'([^']+)'/) || [])[1];
+      const c = (DB.compras || []).find(x => x.id === id); if (!c) return;
+      const aberta = c.reclamacao && c.reclamacao.status === 'aberta';
+      bt.insertAdjacentHTML('afterend', `<button type="button" class="bt p fantasma icone rcl-bt${aberta ? ' aberta' : ''}" onclick="abrirReivindicacao('${id}')" data-dica="${aberta ? 'Reivindicação aberta: ver e atualizar' : 'Os pontos não caíram certo? Reivindique aqui'}" aria-label="Reivindicar pontos"><svg><use href="#i-alerta"/></svg></button>`);
+      const s = el.querySelector('.lc-rec-s');
+      if (s){
+        s.innerHTML = s.innerHTML.replace('abra reclamação com a loja.', `<button type="button" class="rcl-link" onclick="abrirReivindicacao('${id}')">reivindique os pontos</button>.`);
+        s.insertAdjacentHTML('afterend', _rclStatusHTML(c));
+      }
+    });
+    // já caíram, mas menos que o previsto
+    const feitas = (DB.compras || []).filter(c => c.status === 'creditado').sort((a, b) => String(b.creditadoEm || b.data).localeCompare(String(a.creditadoEm || a.data))).slice(0, 8);
+    cx.querySelectorAll('.lc-feita').forEach((el, i) => {
+      const c = feitas[i]; if (!c || el.querySelector('.rcl-bt')) return;
+      const faltou = Number(c.ptsPrevistos) > Number(c.pts);
+      if (!faltou && !(c.reclamacao && c.reclamacao.status === 'aberta')) return;
+      el.classList.add('tem-rcl');
+      el.insertAdjacentHTML('beforeend', `<button type="button" class="bt p fantasma icone rcl-bt${c.reclamacao ? ' aberta' : ''}" onclick="abrirReivindicacao('${c.id}')" data-dica="Caíram ${nBR(Number(c.ptsPrevistos) - Number(c.pts))} pontos a menos. Reivindique aqui" aria-label="Reivindicar pontos"><svg><use href="#i-alerta"/></svg></button>`);
+    });
+    return res;
+  };
+  // ao confirmar que caiu, a reivindicação aberta vira resolvida
+  if (typeof creditarCompra === 'function'){
+    const oc = creditarCompra;
+    creditarCompra = function(id){
+      const res = oc.apply(this, arguments);
+      const bt = document.getElementById('crOk'); if (!bt || !bt.onclick) return res;
+      const clique = bt.onclick;
+      bt.onclick = function(ev){
+        const c = (DB.compras || []).find(y => y.id === id);
+        const out = clique.call(this, ev);
+        if (c && c.status === 'creditado' && c.reclamacao && c.reclamacao.status === 'aberta' && !(Number(c.ptsPrevistos) > Number(c.pts))){
+          c.reclamacao.status = 'resolvida'; c.reclamacao.resolvidaEm = hojeISO(); salvar(); renderReceber();
+        }
+        return out;
+      };
+      return res;
+    };
+  }
+})();
+</script>
+
 </body>
 </html>
