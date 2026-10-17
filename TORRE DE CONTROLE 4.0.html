@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 17:20';
+const BUILD = '2026-10-17 18:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -20209,11 +20209,11 @@ function renderMural(){
         <span class="etq ${zPrazo}">${morta ? 'encerrada' : d === null ? 'sem prazo' : d === 0 ? 'termina hoje' : 'válida até ' + dataBR(m.fim)}</span>
         ${!morta && d !== null && d > 0 ? `<span class="fraco">${prazoTexto(d)}</span>` : ''}
         ${chipCupom(cupomDoMural(m))}
-        ${m.link ? `<a class="mural-link" href="${esc(m.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(String(m.link).replace(/^https?:\/\/(www\.)?/, '').slice(0, 46))}</a>` : ''}
+        ${m.link ? `<a class="mural-link" href="${esc(m.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg><span>${esc(linkCurto(m.link))}</span></a>` : ''}
       </div>
       ${(typeof vereditoHTML === 'function' && !morta) ? vereditoHTML(m) : ''}
       ${m.texto ? (() => { const ls = String(m.texto).split('\n').map(l => l.trim().replace(/;$/, '.')), lem = ls.filter(l => LEMBRETE_REGRA.some(r => r.test(l))), resto = ls.filter(l => !lem.includes(l));
-        return `<div class="mural-texto">${listaCat(resto.join('\n'))}</div>${lem.length ? `<div class="mr-lembrar"><div class="mr-lembrar-tit"><svg><use href="#i-alerta"/></svg>Não deixe de fazer</div><ul>${lem.map(l => `<li>${esc(SEM_EMOJI(l))}</li>`).join('')}</ul></div>` : ''}`; })() : ''}
+        return `<div class="mural-texto">${muralTextoHTML(resto)}</div>${lem.length ? `<div class="mr-lembrar"><div class="mr-lembrar-tit"><svg><use href="#i-alerta"/></svg>Não deixe de fazer</div><ul>${lem.map(l => `<li>${esc(SEM_EMOJI(l))}</li>`).join('')}</ul></div>` : ''}`; })() : ''}
     </div>`;
   }).join('')
     : `<div class="vazio"><p>Nada em ${esc(CATEGORIAS_MURAL[catMural].n.toLowerCase())}${soAtivasMural ? ' com prazo aberto' : ''}. Cadastre o que chegar pelo canal e o prazo passa a avisar sozinho.</p></div>`);
@@ -63256,5 +63256,93 @@ html.eq-vendo.eq-sem-e .pv-meta:has(.pv-meta-in){ cursor:not-allowed; }
   };
 })();
 </script>
+
+<style id="mfx-css">
+/* ══ ANÚNCIO COM FAIXAS E EXCEÇÕES (17/10/2026) ══ */
+.mural-link{ white-space:normal; overflow:visible; text-overflow:clip; align-items:flex-start; }
+.mural-link span{ overflow-wrap:anywhere; }
+.mural-link svg{ margin-top:2px; }
+.mr-faixas{ margin:6px 0; border:1px solid var(--fio); border-radius:14px; overflow:hidden; background:var(--sup-1); }
+.mr-faixas-tit{ padding:9px 14px; font-size:calc(11px * var(--esc)); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); border-bottom:1px solid var(--fio); }
+.mr-faixa{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:14px; padding:9px 14px; }
+.mr-faixa + .mr-faixa{ border-top:1px dashed var(--fio); }
+.mr-faixa-v{ display:flex; align-items:baseline; gap:4px; min-width:calc(78px * var(--esc)); font-family:var(--f-m); color:var(--ouro-texto, var(--ouro)); }
+.mr-faixa-v small{ font-family:inherit; font-size:calc(10.5px * var(--esc)); color:var(--grafite); text-transform:lowercase; }
+.mr-faixa-v b{ font-size:calc(18px * var(--esc)); font-weight:700; }
+.mr-faixa:first-of-type .mr-faixa-v b{ color:var(--jade); }
+.mr-faixa-n{ font-size:calc(13.5px * var(--esc)); color:var(--giz); line-height:1.35; }
+.mr-fora{ margin:6px 0; padding:10px 14px 12px; border-radius:14px; border:1px solid color-mix(in srgb, var(--ouro) 40%, var(--fio)); background:color-mix(in srgb, var(--ouro) 6%, transparent); }
+.mr-fora-tit{ display:flex; align-items:center; gap:7px; font-size:calc(11px * var(--esc)); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ouro-texto, var(--ouro)); margin-bottom:8px; }
+.mr-fora-tit svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; }
+.mr-fora-lista{ display:flex; flex-wrap:wrap; gap:6px; }
+.mr-fora-lista span{ font-family:var(--f-m); font-size:calc(12px * var(--esc)); padding:4px 9px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); white-space:nowrap; }
+</style>
+<script id="mfx-js">
+/* ══ ANÚNCIO COM FAIXAS E EXCEÇÕES (17/10/2026, pedido do Jadiel) ═══════════════
+   No cartão do mural:
+     · linhas seguidas do tipo "até 20% de desconto – cartões Azul Infinite"
+       viram uma tabelinha "valor → para quem";
+     · "As viagens devem ser realizadas de X a Y, exceto nos períodos:" seguida de
+       datas vira a regra + um bloco "Fora destas datas" com as datas juntas;
+     · o link aparece inteiro (sem os códigos de rastreio utm_), sem corte.
+   Nada é inventado: tudo sai das linhas do próprio anúncio, na mesma ordem. */
+function linkCurto(u){
+  let t = String(u || '');
+  try {
+    const x = new URL(t); [...x.searchParams.keys()].filter(k => /^utm_/i.test(k)).forEach(k => x.searchParams.delete(k));
+    t = x.host.replace(/^www\./, '') + (x.pathname === '/' ? '' : x.pathname.replace(/\/$/, '')) + (x.search || '') + (x.hash || '');
+  } catch(_){ t = t.replace(/^https?:\/\/(www\.)?/, ''); }
+  return t;
+}
+const _MFX_FAIXA = /^(at[eé]\s+)?(\d{1,3}(?:[.,]\d+)?)\s*%\s*(de\s+)?(desconto|b[oô]nus|cashback|off|de volta)?\s*[–—-]\s*(.+)$/i;
+const _MFX_DATA = /^(\d{2}\/\d{2}\/\d{4})\s*(?:a|até|-|–)\s*(\d{2}\/\d{2}\/\d{4})\.?;?$/i;
+function muralTextoHTML(linhas){
+  const ls = (linhas || []).map(l => SEM_EMOJI(l)).filter(Boolean), out = [];
+  for (let i = 0; i < ls.length; i++){
+    /* faixas: pelo menos duas linhas seguidas */
+    let j = i; while (j < ls.length && _MFX_FAIXA.test(ls[j])) j++;
+    if (j - i >= 2){
+      const fx = ls.slice(i, j).map(l => { const m = l.match(_MFX_FAIXA); return {ate:!!m[1], v:Number(m[2].replace(',', '.')), tipo:(m[4] || '').toLowerCase(), n:m[5].replace(/[.;]\s*$/, '').replace(/^cart(ões|ão)\s+/i, '').trim()}; });
+      const tipo = (fx.find(f => f.tipo) || {}).tipo || '';
+      const nomeTipo = /desconto|off/.test(tipo) ? 'Desconto' : /b[oô]nus/.test(tipo) ? 'Bônus' : /cashback|volta/.test(tipo) ? 'Cashback' : 'Valor';
+      const porCartao = fx.some(f => /cart|ita[uú]|visa|master|elo|infinite|platinum|gold|black/i.test(f.n));
+      out.push(`<div class="mr-faixas"><div class="mr-faixas-tit">${nomeTipo} por ${porCartao ? 'cartão' : 'faixa'}</div>${fx.map(f => `<div class="mr-faixa"><span class="mr-faixa-v">${f.ate ? '<small>até</small>' : ''}<b>${String(f.v).replace('.', ',')}%</b></span><span class="mr-faixa-n">${esc(f.n.charAt(0).toUpperCase() + f.n.slice(1))}</span></div>`).join('')}</div>`);
+      i = j - 1; continue;
+    }
+    /* "..., exceto nos períodos:" seguido de datas */
+    const ex = ls[i].match(/^(.*?)[,;]?\s*exceto(?:\s+n[oa]s?\s+(?:per[ií]odos|datas|dias))?\s*:\s*$/i);
+    if (ex){
+      let k = i + 1; const datas = [];
+      while (k < ls.length && _MFX_DATA.test(ls[k])){ const m = ls[k].match(_MFX_DATA); datas.push(`${m[1]} a ${m[2]}`); k++; }
+      if (datas.length){
+        if (ex[1].trim()) out.push(listaCat(ex[1].trim() + '.'));
+        out.push(`<div class="mr-fora"><div class="mr-fora-tit"><svg><use href="#i-alerta"/></svg>Fora destas datas</div><div class="mr-fora-lista">${datas.map(d => `<span>${esc(d)}</span>`).join('')}</div></div>`);
+        i = k - 1; continue;
+      }
+    }
+    out.push(listaCat(ls[i]));
+  }
+  return out.join('');
+}
+</script>
+
+<style id="bmcor-css">
+/* ══ MENU DO CELULAR: o item escolhido fica na cor do próprio ícone (17/10/2026) ══
+   Antes, todo item escolhido ficava dourado, qualquer que fosse a cor do ícone.
+   Agora Campanhas escolhida fica lilás, Lojas verde, Desejos rosa... */
+.bm-item:has(> svg[data-ic="ouro"]){ --bmc:#F0A429; }
+.bm-item:has(> svg[data-ic="brasa"]){ --bmc:#EF4B3F; }
+.bm-item:has(> svg[data-ic="jade"]){ --bmc:#10A97A; }
+.bm-item:has(> svg[data-ic="anil"]){ --bmc:#3D7BF0; }
+.bm-item:has(> svg[data-ic="lilas"]){ --bmc:#8B5CF6; }
+.bm-item:has(> svg[data-ic="ceu"]){ --bmc:#0EA5E9; }
+.bm-item:has(> svg[data-ic="rosa"]){ --bmc:#E5488F; }
+.bm-item:has(> svg[data-ic="prata"]){ --bmc:#8E9AB0; }
+.bm-item.on:has(> svg[data-ic]){ --bmt:color-mix(in srgb, var(--bmc) 70%, #fff); color:var(--bmt) !important; background:color-mix(in srgb, var(--bmc) 16%, transparent) !important; }
+:root[data-theme="papel"] .bm-item.on:has(> svg[data-ic]){ --bmt:color-mix(in srgb, var(--bmc) 72%, #000); background:color-mix(in srgb, var(--bmc) 12%, transparent) !important; }
+.bm-item.on:has(> svg[data-ic]) span{ color:var(--bmt) !important; }
+/* "bônus de até": número um pouco menor (pedido do Jadiel) */
+.cc-max b{ font-size:calc(23px * var(--esc)) !important; }
+</style>
 </body>
 </html>
