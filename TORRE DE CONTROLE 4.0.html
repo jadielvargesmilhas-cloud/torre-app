@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 18:35';
+const BUILD = '2026-10-17 19:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -57580,6 +57580,8 @@ abrirSeletorPax = function(atuais, aoConfirmar, clienteId, clienteNome){
       fatias:fatiasHeroi(vendas.filter(x => x.v > 0).map(x => ({id:x.c.id, v:x.v})), x => { const c = pessoa(x.id) || {}; const n = c.empresa || c.nome || ''; return n.length > 22 ? n.slice(0, 21) + '…' : n; }), fmtFatia:v => brl(v), compRot:'Vendas por cliente',
       dirRot:'Vendas a clientes, mês a mês', dirSub:'O que foi cobrado nas emissões para terceiros.',
       ult: serie.length ? {b:brl(serie[serie.length - 1].v), sp:serie[serie.length - 1].r} : null, serie, fmtSerie:v => brl(v), semSerie:'A curva aparece a partir do segundo mês com venda.'});
+    /* os três números numa linha só, também no celular (17/10/2026, pedido do Jadiel) */
+    const hn = alvo.querySelector('.heroi-numeros'); if (hn) hn.classList.add('hn-uma-linha');
   };
 })();
 
@@ -63361,5 +63363,61 @@ function muralTextoHTML(linhas){
   .trilho .tb.on:has(> svg[data-ic])::before{ background:var(--tbc) !important; }
 }
 </style>
+
+<style id="rm-css">
+/* ══ BARRA DE ROLAGEM ENTRE O CONTEÚDO E A BARRA DA DIREITA (17/10/2026) ══════
+   No computador, a barra fixa da direita fica colada na borda da tela e a barra
+   de rolagem passa a ficar entre ela e o conteúdo. Quem rola é o corpo da
+   página (não a janela), com a margem da direita do tamanho da barra fixa. */
+html.rm{ overflow:hidden; height:100%; scrollbar-gutter:auto; background:var(--breu); }
+html.rm body{ height:100%; overflow-y:auto; overflow-x:hidden; margin-right:var(--trilho-dir); scrollbar-gutter:stable; }
+html.rm .casco{ grid-template-columns:var(--trilho) var(--menu) minmax(0,1fr) 0; }
+/* janela aberta: o corpo para de rolar sem sair do lugar */
+html.rm body.folha-aberta{ position:static; inset:auto; width:auto; overflow:hidden; }
+/* Clientes: os três números numa linha só, no celular também; o texto quebra dentro de cada caixa */
+.heroi-numeros.hn-uma-linha{ grid-template-columns:repeat(3, minmax(0, 1fr)) !important; }
+.heroi-numeros.hn-uma-linha > *:last-child{ grid-column:auto !important; }
+@media (max-width:600px){
+  .heroi-numeros.hn-uma-linha{ gap:7px; }
+  .heroi-numeros.hn-uma-linha > *{ padding:10px 9px !important; }
+  .heroi-numeros.hn-uma-linha span{ white-space:normal !important; overflow-wrap:break-word; hyphens:none; line-height:1.3; }
+}
+</style>
+<script id="rm-js">
+/* ══ BARRA DE ROLAGEM ENTRE O CONTEÚDO E A BARRA DA DIREITA (17/10/2026, pedido do Jadiel) ══
+   Só no computador (onde existe a barra da direita). Como quem rola agora é o
+   corpo da página, os atalhos da janela (scrollY, scrollTo, scrollBy e o aviso
+   de "rolou") passam a falar com ele, e todo o resto da Torre segue igual. */
+(function(){
+  const mq = matchMedia('(min-width:861px)');
+  const H = document.documentElement, B = () => document.body;
+  const ativo = () => H.classList.contains('rm');
+  const nat = {scrollTo:window.scrollTo.bind(window), scrollBy:window.scrollBy.bind(window), scroll:window.scroll.bind(window)};
+  const dY = Object.getOwnPropertyDescriptor(window, 'scrollY') || Object.getOwnPropertyDescriptor(Window.prototype, 'scrollY');
+  const dP = Object.getOwnPropertyDescriptor(window, 'pageYOffset') || Object.getOwnPropertyDescriptor(Window.prototype, 'pageYOffset');
+  const lerY = () => ativo() ? B().scrollTop : (dY && dY.get ? dY.get.call(window) : 0);
+  try { Object.defineProperty(window, 'scrollY', {configurable:true, get:lerY}); } catch(_){}
+  try { Object.defineProperty(window, 'pageYOffset', {configurable:true, get:() => ativo() ? B().scrollTop : (dP && dP.get ? dP.get.call(window) : 0)}); } catch(_){}
+  const ponte = nome => function(a, b){
+    if (!ativo()) return nat[nome](...arguments);
+    const alvo = B();
+    if (typeof a === 'object' && a) return alvo[nome === 'scrollBy' ? 'scrollBy' : 'scrollTo']({...a, behavior:a.behavior === 'instant' ? 'auto' : a.behavior});
+    return alvo[nome === 'scrollBy' ? 'scrollBy' : 'scrollTo'](a || 0, b || 0);
+  };
+  window.scrollTo = ponte('scrollTo'); window.scroll = ponte('scroll'); window.scrollBy = ponte('scrollBy');
+  /* quem escuta a janela continua sabendo que a página rolou */
+  let liga = false;
+  function aplicar(){
+    const y = lerY(), quer = mq.matches;
+    if (quer === ativo()) return;
+    H.classList.toggle('rm', quer);
+    if (quer) B().scrollTop = (dY && dY.get ? dY.get.call(window) : 0) || y;
+    else nat.scrollTo(0, y);
+    if (quer && !liga){ liga = true; B().addEventListener('scroll', () => { if (ativo()) window.dispatchEvent(new Event('scroll')); }, {passive:true}); }
+  }
+  if (document.body) aplicar(); else document.addEventListener('DOMContentLoaded', aplicar);
+  mq.addEventListener('change', aplicar);
+})();
+</script>
 </body>
 </html>
