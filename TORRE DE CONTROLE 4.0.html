@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 16:40';
+const BUILD = '2026-10-17 17:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -60270,6 +60270,18 @@ document.addEventListener('click', e => {
 .li-fora{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:8px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 .li-fora b{ color:var(--giz); }
 .li-aj{ margin-left:auto; }
+.li-grupo{ grid-column:1 / -1; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 8px; margin:6px 2px 0; font-size:calc(11.5px * var(--esc)); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--grafite); }
+.li-grupo:first-child{ margin-top:0; }
+.li-grupo span{ letter-spacing:0; padding:0 7px; border-radius:99px; background:var(--sup-2, rgba(127,127,127,.15)); color:var(--giz); }
+.li-grupo small{ text-transform:none; letter-spacing:0; font-weight:500; color:var(--grafite); }
+.li-l.sem:not(.on) .li-n b{ color:var(--grafite); }
+.li-add{ grid-column:1 / -1; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px; border-radius:10px; border:1px dashed color-mix(in srgb, var(--jade) 60%, var(--fio)); background:color-mix(in srgb, var(--jade) 6%, transparent); color:var(--jade); font:inherit; font-weight:600; cursor:pointer; }
+.li-add svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+.li-vazio{ grid-column:1 / -1; margin:4px 2px; }
+.li-t{ display:flex; align-items:center; justify-content:space-between; gap:6px; min-width:0; }
+.li-t b{ min-width:0; }
+.li-n small{ white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; }
+@media (max-width:600px){ .li-barra input{ flex:1 1 100%; } .li-barra .bt{ flex:1 1 0; justify-content:center; padding-inline:6px; } }
 </style>
 <script id="li-js">
 /* ══ Lojas de cada item: você marca onde procurar (16/10/2026) ══════════════════
@@ -60299,33 +60311,68 @@ function lojasVivasParaItem(){
   return Object.values(m).sort((a, b) => a.n.localeCompare(b.n, 'pt'));
 }
 function _autoVende(nome, cat, dTmp){ const d = {...dTmp, lojasSim:[], lojasNao:[]}; try { return !!lojaVendeItem(nome, d, cat); } catch(e){ return false; } }
+/* lojas que a Torre conhece mas que estão SEM promoção hoje: as que você já
+   cadastrou (inclusive as encerradas), as parceiras de compra bonificada e as
+   sugeridas por categoria. Marcar uma delas = quando aparecer promoção lá, o
+   item entra na conta e a Torre avisa. (17/10/2026, pedido do Jadiel) */
+function lojasConhecidasParaItem(extras){
+  const hoje = hojeISO(), m = {};
+  const pega = n => { n = String(n || '').trim(); if (!n) return; const k = _nL(n); if (!k || m[k]) return; m[k] = {n, cat:'', progs:{}, viva:false}; };
+  (DB.lojas || []).slice().sort((a, b) => String(b.fim || '').localeCompare(String(a.fim || ''))).forEach(l => pega(l.n));
+  (DB.campanhas || []).filter(c => c.tipo === 'bonificada' && c.parceiro).forEach(c => pega(c.parceiro));
+  Object.values(LOJAS_SUGERIDAS).flat().forEach(pega);
+  (extras || []).forEach(pega);
+  /* a última promoção que já passou, para você lembrar quanto ela costuma dar */
+  Object.values(m).forEach(e => {
+    const ult = (DB.lojas || []).filter(l => _nL(l.n) === _nL(e.n) && l.fim && l.fim < hoje).sort((a, b) => b.fim.localeCompare(a.fim))[0];
+    if (ult){ e.cat = ult.cat || ''; const t = tetoLoja(ult); e.ult = {prog:ult.prog, v:t.promo || t.base || 0, fim:ult.fim}; }
+  });
+  return m;
+}
 function montarLojasItem(dOrig){
   const box = document.getElementById('dsLojasBox'); if (!box) return;
   const nome = ($('#dsN') || {}).value || '', cat = ($('#dsCat') || {}).value || 'geral';
   const dTmp = {n:nome, cat};
   const sim = new Set((box._sim || dOrig.lojasSim || []).map(_nL)), nao = new Set((box._nao || dOrig.lojasNao || []).map(_nL));
   const prefs = box._sim ? [] : prefsDoDesejo(dOrig);
-  const lojas = lojasVivasParaItem().map(l => {
-    const auto = _autoVende(l.n, l.cat, dTmp), k = _nL(l.n);
+  box._extra = box._extra || [];
+  const vivas = lojasVivasParaItem().map(l => ({...l, viva:true}));
+  const conh = lojasConhecidasParaItem((box._sim || dOrig.lojasSim || []).concat(box._extra));
+  vivas.forEach(l => delete conh[_nL(l.n)]);
+  const base = vivas.concat(Object.values(conh).sort((a, b) => a.n.localeCompare(b.n, 'pt')));
+  const lojas = base.map(l => {
+    const k = _nL(l.n), extra = box._extra.some(x => _nL(x) === k), auto = extra ? false : _autoVende(l.n, l.cat, dTmp);
     let on = nao.has(k) ? false : sim.has(k) ? true : auto;
     if (prefs.length) on = prefs.some(p => _nL(l.n).includes(_nL(p)) || _nL(p).includes(_nL(l.n)));   /* item antigo com texto livre */
-    return {...l, k, auto, on};
+    return {...l, k, auto, on, extra};
   });
   const busca = _nL(box._busca || '');
   const vis = lojas.filter(l => !busca || l.k.includes(busca));
-  const ord = vis.sort((a, b) => (b.auto - a.auto) || a.n.localeCompare(b.n, 'pt'));
+  const ordem = (a, b) => (b.auto - a.auto) || a.n.localeCompare(b.n, 'pt');
+  const vv = vis.filter(l => l.viva).sort(ordem), vs = vis.filter(l => !l.viva).sort(ordem);
   const nOn = lojas.filter(l => l.on).length;
   box._estado = lojas;
-  box.innerHTML = `<div class="li-cab"><b>${nOn} de ${lojas.length} lojas marcadas</b><small>Marcadas = a Torre procura o item nelas. Já vêm marcadas as que vendem ${esc(cat)}${nome ? ` (${esc(nome)})` : ''}.</small></div>
+  const linha = l => `<label class="li-l${l.on ? ' on' : ''}${l.viva ? '' : ' sem'}"><input type="checkbox" data-lk="${esc(l.k)}"${l.on ? ' checked' : ''}>
+      <span class="li-n"><span class="li-t"><b>${esc(l.n)}</b>${l.auto ? '<em class="li-sug">vende o tipo</em>' : ''}</span><small>${l.viva ? Object.entries(l.progs).map(([p, v]) => `${esc(prog(p).n)} ${nBRdec(v)}`).join(' · ')
+        : l.ult ? `Sem promoção hoje · última: ${esc(prog(l.ult.prog).n)} ${nBRdec(l.ult.v)} até ${dataBR(l.ult.fim).slice(0, 5)}` : l.extra ? 'Você incluiu · sem promoção hoje' : 'Sem promoção hoje'}</small></span></label>`;
+  const txt = String(box._busca || '').trim();
+  const podeIncluir = txt.length >= 2 && !lojas.some(l => l.k === busca);
+  box.innerHTML = `<div class="li-cab"><b>${nOn} de ${lojas.length} lojas marcadas</b><small>Marcadas = a Torre procura o item nelas. Já vêm marcadas as que vendem ${esc(cat)}${nome ? ` (${esc(nome)})` : ''}. Marque também lojas sem promoção hoje: quando aparecer promoção nelas, a Torre avisa.</small></div>
     <div class="li-barra"><input type="search" id="dsLojasBusca" placeholder="Procurar loja" value="${esc(box._busca || '')}">
       <button type="button" class="bt p fantasma" data-li="sug">Só as sugeridas</button><button type="button" class="bt p fantasma" data-li="todas">Todas</button><button type="button" class="bt p fantasma" data-li="nenhuma">Nenhuma</button></div>
-    <div class="li-lista">${ord.map(l => `<label class="li-l${l.on ? ' on' : ''}"><input type="checkbox" data-lk="${esc(l.k)}"${l.on ? ' checked' : ''}>
-      <span class="li-n"><b>${esc(l.n)}</b><small>${Object.entries(l.progs).map(([p, v]) => `${esc(prog(p).n)} ${nBRdec(v)}`).join(' · ')}</small></span>
-      ${l.auto ? '<em class="li-sug">vende o tipo</em>' : ''}</label>`).join('') || '<p class="fraco">Nenhuma loja com esse nome em promoção hoje.</p>'}</div>`;
-  const grava = () => { const st = box._estado; box._sim = st.filter(l => l.on && !l.auto).map(l => l.n); box._nao = st.filter(l => !l.on && l.auto).map(l => l.n); };
+    <div class="li-lista">
+      ${vv.length ? `<div class="li-grupo">Em promoção hoje <span>${vv.length}</span></div>${vv.map(linha).join('')}` : ''}
+      ${vs.length ? `<div class="li-grupo">Sem promoção hoje <span>${vs.length}</span><small>a Torre avisa quando aparecer</small></div>${vs.map(linha).join('')}` : ''}
+      ${!vv.length && !vs.length ? `<p class="fraco li-vazio">Nenhuma loja com esse nome na Torre.</p>` : ''}
+      ${podeIncluir ? `<button type="button" class="li-add" data-li-add><svg><use href="#i-mais"/></svg>Incluir a loja “${esc(txt)}”</button>` : ''}
+    </div>`;
+  const grava = () => { const st = box._estado; box._sim = st.filter(l => l.on && (!l.auto || l.extra)).map(l => l.n); box._nao = st.filter(l => !l.on && l.auto).map(l => l.n); box._extra = box._extra.filter(x => st.some(l => l.on && _nL(l.n) === _nL(x))); };
   box.querySelectorAll('[data-lk]').forEach(c => c.onchange = () => { const l = box._estado.find(x => x.k === c.dataset.lk); l.on = c.checked; grava(); montarLojasItem(dOrig); });
   box.querySelectorAll('[data-li]').forEach(b => b.onclick = () => { const a = b.dataset.li; box._estado.forEach(l => { l.on = a === 'todas' ? true : a === 'nenhuma' ? false : l.auto; }); grava(); montarLojasItem(dOrig); });
+  const add = box.querySelector('[data-li-add]');
+  if (add) add.onclick = () => { const n = txt.replace(/\s+/g, ' '); box._extra.push(n); box._estado.push({n, k:_nL(n), auto:false, on:true, extra:true, viva:false, progs:{}}); box._busca = ''; grava(); montarLojasItem(dOrig); avisar(`${esc(n)} incluída. Quando aparecer promoção nela, a Torre avisa.`, 'ok', 4000); };
   const bs = box.querySelector('#dsLojasBusca'); bs.oninput = () => { box._busca = bs.value; const pos = bs.selectionStart; grava(); montarLojasItem(dOrig); const n = document.getElementById('dsLojasBusca'); n.focus(); n.setSelectionRange(pos, pos); };
+  bs.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); const a = box.querySelector('[data-li-add]'); if (a) a.click(); } };
   if (!box._sim) grava();
 }
 (function(){
