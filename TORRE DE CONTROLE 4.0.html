@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 12:00';
+const BUILD = '2026-10-17 13:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -57672,7 +57672,7 @@ function mostrarAvisosRenovacao(){
         <p>${mud ? `Já está marcada a troca para <b style="display:inline">${esc(mud)}</b>.<br>Confira no site do programa se a mudança foi feita antes de ${dataBR(a.renova)}.`
           : `Renovar costuma perder o bônus da campanha. Faça o downgrade ou cancele antes de ${dataBR(a.renova)} para não pagar caro.`}</p></div>
       <button type="button" class="rn-x" data-rn-fechar aria-label="Fechar"><svg><use href="#i-x"/></svg></button></div>
-      <div class="rn-dias"><strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a <b class="rn-dest">renovação</b>' : 'dias para a <b class="rn-dest">renovação</b>'} · <b class="rn-dest">${brl2(a.valor)}</b></span></div>
+      <div class="rn-dias"><strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a <b class="rn-dest">RENOVAÇÃO</b>' : 'dias para a <b class="rn-dest">RENOVAÇÃO</b>'} · <b class="rn-dest rn-valor">${brl2(a.valor)}</b></span></div>
       <div class="rn-acoes"><button type="button" class="rn-pri" data-rn-ver>Ver o Clube</button><button type="button" data-rn-fechar>Depois</button><button type="button" data-rn-ok>Já resolvi</button></div>`;
     const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
     el.querySelectorAll('[data-rn-fechar]').forEach(b => b.onclick = sair);
@@ -58357,24 +58357,59 @@ function renderBlack(){
    grupos. A bússola é o símbolo do Método ROTA, e classificar oferta é a etapa
    T do método: Timing das Oportunidades. Mesmas faixas que os grupos usam:
    até 4 pontos por real, 5 a 6, 7 a 12 e 13 ou mais. */
-const BUSSOLA_FAIXAS = [
-  {n:1, ate:4,  rot:'Só se já ia comprar', faixa:'até 4 pontos',      cor:'grafite'},
-  {n:2, ate:6,  rot:'Vale conferir',        faixa:'de 5 a 6 pontos',   cor:'anil'},
-  {n:3, ate:12, rot:'Boa oportunidade',     faixa:'de 7 a 12 pontos',  cor:'ouro'},
-  {n:4, ate:1e9, rot:'Rota certa',          faixa:'a partir de 13 pontos', cor:'jade'}
-];
-function bussolaDe(ptsPorReal){
+/* 17/10/2026: 5 bússolas (como as 5 estrelas e as 5 bruxinhas dos anúncios) e
+   TRÊS réguas, definidas pelo Jadiel. Pontos (Livelo, Esfera) ainda podem virar
+   mais milhas numa transferência bonificada; milhas (Azul, LATAM, Smiles) já são
+   o destino. Por isso a mesma oferta vale bússolas diferentes:
+                      milhas      Livelo      Esfera e outros pontos
+     🧭               até 4       até 2       até 2
+     🧭🧭             5 a 8       3 a 4       3 a 4
+     🧭🧭🧭           9 a 13      5 a 7       5 a 6
+     🧭🧭🧭🧭         14 a 20     8 a 10      7 a 9
+     🧭🧭🧭🧭🧭       21 ou mais  11 ou mais  10 ou mais
+   Os outros programas de pontos (Itaú, C6 Átomos, Uau CAIXA, RevPoints,
+   Banriclube, Premmia) usam a régua da Esfera (escolha do Jadiel). */
+const BUSSOLA_REGUAS = {milhas:[4, 8, 13, 20], livelo:[2, 4, 7, 10], esfera:[2, 4, 6, 9]};
+const BUSSOLA_NOMES = ['Só se já ia comprar', 'Vale conferir', 'Boa oportunidade', 'Ótima oportunidade', 'Rota certa'];
+const BUSSOLA_CORES = ['grafite', 'anil', 'ouro', 'jade', 'rota'];
+let _bzProgAtual = '';
+function reguaDe(p){
+  if (!p) p = _bzProgAtual || 'livelo';
+  if (p === 'livelo') return 'livelo';
+  const t = (prog(p) || {}).tipo;
+  return t === 'pontos' ? 'esfera' : 'milhas';
+}
+const reguaNome = r => r === 'livelo' ? 'Livelo' : r === 'esfera' ? 'Esfera e outros pontos' : 'milhas (Azul, LATAM, Smiles e outras)';
+function faixasBussola(p){
+  const r = BUSSOLA_REGUAS[reguaDe(p)] || BUSSOLA_REGUAS.livelo, un = reguaDe(p) === 'milhas' ? 'milhas' : 'pontos';
+  return BUSSOLA_NOMES.map((rot, i) => {
+    const ate = i < 4 ? r[i] : 1e9, de = i ? r[i - 1] + 1 : 0;
+    const faixa = i === 0 ? `até ${r[0]} ${un}` : i < 4 ? `de ${de} a ${ate} ${un}` : `${de} ou mais ${un}`;
+    return {n:i + 1, ate, rot, faixa, cor:BUSSOLA_CORES[i], regua:reguaDe(p), un};
+  });
+}
+const BUSSOLA_FAIXAS = faixasBussola('livelo');
+function bussolaDe(ptsPorReal, p){
   const v = Number(ptsPorReal);
   if (!(v > 0)) return null;
-  return BUSSOLA_FAIXAS.find(f => v <= f.ate);
+  return faixasBussola(p).find(f => v <= f.ate);
 }
-/* os magos (2 a 5) dos anúncios viram bússolas (1 a 4) */
-function bussolaDeMagos(m){ const n = Math.max(1, Math.min(4, (Number(m) || 0) - 1)); return BUSSOLA_FAIXAS[n - 1]; }
+/* as bruxinhas (1 a 5) dos anúncios viram bússolas (1 a 5), sem conversão */
+function bussolaDeMagos(m){ const n = Math.max(1, Math.min(5, Number(m) || 1)); return Object.assign({}, faixasBussola('milhas')[n - 1], {faixa:''}); }
 const _BUS_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path class="bz-ag" d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>';
 function bussolaHTML(f, {rotulo = true, compacto = false} = {}){
   if (!f) return '';
-  return `<span class="bz bz-${f.cor}${compacto ? ' bz-c' : ''}" title="Bússola ROTA: ${f.n} de 4 · ${esc(f.rot)} (${esc(f.faixa)} por real)">
-    <span class="bz-icos">${[1, 2, 3, 4].map(i => `<i class="${i <= f.n ? 'on' : ''}">${_BUS_SVG}</i>`).join('')}</span>${rotulo ? `<b>${esc(f.rot)}</b>` : ''}</span>`;
+  return `<span class="bz bz-${f.cor}${compacto ? ' bz-c' : ''}" title="Bússola ROTA: ${f.n} de 5 · ${esc(f.rot)}${f.faixa ? ` (${esc(f.faixa)} por real, régua ${esc(reguaNome(f.regua))})` : ''}">
+    <span class="bz-icos">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= f.n ? 'on' : ''}">${_BUS_SVG}</i>`).join('')}</span>${rotulo ? `<b>${esc(f.rot)}</b>` : ''}</span>`;
+}
+/* legenda com as três réguas, para quem quiser conferir as faixas */
+function bzLegendaHTML(){
+  const R = [['milhas', 'Milhas'], ['livelo', 'Livelo'], ['esfera', 'Esfera e outros']];
+  const F = {milhas:faixasBussola('azul'), livelo:faixasBussola('livelo'), esfera:faixasBussola('esfera')};
+  return `${BUSSOLA_NOMES.map((n, i) => `<span class="bz-leg-i">${bussolaHTML(F.livelo[i], {rotulo:false, compacto:true})}<span>${esc(n)}</span></span>`).join('')}
+    <details class="bz-leg-reg"><summary>Faixas por programa</summary><table><thead><tr><th></th>${R.map(([, t]) => `<th>${t}</th>`).join('')}</tr></thead>
+    <tbody>${BUSSOLA_NOMES.map((n, i) => `<tr><td>${'🧭'.repeat(i + 1)}</td>${R.map(([k]) => `<td>${esc(F[k][i].faixa.replace(/^de /, ''))}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    <small>Pontos por real (milhas por real nas aéreas). Pontos ainda podem virar mais milhas numa transferência bonificada; por isso a régua deles é menor.</small></details>`;
 }
 const bussolaTexto = f => f ? '🧭'.repeat(f.n) : '';
 
@@ -58425,7 +58460,8 @@ function previaListaLojas(L){
   listaLida = L;
   const opP = PROG_IDS.map(p => `<option value="${p}"${p === L.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('');
   const grupos = []; L.itens.forEach((it, i) => { let g = grupos.find(x => x.t === (it.catTxt || 'Outras')); if (!g){ g = {t:it.catTxt || 'Outras', itens:[]}; grupos.push(g); } g.itens.push({it, i}); });
-  const conta = BUSSOLA_FAIXAS.map(f => ({f, n:L.itens.filter(it => (bussolaDe(porRealDoItem(it)) || {}).n === f.n).length}));
+  const _p = (document.getElementById('bzProg') || {}).value || L.prog; L.prog = _p;
+  const conta = faixasBussola(_p).map(f => ({f, n:L.itens.filter(it => (bussolaDe(porRealDoItem(it), _p) || {}).n === f.n).length}));
   box.innerHTML = `<div class="bz-lista">
     <div class="bz-lista-cab">
       <div><div class="olho anil" style="margin:0">Lista do dia · ${L.itens.length} lojas</div><div class="fraco" style="font-size:calc(12.5px * var(--esc))">${esc(L.titulo)}</div></div>
@@ -58436,11 +58472,11 @@ function previaListaLojas(L){
     </div>
     <div class="bz-placar">${conta.slice().reverse().map(({f, n}) => `<div>${bussolaHTML(f, {rotulo:false, compacto:true})}<b>${n}</b><span>${esc(f.rot)}</span></div>`).join('')}</div>
     ${grupos.map(g => `<div class="bz-grupo"><div class="bz-g-t">${esc(g.t)}</div>${g.itens.sort((a, b) => (porRealDoItem(b.it) || 0) - (porRealDoItem(a.it) || 0)).map(({it, i}) => {
-      const pr = porRealDoItem(it), f = bussolaDe(pr);
+      const pr = porRealDoItem(it), f = bussolaDe(pr, _p);
       return `<label class="bz-item"><input type="checkbox" checked data-bz="${i}"><span class="bz-n">${esc(it.n)}</span>
         <span class="bz-v">${nBRdec(it.v)} <small>${it.unid === 'dolar' ? 'por dólar' : 'por real'}</small></span>
         ${f ? bussolaHTML(f, {compacto:true}) : `<span class="fraco" style="font-size:calc(12px * var(--esc))">${it.unid === 'dolar' ? 'sem o dólar do dia' : ''}</span>`}</label>`; }).join('')}</div>`).join('')}
-    <p class="fraco" style="font-size:calc(12px * var(--esc));margin:8px 0 0">Bússola ROTA, etapa T (Timing das Oportunidades): ${BUSSOLA_FAIXAS.map(f => `${bussolaTexto(f)} ${f.faixa}`).join(' · ')}. As ofertas entram em Lojas Parceiras, onde a Torre mostra quanto de cada real volta em pontos.</p>
+    <p class="fraco" style="font-size:calc(12px * var(--esc));margin:8px 0 0">Bússola ROTA, etapa T (Timing das Oportunidades), régua ${esc(reguaNome(reguaDe(_p)))}: ${faixasBussola(_p).map(f => `${bussolaTexto(f)} ${f.faixa}`).join(' · ')}. As ofertas entram em Lojas Parceiras, onde a Torre mostra quanto de cada real volta em pontos.</p>
   </div>`;
   const contar = () => { const n = box.querySelectorAll('[data-bz]:checked').length; if (bt){ bt.disabled = !n; bt.innerHTML = `<svg><use href="#i-ok"/></svg>Cadastrar ${n} ${n === 1 ? 'oferta' : 'ofertas'}`; } };
   box.querySelectorAll('[data-bz]').forEach(x => x.addEventListener('change', contar)); contar();
@@ -58458,9 +58494,9 @@ function textoBussolas(p, fim, itens, link){
   const grupos = []; itens.forEach(it => { let g = grupos.find(x => x.t === it.cat); if (!g){ g = {t:it.cat, l:[]}; grupos.push(g); } g.l.push(it); });
   const fmt = n => String(n).padStart(2, '0');
   return [`🧭 *Torre de Controle · Lojas ${p ? prog(p).n : ''}*`, '', '*Bússola ROTA* (etapa T: Timing das Oportunidades)', '',
-    ...BUSSOLA_FAIXAS.map(f => `${bussolaTexto(f)} ${f.faixa}: ${f.rot.toLowerCase()}`), '',
+    ...faixasBussola(p).map(f => `${bussolaTexto(f)} ${f.faixa}: ${f.rot.toLowerCase()}`), '',
     `⏳ Ofertas ${fim ? 'até ' + dataBR(fim) : 'de hoje'}`, link ? `📌 ${link}` : '', '',
-    ...grupos.flatMap(g => [`*${g.t}*`, ...g.l.sort((a, b) => b.v - a.v).map(it => { const f = bussolaDe(porRealDoItem(it)); return `${bussolaTexto(f) || '·'} ${it.n}: até ${fmt(nBRdec(it.v))} pontos por ${it.unid === 'dolar' ? 'dólar' : 'real'}`; }), '']),
+    ...grupos.flatMap(g => [`*${g.t}*`, ...g.l.sort((a, b) => b.v - a.v).map(it => { const f = bussolaDe(porRealDoItem(it), p); return `${bussolaTexto(f) || '·'} ${it.n}: até ${fmt(nBRdec(it.v))} pontos por ${it.unid === 'dolar' ? 'dólar' : 'real'}`; }), '']),
     '🚨 Entre pelo site ou app do programa antes de comprar e grave a tela da compra.', '🚨 Leia o regulamento: alguns sites pedem cupom ou limitam a pontuação a certos produtos.', '', 'ROTA te leva. VEM acontece.'
   ].filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
 }
@@ -58512,7 +58548,7 @@ function gravarListaLojas(){
   cartaoLoja = function(l){
     const h = _carta.apply(this, arguments);
     const t = tetoLoja(l), v = t.promo || t.base || 0;
-    const f = bussolaDe(l.porDolar ? (_cambioUSD ? v / _cambioUSD : null) : v);
+    const f = bussolaDe(l.porDolar ? (_cambioUSD ? v / _cambioUSD : null) : v, l.prog);
     return f ? h.replace('<div class="lj-miolo">', `<div class="lj-bz">${bussolaHTML(f)}</div><div class="lj-miolo">`) : h;
   };
   const ligar = () => {
@@ -58534,7 +58570,7 @@ function gravarListaLojas(){
     const vit = document.getElementById('ljVitrine');
     if (vit && !document.getElementById('bzLegenda')){
       const d = document.createElement('div'); d.id = 'bzLegenda'; d.className = 'bz-legenda';
-      d.innerHTML = `<span class="bz-leg-t"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>Bússola ROTA <small>T · Timing das Oportunidades</small></span>${BUSSOLA_FAIXAS.map(f => `<span class="bz-leg-i">${bussolaHTML(f, {rotulo:false, compacto:true})}<span>${esc(f.faixa)}</span></span>`).join('')}`;
+      d.innerHTML = `<span class="bz-leg-t"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>Bússola ROTA <small>T · Timing das Oportunidades</small></span>${bzLegendaHTML()}`;
       vit.before(d);
     }
     if ((DB.lojas || []).some(l => l.porDolar) && !_cambioUSD) cambioDolar().then(v => { if (v) try { renderLojasParceiras(); } catch(_){} });
@@ -58610,7 +58646,7 @@ function renderComparaLojas(){
       : `Compre pela <b>${esc(prog(m.prog).n)}</b>: ${nBRdec(mult(m))} pontos por real, contra ${x.os.slice(1).map(o => `${nBRdec(mult(o))} na ${esc(prog(o.prog).n)}`).join(' e ')}.`;
     return `<div class="lc2-l">
       <div class="lc2-n"><span class="lj-avatar" style="--h:${matizLoja(x.n)}" aria-hidden="true">${esc(siglaLoja(x.n))}</span><div><b>${esc(x.n)}</b><small>${frase}</small></div></div>
-      <div class="lc2-ps">${x.os.map((o, i) => { const f = bussolaDe(o.porDolar ? mult(o) / _cambioUSD : mult(o));
+      <div class="lc2-ps">${x.os.map((o, i) => { const f = bussolaDe(o.porDolar ? mult(o) / _cambioUSD : mult(o), o.prog);
         return `<div class="lc2-p${i === 0 && !x.empate ? ' win' : ''}">${discoProg(o.prog, 'p')}<span class="lc2-pn">${esc(prog(o.prog).n)}</span><b>${nBRdec(mult(o))}×</b>${f ? bussolaHTML(f, {rotulo:false, compacto:true}) : ''}<small>${vol(o)} de volta</small>${i === 0 && !x.empate ? '<em>Rende mais</em>' : ''}</div>`; }).join('')}</div>
     </div>`;
   };
@@ -58976,7 +59012,7 @@ function lojasFiltradas(){
   return lista.sort(ord[ordemLojaV] || ord.volta);
 }
 const _ljlMult = l => { const t = tetoLoja(l); return t.promo || t.base || 0; };
-const _ljlFaixa = l => bussolaDe(l.porDolar ? (_cambioUSD ? _ljlMult(l) / _cambioUSD : null) : _ljlMult(l));
+const _ljlFaixa = l => bussolaDe(l.porDolar ? (_cambioUSD ? _ljlMult(l) / _cambioUSD : null) : _ljlMult(l), l.prog);
 function linhaLojaHTML(l){
   const mult = _ljlMult(l), vol = voltaPct(l), d = diasAte(l.fim);
   const prazo = d === null ? '' : d < 0 ? 'encerrada' : d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : `até ${dataBR(l.fim).slice(0, 5)}`;
@@ -59001,7 +59037,7 @@ function renderVitrineLista(){
   const alvo = document.getElementById('ljVitrine'); if (!alvo) return;
   const lista = lojasFiltradas();
   if (!lista.length) return;                         /* o aviso de vazio da vitrine original fica */
-  const grupos = BUSSOLA_FAIXAS.slice().reverse().map(f => ({f, ls:lista.filter(l => (_ljlFaixa(l) || {}).n === f.n)}));
+  const grupos = faixasBussola('livelo').slice().reverse().map(f => ({f, ls:lista.filter(l => (_ljlFaixa(l) || {}).n === f.n)}));
   const semF = lista.filter(l => !_ljlFaixa(l));
   if (semF.length) grupos.push({f:null, ls:semF});
   alvo.innerHTML = grupos.filter(g => g.ls.length).map(g => {
@@ -59009,7 +59045,7 @@ function renderVitrineLista(){
     const fechado = g.f && g.f.n === 1 && !ljlAbertos[k] && !soListaV && !buscaLojaV;
     return `<section class="ljl-g" data-ljl-sec="${k}">
       <header class="ljl-gc">${g.f ? bussolaHTML(g.f, {compacto:true}) : '<span class="bz bz-grafite bz-c"><b>Sem classificação</b></span>'}
-        <span>${g.f ? esc(g.f.faixa) + ' por real' : 'paga por dólar: falta o dólar do dia'}</span><em>${g.ls.length} ${g.ls.length === 1 ? 'loja' : 'lojas'}</em></header>
+        <span>${g.f ? esc((() => { const rs = [...new Set(g.ls.map(l => reguaDe(l.prog)))]; return rs.length === 1 ? faixasBussola(g.ls[0].prog)[g.f.n - 1].faixa + ' por real' : 'faixa conforme o programa'; })()) : 'paga por dólar: falta o dólar do dia'}</span><em>${g.ls.length} ${g.ls.length === 1 ? 'loja' : 'lojas'}</em></header>
       ${fechado ? `<button type="button" class="ljl-abrir" data-ljl-abre="${k}">Mostrar as ${g.ls.length} lojas que só valem se você já ia comprar</button>`
         : (() => {
             /* Top 5 de cada faixa; o resto fica atrás de "Ver mais". Loja em "Hora de
@@ -59174,7 +59210,7 @@ function editarBonificada(id){
   const ler = () => $$('#bfeFx .bfe-l').forEach((r, i) => { fx[i].rot = r.querySelector('[data-k=rot]').value; fx[i].v = rgNum(r.querySelector('[data-k=v]').value); });
   const resumo = () => {
     const top = Math.max(0, ...fx.map(f => Number(f.v) || 0));
-    const b = bussolaDe(top);
+    const b = bussolaDe(top, c.para);
     $('#bfeRes').innerHTML = top > 0 ? `<span>Maior oferta: <b>${nBRdec(top)} pontos por real</b></span>${bussolaHTML(b)}` : '<span class="fraco">Preencha os pontos por real para ver a Bússola ROTA.</span>';
   };
   const desenhar = () => {
@@ -62253,7 +62289,7 @@ function contasCartao(c){
       const sg = cartaoDoAnuncio(texto);
       if (!sg.cartoes.length && !sg.bonusMax) return a;
       a.sugestao = sg; a.cat = 'cartoes';
-      if (sg.bonusMax) a.destaque = `até ${nBR(sg.bonusMax)} pontos`;
+      if (sg.bonusMax) a.destaque = `até ${nBR(sg.bonusMax)} ${sg.unidade || 'pontos'}`;
       return a;
     };
   }
@@ -62270,7 +62306,7 @@ function contasCartao(c){
     muralParaCampanha = function(m){
       const sg = m && m.sugestao;
       if (!sg || sg.tipo !== 'cartao') return o.apply(this, arguments);
-      if (m.campId) return false;
+      if (m.campId || m.campExcluida) return false;
       DB.campanhas = DB.campanhas || [];
       const igual = DB.campanhas.find(c => c.tipo === 'cartao' && c.para === sg.para && (c.banco || '') === (sg.banco || '') && (c.fim || '') === (m.fim || '') && (c.bonusMax || 0) === (sg.bonusMax || 0));
       if (igual){ m.campId = igual.id; return false; }
@@ -62346,7 +62382,7 @@ document.addEventListener('click', e => {
   const c = (DB.campanhas || []).find(k => k.id === x.dataset.ccExcluir); if (!c) return;
   confirmar('Excluir esta promoção de cartão?', `${esc(c.titulo || 'A promoção')} sai de Cartões em promoção.`, () => {
     DB.campanhas = DB.campanhas.filter(k => k.id !== c.id);
-    (DB.mural || []).forEach(m => { if (m.campId === c.id) delete m.campId; });
+    (DB.mural || []).forEach(m => { if (m.campId === c.id) m.campExcluida = true; });  /* fica ligado: ao abrir, a Torre não recria a promoção excluída */
     salvar(); ccDesenhar(); prBarraCampanhas(); try { _marcaColuna = ''; montarColunaMenu(); } catch(_){}
     avisar('Promoção de cartão excluída.', 'ok');
   });
@@ -62461,6 +62497,7 @@ function campMelhorAba(){
 .rn-card .rn-acoes button[data-rn-fechar]{ color:#F2C14E; border-color:color-mix(in srgb, #F2C14E 50%, transparent); background:color-mix(in srgb, #F2C14E 12%, transparent); }
 .rn-card .rn-acoes button[data-rn-ok]{ color:#5FD39A; border-color:color-mix(in srgb, #5FD39A 50%, transparent); background:color-mix(in srgb, #5FD39A 12%, transparent); }
 .rn-card .rn-dias b.rn-dest{ display:inline !important; margin:0; font-size:inherit; font-weight:700; color:#F3F6FB; }
+.rn-card .rn-dias b.rn-valor{ font-size:14.5px; }
 </style>
 <style id="exc-css">
 /* ══ AUDITORIA DE EXCLUSÃO (17/10/2026, pedido do Jadiel): todo botão de excluir fica visível ══ */
@@ -62512,5 +62549,405 @@ function campMelhorAba(){
   }
 })();
 </script>
+<style id="cc3-css">
+/* ══ CARTÕES EM PROMOÇÃO, leitura de qualquer modelo de anúncio (17/10/2026) ══ */
+.cc-kpi.cc-falta b{ color:var(--grafite); font-family:var(--f-b, inherit); font-size:calc(14px * var(--esc)); font-weight:600; }
+.cc-isen{ display:flex; flex-direction:column; gap:4px; margin:0; padding:9px 12px; border-radius:12px; border:1px dashed var(--fio); font-size:calc(12.5px * var(--esc)); color:var(--giz-2, var(--giz)); line-height:1.45; }
+.cc-isen b{ color:var(--giz); }
+.cc-isen small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+.cc-pedir-geral{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:calc(13px * var(--esc)); font-weight:600; text-decoration:none;
+  color:var(--anil-claro); border:1px solid color-mix(in srgb, var(--anil) 40%, var(--fio)); background:color-mix(in srgb, var(--anil) 8%, transparent); }
+.cc-pedir-geral svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; }
+.cc-dica{ display:grid; grid-template-columns:18px minmax(0,1fr); gap:8px; margin:0 22px 14px; padding:10px 12px; border-radius:12px; font-size:calc(12.5px * var(--esc)); line-height:1.5; color:var(--giz-2, var(--giz));
+  background:color-mix(in srgb, var(--ouro) 8%, transparent); border:1px solid color-mix(in srgb, var(--ouro) 30%, var(--fio)); }
+.cc-dica svg{ width:16px; height:16px; fill:none; stroke:var(--ouro); stroke-width:2; margin-top:1px; }
+@media (max-width:600px){ .cc-dica{ margin:0 14px 12px; } }
+#ccPainel .cc-op{ container-type:inline-size; }
+#ccPainel .cc-kpi span b.cc-in{ display:inline; margin:0; font:inherit; font-weight:700; color:var(--giz); }
+@container (max-width:380px){ #ccPainel .cc-contas{ grid-template-columns:1fr; } }
+/* botões de pedir o cartão em verde (17/10/2026, pedido do Jadiel) */
+#ccPainel .cc-pedir a, #ccPainel .cc-pedir-geral{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 50%, transparent); background:color-mix(in srgb, var(--jade) 12%, transparent); }
+#ccPainel .cc-pedir a:hover, #ccPainel .cc-pedir-geral:hover{ background:color-mix(in srgb, var(--jade) 20%, transparent); }
+</style>
+<script id="cc3-js">
+/* ══ CARTÕES EM PROMOÇÃO: UMA LEITURA PARA QUALQUER ANÚNCIO ═════════════════════
+   O anúncio da Azul (Itaú) e o da Smiles (GOL Smiles) escrevem a mesma coisa de
+   jeitos diferentes. Em vez de um programa para cada cartão, a Torre procura as
+   PEÇAS que todo anúncio de cartão tem e mostra só as que encontrou:
+     · cada cartão: "💳 Cartão Itaú Platinum" ou "💎 INFINITE — até 55.000 milhas";
+     · metas: "Acumular R$ 60.000 ... faturas:" + "60.000 pontos" (Azul) ou
+       "Até 20.000 milhas pela aquisição." (Smiles);
+     · gasto mínimo: dentro da meta (Azul) ou em linha própria, com o prazo nas
+       regras ("faturas pagas até 15/03/2027");
+     · anuidade e isenção: no bloco do cartão (Azul) ou por banco, num bloco
+       "isenção de anuidade" (Smiles: "Infinite: R$ 15.000 por mês");
+     · benefícios: por cartão ("Benefícios dos cartões" + 💳) ou de um cartão só
+       ("Principais benefícios do Infinite");
+     · regras, dica e links.
+   O que o anúncio não traz (ex.: o valor da anuidade no da Smiles) aparece como
+   "não informado no anúncio"; a Torre não inventa número. */
+const _cc3Limpa = l => SEM_EMOJI(String(l || '')).replace(/^[\s👉📌💳💎✅⚠️🚨🔥🏦💰✈️🔗📅•·*\-–+]+/u, '').replace(/\s+/g, ' ').trim();
+const _cc3Sem = l => semAcento(_cc3Limpa(l)).toLowerCase();
+function _cc3Num(txt){ const m = String(txt || '').match(/(\d{1,3}(?:\.\d{3})+|\d+(?:,\d+)?)\s*(mil\b)?/i); return m ? _ccN(m[1]) * (m[2] ? 1000 : 1) : 0; }
+function _cc3Bancos(titulo, L){
+  const t = _ccBanco(titulo); if (t) return [t];
+  const achou = [];
+  L.filter(l => /^\s*🏦/u.test(l) || /^\s*(banco|bradesco|santander|ita[uú]|caixa|nubank|inter\b|c6\b|xp\b|btg)/i.test(_cc3Limpa(l)) && _cc3Limpa(l).length < 40)
+    .forEach(l => _cc3Limpa(l).split(/\s+e\s+|,/i).forEach(p => { const b = _ccBanco(p); if (b && !achou.includes(b)) achou.push(b); }));
+  if (achou.length) return achou;
+  const um = _ccBanco(L.join(' ')); return um ? [um] : [];
+}
+const _cc3Lista = a => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1];
+cartaoDoAnuncio = function(texto){
+  const L = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.trim());
+  const titulo = _cc3Limpa(L.find(l => _cc3Limpa(l)) || '');
+  const para = _ccAchaProg(titulo) || _ccAchaProg(L.join(' '));
+  const bancos = _cc3Bancos(titulo, L);
+  const mMax = titulo.match(/(\d{1,3}(?:\.\d{3})+|\d+)\s*(mil\s*)?(?:pontos|milhas)/i);
+  let bonusMax = mMax ? _ccN(mMax[1]) * (mMax[2] ? 1000 : 1) : 0;
+  const unidade = /milhas/i.test(L.join(' ')) && !/pontos?\s*b[oô]nus/i.test(titulo) ? 'milhas' : 'pontos';
+  const secao = l => {
+    const s = _cc3Sem(l); if (!s || s.length > 70 || /https?:/.test(s)) return '';
+    if (/^cartoes elegiveis/.test(s)) return 'eleg';
+    if (/isencao de anuidade|conseguir isencao/.test(s)) return 'isen';
+    if (/^(principais )?beneficios/.test(s)) return 'bens';
+    if (/regras de bonifica|bonificacao maxima|confira a bonifica|como ganhar/.test(s)) return 'regras';
+    if (/atencao as regras|regras da promo|^regulamento|^regras\b/.test(s)) return 'promo';
+    if (/^(solicite|peca seu cartao|link)/.test(s)) return 'link';
+    return '';
+  };
+  const eleg = [], grupos = [], bens = [], promo = [], notas = [], isenNotas = [], dicas = [];
+  let sec = '', grupo = null, bem = null, metaTxt = '', bancoIsen = '', prazoGasto = '';
+  const ehCabCartao = (l, lt) => /^\s*(💳|💎)/u.test(l) || (/^cart[aã]o\b/i.test(lt) && !/:$/.test(lt)) || /^[A-ZÀ-Ú][\wÀ-ú/ ]{1,40}\s*[—–-]\s*at[eé]\s*[\d.]+/i.test(lt);
+  const novoGrupo = lt => { const [n, resto] = lt.split(/\s*[—–]\s*|\s+-\s+/); const g = {n:(n || lt).replace(/:$/, '').trim(), max:resto ? _cc3Num(resto.replace(/^at[eé]\s*/i, '')) : 0, metas:[]}; grupos.push(g); return g; };
+  const iTit = L.findIndex(l => _cc3Limpa(l));
+  L.forEach((l, iL) => {
+    if (!l || iL === iTit) return;
+    const lt = _cc3Limpa(l), s = _cc3Sem(l);
+    if (/^dica\b/.test(s)){ dicas.push(lt.replace(/^dica:\s*/i, '')); return; }
+    const sc = secao(l);
+    if (sc){
+      sec = sc; grupo = sec === 'regras' ? grupo : null; metaTxt = '';
+      if (sc === 'bens'){ const m = lt.match(/benef[ií]cios\s+(?:do|da|dos|das)\s+(.+?)\s*:?$/i); bem = m && !/^cart/i.test(m[1]) ? {n:m[1], itens:[], alvo:true} : null; if (bem) bens.push(bem); }
+      if (sc === 'isen') bancoIsen = '';
+      return;
+    }
+    if (/^https?:/i.test(lt) || /^📌\s*https?:/u.test(l)){
+      const u = (l.match(/https?:\/\/\S+/) || [''])[0];
+      if (sec === 'eleg' && eleg.length && u && !eleg[eleg.length - 1].link) eleg[eleg.length - 1].link = u;
+      return;
+    }
+    if (sec === 'eleg'){ if (ehCabCartao(l, lt) || /^👉/u.test(l)) eleg.push({n:lt, link:''}); return; }
+    if (sec === 'regras' || (!sec && ehCabCartao(l, lt) && /at[eé]\s*[\d.]+/i.test(lt))){
+      if (!sec) sec = 'regras';
+      if (/^⚠️/u.test(l)){ notas.push(lt); return; }
+      if (ehCabCartao(l, lt) && !/^\+?\s*(at[eé]\s+)?[\d.]+\s*(mil\s*)?(pontos|milhas)/i.test(lt)){ grupo = novoGrupo(lt); metaTxt = ''; return; }
+      if (!grupo) return;
+      /* gasto mínimo em linha própria (Smiles) */
+      if (/gasto\s+m[ií]nimo|gastos?\s+de\s+R\$/i.test(lt) && /R\$/.test(lt) && !metaTxt){
+        const v = lt.match(/R\$\s*([\d.]+(?:,\d+)?)\s*(mil)?/i), f = lt.match(/(\d{1,2})\s*(?:primeiras?\s*)?faturas?/i);
+        grupo.gastoMin = {valor:v ? _ccN(v[1]) * (v[2] ? 1000 : 1) : 0, faturas:f ? Number(f[1]) : 0, txt:lt.replace(/\.$/, '')}; return;
+      }
+      /* pontos em linha própria, depois da meta (Azul) */
+      const mp = lt.match(/^\+?\s*(\d{1,3}(?:\.\d{3})+|\d+)\s*(mil\s*)?(pontos|milhas)/i);
+      if (mp && metaTxt){
+        const v = metaTxt.match(/R\$\s*([\d.]+(?:,\d+)?)/i), f = metaTxt.match(/(\d{1,2})\s*(?:primeiras?\s*)?faturas?/i), ate = metaTxt.match(/at[eé]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+        const meta = {txt:metaTxt.replace(/:$/, ''), pts:_ccN(mp[1]) * (mp[2] ? 1000 : 1)};
+        if (v){ meta.tipo = 'gasto'; meta.valor = _ccN(v[1]); meta.faturas = f ? Number(f[1]) : 0; } else meta.tipo = /clube/i.test(metaTxt) ? 'clube' : 'outra';
+        if (ate) meta.ate = `${ate[3].length === 2 ? '20' + ate[3] : ate[3]}-${ate[2].padStart(2, '0')}-${ate[1].padStart(2, '0')}`;
+        grupo.metas.push(meta); metaTxt = ''; return;
+      }
+      /* pontos e explicação na mesma linha (Smiles): "Até 20.000 milhas pela aquisição." */
+      const mm = lt.match(/^(?:at[eé]\s+)?(\d{1,3}(?:\.\d{3})+|\d+)\s*(mil\s*)?(pontos|milhas)\b\s*(.*)$/i);
+      if (mm){
+        const resto = mm[4].replace(/\.$/, '');
+        grupo.metas.push({txt:lt.replace(/\.$/, ''), pts:_ccN(mm[1]) * (mm[2] ? 1000 : 1), tipo:/clube/i.test(resto) ? 'clube' : /aquisi|ades[aã]o|boas.vindas|aprova/i.test(resto) ? 'adesao' : 'outra'});
+        return;
+      }
+      if (/:$/.test(lt) || /^👉/u.test(l)){ metaTxt = lt; return; }
+      if (metaTxt) metaTxt += ' ' + lt;
+      return;
+    }
+    if (sec === 'bens'){
+      if (!bem || !bem.alvo){ if (/^\s*(💳|💎)/u.test(l) || (/^cart[aã]o\b/i.test(lt) && !/:/.test(lt))){ bem = {n:lt, itens:[]}; bens.push(bem); return; } }
+      if (bem) bem.itens.push(lt.replace(/;$/, '').replace(/\.$/, ''));
+      return;
+    }
+    if (sec === 'isen'){
+      if (/^\s*🏦/u.test(l) || (_ccBanco(lt) && lt.length < 40 && !/R\$/.test(lt))){ bancoIsen = _cc3Lista(lt.split(/\s+e\s+|,/i).map(p => _ccBanco(p) || p.trim()).filter(Boolean)); return; }
+      const mi = lt.match(/^([\wÀ-ú /]{2,40}):\s*R\$\s*([\d.]+(?:,\d+)?)\s*(mil)?\s*(por\s+m[eê]s|mensais)?/i);
+      if (mi){ isenNotas.push({alvo:mi[1].trim(), banco:bancoIsen, valor:_ccN(mi[2]) * (mi[3] ? 1000 : 1), mensal:!!mi[4]}); return; }
+      isenNotas.push({banco:bancoIsen, txt:lt.replace(/;$/, '')});
+      return;
+    }
+    if (sec === 'promo'){
+      const pz = lt.match(/faturas?[^.]*?at[eé]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+      if (pz && !prazoGasto) prazoGasto = `${pz[3].length === 2 ? '20' + pz[3] : pz[3]}-${pz[2].padStart(2, '0')}-${pz[1].padStart(2, '0')}`;
+      promo.push(lt.replace(/;$/, '')); return;
+    }
+  });
+  /* liga cada cartão aos benefícios, à isenção e aos links de pedir */
+  const extras = [semAcento(prog(para).n || '').toLowerCase().split(/\s+/)[0], ...bancos.map(b => semAcento(b).toLowerCase()), 'itaucard', 'gol', 'cartao', 'credito'].filter(Boolean);
+  const tk = n => _ccTokens(n, extras);
+  const casa = (a, b) => { const x = tk(a), y = tk(b); if (!x.length || !y.length) return false; const [p, g] = x.length <= y.length ? [x, y] : [y, x]; return p.every(w => g.includes(w)); };
+  const cartoes = grupos.filter(g => g.metas.length || g.gastoMin).map(g => {
+    const b = bens.find(x => casa(x.n, g.n)) || null;
+    const itens = b ? b.itens : [];
+    const an = itens.find(x => /^anuidade/i.test(x)); const mAn = an && an.match(/R\$\s*([\d.]+(?:,\d+)?)/);
+    const isen = itens.find(x => /isen[cç][aã]o/i.test(x)) || '';
+    const lim = [...isen.matchAll(/(\d{1,3})%\s*de\s*isen[cç][aã]o[^%]*?R\$\s*([\d.,]+)\s*(mil)?/gi)].map(m => ({pct:Number(m[1]), valor:_ccN(m[2]) * (m[3] ? 1000 : 1)}));
+    const isenBanco = isenNotas.filter(x => x.alvo && casa(x.alvo, g.n)).map(x => ({banco:x.banco, valor:x.valor, mensal:x.mensal}));
+    const links = eleg.filter(e => casa(e.n, g.n));
+    return {n:g.n, max:g.max || 0, metas:g.metas, gastoMin:g.gastoMin || null, anuidade:mAn ? _ccN(mAn[1]) : 0, anuidadeTxt:an || '', isencao:isen, isencaoLim:lim, isencaoBanco:isenBanco,
+      pontuacao:itens.filter(x => /^pontua[cç][aã]o|por\s+(us\$|d[oó]lar)/i.test(x)), beneficios:itens.filter(x => !/^anuidade|^pontua[cç][aã]o|isen[cç][aã]o|por\s+(us\$|d[oó]lar)/i.test(x)),
+      links:links.map(e => ({n:e.n, link:e.link}))};
+  });
+  if (!bonusMax) bonusMax = Math.max(0, ...cartoes.map(c => c.max || soma(c.metas.map(m => m.pts))));
+  const isenGeral = isenNotas.filter(x => !x.alvo).map(x => (x.banco ? x.banco + ': ' : '') + x.txt);
+  return {tipo:'cartao', para, banco:_cc3Lista(bancos), bancos, bonusMax, unidade, cartoes, notas, regras:promo, elegiveis:eleg, prazoGasto, isenGeral, dicas, bruto:String(texto || '')};
+};
+function _cc3Meses(iso){ const d = diasAte(iso); return d === null || d < 0 ? 0 : Math.max(1, Math.round(d / 30.44)); }
+contasCartao = function(c, camp){
+  const metas = c.metas || [];
+  const tot = soma(metas.map(m => Number(m.pts) || 0)) || Number(c.max) || 0;
+  const semClube = soma(metas.filter(m => m.tipo !== 'clube').map(m => Number(m.pts) || 0));
+  const gastoMeta = metas.find(m => m.tipo === 'gasto');
+  const gasto = gastoMeta ? {valor:gastoMeta.valor, faturas:gastoMeta.faturas, pts:gastoMeta.pts} : c.gastoMin ? {valor:c.gastoMin.valor, faturas:c.gastoMin.faturas, pts:semClube} : null;
+  const prazo = camp && camp.prazoGasto || '';
+  let porMes = 0, meses = 0;
+  if (gasto && gasto.valor){ if (gasto.faturas) porMes = gasto.valor / gasto.faturas; else if (prazo && (meses = _cc3Meses(prazo))) porMes = gasto.valor / meses; }
+  const milTot = c.anuidade && tot ? c.anuidade / (tot / 1000) : 0;
+  const milGasto = c.anuidade && gasto && gasto.pts ? c.anuidade / (gasto.pts / 1000) : 0;
+  return {tot, semClube, gasto, porMes, meses, prazo, milTot, milGasto};
+};
+ccCartaoHTML = function(c){
+  const p = prog(c.para) || {}, d = c.fim ? diasAte(c.fim) : null, un = c.unidade || (p.tipo === 'milhas' ? 'milhas' : 'pontos');
+  const cor = p.cor || '#3AAFE0', sig = (typeof SIGLA_PROG !== 'undefined' && SIGLA_PROG[c.para]) || '';
+  const prazo = c.fim ? (d < 0 ? `<span class="cc-prazo fim"><svg><use href="#i-calendario"/></svg>Encerrada em ${dataBR(c.fim)}</span>`
+    : `<span class="cc-prazo${d <= 1 ? ' urg' : ''}"><svg><use href="#i-calendario"/></svg><span class="cc-pz">Peça até ${dataBR(c.fim)}</span><span class="cc-pz">· ${d === 0 ? 'último dia' : d === 1 ? 'falta 1 dia' : 'faltam ' + d + ' dias'}</span></span>`) : '';
+  const ops = (c.cartoes || []).map(k => {
+    const ct = contasCartao(k, c);
+    const metas = (k.metas || []).map((m, i) => `<li><i>${i + 1}</i><span>${esc(m.txt)}</span><em>+${nBR(m.pts)}</em></li>`).join('');
+    const lim100 = (k.isencaoLim || []).find(x => x.pct === 100);
+    const kpis = [];
+    if (ct.gasto && ct.gasto.valor){
+      if (ct.gasto.faturas) kpis.push(`<div class="cc-kpi"><small>Gasto por mês para a meta</small><b>${brl(ct.porMes)}</b><span>${brl(ct.gasto.valor)} em ${ct.gasto.faturas} faturas</span></div>`);
+      else kpis.push(`<div class="cc-kpi"><small>Gasto mínimo</small><b>${brl(ct.gasto.valor)}</b><span>${ct.prazo ? `faturas pagas até ${dataBR(ct.prazo)}${ct.porMes ? `<br>cerca de <b class="cc-in">${brl(ct.porMes)} por mês</b>, contando de hoje (${ct.meses} ${ct.meses === 1 ? 'mês' : 'meses'})` : ''}` : 'prazo não informado no anúncio'}</span></div>`);
+    }
+    if (ct.milTot) kpis.push(`<div class="cc-kpi"><small>Custo do milheiro</small><b>${brl2(ct.milTot)}</b><span>anuidade de ${brl2(k.anuidade)} ÷ ${nBR(ct.tot)} ${un}${ct.milGasto && ct.milGasto !== ct.milTot ? `<br>só com a meta de gasto: <b>${brl2(ct.milGasto)}</b>` : ''}</span></div>`);
+    else if (kpis.length || (k.metas || []).length) kpis.push(`<div class="cc-kpi cc-falta"><small>Custo do milheiro</small><b>Anuidade não informada no anúncio</b><span>Sem o valor da anuidade, a Torre não calcula o milheiro.</span></div>`);
+    const notas = [];
+    if (ct.porMes && lim100) notas.push(`A meta pede <b>${brl(ct.porMes)} por mês</b>; a isenção total da anuidade pede fatura <b>acima de ${brl(lim100.valor)}</b>.`);
+    (k.isencaoBanco || []).forEach(x => { if (x.valor) notas.push(`${ct.porMes ? `A meta pede cerca de <b>${brl(ct.porMes)} por mês</b>; n` : 'N'}${x.banco ? 'o ' + esc(x.banco) : 'o banco'}, a anuidade zera com <b>${brl(x.valor)}${x.mensal ? ' por mês' : ''}</b>.`); });
+    if (ct.milTot && (k.metas || []).some(m => m.tipo === 'clube')) notas.push('O custo do milheiro não inclui a mensalidade do clube.');
+    const semClubeTxt = ct.semClube && ct.semClube !== ct.tot && (k.metas || []).some(m => m.tipo === 'clube') ? `<small>sem o clube: ${nBR(ct.semClube)}</small>` : '';
+    const bensL = (k.pontuacao || []).concat(k.anuidadeTxt ? [k.anuidadeTxt] : [], k.isencao ? [k.isencao] : [], k.beneficios || []);
+    return `<div class="cc-op">
+      <div class="cc-op-cab"><b>${esc(k.n)}</b>${ct.tot ? `<span class="cc-tot">${nBR(ct.tot)}<small>${un} possíveis</small>${semClubeTxt}</span>` : ''}</div>
+      ${metas ? `<ul class="cc-metas">${metas}</ul>` : ''}
+      ${kpis.length ? `<div class="cc-contas">${kpis.join('')}</div>` : ''}
+      ${notas.length ? `<p class="cc-nota">${notas.join('<br>')}</p>` : ''}
+      ${(k.links || []).filter(x => x.link).length ? `<div class="cc-pedir">${k.links.filter(x => x.link).map(x => `<a href="${esc(x.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(x.n.replace(/^cart[aã]o\s+/i, ''))}</a>`).join('')}</div>` : ''}
+      ${bensL.length ? `<details class="cc-bens"><summary><svg><use href="#i-seta-d"/></svg>Benefícios do cartão (${bensL.length})</summary><ul>${bensL.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+    </div>`;
+  }).join('');
+  const regras = (c.notas || []).concat(c.regras || []);
+  const usados = new Set((c.cartoes || []).flatMap(k => (k.links || []).map(x => x.link)));
+  const outros = (c.links || []).filter(u => !usados.has(u));
+  const reg = outros.find(u => /regulamento|campanha|oferta|promo/i.test(u)) || (usados.size ? '' : outros[0]) || '';
+  const isenG = c.isenGeral || [];
+  return `<article class="cc-card" data-cc="${esc(c.id)}" style="--cc-cor:${esc(cor)}">
+    <div class="cc-topo">
+      <div class="cc-plast" data-sig="${esc(sig)}"></div>
+      <div class="cc-tit"><div class="cc-olho">${esc([c.banco, p.n].filter(Boolean).join(' · '))}</div><h3>${esc(c.titulo || 'Cartão em promoção')}</h3>${prazo}</div>
+      <div class="cc-max">${c.bonusMax ? `<small>bônus de até</small><b>${nBR(c.bonusMax)}</b><span>${un} ${esc(p.n || '')}</span>` : ''}</div>
+    </div>
+    ${ops ? `<div class="cc-grade">${ops}</div>` : ''}
+    ${(c.dicas || []).map(t => `<p class="cc-dica"><svg><use href="#i-info"/></svg><span>${esc(t)}</span></p>`).join('')}
+    <div class="cc-rodape">
+      ${regras.length || isenG.length || reg ? `<details><summary>Regras da promoção</summary><ul>${regras.map(x => `<li>${esc(x)}</li>`).join('')}${isenG.map(x => `<li>${esc(x)}</li>`).join('')}${reg && usados.size ? `<li><a href="${esc(reg)}" target="_blank" rel="noopener">Regulamento</a></li>` : ''}</ul></details>` : '<span class="esticar"></span>'}
+      ${reg && !usados.size ? `<a class="cc-pedir-geral" href="${esc(reg)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Pedir o cartão e ver o regulamento</a>` : ''}
+      <button type="button" class="bt vermelho-solido" data-cc-excluir="${esc(c.id)}"><svg><use href="#i-lixo"/></svg>Excluir</button>
+    </div>
+  </article>`;
+};
+/* gravar: a campanha guarda as peças novas; o mesmo anúncio colado de novo
+   ATUALIZA a promoção que ficou só com o título (não duplica) */
+(function(){
+  const camposDe = sg => ({para:sg.para, banco:sg.banco, bonusMax:sg.bonusMax, unidade:sg.unidade, cartoes:sg.cartoes, notas:sg.notas, regras:sg.regras,
+    prazoGasto:sg.prazoGasto || '', isenGeral:sg.isenGeral || [], dicas:sg.dicas || [], bruto:sg.bruto || ''});
+  const pobre = c => c && c.tipo === 'cartao' && !(c.cartoes || []).length;
+  const mi = muralIgual;
+  muralIgual = function(a, b){
+    const r = mi.apply(this, arguments); if (!r) return r;
+    const novo = [a, b].find(x => x && !x.campId && x.sugestao && x.sugestao.tipo === 'cartao' && (x.sugestao.cartoes || []).length);
+    const velho = [a, b].find(x => x && x !== novo && x.campId);
+    if (novo && velho && velho.campId && pobre((DB.campanhas || []).find(c => c.id === velho.campId))) return false;
+    return r;
+  };
+  const mp = muralParaCampanha;
+  muralParaCampanha = function(m){
+    const sg = m && m.sugestao;
+    if (!sg || sg.tipo !== 'cartao' || m.campId) return mp.apply(this, arguments);
+    const velha = (DB.campanhas || []).find(c => pobre(c) && c.para === sg.para && (c.fim || '') === (m.fim || '') && (c.bonusMax || 0) === (sg.bonusMax || 0));
+    if (velha && (sg.cartoes || []).length){
+      Object.assign(velha, camposDe(sg), {titulo:m.titulo, link:m.link || velha.link, links:m.links || velha.links || []});
+      DB.mural = (DB.mural || []).filter(x => x === m || x.campId !== velha.id);
+      m.campId = velha.id;
+      setTimeout(() => avisar('A promoção de cartão que estava só com o título foi atualizada com os detalhes do anúncio.', 'ok', 6000), 400);
+      return false;
+    }
+    const r = mp.apply(this, arguments);
+    const c = (DB.campanhas || []).find(x => x.id === m.campId);
+    if (c && c.tipo === 'cartao') Object.assign(c, camposDe(sg));
+    return r;
+  };
+})();
+</script>
+
+<style id="bz5-css">
+/* Bússola de 5 (17/10/2026) */
+.bz-rota{ --bzc:var(--jade); }
+.bz-rota .bz-icos i.on svg{ filter:drop-shadow(0 0 3px color-mix(in srgb, var(--jade) 70%, transparent)); }
+.bz-rota b{ font-weight:800; }
+.bz-leg-reg{ flex-basis:100%; margin-top:6px; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.bz-leg-reg summary{ cursor:pointer; color:var(--anil-claro); font-weight:600; }
+.bz-leg-reg table{ border-collapse:collapse; margin:8px 0 6px; font-family:var(--f-m); font-size:calc(12px * var(--esc)); }
+.bz-leg-reg th, .bz-leg-reg td{ padding:4px 12px 4px 0; text-align:left; color:var(--giz-2, var(--giz)); white-space:nowrap; }
+.bz-leg-reg th{ font-family:var(--f-b, inherit); color:var(--grafite); font-weight:600; }
+.bz-leg-reg small{ display:block; max-width:520px; line-height:1.45; }
+.bz-placar{ grid-template-columns:repeat(5, minmax(0, 1fr)); }
+@media (max-width:640px){ .bz-placar{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+</style>
+<script id="bz5-js">
+/* lista do dia: trocar o programa recalcula as bússolas com a régua dele */
+(function(){
+  if (typeof previaListaLojas !== 'function') return;
+  const o = previaListaLojas;
+  previaListaLojas = function(L){
+    const r = o.apply(this, arguments);
+    const sel = document.getElementById('bzProg');
+    if (sel && L && !sel._bz5){ sel._bz5 = 1; sel.addEventListener('change', () => { L.prog = sel.value; previaListaLojas(L); }); }
+    return r;
+  };
+})();
+</script>
+<style id="rl-css">
+/* ══ LEMBRETE DA RENOVAÇÃO (17/10/2026, pedido do Jadiel) ══ */
+.rn-card .rn-acoes button[data-rn-lembrar]{ color:#B9A2FF; border-color:color-mix(in srgb, #B9A2FF 50%, transparent); background:color-mix(in srgb, #B9A2FF 12%, transparent); }
+.rn-card.rl-card{ --rn-cor:#B9A2FF; }
+.rn-card.rl-achou{ --rn-cor:#5FD39A; }
+.rl-lista{ margin:8px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.rl-lista li{ padding:7px 10px; border-radius:10px; background:rgba(255,255,255,.06); font-size:12.5px; line-height:1.4; color:#DCE5F3; }
+.rl-lista li b{ display:inline !important; margin:0 !important; font-size:inherit !important; color:#F3F6FB; }
+.rn-card .rn-acoes button.rl-ok{ color:#5FD39A; border-color:color-mix(in srgb, #5FD39A 50%, transparent); background:color-mix(in srgb, #5FD39A 12%, transparent); }
+.rn-card .rn-acoes button.rl-ver{ background:#6FB7FF; border-color:transparent; color:#06182C; }
+.rn-card .rn-acoes button.rl-depois{ color:#F2C14E; border-color:color-mix(in srgb, #F2C14E 50%, transparent); background:color-mix(in srgb, #F2C14E 12%, transparent); }
+.rn-card .rn-acoes{ gap:6px; }
+.rn-card .rn-acoes button{ padding:8px 10px; }
+</style>
+<script id="rl-js">
+/* ══ LEMBRETE DA RENOVAÇÃO ══════════════════════════════════════════════════════
+   No aviso de renovação, "Lembrar em 19/10" agenda um segundo aviso para a
+   VÉSPERA da renovação. Até lá, o aviso de renovação sai da tela.
+     · No dia marcado (e depois, se ainda não resolvido) aparece o lembrete:
+       procurar um clube melhor para fazer upgrade ou uma promoção de clube.
+       Ele só sai da tela com "Resolvido".
+     · Se antes disso for cadastrada uma promoção de clube do MESMO programa, a
+       Torre avisa na hora: "Promoção para o seu lembrete", com a promoção.
+       "Depois" esconde esse aviso daquela promoção (o lembrete do dia segue
+       marcado); "Resolvido" encerra o lembrete.
+   Guardado na própria assinatura: a.lembrete = {em, criado, status, vistas}. */
+const _rlSessao = new Set();
+const _rlDia = iso => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); };
+function rlAtivo(a){ return a && a.lembrete && a.lembrete.status === 'ativo' && a.lembrete.renova === a.renova; }
+function rlPromocoes(a){
+  const vistas = new Set((a.lembrete && a.lembrete.vistas) || []);
+  return campanhasVivas('clube').filter(c => c.para === a.prog && !vistas.has(c.id));
+}
+(function(){
+  if (typeof renovacoesProximas !== 'function' || typeof mostrarAvisosRenovacao !== 'function') return;
+  /* com lembrete marcado, o aviso de renovação dá lugar ao lembrete */
+  const rp = renovacoesProximas;
+  renovacoesProximas = function(){ return rp.apply(this, arguments).filter(x => !rlAtivo(x.a)); };
+  const nomeDe = a => { const pl = typeof ccPlano === 'function' ? ccPlano(a) : null; return `${prog(a.prog).n}${pl ? ' ' + pl.n : ''} de ${nomeCurtoConta(a.contaId)}`; };
+  const cartao = (cls, olho, tit, corpo, botoes, id) => {
+    const el = document.createElement('div');
+    el.className = 'rn-card ' + cls; el.setAttribute('role', 'alert'); el.dataset.rl = id;
+    el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
+      <div class="rn-txt"><div class="rn-olho">${olho}</div><b>${tit}</b>${corpo}</div></div>
+      <div class="rn-acoes">${botoes}</div>`;
+    return el;
+  };
+  const mr = mostrarAvisosRenovacao;
+  mostrarAvisosRenovacao = function(){
+    const r = mr.apply(this, arguments);
+    const pilha = document.getElementById('rnPilha'); if (!pilha) return r;
+    /* aviso de renovação: botão para agendar o lembrete da véspera */
+    pilha.querySelectorAll('.rn-card[data-rn]').forEach(el => {
+      const a = (DB.assinaturas || []).find(x => x.id === el.dataset.rn); if (!a || _rlSessao.has('rn:' + a.id)){ if (a) el.remove(); return; }
+      const dia = _rlDia(a.renova), ac = el.querySelector('.rn-acoes');
+      if (!ac || ac.querySelector('[data-rn-lembrar]') || !(dia > hojeISO())) return;
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.rnLembrar = '1'; b.textContent = `Lembrar em ${dataBR(dia).slice(0, 5)}`;
+      b.onclick = () => {
+        a.lembrete = {em:dia, renova:a.renova, criado:hojeISO(), status:'ativo', vistas:[]}; salvar();
+        el.classList.add('saindo'); setTimeout(() => el.remove(), 280);
+        avisar(`Combinado: no dia ${dataBR(dia)} a Torre lembra de procurar um clube melhor ou uma promoção. Se aparecer promoção do clube ${esc(prog(a.prog).n)} antes, ela avisa na hora.`, 'ok', 7000);
+      };
+      ac.insertBefore(b, ac.querySelector('[data-rn-ok]'));
+    });
+    /* lembretes marcados */
+    pilha.querySelectorAll('[data-rl]').forEach(x => x.remove());
+    (DB.assinaturas || []).filter(rlAtivo).forEach(a => {
+      const L = a.lembrete, nome = esc(nomeDe(a)), d = diasAte(a.renova);
+      const quando = d < 0 ? 'já renovou' : d === 0 ? 'renova hoje' : d === 1 ? 'renova amanhã' : `renova em ${d} dias`;
+      const fim = () => { L.status = 'resolvido'; L.resolvidoEm = hojeISO(); a.renovaOk = a.renova; salvar(); mostrarAvisosRenovacao(); avisar('Lembrete resolvido.', 'ok', 3000); };
+      const irClube = () => { try { irItemMenu('fabrica', 'fb-campanhas', 'clube'); } catch(_){} };
+      const promos = rlPromocoes(a);
+      if (promos.length && !_rlSessao.has('achou:' + a.id)){
+        const el = cartao('rl-achou', 'Promoção para o seu lembrete', `Clube ${esc(prog(a.prog).n)} em promoção`,
+          `<p>Você pediu para lembrar no dia ${dataBR(L.em)} da renovação do ${nome}.</p><ul class="rl-lista">${promos.slice(0, 3).map(c => `<li><b>${esc(c.titulo || 'Clube ' + prog(c.para).n)}</b>${c.fim ? ' · até ' + dataBR(c.fim) : ''}</li>`).join('')}</ul>`,
+          `<button type="button" class="rl-ver">Ver a promoção</button><button type="button" class="rl-depois">Depois</button><button type="button" class="rl-ok">Resolvido</button>`, 'achou:' + a.id);
+        el.querySelector('.rl-ver').onclick = irClube;
+        el.querySelector('.rl-depois').onclick = () => { L.vistas = [...new Set((L.vistas || []).concat(promos.map(c => c.id)))]; salvar(); el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
+        el.querySelector('.rl-ok').onclick = fim;
+        pilha.appendChild(el);
+      }
+      if (hojeISO() >= L.em){
+        const el = cartao('rl-card', 'Lembrete', `${nome} ${quando}`,
+          `<p>Hoje é o dia que você marcou: procure um <b style="display:inline">clube melhor para fazer upgrade</b> ou uma <b style="display:inline">promoção de clube</b> antes de ${dataBR(a.renova)}.</p>`,
+          `<button type="button" class="rl-ver">Ver promoções de clube</button><button type="button" class="rl-ok">Resolvido</button>`, 'dia:' + a.id);
+        el.querySelector('.rl-ver').onclick = irClube;
+        el.querySelector('.rl-ok').onclick = fim;
+        pilha.appendChild(el);
+      }
+    });
+    return r;
+  };
+  /* "Depois" e o × do aviso de renovação valem para a sessão (não voltam ao redesenhar) */
+  document.addEventListener('click', e => {
+    const b = e.target.closest('#rnPilha [data-rn-fechar]'); if (!b) return;
+    const c = b.closest('.rn-card[data-rn]'); if (c) _rlSessao.add('rn:' + c.dataset.rn);
+  }, true);
+  /* "Já resolvi" no aviso de renovação encerra também o lembrete */
+  document.addEventListener('click', e => {
+    const b = e.target.closest('#rnPilha [data-rn-ok]'); if (!b) return;
+    const c = b.closest('.rn-card[data-rn]'); const a = c && (DB.assinaturas || []).find(x => x.id === c.dataset.rn);
+    if (a && a.lembrete) a.lembrete.status = 'resolvido';
+  }, true);
+  /* promoção de clube cadastrada depois: a Torre confere na hora */
+  let _rlT = 0, _rlAssin = '';
+  const conferir = () => {
+    const sinal = (DB.assinaturas || []).filter(rlAtivo).map(a => a.id + ':' + rlPromocoes(a).map(c => c.id).join(',')).join('|');
+    if (sinal !== _rlAssin){ _rlAssin = sinal; try { mostrarAvisosRenovacao(); } catch(e){ console.error(e); } }
+  };
+  if (typeof salvar === 'function'){
+    const s = salvar;
+    salvar = function(){ const r = s.apply(this, arguments); clearTimeout(_rlT); _rlT = setTimeout(conferir, 400); return r; };
+  }
+  setInterval(conferir, 60000);
+})();
+</script>
+
 </body>
 </html>
