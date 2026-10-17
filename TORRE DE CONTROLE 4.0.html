@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 14:00';
+const BUILD = '2026-10-17 14:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -62287,16 +62287,17 @@ function contasCartao(c){
       const texto = (bloco || []).join('\n');
       if (!ehAnuncioCartao(texto)) return a;
       const sg = cartaoDoAnuncio(texto);
-      if (!sg.cartoes.length && !sg.bonusMax) return a;
+      if (!sg.cartoes.length && !sg.bonusMax && !sg.beneficio) return a;
       a.sugestao = sg; a.cat = 'cartoes';
       if (sg.bonusMax) a.destaque = `até ${nBR(sg.bonusMax)} ${sg.unidade || 'pontos'}`;
+      else if (sg.beneficio === 'anuidade') a.destaque = '1ª anuidade grátis';
       return a;
     };
   }
   if (typeof rotuloSugestao === 'function'){
     const o = rotuloSugestao;
     rotuloSugestao = function(sg){
-      if (sg && sg.tipo === 'cartao') return `vira campanha em Cartões em promoção: ${sg.banco ? sg.banco + ' · ' : ''}${prog(sg.para).n}, ${sg.cartoes.length} ${sg.cartoes.length === 1 ? 'cartão' : 'cartões'}`;
+      if (sg && sg.tipo === 'cartao'){ const n = sg.cartoes.length || soma((sg.elegGrupos || []).map(g => g.itens.length)); return `vira campanha em Cartões em promoção: ${[sg.banco, sg.para ? prog(sg.para).n : ''].filter(Boolean).join(' · ')}, ${n} ${sg.cartoes.length ? (n === 1 ? 'cartão' : 'cartões') : (n === 1 ? 'cartão elegível' : 'cartões elegíveis')}${sg.beneficio === 'anuidade' ? ', 1ª anuidade grátis' : ''}`; }
       return o.apply(this, arguments);
     };
   }
@@ -62759,7 +62760,7 @@ ccCartaoHTML = function(c){
   return `<article class="cc-card" data-cc="${esc(c.id)}" style="--cc-cor:${esc(cor)}">
     <div class="cc-topo">
       <div class="cc-plast" data-sig="${esc(sig)}"></div>
-      <div class="cc-tit"><div class="cc-olho">${esc([c.banco, p.n].filter(Boolean).join(' · '))}</div><h3>${esc(c.titulo || 'Cartão em promoção')}</h3>${prazo}</div>
+      <div class="cc-tit"><div class="cc-olho">${esc([c.banco, c.para ? p.n : ''].filter(Boolean).join(' · '))}</div><h3>${esc(c.titulo || 'Cartão em promoção')}</h3>${prazo}</div>
       <div class="cc-max">${c.bonusMax ? `<small>bônus de até</small><b>${nBR(c.bonusMax)}</b><span>${un} ${esc(p.n || '')}</span>` : ''}</div>
     </div>
     ${ops ? `<div class="cc-grade">${ops}</div>` : ''}
@@ -62775,8 +62776,9 @@ ccCartaoHTML = function(c){
    ATUALIZA a promoção que ficou só com o título (não duplica) */
 (function(){
   const camposDe = sg => ({para:sg.para, banco:sg.banco, bonusMax:sg.bonusMax, unidade:sg.unidade, cartoes:sg.cartoes, notas:sg.notas, regras:sg.regras,
-    prazoGasto:sg.prazoGasto || '', isenGeral:sg.isenGeral || [], dicas:sg.dicas || [], bruto:sg.bruto || ''});
-  const pobre = c => c && c.tipo === 'cartao' && !(c.cartoes || []).length;
+    prazoGasto:sg.prazoGasto || '', isenGeral:sg.isenGeral || [], dicas:sg.dicas || [], bruto:sg.bruto || '',
+    beneficio:sg.beneficio || '', elegGrupos:sg.elegGrupos || [], metasGasto:sg.metasGasto || [], prazoCompra:sg.prazoCompra || ''});
+  const pobre = c => c && c.tipo === 'cartao' && !(c.cartoes || []).length && !c.beneficio;
   const mi = muralIgual;
   muralIgual = function(a, b){
     const r = mi.apply(this, arguments); if (!r) return r;
@@ -63001,6 +63003,95 @@ function rlPromocoes(a){
     const r = gv.apply(this, arguments);
     if (n) setTimeout(() => avisar(`${n === 1 ? 'O anúncio repetido foi substituído' : n + ' anúncios repetidos foram substituídos'} pelo que você colou agora.`, 'ok', 6000), 300);
     return r;
+  };
+})();
+</script>
+<style id="cc4-css">
+/* ══ CARTÕES EM PROMOÇÃO: benefício "1ª anuidade grátis" (17/10/2026) ══ */
+.cc-max .cc-ben{ font:700 calc(20px * var(--esc))/1.15 var(--f-b, inherit) !important; color:var(--jade) !important; }
+.cc-mg{ display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; }
+.cc-mg li{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:9px 12px; border-radius:12px; background:color-mix(in srgb, var(--anil) 7%, transparent); }
+.cc-mg li b{ font-size:calc(13.5px * var(--esc)); color:var(--giz); font-weight:600; }
+.cc-mg li small{ display:block; font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.cc-mg li em{ font:500 calc(14px * var(--esc)) var(--f-m, monospace); font-style:normal; color:var(--ouro); white-space:nowrap; }
+.cc-band{ display:flex; flex-direction:column; gap:6px; }
+.cc-band b{ font-size:calc(12px * var(--esc)); color:var(--grafite); text-transform:uppercase; letter-spacing:.06em; }
+.cc-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.cc-chips span{ padding:4px 10px; border-radius:99px; font-size:calc(12.5px * var(--esc)); color:var(--giz-2, var(--giz)); border:1px solid var(--fio); background:color-mix(in srgb, var(--giz) 4%, transparent); }
+</style>
+<script id="cc4-js">
+/* Anúncio de cartão cujo benefício é a ANUIDADE (ex.: "Cartões Caixa: Sua primeira
+   anuidade por nossa conta"): não há bônus de pontos, há cartões elegíveis por
+   bandeira, meta de gastos só para alguns cartões e prazo nas regras. A Torre
+   lê essas peças e mostra: cartões com meta (valor, prazo, quanto por mês) e
+   cartões sem meta (só desbloquear e fazer a 1ª compra até a data). */
+const _cc4Ben = t => { const s = semAcento(SEM_EMOJI(String(t || ''))).toLowerCase(); return /anuidade/.test(s) && /(nossa conta|gratis|isenta|isencao|zerad|sem anuidade|anuidade zero)/.test(s) ? 'anuidade' : ''; };
+(function(){
+  const eh = ehAnuncioCartao;
+  ehAnuncioCartao = function(texto){
+    if (eh.apply(this, arguments)) return true;
+    const cab = semAcento(SEM_EMOJI(String(texto || ''))).toLowerCase().split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3).join(' ');
+    return /\bcart(ao|oes)\b/.test(cab) && !!_cc4Ben(cab);
+  };
+  const cd = cartaoDoAnuncio;
+  cartaoDoAnuncio = function(texto){
+    const sg = cd.apply(this, arguments);
+    const L = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+    const tit = _cc3Limpa(L[0] || '');
+    sg.beneficio = _cc4Ben(tit) || '';
+    if (!sg.beneficio) return sg;
+    /* só liga a um programa se o NOME dele aparece no anúncio ("Caixa" é o banco, não o Uau CAIXA) */
+    if (sg.para && !semAcento(L.join(' ')).toLowerCase().includes(semAcento(prog(sg.para).n).toLowerCase())) sg.para = '';
+    /* elegíveis por bandeira ("💳 Cartões Elo" + "👉 Diners;") e metas ("👉 CAIXA Ícone Visa: R$ 30.000,00") */
+    const grupos = [], metas = []; let sec = '', g = null;
+    L.forEach(l => {
+      const lt = _cc3Limpa(l), s = _cc3Sem(l);
+      if (/^cartoes elegiveis/.test(s)){ sec = 'eleg'; return; }
+      if (/^metas? de gastos?/.test(s)){ sec = 'meta'; return; }
+      if (/^(regras|atencao|regulamento|beneficios)/.test(s)){ sec = ''; return; }
+      if (sec === 'eleg'){
+        const mb = lt.match(/^cart[oõ]es\s+(.+?):?$/i);
+        if (mb){ g = {band:mb[1].trim(), itens:[]}; grupos.push(g); return; }
+        if (/^👉/u.test(l) || /^\s*[•·-]/.test(l)){ if (!g){ g = {band:'', itens:[]}; grupos.push(g); } g.itens.push(lt.replace(/[;.]+$/, '')); }
+        return;
+      }
+      if (sec === 'meta'){
+        const mm = lt.match(/^(.+?):\s*R\$\s*([\d.]+(?:,\d+)?)\s*(mil)?/i);
+        if (mm) metas.push({n:mm[1].trim(), valor:_ccN(mm[2]) * (mm[3] ? 1000 : 1)});
+      }
+    });
+    const dt = re => { const m = L.join('\n').match(re); return m ? `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+    sg.prazoGasto = sg.prazoGasto || dt(/meta[^\n]*?at[eé]\s*(?:o\s+)?(?:dia\s+)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    sg.prazoCompra = dt(/primeira compra[^\n]*?at[eé]\s*(?:o\s+)?(?:dia\s+)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    /* cada meta encontra o seu cartão elegível (o de mais palavras em comum, todas contidas na meta) */
+    const tk = t => semAcento(String(t || '')).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w && !['caixa', 'cartao', 'cartoes', 'club', 'de', 'do', 'da'].includes(w));
+    const cand = grupos.flatMap(x => x.itens.map(n => ({n, band:x.band, t:tk(n + ' ' + x.band)})));
+    metas.forEach(m => { const mt = tk(m.n); const ok = cand.filter(c => c.t.every(w => mt.includes(w))).sort((a, b) => b.t.length - a.t.length)[0]; if (ok){ m.cartao = ok.n; m.band = ok.band; ok.temMeta = true; } });
+    sg.elegGrupos = grupos.map(x => ({band:x.band, itens:x.itens.map(n => ({n, meta:cand.some(c => c.n === n && c.band === x.band && c.temMeta)}))}));
+    sg.metasGasto = metas;
+    return sg;
+  };
+  const ch = ccCartaoHTML;
+  ccCartaoHTML = function(c){
+    let h = ch.apply(this, arguments);
+    if (c.beneficio !== 'anuidade') return h;
+    /* destaque à direita: o benefício, no lugar do bônus */
+    if (!c.bonusMax) h = h.replace('<div class="cc-max"></div>', `<div class="cc-max"><small>benefício</small><b class="cc-ben">1ª anuidade grátis</b><span>no primeiro ano</span></div>`);
+    if ((c.cartoes || []).length) return h;
+    const d = c.prazoGasto ? diasAte(c.prazoGasto) : null;
+    const comMeta = (c.metasGasto || []).map(m => `<li><span><b>${esc(m.n)}</b><small>${c.prazoGasto ? `até ${dataBR(c.prazoGasto)}${d !== null && d >= 0 ? ` · faltam ${d} dias` : ''}` : 'prazo não informado'}</small></span><em>${brl(m.valor)}</em></li>`).join('');
+    const semMeta = (c.elegGrupos || []).map(g => ({band:g.band, itens:g.itens.filter(i => !i.meta)})).filter(g => g.itens.length);
+    const blocos = [];
+    if (comMeta) blocos.push(`<div class="cc-op"><div class="cc-op-cab"><b>Com meta de gastos</b></div><ul class="cc-mg">${comMeta}</ul><p class="cc-nota">Compras parceladas contam pelo valor total; cartões virtuais e adicionais também contam.</p></div>`);
+    if (semMeta.length) blocos.push(`<div class="cc-op"><div class="cc-op-cab"><b>Sem meta de gastos</b></div><p class="cc-nota">Basta <b>desbloquear e fazer a primeira compra</b>${c.prazoCompra ? ` até <b>${dataBR(c.prazoCompra)}</b>` : ''}.</p>${semMeta.map(g => `<div class="cc-band">${g.band ? `<b>${esc(g.band)}</b>` : ''}<div class="cc-chips">${g.itens.map(i => `<span>${esc(i.n)}</span>`).join('')}</div></div>`).join('')}</div>`);
+    if (!blocos.length) return h;
+    return h.replace('<div class="cc-rodape">', `<div class="cc-grade">${blocos.join('')}</div><div class="cc-rodape">`);
+  };
+  /* o link do regulamento em PDF não é "pedir o cartão" */
+  const ch2 = ccCartaoHTML;
+  ccCartaoHTML = function(c){
+    const h = ch2.apply(this, arguments);
+    return h.replace(/(<a class="cc-pedir-geral" href="([^"]+)"[^>]*>[\s\S]*?<\/svg>)Pedir o cartão e ver o regulamento/, (t, a, u) => /regulamento|\.pdf/i.test(u) && !/solicit|pedir|cartoes\/escolha/i.test(u) ? a + 'Ver o regulamento' : t);
   };
 })();
 </script>
