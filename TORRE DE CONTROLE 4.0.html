@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 16:10';
+const BUILD = '2026-10-17 16:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -61645,6 +61645,7 @@ function eqAplicarVisao(){
   const on = document.querySelector('.coluna-menu .cm-item.on') || document.querySelector('.bm-item.on');
   let atual = on ? eqRotulo(on) : ''; if (!temNome(atual) && longo[atual]) atual = longo[atual].find(temNome) || atual;
   const key = areaOn + '|' + atual, pode = !nomeArea || !temNome(atual) ? true : eqTem(c, key, 'v');
+  window._eqParte = {key, nome:atual || (nomeArea || {}).n || 'esta tela'};
   const h = document.documentElement;
   h.classList.toggle('eq-sem-i', !eqTem(c, key, 'i')); h.classList.toggle('eq-sem-e', !eqTem(c, key, 'e')); h.classList.toggle('eq-sem-a', !eqTem(c, key, 'a'));
   let bq = document.getElementById('eqBloq');
@@ -63114,6 +63115,97 @@ const _cc4Ben = t => { const s = semAcento(SEM_EMOJI(String(t || ''))).toLowerCa
     rodando = true;
     try { return o.apply(this, arguments); }
     finally { rodando = false; ate = Date.now() + 30; }
+  };
+})();
+</script>
+
+<style id="eqtrava-css">
+/* VER COMO DE VERDADE (17/10/2026): sem "Editar", o valor fica só para leitura */
+html.eq-vendo.eq-sem-i [onclick*="registrarEmissao"]{ display:none !important; }
+html.eq-vendo.eq-sem-e .pv-meta-in{ cursor:not-allowed; opacity:.75; }
+html.eq-vendo.eq-sem-e .pv-meta:has(.pv-meta-in){ cursor:not-allowed; }
+</style>
+<script id="eqtrava-js">
+/* ══ VER COMO QUE BLOQUEIA DE VERDADE (17/10/2026, pedido do Jadiel) ═══════════
+   Antes, o Ver Como só escondia alguns botões; campos digitados direto na tela
+   (a meta da Prateleira, por exemplo) gravavam normalmente. Agora há duas camadas:
+     1. Na tela: sem "Editar", os campos de valor ficam só para leitura; sem
+        "Incluir", somem os botões de incluir conhecidos (ex.: Emitir para).
+     2. A trava: toda gravação feita no Ver Como é conferida. A Torre compara os
+        dados de antes com os de agora: item novo pede Incluir, item mudado pede
+        Editar, item que sumiu pede Apagar. Se a pessoa não tem a permissão na
+        parte aberta, a mudança é desfeita e a Torre avisa. Tema e tamanho da
+        letra são preferências da tela e continuam livres. */
+(function(){
+  if (typeof salvar !== 'function' || typeof eqAplicarVisao !== 'function') return;
+  const LIVRES_CFG = ['tema', 'escala', 'colunaFechada', 'porPaginaLojas', 'porPaginaEncerradas', 'catVista', 'resumoVisto', 'desejosAvisados',
+    'datasConferidas', 'migracoes', 'vigiaUltima', 'vigiaFeitas', 'vitrineUltima', 'campanhasCarregadas', 'vitrineCarregada', 'faixasConferidasEm', 'resultadoBase', 'resumoAuto', 'cqLerNaHora'];
+  let foto = null, avisoEm = 0;
+  const tirarFoto = () => { try { foto = JSON.stringify(DB); } catch(_){ foto = null; } };
+  /* lista ou objeto vazio conta como "não existe": criar a gaveta vazia não é mudar dado */
+  const vazio = v => v == null || (Array.isArray(v) ? !v.length : typeof v === 'object' && !Object.keys(v).length);
+  const semLivres = o => { const x = JSON.parse(JSON.stringify(o || {}));
+    if (x.cfg) LIVRES_CFG.forEach(k => delete x.cfg[k]);
+    [x, x.cfg || {}].forEach(m => Object.keys(m).forEach(k => { if (vazio(m[k])) delete m[k]; }));
+    return x; };
+  function oQuePede(antes, agora){
+    const pede = new Set(), A = semLivres(antes), B = semLivres(agora);
+    new Set([...Object.keys(A), ...Object.keys(B)]).forEach(k => {
+      const x = A[k], y = B[k]; if (JSON.stringify(x) === JSON.stringify(y)) return;
+      const comId = v => Array.isArray(v) && v.every(o => o && typeof o === 'object' && o.id != null);
+      if (comId(x) && comId(y)){
+        const mx = new Map(x.map(o => [String(o.id), JSON.stringify(o)])), my = new Map(y.map(o => [String(o.id), JSON.stringify(o)]));
+        let algum = false;
+        my.forEach((v, id) => { if (!mx.has(id)){ pede.add('i'); algum = true; } else if (mx.get(id) !== v){ pede.add('e'); algum = true; } });
+        mx.forEach((v, id) => { if (!my.has(id)){ pede.add('a'); algum = true; } });
+        if (!algum) pede.add('e');
+      } else pede.add('e');
+    });
+    return pede;
+  }
+  window.eqOQuePede = oQuePede;
+  /* gravação recusada: o aviso de sucesso que viria logo depois ("guardada", "salvo") não aparece */
+  let calando = false;
+  if (typeof avisar === 'function'){ const av0 = avisar; avisar = function(m, tipo){ if (calando && (tipo === undefined || tipo === 'ok')) return; return av0.apply(this, arguments); }; }
+  const VERBO = {i:'incluir', e:'editar', a:'apagar'};
+  const s0 = salvar;
+  salvar = function(){
+    if (!_eqVendo) return s0.apply(this, arguments);
+    const c = eqDB().find(x => x.id === _eqVendo);
+    if (!c || foto == null) return s0.apply(this, arguments);
+    const antes = JSON.parse(foto), pede = oQuePede(antes, DB);
+    const P = window._eqParte || {key:'', nome:'esta tela'};
+    const falta = [...pede].filter(x => !eqTem(c, P.key, x));
+    if (!falta.length){ const r = s0.apply(this, arguments); tirarFoto(); return r; }
+    /* desfaz: volta aos dados de antes, mantendo só as preferências da tela */
+    try { const A = semLivres(antes), B = semLivres(DB); window._eqUltimaTrava = {falta, parte:P.key, chaves:Object.keys(B).filter(k => JSON.stringify(A[k]) !== JSON.stringify(B[k])), cfg:Object.keys(B.cfg||{}).filter(k => JSON.stringify((A.cfg||{})[k]) !== JSON.stringify(B.cfg[k]))}; } catch(_){}
+    const livres = {}; LIVRES_CFG.forEach(k => { if (DB.cfg && k in DB.cfg) livres[k] = DB.cfg[k]; });
+    DB = antes; if (DB.cfg) Object.assign(DB.cfg, livres);
+    calando = true;
+    const msg = `${esc(nomeCurto(c.nome))} não tem permissão para <b>${falta.map(x => VERBO[x]).join(' nem ')}</b> em ${esc(P.nome)}. A mudança foi desfeita.`;
+    setTimeout(() => {
+      calando = false;
+      try { aplicarTudo(); } catch(e){ console.error(e); }
+      try { eqAplicarVisao(); } catch(_){}
+      if (Date.now() - avisoEm > 1200){ avisoEm = Date.now(); avisar(msg, 'alerta', 6000); }
+    }, 0);
+  };
+  /* foto dos dados ao entrar no Ver Como; ao sair, a trava desliga */
+  const vc = eqVerComo; eqVerComo = function(){ tirarFoto(); return vc.apply(this, arguments); };
+  function destravar(el){ el.readOnly = false; el.removeAttribute('data-eq-trava'); const cx = el.closest('[data-eq-dica]'); if (cx){ cx.dataset.dica = cx.getAttribute('data-eq-dica'); cx.removeAttribute('data-eq-dica'); } }
+  const sv = eqSairVisao; eqSairVisao = function(){ foto = null; document.querySelectorAll('[data-eq-trava]').forEach(destravar); return sv.apply(this, arguments); };
+  /* camada da tela: sem Editar, a meta da Prateleira fica só para leitura */
+  const av = eqAplicarVisao;
+  eqAplicarVisao = function(){
+    const r = av.apply(this, arguments);
+    const semE = !!_eqVendo && document.documentElement.classList.contains('eq-sem-e');
+    document.querySelectorAll('.pv-meta-in').forEach(el => {
+      const cx = el.closest('[data-dica]');
+      if (semE && !el.readOnly){ el.readOnly = true; el.setAttribute('data-eq-trava', '1');
+        if (cx && !cx.hasAttribute('data-eq-dica')){ cx.setAttribute('data-eq-dica', cx.dataset.dica); cx.dataset.dica = `${nomeCurto((eqDB().find(x => x.id === _eqVendo) || {}).nome || '')} só pode ver a meta: editar não está liberado.`; } }
+      else if (!semE && el.hasAttribute('data-eq-trava')) destravar(el);
+    });
+    return r;
   };
 })();
 </script>
