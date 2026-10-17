@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 09:40';
+const BUILD = '2026-10-17 10:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -57656,14 +57656,14 @@ function mostrarAvisosRenovacao(){
   renovacoesProximas().slice(0, 3).forEach(({a, d}) => {
     const pl = typeof ccPlano === 'function' ? ccPlano(a) : null;
     const mud = a.mudanca && a.mudanca.planoId ? ((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId : '';
-    const quando = d < 0 ? 'renovou ontem' : d === 0 ? 'renova hoje' : d === 1 ? 'renova amanhã' : `renova em ${d} dias`;
+    const quando = d < 0 ? 'Renovou ontem' : d === 0 ? 'Renova hoje' : d === 1 ? 'Renova amanhã' : `Renova em ${d} dias`;
     const cor = mud ? '#6FB7FF' : d <= 1 ? '#FF8A6B' : '#F2C14E';
     const el = document.createElement('div');
     el.className = 'rn-card'; el.style.setProperty('--rn-cor', cor); el.setAttribute('role', 'alert'); el.dataset.rn = a.id;
     el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
       <div class="rn-txt"><div class="rn-olho">Renovação de clube</div>
-        <b>${esc(prog(a.prog).n)} ${esc(pl ? pl.n : '')} de ${esc(nomeCurtoConta(a.contaId))} ${quando}</b>
-        <p>${mud ? `Já está marcada a troca para <b style="display:inline">${esc(mud)}</b>. Confira no site do programa se a mudança foi feita antes de ${dataBR(a.renova)}.`
+        <b class="rn-tit"><span class="rn-nome">${esc(prog(a.prog).n)} ${esc(pl ? pl.n : '')} de ${esc(nomeCurtoConta(a.contaId))}</span><span class="rn-quando">${quando}</span></b>
+        <p>${mud ? `Já está marcada a troca para <b style="display:inline">${esc(mud)}</b>.<br>Confira no site do programa se a mudança foi feita antes de ${dataBR(a.renova)}.`
           : `Renovar costuma perder o bônus da campanha. Faça o downgrade ou cancele antes de ${dataBR(a.renova)} para não pagar caro.`}</p></div>
       <button type="button" class="rn-x" data-rn-fechar aria-label="Fechar"><svg><use href="#i-x"/></svg></button></div>
       <div class="rn-dias"><strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a renovação' : 'dias para a renovação'} · ${brl2(a.valor)}</span></div>
@@ -57673,6 +57673,9 @@ function mostrarAvisosRenovacao(){
     el.querySelector('[data-rn-ver]').onclick = () => { sair(); try { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); setTimeout(() => { const l = document.querySelector(`[data-assin="${a.id}"]`); if (l) l.scrollIntoView({block:'center', behavior:'smooth'}); }, 500); } catch(_){} };
     el.querySelector('[data-rn-ok]').onclick = () => { a.renovaOk = a.renova; salvar(); sair(); avisar('Combinado: este aviso volta só na próxima renovação.', 'ok', 3500); };
     pilha.appendChild(el);
+    /* nome e "Renova em N dias" numa linha só: a letra do nome diminui até caber */
+    const tit = el.querySelector('.rn-tit'); let fs = 15;
+    while (tit && tit.scrollWidth > tit.clientWidth + 1 && fs > 11){ fs -= 0.5; tit.style.fontSize = fs + 'px'; }
   });
 }
 /* toda vez que a Torre abre: depois da abertura, para o cartão não brigar com ela */
@@ -62312,7 +62315,7 @@ function ccCartaoHTML(c){
       <div class="cc-op-cab"><b>${esc(k.n)}</b>${ct.tot ? `<span class="cc-tot">${nBR(ct.tot)}<small>pontos possíveis</small></span>` : ''}</div>
       ${metas ? `<ul class="cc-metas">${metas}</ul>` : ''}
       ${kpis.length ? `<div class="cc-contas">${kpis.join('')}</div>` : ''}
-      ${notas.length ? `<p class="cc-nota">${notas.join(' ')}</p>` : ''}
+      ${notas.length ? `<p class="cc-nota">${notas.join('<br>')}</p>` : ''}
       ${(k.links || []).filter(x => x.link).length ? `<div class="cc-pedir">${k.links.filter(x => x.link).map(x => `<a href="${esc(x.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(x.n.replace(/^cart[aã]o\s+/i, ''))}</a>`).join('')}</div>` : ''}
       ${bens.length ? `<details class="cc-bens"><summary><svg><use href="#i-seta-d"/></svg>Benefícios do cartão (${bens.length})</summary><ul>${bens.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
     </div>`;
@@ -62347,10 +62350,8 @@ document.addEventListener('click', e => {
   const ii = irItemMenu;
   irItemMenu = function(vv, a, sub){
     if (a === 'fb-campanhas'){
-      if (sub === 'camp'){
-        const vivas = [['tra', 'transferencia'], ['com', 'compra'], ['clube', 'clube'], ['cartao', 'cartao']].filter(([, t]) => campanhasVivas(t).length).map(([k]) => k);
-        sub = vivas.length === 1 ? vivas[0] : campUltimo;
-      }
+      if (sub === 'camp') sub = campMelhorAba();
+      _ccRoteando = true; clearTimeout(_ccRoteando_t); _ccRoteando_t = setTimeout(() => { _ccRoteando = false; }, 120);
       if (sub === 'cartao'){
         campUltimo = 'cartao';
         const r = ii.call(this, vv, a, 'tra');
@@ -62406,5 +62407,46 @@ prBarraCampanhas = function(){
   abrirCampanhasEm = function(tipo){ if (tipo === 'cartao') return irItemMenu('fabrica', 'fb-campanhas', 'cartao'); return o.apply(this, arguments); };
 })();
 </script>
+<script id="cmA-js">
+/* ══ CAMPANHAS ABRE NA ABA COM MAIS CAMPANHAS (17/10/2026, pedido do Jadiel) ══
+   Ao entrar em Campanhas sem escolher a aba, a Torre nunca abre numa aba vazia
+   se outra tiver campanha no ar: abre na que tem MAIS campanhas. Empate: fica
+   na última visitada, se ela estiver entre as empatadas; senão, a primeira na
+   ordem das abas. Sem nenhuma campanha no ar, fica na última visitada. */
+let _ccRoteando = false, _ccRoteando_t = 0;
+function campMelhorAba(){
+  const n = [['tra', 'transferencia'], ['com', 'compra'], ['clube', 'clube'], ['cartao', 'cartao']].map(([k, t]) => ({k, n:campanhasVivas(t).length}));
+  const max = Math.max(...n.map(x => x.n));
+  if (!max) return campUltimo;
+  const top = n.filter(x => x.n === max).map(x => x.k);
+  return top.includes(campUltimo) ? campUltimo : top[0];
+}
+/* outros caminhos (atalhos do Painel, avisos, busca) chegam por irParaAba sem
+   escolher a aba: ao ENTRAR em Campanhas, aplica a mesma regra */
+(function(){
+  const o = irParaAba;
+  irParaAba = function(grupo, aba){
+    const entrando = grupo === 'fabrica' && aba === 'fb-campanhas' && !document.querySelector('#p-fb-campanhas.on');
+    const r = o.apply(this, arguments);
+    if (entrando && !_ccRoteando){ try { irItemMenu('fabrica', 'fb-campanhas', campMelhorAba()); } catch(e){ console.error(e); } }
+    return r;
+  };
+})();
+</script>
+<style id="rnt-css">
+/* renovação: nome e "Renova em N dias" na mesma linha, com destaque (17/10/2026) */
+.rn-txt b.rn-tit{ display:flex !important; align-items:center; gap:8px; white-space:nowrap; overflow:hidden; }
+.rn-tit .rn-nome{ flex:none; }
+.rn-tit .rn-quando{ flex:none; font-size:.82em; font-weight:700; line-height:1.2; padding:.22em .7em; border-radius:99px; color:var(--rn-cor, #F2C14E);
+  background:color-mix(in srgb, var(--rn-cor, #F2C14E) 18%, transparent); border:1px solid color-mix(in srgb, var(--rn-cor, #F2C14E) 45%, transparent); }
+.rn-pilha{ width:min(440px, calc(100vw - 32px)); }
+.rn-card .rn-x{ position:absolute; top:12px; right:12px; }
+.rn-card .rn-olho{ padding-right:34px; }
+@media (max-width:560px){ .rn-pilha{ width:auto; } }
+</style>
+<style id="acd-css">
+/* lápis (editar) e lixeira (excluir) sempre na ponta direita do cartão, em todo tamanho de tela (17/10/2026) */
+.cp-cab > .cp-acoes{ margin-left:auto; justify-content:flex-end; }
+</style>
 </body>
 </html>
