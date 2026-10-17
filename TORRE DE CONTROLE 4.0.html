@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 13:30';
+const BUILD = '2026-10-17 14:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -62949,5 +62949,60 @@ function rlPromocoes(a){
 })();
 </script>
 
+<style id="sub-css">
+.mr-previa.repetido.vai-subst{ opacity:1; }
+.mr-previa.repetido .mr-ja b.mr-ja-sub{ display:inline; color:var(--jade); }
+</style>
+<script id="sub-js">
+/* ══ ANÚNCIO REPETIDO: SUBSTITUIR O QUE ESTÁ GRAVADO (17/10/2026, pedido do Jadiel) ══
+   O anúncio colado de novo continua sem gravar em dobro, mas agora dá para
+   trocar o que está gravado (ex.: foi gravado com o tipo errado): marque
+   "Incluir" no anúncio repetido e toque em "Atualizar". A Torre tira o anúncio
+   antigo, e a campanha ligada a ele, e grava o novo com o tipo escolhido. */
+(function(){
+  if (typeof previaAnuncios !== 'function' || typeof gravarAnuncios !== 'function') return;
+  const botao = () => {
+    const box = document.getElementById('mrPrevias'), bt = document.getElementById('btGravarAnuncios'); if (!box || !bt || typeof anunciosLidos === 'undefined') return;
+    let novos = 0, subst = 0;
+    box.querySelectorAll('.mr-inclui input[data-i]').forEach(x => {
+      const a = anunciosLidos[Number(x.dataset.i)]; if (!a || !x.checked) return;
+      if (a.jaTem) subst++; else novos++;
+      x.closest('.mr-previa').classList.toggle('vai-subst', !!a.jaTem && x.checked);
+    });
+    box.querySelectorAll('.mr-previa.repetido .mr-inclui input').forEach(x => { if (!x.checked) x.closest('.mr-previa').classList.remove('vai-subst'); });
+    bt.disabled = !(novos + subst);
+    bt.innerHTML = !(novos + subst) ? `<svg><use href="#i-alerta"/></svg>${anunciosLidos.length === 1 ? 'Já está no mural' : 'Todos já estão no mural'}`
+      : `<svg><use href="#i-ok"/></svg>${novos ? `Gravar ${novos}` : ''}${novos && subst ? ' e ' : ''}${subst ? `${novos ? 'atualizar' : 'Atualizar'} ${subst}` : ''}`;
+  };
+  const pv = previaAnuncios;
+  previaAnuncios = function(){
+    const r = pv.apply(this, arguments);
+    const box = document.getElementById('mrPrevias'); if (!box || (typeof listaLida !== 'undefined' && listaLida)) return r;
+    box.querySelectorAll('.mr-previa.repetido .mr-ja span').forEach(sp => {
+      sp.innerHTML = sp.innerHTML.replace('Não será gravado de novo.', 'Não grava em dobro. <b class="mr-ja-sub">Para trocar o que está gravado (por exemplo, o tipo), marque Incluir e toque em Atualizar.</b>');
+    });
+    box.querySelectorAll('.mr-inclui input[data-i]').forEach(x => x.addEventListener('change', botao));
+    botao();
+    return r;
+  };
+  const gv = gravarAnuncios;
+  gravarAnuncios = function(){
+    if (typeof listaLida !== 'undefined' && listaLida) return gv.apply(this, arguments);
+    const marcados = [...document.querySelectorAll('#mrPrevias .mr-inclui input[data-i]')].filter(x => x.checked).map(x => anunciosLidos[Number(x.dataset.i)]).filter(a => a && a.jaTem);
+    let n = 0;
+    marcados.forEach(a => {
+      const velho = a.jaTem;
+      (DB.mural || []).filter(m => m === velho || (velho.campId && m.campId === velho.campId)).forEach(m => {
+        if (m.campId) DB.campanhas = (DB.campanhas || []).filter(c => c.id !== m.campId);
+      });
+      DB.mural = (DB.mural || []).filter(m => m !== velho && !(velho.campId && m.campId === velho.campId));
+      a.jaTem = null; n++;
+    });
+    const r = gv.apply(this, arguments);
+    if (n) setTimeout(() => avisar(`${n === 1 ? 'O anúncio repetido foi substituído' : n + ' anúncios repetidos foram substituídos'} pelo que você colou agora.`, 'ok', 6000), 300);
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
