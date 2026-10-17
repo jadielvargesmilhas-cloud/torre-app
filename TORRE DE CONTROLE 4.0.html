@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-16 20:15';
+const BUILD = '2026-10-17 09:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17825,9 +17825,9 @@ function renderMesa(){
     /* clube com faixas cadastradas mostra o milheiro; sem faixas, cai no bônus da
        campanha. Um travessão não diz nada a quem está decidindo. */
     const temFaixa = c.tipo === 'clube' && melhorFaixa;
-    const numero = temFaixa ? brl2(melhorFaixa.cpmDesc)
+    const numero = c.tipo === 'cartao' ? nBR(c.bonusMax || 0) : temFaixa ? brl2(melhorFaixa.cpmDesc)
       : c.tipo === 'compra' && c.desconto ? `−${c.desconto}%` : `+${c.bonus || 0}%`;
-    const rotuloNumero = temFaixa ? 'melhor milheiro' : c.tipo === 'compra' && c.desconto ? 'desconto' : 'bônus';
+    const rotuloNumero = c.tipo === 'cartao' ? 'pontos de bônus' : temFaixa ? 'melhor milheiro' : c.tipo === 'compra' && c.desconto ? 'desconto' : 'bônus';
     /* Verde como o cabeçalho da janela: campanha viva é oportunidade, não
        ameaça, e fio vermelho num painel verde contava a história errada. O
        degrau de prazo continua existindo — jade cheio para o que fecha nos
@@ -51748,7 +51748,14 @@ function prListaHojeHTML(){
   const ss = seloSub; seloSub = function(sub){ if (sub === 'camp'){ try { return String(campanhasVivas('transferencia').length + campanhasVivas('compra').length + campanhasVivas('clube').length); } catch(e){ return ''; } } return ss.apply(this, arguments); };
   const sa = subAtivo; subAtivo = function(sub){ if (sub === 'camp') return sa('tra') || sa('com') || sa('clube'); return sa.apply(this, arguments); };
   const ii = irItemMenu; irItemMenu = function(vv, a, sub){
-    if (sub === 'camp') sub = campUltimo;
+    if (sub === 'camp'){
+      /* 17/10/2026: se só UMA aba tem campanha no ar, abre nela (pedido do Jadiel) */
+      sub = campUltimo;
+      try {
+        const com = [['tra', 'transferencia'], ['com', 'compra'], ['clube', 'clube']].filter(([, t]) => campanhasVivas(t).length).map(([k]) => k);
+        if (com.length === 1) sub = com[0];
+      } catch(e){}
+    }
     if (sub === 'tra' || sub === 'com' || sub === 'clube') campUltimo = sub;
     const r = ii.call(this, vv, a, sub);
     setTimeout(prBarraCampanhas, 30);
@@ -61994,5 +62001,410 @@ function _etyProgsNoTexto(t){
 })();
 </script>
 
+<style id="rnb-css">
+/* ══ aviso de renovação de clube na parte de baixo da tela (17/10/2026, pedido do Jadiel) ══ */
+.rn-pilha{ top:auto; bottom:20px; right:calc(20px + var(--trilho-dir, 0px)); }
+.rn-card{ animation-name:rnSobe; }
+@keyframes rnSobe{ from{ opacity:0; transform:translateY(16px) scale(.96); } to{ opacity:1; transform:none; } }
+@media (max-width:560px){ .rn-pilha{ top:auto; bottom:calc(150px + env(safe-area-inset-bottom, 0px)); right:16px; left:16px; width:auto; } }
+</style>
+<script id="rnb-js">
+/* as mensagens rápidas (canto de baixo) sobem para cima do aviso enquanto ele estiver aberto */
+(function(){
+  const ajustar = () => {
+    const av = document.getElementById('avisos'), pl = document.getElementById('rnPilha'); if (!av) return;
+    const tem = pl && pl.querySelector('.rn-card:not(.saindo)');
+    av.style.bottom = tem ? Math.round(innerHeight - pl.getBoundingClientRect().top + 12) + 'px' : '';
+  };
+  const vigiar = () => {
+    const pl = document.getElementById('rnPilha'); if (!pl || pl._rnb) return; pl._rnb = 1;
+    new MutationObserver(() => queueMicrotask(ajustar)).observe(pl, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    if (window.ResizeObserver) new ResizeObserver(ajustar).observe(pl);
+    ajustar();
+  };
+  if (typeof mostrarAvisosRenovacao === 'function'){
+    const o = mostrarAvisosRenovacao;
+    mostrarAvisosRenovacao = function(){ const r = o.apply(this, arguments); vigiar(); ajustar(); return r; };
+  }
+  addEventListener('resize', ajustar);
+})();
+</script>
+<style id="cc-css">
+/* ══ CARTÕES EM PROMOÇÃO (17/10/2026, pedido do Jadiel) ═════════════════════════ */
+#p-fb-campanhas.cc-on > #campGrupoCT, #p-fb-campanhas.cc-on > #campGrupoClube{ display:none !important; }
+#ccPainel{ display:flex; flex-direction:column; gap:16px; }
+#ccPainel[hidden]{ display:none !important; }
+.cc-card{ position:relative; border-radius:20px; overflow:hidden; border:1px solid var(--fio); background:var(--sup-1); }
+.cc-topo{ position:relative; padding:20px 22px 18px; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:16px; align-items:center;
+  background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--cc-cor, var(--anil)) 22%, transparent), transparent 60%),
+             linear-gradient(135deg, color-mix(in srgb, var(--cc-cor, var(--anil)) 10%, var(--sup-1)), var(--sup-1));
+  border-bottom:1px solid var(--fio); }
+.cc-plast{ width:74px; height:48px; border-radius:9px; position:relative; flex:none; box-shadow:0 10px 22px -10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.25);
+  background:linear-gradient(135deg, var(--cc-cor, #3AAFE0), color-mix(in srgb, var(--cc-cor, #3AAFE0) 45%, #07111f)); }
+.cc-plast::before{ content:''; position:absolute; left:9px; top:15px; width:15px; height:11px; border-radius:3px; background:linear-gradient(135deg, #F6D67A, #B8892E); }
+.cc-plast::after{ content:attr(data-sig); position:absolute; right:7px; bottom:5px; font:700 10px var(--f-m, monospace); color:rgba(255,255,255,.9); letter-spacing:.06em; }
+.cc-tit{ min-width:0; }
+.cc-olho{ font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--cc-cor-txt, var(--anil-claro)); }
+.cc-tit h3{ margin:4px 0 4px; font-size:calc(17px * var(--esc)); line-height:1.3; color:var(--giz); }
+.cc-tit p{ margin:0; font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.cc-max{ text-align:right; }
+.cc-max small{ display:block; font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.cc-max b{ display:block; font:500 calc(28px * var(--esc))/1.05 var(--f-m, monospace); color:var(--ouro); }
+.cc-max span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.cc-prazo{ display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:3px 10px; border-radius:99px; font-size:calc(12px * var(--esc)); font-weight:600;
+  color:var(--jade); background:color-mix(in srgb, var(--jade) 12%, transparent); border:1px solid color-mix(in srgb, var(--jade) 35%, transparent); }
+.cc-prazo.urg{ color:var(--brasa); background:color-mix(in srgb, var(--brasa) 12%, transparent); border-color:color-mix(in srgb, var(--brasa) 40%, transparent); }
+.cc-prazo.fim{ color:var(--grafite); background:transparent; border-color:var(--fio); }
+.cc-prazo svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; }
+.cc-grade{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; padding:18px 22px; }
+.cc-op{ border:1px solid var(--fio); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; background:color-mix(in srgb, var(--sup-1) 70%, transparent); }
+.cc-op-cab{ display:flex; align-items:flex-start; gap:10px; justify-content:space-between; }
+.cc-op-cab b{ font-size:calc(15px * var(--esc)); color:var(--giz); line-height:1.35; }
+.cc-op-cab .cc-tot{ font:500 calc(18px * var(--esc)) var(--f-m, monospace); color:var(--ouro); white-space:nowrap; }
+.cc-op-cab .cc-tot small{ font:500 calc(11px * var(--esc)) var(--f-b, inherit); color:var(--grafite); display:block; text-align:right; }
+.cc-metas{ display:flex; flex-direction:column; gap:8px; margin:0; padding:0; list-style:none; }
+.cc-metas li{ display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:10px; align-items:center; padding:9px 10px; border-radius:12px; background:color-mix(in srgb, var(--anil) 7%, transparent); }
+.cc-metas li i{ width:28px; height:28px; border-radius:9px; display:grid; place-items:center; font-style:normal; font:700 12px var(--f-m, monospace); color:var(--anil-claro); background:color-mix(in srgb, var(--anil) 18%, transparent); }
+.cc-metas li span{ font-size:calc(13px * var(--esc)); color:var(--giz-2, var(--giz)); line-height:1.4; }
+.cc-metas li em{ font:500 calc(13.5px * var(--esc)) var(--f-m, monospace); font-style:normal; color:var(--jade); white-space:nowrap; }
+.cc-contas{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cc-kpi{ border-radius:12px; padding:10px 12px; border:1px solid var(--fio); }
+.cc-kpi small{ display:block; font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.cc-kpi b{ display:block; font:500 calc(17px * var(--esc)) var(--f-m, monospace); color:var(--giz); margin:2px 0 1px; }
+.cc-kpi span{ display:block; font-size:calc(11.5px * var(--esc)); color:var(--grafite); line-height:1.4; }
+.cc-nota{ font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.5; margin:0; }
+.cc-nota b{ color:var(--giz); }
+.cc-bens{ border-top:1px dashed var(--fio); padding-top:10px; }
+.cc-bens summary{ cursor:pointer; font-size:calc(13px * var(--esc)); font-weight:600; color:var(--anil-claro); list-style:none; display:flex; align-items:center; gap:6px; }
+.cc-bens summary::-webkit-details-marker{ display:none; }
+.cc-bens summary svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; transition:transform .2s; }
+.cc-bens[open] summary svg{ transform:rotate(90deg); }
+.cc-bens ul{ margin:10px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:5px; font-size:calc(12.5px * var(--esc)); color:var(--giz-2, var(--giz)); line-height:1.5; }
+.cc-pedir{ display:flex; flex-wrap:wrap; gap:8px; }
+.cc-pedir a{ display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:10px; font-size:calc(12.5px * var(--esc)); font-weight:600; text-decoration:none;
+  color:var(--anil-claro); border:1px solid color-mix(in srgb, var(--anil) 40%, var(--fio)); background:color-mix(in srgb, var(--anil) 8%, transparent); }
+.cc-pedir a svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; }
+.cc-rodape{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 22px 18px; border-top:1px solid var(--fio); }
+.cc-rodape details{ flex:1 1 300px; }
+.cc-rodape summary{ cursor:pointer; font-size:calc(13px * var(--esc)); font-weight:600; color:var(--grafite); }
+.cc-rodape ul{ margin:8px 0 0; padding-left:18px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; display:flex; flex-direction:column; gap:4px; }
+.cc-rodape a{ color:var(--anil-claro); }
+.cc-vazio{ border:1px dashed var(--fio); border-radius:18px; padding:30px 20px; text-align:center; color:var(--grafite); }
+.cc-vazio svg{ width:30px; height:30px; fill:none; stroke:var(--grafite); stroke-width:1.6; }
+.cc-vazio b{ display:block; color:var(--giz); margin:8px 0 4px; font-size:calc(15px * var(--esc)); }
+.cc-vazio p{ margin:0 auto 14px; max-width:460px; font-size:calc(13px * var(--esc)); line-height:1.5; }
+.cc-enc > summary{ cursor:pointer; font-weight:600; color:var(--grafite); font-size:calc(13px * var(--esc)); padding:4px 0; }
+.cc-enc .cc-card{ opacity:.72; margin-top:12px; }
+@media (max-width:600px){
+  .cc-topo{ grid-template-columns:auto minmax(0,1fr); padding:16px; }
+  .cc-max{ grid-column:1 / -1; text-align:left; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .cc-max small{ display:inline; }
+  .cc-grade{ padding:14px; grid-template-columns:1fr; }
+  .cc-rodape{ padding:12px 16px 16px; }
+  .cc-plast{ width:58px; height:38px; }
+  .cc-plast::before{ left:7px; top:11px; width:12px; height:9px; }
+}
+#ccPainel .cc-kpi b, #ccPainel .cc-kpi span, #ccPainel .cc-kpi small{ white-space:normal !important; overflow:visible !important; text-overflow:clip !important; max-width:none !important; }
+#ccPainel .cc-prazo{ width:max-content; max-width:100%; flex-wrap:wrap; column-gap:4px; row-gap:0; }
+#ccPainel .cc-pz{ white-space:nowrap; }
+@media (max-width:600px){ #ccPainel .cc-prazo{ border-radius:12px; } }
+@media (max-width:600px){ #ccPainel .cc-contas{ grid-template-columns:1fr; } }
+:root[data-theme="papel"] .cc-max b{ color:color-mix(in srgb, var(--ouro) 75%, #3a2a00); }
+</style>
+<script id="cc-js">
+/* ══ CARTÕES EM PROMOÇÃO ═══════════════════════════════════════════════════════
+   Anúncio de cartão de crédito com bônus de boas-vindas ("Peça seu Cartão Azul
+   Itaucard e ganhe até 120.000 Pontos Bônus") era lido como lista de lojas,
+   porque as linhas "3,0 pontos por US$ 1" parecem ofertas. Agora:
+     · a Torre reconhece o anúncio de cartão e não o trata como lista de lojas;
+     · tira do texto o programa, o banco, o prazo, o bônus máximo, os cartões
+       elegíveis (com o link de cada um), as metas de cada cartão, a anuidade,
+       a pontuação e os benefícios;
+     · grava como campanha do tipo "cartao", numa 4ª aba de Campanhas:
+       "Cartões em promoção".
+   Contas de cada cartão (escolha do Jadiel em 17/10/2026):
+     · pontos por meta e total possível;
+     · gasto por mês exigido = valor da meta ÷ número de faturas;
+     · custo do milheiro = anuidade ÷ (pontos do bônus ÷ 1.000), com as metas
+       todas e só com a meta de gasto (sem contar a mensalidade do clube);
+     · benefícios do cartão, guardados como vieram no anúncio. */
+const _ccN = s => Number(String(s || '').replace(/\./g, '').replace(',', '.')) || 0;
+function ehAnuncioCartao(texto){
+  const t = semAcento(SEM_EMOJI(String(texto || ''))).toLowerCase();
+  const cab = t.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3).join(' ');
+  return /\bcart(ao|oes)\b/.test(cab) && /(pontos?|milhas?)\s*(bonus|extras?)/.test(t) && /(anuidade|faturas?|aprovad)/.test(t);
+}
+function _ccAchaProg(t){
+  const s = ' ' + semAcento(String(t || '')).toLowerCase() + ' ';
+  const achou = [];
+  PROG_IDS.forEach(k => {
+    const p = prog(k); const nomes = [p.n, p.cia].filter(Boolean).map(n => semAcento(n).toLowerCase());
+    const pri = semAcento(p.n).toLowerCase().split(/\s+/)[0]; if (pri.length >= 4) nomes.push(pri);
+    let pos = -1; nomes.forEach(n => { const m = s.search(new RegExp('[^a-z0-9]' + n.replace(/[^a-z0-9 ]/g, '') + '[^a-z0-9]')); if (m >= 0 && (pos < 0 || m < pos)) pos = m; });
+    if (pos >= 0) achou.push({k, pos, milhas:p.tipo === 'milhas'});
+  });
+  achou.sort((a, b) => (b.milhas - a.milhas) || (a.pos - b.pos));
+  return achou.length ? achou[0].k : '';
+}
+const CC_BANCOS = [[/ita[uú]card|ita[uú]/i, 'Itaú'], [/bradesco/i, 'Bradesco'], [/santander/i, 'Santander'], [/banco do brasil|ourocard|\bbb\b/i, 'Banco do Brasil'], [/caixa/i, 'Caixa'],
+  [/\binter\b/i, 'Inter'], [/\bc6\b/i, 'C6 Bank'], [/\bxp\b/i, 'XP'], [/\bbtg\b/i, 'BTG'], [/nubank/i, 'Nubank'], [/porto/i, 'Porto Bank'], [/sicredi/i, 'Sicredi'], [/sicoob/i, 'Sicoob'], [/mercado pago/i, 'Mercado Pago']];
+function _ccBanco(t){ const m = CC_BANCOS.find(([r]) => r.test(t)); return m ? m[1] : ''; }
+function _ccTokens(n, extras){
+  const fora = new Set(['cartao', 'cartoes', 'de', 'do', 'da', 'e'].concat(extras || []));
+  return semAcento(SEM_EMOJI(n)).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w && !fora.has(w));
+}
+function cartaoDoAnuncio(texto){
+  const L = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.trim());
+  const limpa = l => SEM_EMOJI(l).replace(/^[\s👉📌💳✅⚠️🚨•*\-–+]+/u, '').replace(/\s+/g, ' ').trim();
+  const titulo = limpa(L.find(l => limpa(l)) || '');
+  const para = _ccAchaProg(titulo) || _ccAchaProg(L.join(' '));
+  const banco = _ccBanco(titulo) || _ccBanco(L.join(' '));
+  const mMax = titulo.match(/(\d{1,3}(?:\.\d{3})+|\d+)\s*(?:mil\s*)?(?:pontos|milhas)/i);
+  let bonusMax = mMax ? _ccN(mMax[1]) * (/mil\s*(pontos|milhas)/i.test(mMax[0]) ? 1000 : 1) : 0;
+  /* seções do anúncio */
+  const secao = l => { const s = semAcento(limpa(l)).toLowerCase(); if (/^cartoes elegiveis/.test(s)) return 'eleg'; if (/^regras de bonifica/.test(s)) return 'regras'; if (/^beneficios/.test(s)) return 'bens'; if (/^regras da promo|^regulamento/.test(s)) return 'promo'; return ''; };
+  const eleg = [], grupos = [], bens = [], promo = [], notas = [];
+  let sec = '', grupo = null, bem = null, metaTxt = '';
+  const ehCartaoLinha = l => /^💳/u.test(l) || /^cart[aã]o\b/i.test(limpa(l));
+  L.forEach((l, i) => {
+    if (!l) return;
+    const s = secao(l); if (s){ sec = s; grupo = null; bem = null; metaTxt = ''; return; }
+    const lt = limpa(l);
+    if (/^https?:/i.test(lt) || /^📌/u.test(l)){
+      const u = (l.match(/https?:\/\/\S+/) || [''])[0];
+      if (sec === 'eleg' && eleg.length && u && !eleg[eleg.length - 1].link) eleg[eleg.length - 1].link = u;
+      return;
+    }
+    if (sec === 'eleg'){ if (ehCartaoLinha(l) || /^👉/u.test(l)) eleg.push({n:lt, link:''}); return; }
+    if (sec === 'regras'){
+      if (/^⚠️/u.test(l)){ notas.push(lt); return; }
+      if (/^💳/u.test(l) || (/^cart[aã]o\b/i.test(lt) && !/:$/.test(lt))){ grupo = {n:lt, metas:[]}; grupos.push(grupo); metaTxt = ''; return; }
+      const mp = lt.match(/^\+?\s*(\d{1,3}(?:\.\d{3})+|\d+)\s*(pontos|milhas)/i);
+      if (mp && metaTxt && grupo){
+        const v = metaTxt.match(/R\$\s*([\d.]+(?:,\d+)?)/i), f = metaTxt.match(/(\d{1,2})\s*(?:primeiras?\s*)?faturas?/i);
+        const ate = metaTxt.match(/at[eé]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+        const meta = {txt:metaTxt.replace(/:$/, ''), pts:_ccN(mp[1])};
+        if (v){ meta.tipo = 'gasto'; meta.valor = _ccN(v[1]); meta.faturas = f ? Number(f[1]) : 0; }
+        else if (/clube/i.test(metaTxt)){ meta.tipo = 'clube'; }
+        else meta.tipo = 'outra';
+        if (ate) meta.ate = `${ate[3].length === 2 ? '20' + ate[3] : ate[3]}-${ate[2].padStart(2, '0')}-${ate[1].padStart(2, '0')}`;
+        grupo.metas.push(meta); metaTxt = ''; return;
+      }
+      if (/:$/.test(lt) || /^👉/u.test(l)){ metaTxt = lt; return; }
+      if (grupo && metaTxt){ metaTxt += ' ' + lt; }
+      return;
+    }
+    if (sec === 'bens'){
+      if (/^💳/u.test(l) || (/^cart[aã]o\b/i.test(lt) && !/:/.test(lt))){ bem = {n:lt, itens:[]}; bens.push(bem); return; }
+      if (bem) bem.itens.push(lt.replace(/;$/, ''));
+      return;
+    }
+    if (sec === 'promo'){ promo.push(lt.replace(/;$/, '')); return; }
+  });
+  /* liga cada grupo de regras aos benefícios e aos cartões elegíveis */
+  const extras = [semAcento(prog(para).n || '').toLowerCase().split(/\s+/)[0], semAcento(banco).toLowerCase(), 'itaucard'].filter(Boolean);
+  const cartoes = grupos.map(g => {
+    const tk = _ccTokens(g.n, extras);
+    const b = bens.find(x => { const t2 = _ccTokens(x.n, extras); return t2.length === tk.length && t2.every(w => tk.includes(w)); }) || null;
+    const links = eleg.filter(e => { const te = _ccTokens(e.n, extras); return te.length && te.every(w => tk.includes(w)); });
+    const itens = b ? b.itens : [];
+    const an = itens.find(x => /^anuidade/i.test(x)); const mAn = an && an.match(/R\$\s*([\d.]+(?:,\d+)?)/);
+    const isen = itens.find(x => /isen[cç][aã]o/i.test(x)) || '';
+    const lim = [...isen.matchAll(/(\d{1,3})%\s*de\s*isen[cç][aã]o[^%]*?R\$\s*([\d.,]+)\s*(mil)?/gi)].map(m => ({pct:Number(m[1]), valor:_ccN(m[2]) * (m[3] ? 1000 : 1)}));
+    return {n:g.n, metas:g.metas, anuidade:mAn ? _ccN(mAn[1]) : 0, anuidadeTxt:an || '', isencao:isen, isencaoLim:lim,
+      pontuacao:itens.filter(x => /^pontua[cç][aã]o/i.test(x)), beneficios:itens.filter(x => !/^anuidade|^pontua[cç][aã]o|isen[cç][aã]o/i.test(x)),
+      links:links.map(e => ({n:e.n, link:e.link}))};
+  });
+  if (!bonusMax) bonusMax = Math.max(0, ...cartoes.map(c => soma(c.metas.map(m => m.pts))));
+  return {tipo:'cartao', para, banco, bonusMax, cartoes, notas, regras:promo, elegiveis:eleg};
+}
+/* contas de um cartão */
+function contasCartao(c){
+  const tot = soma((c.metas || []).map(m => Number(m.pts) || 0));
+  const gasto = (c.metas || []).find(m => m.tipo === 'gasto');
+  const porMes = gasto && gasto.faturas ? gasto.valor / gasto.faturas : 0;
+  const milTot = c.anuidade && tot ? c.anuidade / (tot / 1000) : 0;
+  const milGasto = c.anuidade && gasto && gasto.pts ? c.anuidade / (gasto.pts / 1000) : 0;
+  return {tot, gasto, porMes, milTot, milGasto};
+}
+
+/* ── leitura: o anúncio de cartão não é lista de lojas ───────────────────── */
+(function(){
+  if (typeof CATEGORIAS_MURAL !== 'undefined' && !CATEGORIAS_MURAL.cartoes) CATEGORIAS_MURAL.cartoes = {n:'Cartões de crédito', ico:'i-cartao'};
+  if (typeof lerListaLojas === 'function'){
+    const o = lerListaLojas;
+    lerListaLojas = function(texto){ if (ehAnuncioCartao(texto)) return null; return o.apply(this, arguments); };
+  }
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments); if (!a) return a;
+      const texto = (bloco || []).join('\n');
+      if (!ehAnuncioCartao(texto)) return a;
+      const sg = cartaoDoAnuncio(texto);
+      if (!sg.cartoes.length && !sg.bonusMax) return a;
+      a.sugestao = sg; a.cat = 'cartoes';
+      if (sg.bonusMax) a.destaque = `até ${nBR(sg.bonusMax)} pontos`;
+      return a;
+    };
+  }
+  if (typeof rotuloSugestao === 'function'){
+    const o = rotuloSugestao;
+    rotuloSugestao = function(sg){
+      if (sg && sg.tipo === 'cartao') return `vira campanha em Cartões em promoção: ${sg.banco ? sg.banco + ' · ' : ''}${prog(sg.para).n}, ${sg.cartoes.length} ${sg.cartoes.length === 1 ? 'cartão' : 'cartões'}`;
+      return o.apply(this, arguments);
+    };
+  }
+  /* gravar: vira campanha do tipo cartao (o mesmo anúncio colado de novo não duplica) */
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const sg = m && m.sugestao;
+      if (!sg || sg.tipo !== 'cartao') return o.apply(this, arguments);
+      if (m.campId) return false;
+      DB.campanhas = DB.campanhas || [];
+      const igual = DB.campanhas.find(c => c.tipo === 'cartao' && c.para === sg.para && (c.banco || '') === (sg.banco || '') && (c.fim || '') === (m.fim || '') && (c.bonusMax || 0) === (sg.bonusMax || 0));
+      if (igual){ m.campId = igual.id; return false; }
+      const id = 'mural-cc-' + m.id;
+      DB.campanhas.push({id, tipo:'cartao', de:'', para:sg.para, banco:sg.banco, bonusMax:sg.bonusMax, bonus:0, desconto:0, limite:0,
+        cartoes:sg.cartoes, notas:sg.notas, regras:sg.regras, inicio:hojeISO(), fim:m.fim || '', titulo:m.titulo, link:m.link || '', links:m.links || [], magos:m.magos || 0, origem:'mural',
+        ...((m.fim && m.fim < hojeISO()) ? {historico:true} : {})});
+      m.campId = id;
+      return true;
+    };
+  }
+})();
+
+/* ── a 4ª aba de Campanhas ───────────────────────────────────────────────── */
+let campCartao = false;
+function ccDesenhar(){
+  const p = $('#p-fb-campanhas'); if (!p) return;
+  let box = $('#ccPainel');
+  if (!box){ box = document.createElement('div'); box.id = 'ccPainel'; const bar = $('#prCampSeg'); if (bar) bar.after(box); else p.insertBefore(box, p.firstChild); }
+  p.classList.toggle('cc-on', campCartao);
+  box.hidden = !campCartao;
+  if (!campCartao) return;
+  const h = hojeISO();
+  const todas = (DB.campanhas || []).filter(c => c.tipo === 'cartao');
+  const vivas = todas.filter(c => !c.fim || c.fim >= h).sort((a, b) => (a.fim || '9999').localeCompare(b.fim || '9999'));
+  const mortas = todas.filter(c => c.fim && c.fim < h).sort((a, b) => b.fim.localeCompare(a.fim));
+  box.innerHTML = (vivas.length ? vivas.map(ccCartaoHTML).join('') : `<div class="cc-vazio"><svg><use href="#i-cartao"/></svg><b>Nenhuma promoção de cartão no ar</b><p>Quando chegar um anúncio de cartão com bônus para pedir, toque em <b>Colar anúncio</b>: a Torre separa as metas de cada cartão e faz as contas.</p><button type="button" class="bt primario" onclick="abrirColarMural()"><svg><use href="#i-copiar"/></svg>Colar anúncio</button></div>`)
+    + (mortas.length ? `<details class="cc-enc"><summary>Encerradas (${mortas.length})</summary>${mortas.map(ccCartaoHTML).join('')}</details>` : '');
+}
+function ccCartaoHTML(c){
+  const p = prog(c.para) || {}, d = c.fim ? diasAte(c.fim) : null;
+  const cor = p.cor || '#3AAFE0';
+  const prazo = c.fim ? (d < 0 ? `<span class="cc-prazo fim"><svg><use href="#i-calendario"/></svg>Encerrada em ${dataBR(c.fim)}</span>`
+    : `<span class="cc-prazo${d <= 1 ? ' urg' : ''}"><svg><use href="#i-calendario"/></svg><span class="cc-pz">Peça até ${dataBR(c.fim)}</span><span class="cc-pz">· ${d === 0 ? 'último dia' : d === 1 ? 'falta 1 dia' : 'faltam ' + d + ' dias'}</span></span>`) : '';
+  const sig = (typeof SIGLA_PROG !== 'undefined' && SIGLA_PROG[c.para]) || '';
+  const ops = (c.cartoes || []).map(k => {
+    const ct = contasCartao(k);
+    const metas = (k.metas || []).map((m, i) => `<li><i>${i + 1}</i><span>${esc(m.txt)}</span><em>+${nBR(m.pts)}</em></li>`).join('');
+    const lim100 = (k.isencaoLim || []).find(x => x.pct === 100);
+    const kpis = [];
+    if (ct.porMes) kpis.push(`<div class="cc-kpi"><small>Gasto por mês para a meta</small><b>${brl(ct.porMes)}</b><span>${brl(ct.gasto.valor)} em ${ct.gasto.faturas} faturas</span></div>`);
+    if (ct.milTot) kpis.push(`<div class="cc-kpi"><small>Custo do milheiro</small><b>${brl2(ct.milTot)}</b><span>anuidade de ${brl2(k.anuidade)} ÷ ${nBR(ct.tot)} pontos${ct.milGasto && ct.milGasto !== ct.milTot ? `<br>só com a meta de gasto: <b>${brl2(ct.milGasto)}</b>` : ''}</span></div>`);
+    const notas = [];
+    if (ct.porMes && lim100) notas.push(`A meta pede <b>${brl(ct.porMes)} por mês</b>; a isenção total da anuidade pede fatura <b>acima de ${brl(lim100.valor)}</b>.`);
+    if (ct.milTot && (k.metas || []).some(m => m.tipo === 'clube')) notas.push('O custo do milheiro não inclui a mensalidade do clube.');
+    const bens = k.pontuacao.concat(k.anuidadeTxt ? [k.anuidadeTxt] : [], k.isencao ? [k.isencao] : [], k.beneficios);
+    return `<div class="cc-op">
+      <div class="cc-op-cab"><b>${esc(k.n)}</b>${ct.tot ? `<span class="cc-tot">${nBR(ct.tot)}<small>pontos possíveis</small></span>` : ''}</div>
+      ${metas ? `<ul class="cc-metas">${metas}</ul>` : ''}
+      ${kpis.length ? `<div class="cc-contas">${kpis.join('')}</div>` : ''}
+      ${notas.length ? `<p class="cc-nota">${notas.join(' ')}</p>` : ''}
+      ${(k.links || []).filter(x => x.link).length ? `<div class="cc-pedir">${k.links.filter(x => x.link).map(x => `<a href="${esc(x.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>${esc(x.n.replace(/^cart[aã]o\s+/i, ''))}</a>`).join('')}</div>` : ''}
+      ${bens.length ? `<details class="cc-bens"><summary><svg><use href="#i-seta-d"/></svg>Benefícios do cartão (${bens.length})</summary><ul>${bens.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+    </div>`;
+  }).join('');
+  const regras = (c.notas || []).concat(c.regras || []);
+  const reg = (c.links || []).find(u => !/itau\.com|cartoes\/escolha/i.test(u) && (c.cartoes || []).every(k => (k.links || []).every(x => x.link !== u)));
+  return `<article class="cc-card" data-cc="${esc(c.id)}" style="--cc-cor:${esc(cor)}">
+    <div class="cc-topo">
+      <div class="cc-plast" data-sig="${esc(sig)}"></div>
+      <div class="cc-tit"><div class="cc-olho">${esc([c.banco, p.n].filter(Boolean).join(' · '))}</div><h3>${esc(c.titulo || 'Cartão em promoção')}</h3>${prazo}</div>
+      <div class="cc-max">${c.bonusMax ? `<small>bônus de até</small><b>${nBR(c.bonusMax)}</b><span>pontos ${esc(p.n || '')}</span>` : ''}</div>
+    </div>
+    ${ops ? `<div class="cc-grade">${ops}</div>` : ''}
+    <div class="cc-rodape">
+      ${regras.length || reg ? `<details><summary>Regras da promoção</summary><ul>${regras.map(x => `<li>${esc(x)}</li>`).join('')}${reg ? `<li><a href="${esc(reg)}" target="_blank" rel="noopener">Regulamento</a></li>` : ''}</ul></details>` : '<span class="esticar"></span>'}
+      <button type="button" class="bt vermelho-solido" data-cc-excluir="${esc(c.id)}"><svg><use href="#i-lixo"/></svg>Excluir</button>
+    </div>
+  </article>`;
+}
+document.addEventListener('click', e => {
+  const x = e.target.closest('[data-cc-excluir]'); if (!x) return;
+  const c = (DB.campanhas || []).find(k => k.id === x.dataset.ccExcluir); if (!c) return;
+  confirmar('Excluir esta promoção de cartão?', `${esc(c.titulo || 'A promoção')} sai de Cartões em promoção.`, () => {
+    DB.campanhas = DB.campanhas.filter(k => k.id !== c.id);
+    (DB.mural || []).forEach(m => { if (m.campId === c.id) delete m.campId; });
+    salvar(); ccDesenhar(); prBarraCampanhas(); try { _marcaColuna = ''; montarColunaMenu(); } catch(_){}
+    avisar('Promoção de cartão excluída.', 'ok');
+  });
+});
+/* roteamento: "cartao" é a 4ª aba; qualquer outra escolha de Campanhas a esconde */
+(function(){
+  const ii = irItemMenu;
+  irItemMenu = function(vv, a, sub){
+    if (a === 'fb-campanhas'){
+      if (sub === 'camp'){
+        const vivas = [['tra', 'transferencia'], ['com', 'compra'], ['clube', 'clube'], ['cartao', 'cartao']].filter(([, t]) => campanhasVivas(t).length).map(([k]) => k);
+        sub = vivas.length === 1 ? vivas[0] : campUltimo;
+      }
+      if (sub === 'cartao'){
+        campUltimo = 'cartao';
+        const r = ii.call(this, vv, a, 'tra');
+        campUltimo = 'cartao'; campCartao = true;
+        setTimeout(() => { campCartao = true; ccDesenhar(); prBarraCampanhas(); try { _marcaColuna = ''; marcarColunaMenu(); } catch(_){} }, 40);
+        return r;
+      }
+      campCartao = false; ccDesenhar();
+    }
+    return ii.call(this, vv, a, sub);
+  };
+  const sa = subAtivo;
+  subAtivo = function(sub){
+    if (sub === 'cartao') return campCartao && campGrupo === 'ct';
+    if (campCartao && ['tra', 'com', 'bonificada', 'ct'].includes(sub)) return false;
+    if (sub === 'camp') return sa.call(this, sub) || (campCartao && campGrupo === 'ct');
+    return sa.apply(this, arguments);
+  };
+  const ss = seloSub;
+  seloSub = function(sub){
+    if (sub === 'camp'){ try { return String(['transferencia', 'compra', 'clube', 'cartao'].reduce((n, t) => n + campanhasVivas(t).length, 0)); } catch(e){ return ''; } }
+    return ss.apply(this, arguments);
+  };
+  const mg = mostrarGrupoCamp;
+  mostrarGrupoCamp = function(){ campCartao = false; const r = mg.apply(this, arguments); ccDesenhar(); return r; };
+})();
+/* a barra de abas no alto de Campanhas, agora com a 4ª */
+prBarraCampanhas = function(){
+  const p = $('#p-fb-campanhas'); if (!p) return;
+  let bar = $('#prCampSeg');
+  if (!bar){ bar = document.createElement('div'); bar.id = 'prCampSeg'; bar.className = 'pr-camp-barra'; p.insertBefore(bar, p.firstChild); }
+  const ativo = subAtivo('cartao') ? 'cartao' : subAtivo('tra') ? 'tra' : subAtivo('com') ? 'com' : subAtivo('clube') ? 'clube' : '';
+  bar.hidden = !ativo;
+  if (!ativo) return;
+  const n = {tra:campanhasVivas('transferencia').length, com:campanhasVivas('compra').length, clube:campanhasVivas('clube').length, cartao:campanhasVivas('cartao').length};
+  bar.innerHTML = `<div class="seg pr-chips">${[['tra', 'Transferência bonificada'], ['com', 'Compra com desconto'], ['clube', 'Clubes em promoção'], ['cartao', 'Cartões em promoção']].map(([k, t]) => `<button type="button" class="${k === ativo ? 'on' : ''}" data-pr-c="${k}">${t} <span class="cont-disco">${n[k]}</span></button>`).join('')}</div>
+    <button type="button" class="bt" onclick="abrirColarMural()"><svg><use href="#i-copiar"/></svg>Colar anúncio</button>`;
+  bar.querySelectorAll('[data-pr-c]').forEach(b => b.onclick = () => irItemMenu('fabrica', 'fb-campanhas', b.dataset.prC));
+  const box = $('#ccPainel'); if (box && box.previousElementSibling !== bar) bar.after(box);
+};
+/* depois de gravar anúncios, a aba se redesenha */
+(function(){
+  const o = prRedesenharTudo;
+  prRedesenharTudo = function(){ const r = o.apply(this, arguments); try { ccDesenhar(); } catch(e){ console.error(e); } return r; };
+})();
+</script>
+
+<script id="cc2-js">
+/* promoção de cartão: tocar no item do Painel de bordo abre a aba Cartões em promoção */
+(function(){
+  if (typeof abrirCampanhasEm !== 'function') return;
+  const o = abrirCampanhasEm;
+  abrirCampanhasEm = function(tipo){ if (tipo === 'cartao') return irItemMenu('fabrica', 'fb-campanhas', 'cartao'); return o.apply(this, arguments); };
+})();
+</script>
 </body>
 </html>
