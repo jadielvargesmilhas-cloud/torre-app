@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 14:30';
+const BUILD = '2026-10-17 16:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -61488,11 +61488,11 @@ function eqDesenharLista(d){
         <span class="eq-perfil"><svg><use href="${pf.ic}"/></svg>${esc(pf.n)}${c.ativo === false ? ' · pausado' : ''}</span>
         <div class="eq-areas">${ar.length ? ar.map(x => `<span>${esc(x)}</span>`).join('') : '<span class="nada">Ainda sem acesso a nenhum menu</span>'}</div>
         <div class="eq-acoes"><button type="button" class="bt p fantasma" data-eq="editar"><svg><use href="#i-lapis"/></svg>Editar</button>
-          <button type="button" class="bt p fantasma" data-eq="vercomo"><svg><use href="#i-olho"/></svg>Ver como</button></div></div>`; }).join('')}</div>`
+          <button type="button" class="bt p fantasma" data-eq="vercomo"><svg><use href="#i-olho"/></svg>Ver Como</button></div></div>`; }).join('')}</div>`
     : `<div class="eq-vazio"><span class="eq-selo"><svg><use href="#i-usuarios"/></svg></span><b>Sua equipe começa aqui</b>
         <p>Cadastre quem vai ajudar na emissão, na administração e na gestão de milhas. Em um toque você escolhe um perfil pronto; depois ajusta, menu por menu, o que a pessoa vê e faz.</p>
         <button type="button" class="bt primario" data-eq="novo"><svg><use href="#i-mais"/></svg>Cadastrar o primeiro colaborador</button></div>`}
-    <div class="eq-nota"><svg><use href="#i-info"/></svg><span><b>Como funciona hoje:</b> as permissões ficam guardadas e o botão <b>Ver como</b> mostra a Torre exatamente como a pessoa vai ver. Para o colaborador entrar com o login dele, de outro aparelho, falta ligar o acesso na nuvem (Supabase), que é o próximo passo.</span></div>
+    <div class="eq-nota"><svg><use href="#i-info"/></svg><span><b>Como funciona hoje:</b> as permissões ficam guardadas e o botão <span class="eq-bt-falso" aria-hidden="true"><svg><use href="#i-olho"/></svg>Ver Como</span> mostra a Torre exatamente como a pessoa vai ver.<br>Para o colaborador entrar com o login dele, de outro aparelho, falta ligar o acesso na nuvem (Supabase), que é o próximo passo.</span></div>
     </div></div>
     <footer class="dr-pe"><button type="button" class="bt perigo sair" onclick="document.getElementById('dlgEquipe').close()">Fechar</button><span class="esticar"></span>
       ${cs.length ? `<button type="button" class="bt primario" data-eq="novo"><svg><use href="#i-mais"/></svg>Novo colaborador</button>` : ''}</footer></div>`;
@@ -61650,7 +61650,8 @@ function eqAplicarVisao(){
   let bq = document.getElementById('eqBloq');
   if (!pode || (nomeArea && !nomeArea.itens.some(n => eqTem(c, areaOn + '|' + n, 'v')))){
     if (!bq){ bq = document.createElement('div'); bq.id = 'eqBloq'; bq.className = 'eq-bloq'; document.body.appendChild(bq); }
-    bq.innerHTML = `<div><span class="eq-selo"><svg><use href="#i-olho-fechado"/></svg></span><b>Esta parte não está liberada</b><p>${esc(nomeCurto(c.nome))} não vê <b>${esc(atual || (nomeArea || {}).n || 'esta tela')}</b>. Libere em <b>Equipe</b>, no menu ${esc((nomeArea || {}).n || '')}.</p></div>`;
+    const _h = `<div><span class="eq-selo"><svg><use href="#i-olho-fechado"/></svg></span><b>Esta parte não está liberada</b><p>${esc(nomeCurto(c.nome))} não vê <b>${esc(atual || (nomeArea || {}).n || 'esta tela')}</b>. Libere em <b>Equipe</b>, no menu ${esc((nomeArea || {}).n || '')}.</p></div>`;
+    if (bq._h !== _h){ bq.innerHTML = _h; bq._h = _h; }
   } else if (bq) bq.remove();
 }
 (function(){
@@ -63092,6 +63093,27 @@ const _cc4Ben = t => { const s = semAcento(SEM_EMOJI(String(t || ''))).toLowerCa
   ccCartaoHTML = function(c){
     const h = ch2.apply(this, arguments);
     return h.replace(/(<a class="cc-pedir-geral" href="([^"]+)"[^>]*>[\s\S]*?<\/svg>)Pedir o cartão e ver o regulamento/, (t, a, u) => /regulamento|\.pdf/i.test(u) && !/solicit|pedir|cartoes\/escolha/i.test(u) ? a + 'Ver o regulamento' : t);
+  };
+})();
+</script>
+<style id="eqn-css">
+/* "Ver Como" no texto da Equipe: com cara de botão, mas sem clique (17/10/2026) */
+.eq-bt-falso{ display:inline-block; padding:2px 9px; margin:0 2px; border-radius:8px; border:1px solid var(--fio-forte, var(--fio)); background:color-mix(in srgb, var(--giz) 6%, transparent);
+  color:var(--giz); font-weight:600; font-size:.92em; line-height:1.5; vertical-align:baseline; pointer-events:none; cursor:default; user-select:none; white-space:nowrap; }
+.eq-bt-falso svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; vertical-align:-2px; margin-right:5px; }
+</style>
+<script id="eqfix-js">
+/* Ver Como: a verificação da visão mexe na tela, e mexer na tela disparava a
+   verificação de novo, sem fim: a página congelava quando a pessoa não tinha
+   acesso à tela aberta (17/10/2026). Agora ela não se chama de dentro dela mesma. */
+(function(){
+  if (typeof eqAplicarVisao !== 'function') return;
+  const o = eqAplicarVisao; let rodando = false, ate = 0;
+  eqAplicarVisao = function(){
+    if (rodando || Date.now() < ate) return;
+    rodando = true;
+    try { return o.apply(this, arguments); }
+    finally { rodando = false; ate = Date.now() + 30; }
   };
 })();
 </script>
