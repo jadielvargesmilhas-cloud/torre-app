@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 11:15';
+const BUILD = '2026-10-17 12:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -22197,6 +22197,10 @@ function cartaoBonificada(c){
           <span>${esc(c.titulo || '')}</span></div>
       </div>
       <div class="cp-prazo"><span class="cp-fecha cp-${urg}">${prazo}</span><small>${c.fim ? dataBR(c.fim) : ''}</small></div>
+      <div class="cp-acoes">
+        <button class="bt p fantasma icone" onclick="editarBonificada('${c.id}')" data-dica="Editar" aria-label="Editar campanha"><svg><use href="#i-lapis"/></svg></button>
+        <button class="bt p fantasma icone" onclick="apagar('campanhas','${c.id}','a campanha')" data-dica="Apagar" aria-label="Apagar campanha"><svg><use href="#i-lixo"/></svg></button>
+      </div>
     </header>
     <div class="bf-miolo">
       <div class="cp-hero">
@@ -29191,7 +29195,7 @@ function abrirFichaPrograma(p){
     <div class="jn-lista">${l.map(sv => `<div class="jn-linha">${avatarConta((DB.contas || []).find(c => c.id === sv.contaId) || {nome:nomeConta(sv.contaId)}, 'jn-pos')}
       <div class="jn-nome"><b>${esc(nomeConta(sv.contaId))}</b><div class="jn-barra"><i style="width:${total ? (sv.qtd / total * 100).toFixed(1) : 0}%;background:${prog(p).cor || 'var(--ouro)'}"></i></div></div>
       <div class="linha" style="gap:8px;flex-wrap:nowrap"><div class="jn-num"><b>${nBR(sv.qtd)}</b><span>${total ? pct(sv.qtd / total * 100, 0) : ''}</span></div>
-      <button class="bt p fantasma icone" onclick="fecharFolha();setTimeout(()=>editarSaldo('${sv.id}'),60)" data-dica="Ajustar"><svg><use href="#i-lapis"/></svg></button></div></div>`).join('')}</div>
+      <button class="bt p fantasma icone" onclick="fecharFolha();setTimeout(()=>editarSaldo('${sv.id}'),60)" data-dica="Ajustar"><svg><use href="#i-lapis"/></svg></button><button class="bt p fantasma icone" onclick="fecharFolha();setTimeout(()=>apagar('saldos','${sv.id}','o saldo'),60)" data-dica="Excluir" aria-label="Excluir o saldo"><svg><use href="#i-lixo"/></svg></button></div></div>`).join('')}</div>
     <div class="olho anil" style="margin:18px 0 8px">O seu milheiro</div>
     ${desenharTermometro(p, c, {semNome:true})}
     ${prog(p).nota ? `<div class="olho anil" style="margin:18px 0 8px">Regras do programa</div><div class="pilha" style="gap:4px">${linhasNota(prog(p).nota, 'fraco', 'line-height:1.55')}</div>` : ''}
@@ -29444,7 +29448,7 @@ function editarSaldo(id){
         <div class="dica">O número que o programa mostra agora. Não é entrada nem saída: é a foto do extrato.</div></div>
     </div>
     <div id="sdMovimento" style="margin-top:14px"></div>`,
-    pe:`${id ? `<button class="bt perigo" onclick="fecharFolha();apagar('saldos','${id}','o saldo')">Remover</button>` : ''}<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarSaldo">Salvar</button>`
+    pe:`${id ? `<button class="bt vermelho-solido" onclick="fecharFolha();apagar('saldos','${id}','o saldo')"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarSaldo">Salvar</button>`
   });
 
   const previa = () => {
@@ -33501,7 +33505,7 @@ function editarPlanoViagem(id){
     <p class="fraco" style="font-size:calc(13px * var(--esc));line-height:1.5;margin:0 0 11px">Visto, passaporte, check-in, cancelamento grátis. Entram no painel de avisos junto com o resto, e quem vence hoje sobe para o topo.</p>
     <div id="pvPrazos"></div>
     <button class="bt p fantasma" id="btPvPrazo" style="margin-top:10px"><svg><use href="#i-mais"/></svg>Prazo</button>`,
-    pe:`${id ? `<button class="bt fantasma" onclick="apagarPlano('${id}')"><svg><use href="#i-lixo"/></svg>Apagar</button>` : ''}
+    pe:`${id ? `<button class="bt vermelho-solido" onclick="apagarPlano('${id}')"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}
         <div class="esticar"></div>
         <button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarPlano">Salvar</button>`
   });
@@ -45104,6 +45108,7 @@ function cartaoProntoOferta(x){
     <div class="ds-acoes">
       <button class="bt p primario" onclick="comprarComOferta('${d.id}')"><svg><use href="#i-ok"/></svg>Comprei</button>
       <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+      <button class="bt p fantasma icone" onclick="apagar('desejos','${d.id}','o item da lista')" data-dica="Tirar da lista" aria-label="Tirar da lista"><svg><use href="#i-lixo"/></svg></button>
     </div></div></div>`;
 }
 function comprarComOferta(id){
@@ -45290,6 +45295,7 @@ function renderDesejos(){
         ${melhor.link ? `<a class="bt p fantasma" href="${esc(melhor.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a loja</a>` : ''}
         <button class="bt p fantasma icone" onclick="dispensarOfertaDesejo('${d.id}',this)" data-dica="Não me interessa agora" aria-label="Não me interessa agora"><svg><use href="#i-olho-fechado"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
+        <button class="bt p fantasma icone" onclick="apagar('desejos','${d.id}','o item da lista')" data-dica="Tirar da lista" aria-label="Tirar da lista"><svg><use href="#i-lixo"/></svg></button>
       </div></div></div>`;
   };
   host.innerHTML = `
@@ -52270,7 +52276,7 @@ function prCartaoHTML(c, linhas, total, i, cheio){
   return `<article class="mp-bloco pr-cartao mp-${c.cor}${total ? '' : ' zero'}" style="--i:${i}">
     <header>
       <span class="mp-ic"><svg><use href="${c.ic}"/></svg></span>
-      <div class="mp-bloco-tit"><h4>${esc(c.t)}</h4>${melhor && total ? `<small>Melhor: ${melhor.rot.toLowerCase()}</small>` : ''}</div>
+      <div class="mp-bloco-tit"><h4>${esc(c.t)}</h4>${melhor && total ? `<small>Melhor: <span class="mp-melhor${melhor.z === 'brasa' ? ' ruim' : ''}">${melhor.rot.toLowerCase()}</span></small>` : ''}</div>
       <div class="mp-num"><b>${total}</b><small>${c.k === 'anuncio' ? 'para decidir' : 'no ar'}</small></div>
     </header>
     ${linhas.length ? `<div class="mpr-lista">${mostrar.map(prLinhaHTML).join('')}</div>`
@@ -57666,8 +57672,8 @@ function mostrarAvisosRenovacao(){
         <p>${mud ? `Já está marcada a troca para <b style="display:inline">${esc(mud)}</b>.<br>Confira no site do programa se a mudança foi feita antes de ${dataBR(a.renova)}.`
           : `Renovar costuma perder o bônus da campanha. Faça o downgrade ou cancele antes de ${dataBR(a.renova)} para não pagar caro.`}</p></div>
       <button type="button" class="rn-x" data-rn-fechar aria-label="Fechar"><svg><use href="#i-x"/></svg></button></div>
-      <div class="rn-dias"><strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a renovação' : 'dias para a renovação'} · ${brl2(a.valor)}</span></div>
-      <div class="rn-acoes"><button type="button" class="rn-pri" data-rn-ver>Ver o clube</button><button type="button" data-rn-fechar>Depois</button><button type="button" data-rn-ok>Já resolvi</button></div>`;
+      <div class="rn-dias"><strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a <b class="rn-dest">renovação</b>' : 'dias para a <b class="rn-dest">renovação</b>'} · <b class="rn-dest">${brl2(a.valor)}</b></span></div>
+      <div class="rn-acoes"><button type="button" class="rn-pri" data-rn-ver>Ver o Clube</button><button type="button" data-rn-fechar>Depois</button><button type="button" data-rn-ok>Já resolvi</button></div>`;
     const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
     el.querySelectorAll('[data-rn-fechar]').forEach(b => b.onclick = sair);
     el.querySelector('[data-rn-ver]').onclick = () => { sair(); try { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); setTimeout(() => { const l = document.querySelector(`[data-assin="${a.id}"]`); if (l) l.scrollIntoView({block:'center', behavior:'smooth'}); }, 500); } catch(_){} };
@@ -58987,7 +58993,7 @@ function linhaLojaHTML(l){
     <span class="ljl-a">
       ${l.link ? `<a class="bt p fantasma icone" href="${esc(l.link)}" target="_blank" rel="noopener" data-dica="Abrir a loja pelo site do programa" aria-label="Abrir a loja"><svg><use href="#i-link"/></svg></a>` : `<span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-link"/></svg></span>`}
       <button type="button" class="bt p fantasma" data-ljl-vale="${esc(String(l.id))}">Vale a pena?</button>
-      ${l.origem === 'loja' ? `<button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();editarLoja('${l.id}')" data-dica="Editar" aria-label="Editar"><svg><use href="#i-lapis"/></svg></button>` : l.campId ? `<button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();editarCampanha('${l.campId}')" data-dica="Editar a campanha" aria-label="Editar a campanha"><svg><use href="#i-lapis"/></svg></button>` : `<span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-lapis"/></svg></span>`}
+      ${l.origem === 'loja' ? `<button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();editarLoja('${l.id}')" data-dica="Editar" aria-label="Editar"><svg><use href="#i-lapis"/></svg></button><button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();apagar('lojas','${l.id}','a loja')" data-dica="Excluir" aria-label="Excluir"><svg><use href="#i-lixo"/></svg></button>` : l.campId ? `<button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();editarCampanha('${l.campId}')" data-dica="Editar a campanha" aria-label="Editar a campanha"><svg><use href="#i-lapis"/></svg></button><button type="button" class="bt p fantasma icone" onclick="event.stopPropagation();apagar('campanhas','${l.campId}','a campanha')" data-dica="Excluir a campanha" aria-label="Excluir a campanha"><svg><use href="#i-lixo"/></svg></button>` : `<span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-lapis"/></svg></span><span class="bt p fantasma icone ljl-ph" aria-hidden="true"><svg><use href="#i-lixo"/></svg></span>`}
     </span>
   </div>`;
 }
@@ -62454,6 +62460,57 @@ function campMelhorAba(){
 .rn-card .rn-acoes button.rn-pri{ background:#6FB7FF; border-color:transparent; color:#06182C; }
 .rn-card .rn-acoes button[data-rn-fechar]{ color:#F2C14E; border-color:color-mix(in srgb, #F2C14E 50%, transparent); background:color-mix(in srgb, #F2C14E 12%, transparent); }
 .rn-card .rn-acoes button[data-rn-ok]{ color:#5FD39A; border-color:color-mix(in srgb, #5FD39A 50%, transparent); background:color-mix(in srgb, #5FD39A 12%, transparent); }
+.rn-card .rn-dias b.rn-dest{ display:inline !important; margin:0; font-size:inherit; font-weight:700; color:#F3F6FB; }
 </style>
+<style id="exc-css">
+/* ══ AUDITORIA DE EXCLUSÃO (17/10/2026, pedido do Jadiel): todo botão de excluir fica visível ══ */
+.ds-item:not(.pronto) .ds-acoes, .ds-item:not(.pronto) .ds-corpo > .ds-acoes{ opacity:1 !important; }
+.ex-acoes{ opacity:1 !important; }
+.ljl-a{ flex-wrap:nowrap; }
+/* lojas em lista, celular e tablet: lápis e lixeira numa linha própria, à direita */
+@media (max-width:1099px){
+  .ljl-l .ljl-a{ display:flex !important; grid-area:a; justify-content:flex-end; margin-top:2px; }
+  .ljl-l .ljl-a > :not(button[onclick*="editar"]):not(button[onclick*="apagar"]){ display:none !important; }
+}
+@media (max-width:760px){ .ljl-l{ grid-template-areas:"av n m" "av p v" "av a a" !important; } }
+@media (min-width:761px) and (max-width:1099px){ .ljl-l{ grid-template-areas:"av n m v" "av p m v" "av a a a" !important; } }
+.eq-acoes .eq-x{ margin-left:auto; }
+/* Mapa das Ofertas: "não compensa" em vermelho (17/10/2026) */
+.mp-bloco-tit small .mp-melhor{ all:unset; display:inline; }
+.mp-bloco-tit small .mp-melhor.ruim{ color:var(--brasa); font-weight:700; }
+</style>
+<script id="exc-js">
+/* janelas de editar que não tinham Excluir: loja, item da lista de desejos e compra bonificada */
+(function(){
+  const pe = (colecao, id, oQue) => {
+    const f = document.getElementById('folhaPe'); if (!f || !id || f.querySelector('.bt.vermelho-solido')) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'bt vermelho-solido'; b.innerHTML = '<svg><use href="#i-lixo"/></svg>Excluir';
+    b.onclick = () => { fecharFolha(); setTimeout(() => apagar(colecao, id, oQue), 60); };
+    const primeiro = f.querySelector('.bt'); if (primeiro) primeiro.after(b); else f.prepend(b);
+  };
+  [['editarLoja', 'lojas', 'a loja'], ['editarDesejo', 'desejos', 'o item da lista'], ['editarBonificada', 'campanhas', 'a campanha']].forEach(([fn, col, oq]) => {
+    if (typeof window[fn] !== 'function') return;
+    const o = window[fn];
+    window[fn] = function(id){ const r = o.apply(this, arguments); try { if (id && (DB[col] || []).some(x => String(x.id) === String(id))) pe(col, id, oq); } catch(e){ console.error(e); } return r; };
+  });
+  /* Equipe: excluir direto no cartão do colaborador */
+  if (typeof eqDesenharLista === 'function'){
+    const o = eqDesenharLista;
+    eqDesenharLista = function(d){
+      const r = o.apply(this, arguments);
+      (d || document).querySelectorAll('.eq-card').forEach(card => {
+        const ac = card.querySelector('.eq-acoes'); if (!ac || ac.querySelector('.eq-x')) return;
+        const id = card.dataset.id, c = eqDB().find(x => x.id === id); if (!c) return;
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'bt p fantasma icone eq-x'; b.dataset.dica = 'Excluir'; b.setAttribute('aria-label', 'Excluir ' + c.nome);
+        b.innerHTML = '<svg><use href="#i-lixo"/></svg>';
+        b.onclick = () => { const dlg = card.closest('dialog'); if (dlg) dlg.close(); confirmar(`Excluir ${c.nome} da equipe?`, `${esc(c.nome)} perde todos os acessos. As permissões são apagadas.`, () => {
+          DB.colaboradores = eqDB().filter(x => x.id !== c.id); salvar(); if (typeof _eqVendo !== 'undefined' && _eqVendo === c.id) eqSairVisao(); avisar(`${esc(c.nome)} saiu da equipe.`, 'ok'); abrirEquipe(); }, 'Excluir', true); };
+        ac.appendChild(b);
+      });
+      return r;
+    };
+  }
+})();
+</script>
 </body>
 </html>
