@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-18 12:45';
+const BUILD = '2026-10-18 17:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -52401,8 +52401,13 @@ function avMenuMotivo(k, btn, opts){
    quando aparecer coisa melhor no mesmo programa, para os itens que aquela
    oferta servia. O item continua na lista, com o porquê escrito. */
 /* "Não uso este programa" saiu da lista (15/10/2026), mas fica aqui para os avisos já dispensados com ele. */
-const MOTIVOS_DISPENSA = ['Não compensa para mim', 'Não encontrei o produto exato', 'Não uso este programa', 'O prazo não dá para mim', 'Esperar uma campanha melhor'];
+const MOTIVOS_DISPENSA = ['Não compensa para mim', 'Não encontrei o produto exato', 'Não uso este programa', 'O prazo não dá para mim', 'Esperar uma campanha melhor',
+  /* listas por categoria (18/10/2026): todo motivo que diz "esta oferta não serve" também dispensa a oferta */
+  'O prazo não dá pra mim', 'Prefiro esperar uma campanha melhor', 'Não utilizo esse programa', 'Não utilizo essa Cia Aérea', 'Já tenho esse Cartão', 'Já tenho esse clube',
+  'Banco não autorizou emissão', 'Metas altas para o meu padrão/perfil', 'Não tenho cartão elegível', 'Perdi o prazo do cadastro', 'Não tenho pontos nesse programa', 'Bônus baixo para mim',
+  'Exige clube que não tenho', 'Milheiro caro para mim', 'Limite de compra baixo', 'Mensalidade alta para mim', 'Não vou viajar nessas datas', 'Não se aplica a mim'];
 const MOTIVO_ESPERA = 'Esperar uma campanha melhor';
+function _ehEspera(m){ return m === MOTIVO_ESPERA || m === 'Prefiro esperar uma campanha melhor'; }
 const _candOrig = candidatosDesejo;
 function _chaveDesejo(d){ return String(d.id || d.n); }
 function _bateDispensa(z, d, o){
@@ -52424,7 +52429,7 @@ function dispensasAtivas(){
     if (!z) return;
     z.k = k; z.motivo = e.motivo || ''; z.em = e.em || 0;
     /* nível dispensado: guardado uma vez, para valer mesmo depois que a oferta acabar */
-    if (z.motivo === MOTIVO_ESPERA && !e.barra){
+    if (_ehEspera(z.motivo) && !e.barra){
       const ds = [], mults = [];
       (DB.desejos || []).filter(d => !d.feito).forEach(d => {
         _candOrig(d, true).filter(o => _bateDispensa(z, d, o)).forEach(o => { ds.push(_chaveDesejo(d)); mults.push({m:o.mult, prog:o.prog, loja:o.loja.n}); });
@@ -52439,7 +52444,7 @@ function dispensasAtivas(){
 }
 function dispensaDe(d, o, zs){
   return (zs || dispensasAtivas()).find(z => _bateDispensa(z, d, o)
-    || (z.motivo === MOTIVO_ESPERA && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)) && o.prog === z.barra.prog && Number(o.mult) <= Number(z.barra.mult) + 1e-9)) || null;
+    || (_ehEspera(z.motivo) && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)) && o.prog === z.barra.prog && Number(o.mult) <= Number(z.barra.mult) + 1e-9)) || null;
 }
 let _dispFiltro = null, _dispZs = null;
 candidatosDesejo = function(d, vivos){
@@ -52459,13 +52464,13 @@ candidatosDesejo = function(d, vivos){
       if (fora){
         const z = fora.z, b = z.barra;
         x.esperando = {k:z.k, motivo:z.motivo, loja:fora.o.loja.n, mult:fora.o.mult,
-          txt: z.motivo === MOTIVO_ESPERA
+          txt: _ehEspera(z.motivo)
             ? `Você decidiu esperar campanha melhor que ${nBRdec(b ? b.mult : fora.o.mult)}× (${b ? b.loja : fora.o.loja.n}, ${prog((b && b.prog) || fora.o.prog).n}). A Torre avisa quando aparecer.`
             : `Você dispensou ${fora.o.loja.n} (${nBRdec(fora.o.mult)}×): ${(z.motivo || 'não me interessa').toLowerCase()}.`};
       }
       /* a oferta dispensada já acabou: a espera continua valendo */
       else if (!x.melhor){
-        const z = zs.find(z => z.motivo === MOTIVO_ESPERA && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)));
+        const z = zs.find(z => _ehEspera(z.motivo) && z.barra && (z.barra.ds || []).includes(_chaveDesejo(d)));
         if (z) x.esperando = {k:z.k, motivo:z.motivo, loja:z.barra.loja, mult:z.barra.mult,
           txt:`Você decidiu esperar campanha melhor que ${nBRdec(z.barra.mult)}× (${z.barra.loja}, ${prog(z.barra.prog).n}). A Torre avisa quando aparecer.`};
       }
@@ -52491,7 +52496,7 @@ function dispensarOfertaDesejo(id, btn){
     prRedesenharTudoSeguro();
     try { if (typeof renderMesa === 'function') renderMesa(); } catch(e){}
     const txt = resolvido ? `<b>${esc(d.n)}</b> saiu da lista: resolvido de outro jeito.`
-      : motivo === MOTIVO_ESPERA ? `<b>${esc(d.n)}</b> volta para Na mira. A Torre espera campanha melhor que ${nBRdec(m.mult)}× na ${esc(prog(m.prog).n)}.`
+      : _ehEspera(motivo) ? `<b>${esc(d.n)}</b> volta para Na mira. A Torre espera campanha melhor que ${nBRdec(m.mult)}× na ${esc(prog(m.prog).n)}.`
       : `<b>${esc(d.n)}</b> volta para Na mira, sem a ${esc(m.loja.n)}. <i class="av-mot-rot">· ${esc(motivo)}</i>`;
     qcBarra(txt, () => {
       const st = avEstado(); delete st[k];
@@ -63708,5 +63713,587 @@ html .cm-titulo .cm-tit-icone > svg[data-ic], html[data-theme] .cm-titulo .cm-ti
 .pr-hoje-cab:has(> .bt-colar){ display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; }
 .pr-hoje-cab > .bt-colar{ align-self:center; }
 </style>
+<style id="mot-css">
+/* ══ "POR QUE NÃO INTERESSA?" POR CATEGORIA (18/10/2026) ══ */
+.av-outro{ display:flex; gap:8px; padding:8px 12px 12px; }
+.av-outro input{ flex:1 1 auto; min-width:0; }
+.av-outro .bt{ flex:0 0 auto; }
+.av-regras{ margin-top:16px; }
+.av-regra{ display:flex; align-items:center; gap:10px; }
+.av-regra .item-corpo{ flex:1 1 auto; min-width:0; }
+</style>
+<script id="mot-js">
+/* ══ "POR QUE NÃO INTERESSA?" COM LISTA PARA CADA TIPO DE AVISO (18/10/2026, pedido do Jadiel) ══
+   1. Cada categoria tem a sua lista de motivos (cartão para pedir com metas,
+      gaste e ganhe, transferência, compra de pontos, clube, lojas, desconto em
+      resgate e alertas). Em todas, "Outro" abre um campo para escrever.
+   2. "Já tenho esse Cartão" para de avisar promoções daquele cartão (banco e
+      programa); "Já tenho esse clube" para de avisar promoções daquele clube;
+      "Não utilizo essa Cia Aérea" / "Não utilizo esse programa" para de avisar
+      o que tiver aquele programa. Tudo volta em "Ocultos e adiados".
+   3. Sem duplicados: anúncio do mural que já virou campanha não aparece de novo
+      como aviso; campanha igual (mesmo tipo, programas, banco, fim e título)
+      não é criada duas vezes, e as repetidas que já existiam são juntadas. */
+const AV_LISTAS = {
+  cartao:['Já tenho esse Cartão', 'O prazo não dá pra mim', 'Não utilizo essa Cia Aérea', 'Banco não autorizou emissão', 'Metas altas para o meu padrão/perfil', 'Prefiro esperar uma campanha melhor', 'Outro'],
+  gg:['Não tenho cartão elegível', 'Metas altas para o meu padrão/perfil', 'Perdi o prazo do cadastro', 'Não utilizo esse programa', 'Prefiro esperar uma campanha melhor', 'Outro'],
+  tra:['Não tenho pontos nesse programa', 'Bônus baixo para mim', 'Não utilizo essa Cia Aérea', 'Exige clube que não tenho', 'O prazo não dá pra mim', 'Prefiro esperar uma campanha melhor', 'Outro'],
+  com:['Milheiro caro para mim', 'Sem dinheiro agora', 'Não utilizo esse programa', 'Limite de compra baixo', 'O prazo não dá pra mim', 'Prefiro esperar uma campanha melhor', 'Outro'],
+  clube:['Já tenho esse clube', 'Mensalidade alta para mim', 'Não utilizo esse programa', 'O prazo não dá pra mim', 'Prefiro esperar uma campanha melhor', 'Outro'],
+  loja:['Não compensa para mim', 'Não encontrei o produto exato', 'O prazo não dá pra mim', 'Sem dinheiro agora', 'Prefiro esperar uma campanha melhor', 'Já resolvi de outro jeito', 'Outro'],
+  resgate:['Não tenho cartão elegível', 'Não vou viajar nessas datas', 'Não utilizo essa Cia Aérea', 'O prazo não dá pra mim', 'Outro'],
+  geral:['Não se aplica a mim', 'Já resolvi de outro jeito', 'O prazo não dá pra mim', 'Outro']
+};
+const _avCatCamp = c => !c ? 'geral' : c.tipo === 'transferencia' ? 'tra' : c.tipo === 'compra' ? 'com' : c.tipo === 'clube' ? 'clube'
+  : c.tipo === 'cartao' ? (c.beneficio === 'gasteganhe' ? 'gg' : 'cartao') : c.tipo === 'bonificada' ? 'loja' : 'geral';
+/* de que tipo é o aviso, e de que programa / banco */
+function avInfo(k){
+  const p = String(k || '').split(':'), out = {cat:'geral', para:'', banco:'', camp:null};
+  const campDe = id => (DB.campanhas || []).find(c => String(c.id) === String(id));
+  if (p[0] === 'camp'){ const c = campDe(p.slice(1).join(':')); if (c) Object.assign(out, {cat:_avCatCamp(c), para:c.para || '', banco:c.banco || '', camp:c}); return out; }
+  if (p[0] === 'mural'){
+    const m = (DB.mural || []).find(x => 'mural:' + x.id === k); if (!m) return out;
+    const c = m.campId && campDe(m.campId);
+    if (c) return Object.assign(out, {cat:_avCatCamp(c), para:c.para || '', banco:c.banco || '', camp:c});
+    const sg = m.sugestao || {};
+    out.cat = m.cat === 'cartoes' ? (sg.beneficio === 'gasteganhe' ? 'gg' : 'cartao') : m.cat === 'compras' ? 'loja' : m.cat === 'pontos' ? 'com' : m.cat === 'resgate' ? 'resgate' : 'geral';
+    out.para = sg.para || (typeof _ccAchaProg === 'function' ? _ccAchaProg(m.titulo || '') : '') || '';
+    out.banco = sg.banco || (typeof _ccBanco === 'function' ? _ccBanco(m.titulo || '') : '') || '';
+    return out;
+  }
+  if (p[0] === 'loja' || p[0] === 'desejo') out.cat = 'loja';
+  return out;
+}
+/* regras: "Já tenho" e "Não utilizo" */
+function avRegras(){ DB.avRegras = Array.isArray(DB.avRegras) ? DB.avRegras : []; return DB.avRegras; }
+function avRegraDe(motivo, info){
+  if (motivo === 'Já tenho esse Cartão' && (info.banco || info.para)) return {tipo:'cartao', banco:info.banco, para:info.para};
+  if (motivo === 'Já tenho esse clube' && info.para) return {tipo:'clube', para:info.para};
+  if ((motivo === 'Não utilizo essa Cia Aérea' || motivo === 'Não utilizo esse programa') && info.para) return {tipo:'prog', para:info.para};
+  return null;
+}
+function avRegraRotulo(r){
+  const P = r.para ? prog(r.para).n : '';
+  return r.tipo === 'cartao' ? `Já tenho o cartão ${[r.banco, P].filter(Boolean).join(' · ')}: não avisar promoções dele`
+    : r.tipo === 'clube' ? `Já tenho o clube ${P}: não avisar promoções dele` : `Não utilizo ${P}: não avisar o que for desse programa`;
+}
+function avRegraBate(r, info){
+  if (!info || info.cat === 'loja') return false;
+  if (r.tipo === 'cartao') return info.cat === 'cartao' && (info.banco || '') === (r.banco || '') && (info.para || '') === (r.para || '');
+  if (r.tipo === 'clube') return info.cat === 'clube' && info.para === r.para;
+  if (r.tipo === 'prog') return !!info.para && info.para === r.para;
+  return false;
+}
+function avEscondidoPorRegra(k){
+  if (!/^(camp|mural):/.test(String(k))) return false;
+  const rs = avRegras(); if (!rs.length) return false;
+  const info = avInfo(k); return rs.some(r => avRegraBate(r, info));
+}
+(function(){
+  if (typeof avisoEscondido === 'function'){
+    const o = avisoEscondido;
+    avisoEscondido = function(k){ return o.apply(this, arguments) || avEscondidoPorRegra(k); };
+  }
+  /* o menu de motivos, com a lista da categoria e "Outro" com campo */
+  avMenuMotivo = function(k, btn, opts){
+    opts = opts || {};
+    if (typeof fecharSeletorLista === 'function') fecharSeletorLista();
+    document.querySelectorAll('.av-menu, .av-menu-fundo, .av-desfazer').forEach(x => x.remove());
+    const info = avInfo(k), lista = AV_LISTAS[info.cat] || AV_LISTAS.geral;
+    const painel = document.createElement('div'); painel.className = 'tsl av-menu av-motivos'; painel.setAttribute('role', 'menu'); painel.dataset.cat = info.cat;
+    painel.innerHTML = `<div class="tsl-cab"><span>${opts.titulo || 'Por que não interessa?'}</span><button type="button" data-fechar>Fechar</button></div>
+      <div class="tsl-lista">${lista.map((m, i) => `<button type="button" class="tsl-op av-mot" role="menuitemcheckbox" aria-checked="false" data-i="${i}"><span class="av-caixa" aria-hidden="true"><svg><use href="#i-ok"/></svg></span>${esc(m)}</button>`).join('')}</div>`;
+    let fundo = null;
+    if (innerWidth <= 640){ fundo = document.createElement('div'); fundo.className = 'tsl-fundo av-menu-fundo'; document.body.appendChild(fundo); }
+    document.body.appendChild(painel);
+    const fechar = () => { painel.remove(); if (fundo) fundo.remove(); document.removeEventListener('pointerdown', fora, true); document.removeEventListener('keydown', esc_, true); };
+    const fora = e => { if (!painel.contains(e.target) && e.target !== btn && !(btn && btn.contains(e.target))) fechar(); };
+    const esc_ = e => { if (e.key === 'Escape') fechar(); };
+    const concluir = (motivo, b) => {
+      if (painel.dataset.feito) return; painel.dataset.feito = '1';
+      if (b){ b.classList.add('marcado'); b.setAttribute('aria-checked', 'true'); }
+      setTimeout(() => {
+        fechar();
+        avAgir(k, 'oculto', btn);
+        try { const st = avEstado(); if (st[k]){ st[k].motivo = motivo; st[k].cat = info.cat; if (opts.forte) st[k].forte = true; } } catch(e){}
+        const regra = avRegraDe(motivo, info);
+        if (regra){
+          const rs = avRegras();
+          if (!rs.some(r => r.tipo === regra.tipo && (r.para || '') === (regra.para || '') && (r.banco || '') === (regra.banco || ''))) rs.push(Object.assign({id:uid(), em:Date.now()}, regra));
+          setTimeout(() => avisar(`${esc(avRegraRotulo(regra))}. Para voltar a avisar, abra "Ocultos e adiados".`, 'ok', 7000), 300);
+        }
+        try { salvar(); } catch(e){}
+        if (regra){ try { avRedesenhar(); } catch(e){} }
+        if (opts.depois){ try { opts.depois(motivo); } catch(e){ console.error(e); } return; }
+        const barra = document.querySelector('.av-desfazer span'); if (barra) barra.insertAdjacentHTML('beforeend', ` <i class="av-mot-rot">· ${esc(motivo)}</i>`);
+      }, 260);
+    };
+    painel.querySelectorAll('.av-mot').forEach(b => b.onclick = () => {
+      const motivo = lista[+b.dataset.i];
+      if (motivo !== 'Outro') return concluir(motivo, b);
+      /* "Outro": abre o campo para escrever */
+      if (painel.querySelector('.av-outro')) return painel.querySelector('.av-outro input').focus();
+      b.classList.add('marcado'); b.setAttribute('aria-checked', 'true');
+      b.insertAdjacentHTML('afterend', `<div class="av-outro"><input type="text" placeholder="Escreva o motivo" maxlength="140" aria-label="Outro motivo"><button type="button" class="bt p primario">Salvar</button></div>`);
+      const cx = painel.querySelector('.av-outro'), inp = cx.querySelector('input');
+      const ok = () => { const t = inp.value.trim().replace(/\s+/g, ' '); if (!t){ inp.focus(); inp.animate([{transform:'translateX(0)'}, {transform:'translateX(-5px)'}, {transform:'translateX(5px)'}, {transform:'translateX(0)'}], {duration:250}); return; } concluir('Outro: ' + t, null); };
+      cx.querySelector('button').onclick = ok;
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); ok(); } });
+      setTimeout(() => inp.focus(), 30);
+      if (innerWidth > 640){ const r = painel.getBoundingClientRect(); if (r.bottom > innerHeight - 8) painel.style.top = Math.max(8, innerHeight - 8 - r.height) + 'px'; }
+    });
+    painel.querySelector('[data-fechar]').onclick = fechar; if (fundo) fundo.onclick = fechar;
+    if (innerWidth > 640 && btn){
+      const r = btn.getBoundingClientRect(); painel.style.minWidth = '260px';
+      const alt = painel.offsetHeight, larg = Math.max(painel.offsetWidth, 260);
+      let topo = r.bottom + 6; if (topo + alt > innerHeight - 8) topo = Math.max(8, r.top - alt - 6);
+      let esq = r.right - larg; if (esq < 8) esq = 8;
+      painel.style.top = Math.round(topo) + 'px'; painel.style.left = Math.round(esq) + 'px';
+    }
+    setTimeout(() => { document.addEventListener('pointerdown', fora, true); document.addEventListener('keydown', esc_, true); }, 0);
+  };
+  /* "Ocultos e adiados": as regras aparecem com "Voltar a avisar" */
+  if (typeof abrirAvisosOcultos === 'function'){
+    const o = abrirAvisosOcultos;
+    abrirAvisosOcultos = function(){
+      const r = o.apply(this, arguments);
+      const rs = avRegras(), corpo = document.getElementById('folhaCorpo');
+      if (rs.length && corpo){
+        corpo.insertAdjacentHTML('beforeend', `<div class="av-grupo av-regras"><div class="av-grupo-cab"><svg><use href="#i-olho-fechado"/></svg>Não avisar mais</div>${rs.map(x => `<div class="item av-oc av-regra"><div class="item-corpo"><div class="item-tit">${esc(avRegraRotulo(x))}</div><div class="item-sub">desde ${new Date(x.em).toLocaleDateString('pt-BR')}</div></div><button type="button" class="bt p" data-av-regra="${esc(x.id)}">Voltar a avisar</button></div>`).join('')}</div>`);
+        corpo.querySelectorAll('[data-av-regra]').forEach(b => b.onclick = () => { DB.avRegras = avRegras().filter(x => x.id !== b.dataset.avRegra); salvar(); try { avRedesenhar(); } catch(e){} abrirAvisosOcultos(); avisar('Pronto: a Torre volta a avisar.', 'ok', 3500); });
+        const vazio = corpo.querySelector('.vazio'); if (vazio) vazio.remove();
+      }
+      return r;
+    };
+  }
+  /* sem duplicados: anúncio que já virou campanha não aparece de novo como aviso */
+  if (typeof avisos === 'function'){
+    const o = avisos;
+    avisos = function(){
+      const L = o.apply(this, arguments), ids = new Set((DB.campanhas || []).map(c => String(c.id)));
+      return L.filter(a => { if (a.tipo !== 'mural' || !a.ref) return true; const m = (DB.mural || []).find(x => 'mural:' + x.id === a.ref); return !(m && m.campId && ids.has(String(m.campId))); });
+    };
+  }
+  /* sem duplicados: campanha igual não nasce duas vezes, e as repetidas antigas se juntam */
+  const _nt = t => semAcento(SEM_EMOJI(String(t || ''))).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const assin = c => [c.tipo, c.de || '', c.para || '', c.banco || '', c.fim || '', _nt(c.titulo)].join('|');
+  window.juntarCampanhasRepetidas = function(){
+    const L = DB.campanhas || [], vistos = new Map(), troca = {}; let n = 0;
+    DB.campanhas = L.filter(c => { if (!c || !c.titulo) return true; const a = assin(c); if (vistos.has(a)){ troca[c.id] = vistos.get(a).id; n++; return false; } vistos.set(a, c); return true; });
+    if (n){ (DB.mural || []).forEach(m => { if (m.campId && troca[m.campId]) m.campId = troca[m.campId]; }); try { salvar(); } catch(e){} }
+    return n;
+  };
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = o.apply(this, arguments);
+      if (m && m.campId){
+        const c = (DB.campanhas || []).find(x => x.id === m.campId);
+        if (c){ const a = assin(c), igual = (DB.campanhas || []).find(x => x !== c && x.titulo && assin(x) === a);
+          if (igual){ DB.campanhas = DB.campanhas.filter(x => x !== c); m.campId = igual.id; return false; } }
+      }
+      return r;
+    };
+  }
+  const limpar = () => { try { const n = juntarCampanhasRepetidas(); if (n) console.info('campanhas repetidas juntadas:', n); } catch(e){ console.error(e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(limpar, 300)); else setTimeout(limpar, 300);
+})();
+</script>
+<script id="adx-js">
+/* ══ ANÚNCIOS: MISSÃO DE TRANSFERÊNCIA E BÔNUS POR CADASTRO (18/10/2026, pedido do Jadiel) ══
+   1. "Válido de 13/10 a 19/10/26": o fim é o 19/10/2026 (antes ficava "sem prazo").
+   2. Transferência "do seu banco, incluindo Esfera e Livelo": vira uma campanha
+      para cada banco citado (Esfera → LATAM Pass e Livelo → LATAM Pass).
+   3. "limitados em até 300.000 pontos": vira o limite de bônus por CPF.
+   4. "Ganhe 700 Pontos Latam ao se cadastrar no Marriott Bonvoy": destaque
+      "700 pontos LATAM Pass" no cartão do mural. */
+(function(){
+  const iso = (d, m, a) => `${String(a).length === 2 ? '20' + a : a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const bancos = () => PROG_IDS.filter(k => (prog(k) || {}).tipo === 'pontos');
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments); if (!a) return a;
+      const txt = (bloco || []).join('\n'), t = SEM_EMOJI(txt);
+      /* 1. período "de X a Y" */
+      if (!a.fim){
+        const m = t.match(/v[aá]lid[oa]s?\s+(?:de|entre)\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s+(?:a|at[eé]|e)\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+        if (m){ a.fim = iso(m[4], m[5], m[6]); if (a.sugestao && a.sugestao.tipo) a.sugestao.inicio = a.sugestao.inicio || iso(m[1], m[2], m[3] || m[6]); }
+      }
+      const sg = a.sugestao;
+      if (sg && sg.tipo === 'transferencia'){
+        /* 3. limite de bônus */
+        const ml = t.match(/limitad[oa]s?\s+(?:em\s+)?at[eé]\s+([\d.]+)\s*(mil)?\s*(?:pontos|milhas)/i);
+        if (ml && !sg.limite) sg.limite = Number(ml[1].replace(/\./g, '')) * (ml[2] ? 1000 : 1);
+        /* 2. outros bancos citados ("incluindo Esfera e Livelo") */
+        if (/(do seu banco|incluindo|bancos parceiros)/i.test(t)){
+          const s = ' ' + semAcento(t).toLowerCase() + ' ';
+          const mais = bancos().filter(k => k !== sg.de && new RegExp('[^a-z]' + semAcento(prog(k).n).toLowerCase().replace(/[^a-z0-9 ]/g, '') + '[^a-z]').test(s));
+          if (mais.length) sg.deMais = mais;
+        }
+      }
+      /* 4. bônus por cadastro */
+      const mc = String(a.titulo || '').match(/ganhe\s+([\d.]+)\s*(mil\s+)?(pontos|milhas)\s+(.+?)\s+ao\s+se\s+cadastrar/i);
+      if (mc && !a.pontuacao){
+        const n = Number(mc[1].replace(/\./g, '')) * (mc[2] ? 1000 : 1), p = typeof _ccAchaProg === 'function' ? _ccAchaProg(mc[4]) : '';
+        a.pontuacao = `${nBR(n)} ${mc[3].toLowerCase()} ${p ? prog(p).n : mc[4].trim()}`; a.destaque = a.pontuacao;
+      }
+      return a;
+    };
+  }
+  if (typeof rotuloSugestao === 'function'){
+    const o = rotuloSugestao;
+    rotuloSugestao = function(sg){
+      const r = o.apply(this, arguments);
+      if (sg && sg.tipo === 'transferencia' && (sg.deMais || []).length && sg.de){
+        const nomes = [sg.de].concat(sg.deMais).map(k => prog(k).n);
+        return String(r).replace(prog(sg.de).n, nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1]) + (sg.limite ? `, limite de ${nBR(sg.limite)} pontos de bônus` : '');
+      }
+      return r;
+    };
+  }
+  /* 2. uma campanha para cada banco citado */
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = o.apply(this, arguments);
+      const sg = m && m.sugestao;
+      if (sg && sg.tipo === 'transferencia' && (sg.deMais || []).length && m.campId){
+        const c = (DB.campanhas || []).find(x => x.id === m.campId);
+        if (c) sg.deMais.forEach(de => {
+          if ((DB.campanhas || []).some(x => x.tipo === c.tipo && x.de === de && x.para === c.para && (x.fim || '') === (c.fim || ''))) return;
+          DB.campanhas.push(Object.assign({}, c, {id:c.id + '-' + de, de}));
+        });
+      }
+      return r;
+    };
+  }
+})();
+</script>
+<style id="vid-css">
+/* ══ VÍDEO DA PROMOÇÃO (18/10/2026) ═══════════════════════════════════════════
+   Uma faixa de vídeo dentro do cartão: capa à esquerda, convite à direita.
+   Um toque e o vídeo toca ali mesmo, sem sair da Torre. */
+.vd{ position:relative; margin:12px 0 0; border-radius:16px; overflow:hidden;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--ouro) 10%, var(--sup-1)), var(--sup-1) 55%);
+  border:1px solid color-mix(in srgb, var(--ouro) 26%, var(--fio)); }
+.cp .vd{ margin:0 18px 14px; }
+.cc-card .vd{ margin:0 22px 16px; }
+.vd-capa{ all:unset; box-sizing:border-box; display:flex; align-items:center; gap:14px; width:100%; padding:10px; cursor:pointer; }
+.vd-capa:focus-visible{ outline:2px solid var(--ouro); outline-offset:-2px; border-radius:16px; }
+.vd-tela{ position:relative; flex:0 0 clamp(118px, 34%, 196px); aspect-ratio:16 / 9; border-radius:11px; overflow:hidden; display:grid; place-items:center;
+  background:radial-gradient(120% 90% at 20% 10%, #3b3f58, #12131c 70%); box-shadow:0 6px 18px rgba(0,0,0,.28); }
+.vd-tela.vd-p-ig{ background:linear-gradient(135deg, #f9ce34, #ee2a7b 50%, #6228d7); }
+.vd-tela.vd-p-tt{ background:linear-gradient(135deg, #111 40%, #25f4ee 160%); }
+.vd-tela.vd-p-vm{ background:linear-gradient(135deg, #1ab7ea, #0b5c8a); }
+.vd-tela.vd-p-dr{ background:linear-gradient(135deg, #1fa463, #4285f4 60%, #ffd04b 140%); }
+.vd-tela.vd-p-fb{ background:linear-gradient(135deg, #1877f2, #0b3e8a); }
+.vd-tela.vd-p-lm{ background:linear-gradient(135deg, #625df5, #2b2780); }
+.vd-tela img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform .5s var(--ease, ease); }
+.vd-capa:hover .vd-tela img{ transform:scale(1.05); }
+.vd-tela::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg, transparent 45%, rgba(0,0,0,.55)); }
+.vd-play{ position:relative; z-index:1; width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
+  background:rgba(255,255,255,.18); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.45);
+  box-shadow:0 4px 16px rgba(0,0,0,.35); transition:transform .25s var(--ease, ease), background .25s; }
+.vd-capa:hover .vd-play{ transform:scale(1.08); background:rgba(255,255,255,.3); }
+.vd-play svg{ width:18px; height:18px; fill:#fff; stroke:none; margin-left:3px; }
+.vd-plat{ position:absolute; z-index:1; left:7px; bottom:6px; font:700 calc(9.5px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; color:#fff; opacity:.92; }
+.vd-txt{ display:flex; flex-direction:column; gap:4px; min-width:0; flex:1 1 auto; padding-right:36px; }
+.vd-form-previa .vd-txt{ padding-right:0; }
+.vd-txt small{ font-size:calc(10.5px * var(--esc)); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ouro); }
+.vd-txt b{ font-size:calc(14.5px * var(--esc)); line-height:1.3; color:var(--giz); font-weight:700; }
+.vd-cta{ display:inline-flex; align-items:center; gap:6px; margin-top:2px; font-size:calc(12.5px * var(--esc)); font-weight:600; color:var(--grafite); }
+.vd-cta svg{ width:12px; height:12px; fill:currentColor; stroke:none; }
+.vd-trocar{ position:absolute; top:8px; right:8px; z-index:2; }
+.vd-palco{ position:relative; padding:12px; isolation:isolate; background:#07080d; }
+.vd-palco::before{ content:''; position:absolute; inset:-30px; z-index:-1; background:var(--vd-amb, radial-gradient(60% 60% at 50% 40%, color-mix(in srgb, var(--ouro) 35%, transparent), transparent 70%)) center/cover;
+  filter:blur(38px) saturate(1.5); opacity:.65; }
+.vd-palco-cab small{ color:#f3d38a !important; }
+.vd-palco-cab .bt.fantasma{ color:#e9e9f0; border-color:rgba(255,255,255,.25); }
+.vd-moldura{ animation:vdEntra .45s var(--ease, ease) both; }
+@keyframes vdEntra{ from{ opacity:0; transform:scale(.96); } to{ opacity:1; transform:none; } }
+.vd-play::before{ content:''; position:absolute; inset:-6px; border-radius:50%; border:1.5px solid rgba(255,255,255,.55); animation:vdPulso 2.4s ease-out infinite; }
+@keyframes vdPulso{ 0%{ transform:scale(.85); opacity:.9; } 100%{ transform:scale(1.45); opacity:0; } }
+@media (prefers-reduced-motion:reduce){ .vd-play::before, .vd-moldura{ animation:none; } }
+.vd-palco-cab{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin:0 0 10px; }
+.vd-palco-cab small{ white-space:nowrap; }
+@media (max-width:560px){ .vd-palco-cab small{ flex:1 0 100%; } .vd-palco-cab .esticar{ display:none; } .vd-palco-cab .bt{ flex:1 1 0; justify-content:center; } }
+.vd-palco-cab small{ font-size:calc(10.5px * var(--esc)); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ouro); }
+.vd-palco-cab .esticar{ flex:1; }
+.vd-moldura{ width:100%; max-width:760px; margin:0 auto; aspect-ratio:16 / 9; border-radius:12px; overflow:hidden; background:#000; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+.vd-moldura.vert{ max-width:min(380px, 100%); aspect-ratio:9 / 16; max-height:78vh; }
+.vd-moldura iframe, .vd-moldura video{ width:100%; height:100%; border:0; display:block; background:#000; }
+@media (max-width:560px){
+  .cp .vd, .cc-card .vd{ margin-left:12px; margin-right:12px; }
+  .vd-capa{ gap:11px; padding:8px; }
+  .vd-txt b{ font-size:calc(13.5px * var(--esc)); }
+  .vd-capa{ flex-direction:column; align-items:stretch; gap:10px; }
+  .vd-tela{ flex:0 0 auto; width:100%; }
+  .vd-play{ width:56px; height:56px; }
+  .vd-play svg{ width:22px; height:22px; }
+  .vd-txt{ padding:0 4px 4px; }
+  .vd-trocar{ top:16px; right:16px; background:rgba(0,0,0,.45) !important; border-color:rgba(255,255,255,.4) !important; color:#fff !important; backdrop-filter:blur(6px); }
+  .vd-trocar svg{ stroke:#fff !important; }
+}
+/* no formulário */
+.vd-form-previa{ margin-top:12px; }
+#vdUrl{ width:100%; max-width:none; }
+.vd-form-previa .vd{ margin:0; }
+.vd-form-dica{ margin:8px 0 0; font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.vd-form-dica.erro{ color:var(--brasa); }
+.vd-redes{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.vd-redes span{ font-size:calc(11px * var(--esc)); padding:3px 9px; border-radius:99px; border:1px solid var(--fio); color:var(--grafite); }
+</style>
+<script id="vid-js">
+/* ══ VÍDEO DA PROMOÇÃO (18/10/2026, pedido do Jadiel) ═════════════════════════
+   Toda oportunidade do mural e toda campanha pode levar um vídeo: o Jadiel
+   falando da promoção, se vale a pena, para quem faz sentido.
+
+   Menos cliques:
+   - Copiou o link do vídeo? Um toque no botão de vídeo do cartão e ele já
+     entra, lido da área de transferência.
+   - Colou o link no campo? Entra sozinho, sem botão de salvar.
+   - Anúncio colado com link de vídeo? O vídeo já vem anexado.
+   - O vídeo vale para o anúncio e para a campanha que nasce dele.
+   - No cartão, um toque e o vídeo toca ali mesmo.
+
+   Aceita YouTube (inclusive Shorts), Instagram (Reels), TikTok, Vimeo,
+   Google Drive, Facebook, Loom e arquivo de vídeo direto (.mp4). */
+function vdInfo(u){
+  u = String(u || '').trim();
+  if (!/^https?:\/\/\S+$/i.test(u)) return null;
+  let m;
+  const r = (p, n, emb, o) => Object.assign({u, p, n, emb, vert:false, thumb:''}, o || {});
+  if ((m = u.match(/youtube\.com\/shorts\/([\w-]{11})/i))) return r('yt', 'YouTube', `https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0&playsinline=1`, {vert:true, thumb:`https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`});
+  if ((m = u.match(/(?:youtube\.com\/(?:watch\?(?:\S*&)?v=|embed\/|live\/)|youtu\.be\/)([\w-]{11})/i))) return r('yt', 'YouTube', `https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0&playsinline=1`, {thumb:`https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`});
+  if ((m = u.match(/instagram\.com\/(?:[\w.]+\/)?(reels?|p|tv)\/([\w-]+)/i))) return r('ig', 'Instagram', `https://www.instagram.com/${m[1] === 'p' ? 'p' : 'reel'}/${m[2]}/embed`, {vert:true});
+  if ((m = u.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/i))) return r('tt', 'TikTok', `https://www.tiktok.com/embed/v2/${m[1]}`, {vert:true});
+  if (/(vm|vt)\.tiktok\.com\//i.test(u)) return r('tt', 'TikTok', '', {vert:true});
+  if ((m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/i))) return r('vm', 'Vimeo', `https://player.vimeo.com/video/${m[1]}?autoplay=1`);
+  if ((m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]+)/i))) return r('dr', 'Google Drive', `https://drive.google.com/file/d/${m[1]}/preview`);
+  if (/facebook\.com\/(?:watch|[\w.]+\/videos|reel)|fb\.watch\//i.test(u)) return r('fb', 'Facebook', `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(u)}&autoplay=1`);
+  if ((m = u.match(/loom\.com\/share\/(\w+)/i))) return r('lm', 'Loom', `https://www.loom.com/embed/${m[1]}?autoplay=1`);
+  if (/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)) return r('mp4', 'Vídeo', u, {arquivo:true});
+  return null;
+}
+/* o que tem vídeo: anúncio do mural e campanhas, ligados entre si */
+function vdObj(k, id){ return k === 'mural' ? (DB.mural || []).find(x => x.id === id) : (DB.campanhas || []).find(x => x.id === id); }
+function vdLigados(k, id){
+  const o = vdObj(k, id); if (!o) return [];
+  const camps = DB.campanhas || [], mur = DB.mural || [];
+  const base = k === 'mural' ? o.campId : (mur.find(m => m.campId && (m.campId === o.id || o.id.indexOf(m.campId + '-') === 0)) || {}).campId;
+  const ms = k === 'mural' ? [o] : mur.filter(m => base && m.campId === base);
+  const cs = base ? camps.filter(c => c.id === base || c.id.indexOf(base + '-') === 0) : (k === 'camp' ? [o] : []);
+  return [...new Set([o, ...ms, ...cs])];
+}
+function vdGravar(k, id, url){
+  const v = String(url || '').trim();
+  vdLigados(k, id).forEach(o => { if (v) o.video = v; else delete o.video; });
+  salvar();
+  try { renderMural(); } catch(_){}
+  try { renderCampanhas(); } catch(_){}
+  try { ccDesenhar(); } catch(_){}
+}
+const VD_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
+function vdHTML(o, k){
+  const inf = vdInfo(o && o.video); if (!inf) return '';
+  return `<div class="vd" data-vd-k="${k}" data-vd-id="${esc(o.id)}">
+    <button type="button" class="vd-capa" data-vd-play aria-label="Assistir ao vídeo sobre esta promoção">
+      <span class="vd-tela vd-p-${inf.p}">${inf.thumb ? `<img src="${esc(inf.thumb)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="vd-play">${VD_PLAY}</span><span class="vd-plat">${esc(inf.n)}</span></span>
+      <span class="vd-txt"><small>Vídeo da promoção</small><b>Vale a pena? Assista antes de decidir</b><span class="vd-cta">${VD_PLAY}${inf.emb ? 'Toque para assistir aqui' : 'Toque para abrir o vídeo'}</span></span>
+    </button>
+    <button type="button" class="bt p fantasma icone vd-trocar" data-vd-editar data-dica="Trocar ou remover o vídeo" aria-label="Trocar ou remover o vídeo"><svg><use href="#i-lapis"/></svg></button>
+  </div>`;
+}
+const VD_ICONE = '<svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><rect x="2.5" y="5.5" width="13" height="13" rx="2.5"/><path d="M15.5 10.2l6-3.4v10.4l-6-3.4z"/></svg>';
+const vdBotao = (k, id, grande) => grande
+  ? `<button type="button" class="bt fantasma" data-vd-anexar="${k}" data-vd-id="${esc(id)}" data-dica="Anexar um vídeo sobre esta promoção">${VD_ICONE}Vídeo</button>`
+  : `<button type="button" class="bt p fantasma icone" data-vd-anexar="${k}" data-vd-id="${esc(id)}" data-dica="Anexar um vídeo sobre esta promoção" aria-label="Anexar vídeo">${VD_ICONE}</button>`;
+
+/* Um toque: se o link do vídeo já está copiado, ele entra direto. */
+async function vdAnexar(k, id){
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText){
+      const t = await Promise.race([navigator.clipboard.readText(), new Promise((_, n) => setTimeout(() => n('tempo'), 1500))]);
+      const u = (String(t || '').match(/https?:\/\/\S+/) || [''])[0].replace(/[.,;)]+$/, '');
+      if (vdInfo(u)){ vdGravar(k, id, u); return avisar('Vídeo anexado: era o link que você tinha copiado.', 'ok', 5000); }
+    }
+  } catch(_){}
+  vdFolha(k, id);
+}
+function vdFolha(k, id){
+  const o = vdObj(k, id); if (!o) return;
+  abrirFolha({titulo: o.video ? 'Vídeo da promoção' : 'Anexar vídeo', corpo:`
+    <div class="campo rotulo-inteiro"><label>Cole aqui o link do vídeo</label><input type="url" id="vdUrl" value="${esc(o.video || '')}" placeholder="https://youtu.be/..." autocomplete="off"></div>
+    <p class="vd-form-dica" id="vdDica">Ao colar, o vídeo entra sozinho. Não precisa salvar.</p>
+    <div class="vd-redes"><span>YouTube</span><span>Shorts</span><span>Instagram</span><span>TikTok</span><span>Vimeo</span><span>Google Drive</span><span>Facebook</span><span>Loom</span><span>.mp4</span></div>
+    <div class="vd-form-previa" id="vdPrevia">${o.video ? vdHTML(o, k).replace(/<button type="button" class="bt p fantasma icone vd-trocar"[\s\S]*?<\/button>/, '') : ''}</div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>${o.video ? '<button class="bt vermelho-solido" id="vdRemover"><svg><use href="#i-lixo"/></svg>Remover vídeo</button>' : ''}<div class="esticar"></div><button class="bt primario" id="vdSalvar">Anexar vídeo</button>`});
+  const inp = $('#vdUrl'), dica = $('#vdDica');
+  const tentar = fechar => {
+    const u = inp.value.trim();
+    if (!u){ dica.className = 'vd-form-dica erro'; dica.textContent = 'Cole o link do vídeo.'; return false; }
+    if (!/^https?:\/\/\S+$/i.test(u)){ dica.className = 'vd-form-dica erro'; dica.textContent = 'Isso não parece um link. Ele começa com https://'; return false; }
+    vdGravar(k, id, u);
+    if (fechar){ fecharFolha(); avisar(vdInfo(u) ? 'Vídeo anexado.' : 'Link anexado. Ele abre numa nova aba.', 'ok'); }
+    return true;
+  };
+  inp.addEventListener('paste', () => setTimeout(() => { if (vdInfo(inp.value.trim())) tentar(true); }, 0));
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); tentar(true); } });
+  $('#vdSalvar').onclick = () => tentar(true);
+  if ($('#vdRemover')) $('#vdRemover').onclick = () => { vdGravar(k, id, ''); fecharFolha(); avisar('Vídeo removido.', 'ok'); };
+  setTimeout(() => { try { inp.focus(); inp.select(); } catch(_){} }, 60);
+}
+
+(function(){
+  /* ── cliques ── */
+  document.addEventListener('click', e => {
+    const an = e.target.closest('[data-vd-anexar]');
+    if (an){ e.preventDefault(); e.stopPropagation(); return vdAnexar(an.dataset.vdAnexar, an.dataset.vdId); }
+    const ed = e.target.closest('[data-vd-editar]');
+    if (ed){ e.preventDefault(); e.stopPropagation(); const v = ed.closest('.vd'); return vdFolha(v.dataset.vdK, v.dataset.vdId); }
+    const pl = e.target.closest('[data-vd-play]');
+    if (pl){
+      e.preventDefault(); e.stopPropagation();
+      const v = pl.closest('.vd'), o = v.dataset.vdK ? vdObj(v.dataset.vdK, v.dataset.vdId) : null;
+      const inf = vdInfo(o ? o.video : v.dataset.vdUrl); if (!inf) return;
+      if (!inf.emb){ window.open(inf.u, '_blank', 'noopener'); return; }
+      const midia = inf.arquivo ? `<video src="${esc(inf.emb)}" controls autoplay playsinline></video>`
+        : `<iframe src="${esc(inf.emb)}" title="Vídeo da promoção" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`;
+      v.dataset.html = v.innerHTML;
+      v.innerHTML = `<div class="vd-palco"${inf.thumb ? ` style="--vd-amb:url('${esc(inf.thumb)}')"` : ''}><div class="vd-palco-cab"><small>Vídeo da promoção · ${esc(inf.n)}</small><div class="esticar"></div>
+        <a class="bt p fantasma" href="${esc(inf.u)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir no ${esc(inf.n)}</a>
+        <button type="button" class="bt p perigo" data-vd-fechar>Fechar</button></div>
+        <div class="vd-moldura${inf.vert ? ' vert' : ''}">${midia}</div></div>`;
+      return;
+    }
+    const fc = e.target.closest('[data-vd-fechar]');
+    if (fc){ e.preventDefault(); e.stopPropagation(); const v = fc.closest('.vd'); if (v && v.dataset.html){ v.innerHTML = v.dataset.html; delete v.dataset.html; } }
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const b = document.querySelector('.vd [data-vd-fechar]'); if (b && !document.body.classList.contains('folha-aberta')) b.click(); });
+
+  /* ── mural: o vídeo entra logo abaixo do prazo; o botão, ao lado do lápis ── */
+  if (typeof renderMural === 'function'){
+    const o = renderMural;
+    renderMural = function(){
+      const r = o.apply(this, arguments);
+      try {
+        const alvo = $('#mrLista'); if (!alvo) return r;
+        alvo.querySelectorAll('.mural-cartao').forEach(el => {
+          const lp = el.querySelector('.mural-topo [onclick^="editarMural("]'); if (!lp || el.querySelector('.vd, [data-vd-anexar]')) return;
+          const id = (lp.getAttribute('onclick').match(/editarMural\('([^']+)'/) || [])[1]; const m = id && vdObj('mural', id); if (!m) return;
+          const h = vdHTML(m, 'mural');
+          if (h){ const pz = el.querySelector('.mural-prazo'); (pz || el.querySelector('.mural-topo')).insertAdjacentHTML('afterend', h); }
+          else lp.insertAdjacentHTML('beforebegin', vdBotao('mural', id));
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* ── campanha (transferência, compra, clube) ── */
+  if (typeof cartaoCampanha === 'function'){
+    const o = cartaoCampanha;
+    cartaoCampanha = function(c){
+      let h = o.apply(this, arguments);
+      try {
+        if (!c || !c.id) return h;
+        const v = vdHTML(c, 'camp');
+        if (v){ const i = h.indexOf('<div class="cp-fatos">'); h = i >= 0 ? h.slice(0, i) + v + h.slice(i) : h.replace(/<\/article>\s*$/, v + '</article>'); }
+        else h = h.replace(/(<button class="bt p fantasma icone" onclick="editarCampanha\()/, vdBotao('camp', c.id) + '$1');
+      } catch(e){ console.error(e); }
+      return h;
+    };
+  }
+  /* ── Cartões e Bônus ── */
+  if (typeof ccCartaoHTML === 'function'){
+    const o = ccCartaoHTML;
+    ccCartaoHTML = function(c){
+      let h = o.apply(this, arguments);
+      try {
+        if (!c || !c.id) return h;
+        const v = vdHTML(c, 'camp');
+        if (v) h = h.replace('<div class="cc-rodape">', v + '<div class="cc-rodape">');
+        else h = h.replace(/(<button type="button" class="bt vermelho-solido" data-cc-excluir=)/, vdBotao('camp', c.id, true) + '$1');
+      } catch(e){ console.error(e); }
+      return h;
+    };
+  }
+  /* ── Editar Oportunidade: campo do vídeo, logo abaixo do link ── */
+  if (typeof editarMural === 'function'){
+    const o = editarMural;
+    editarMural = function(id){
+      const r = o.apply(this, arguments);
+      const m = id ? vdObj('mural', id) : null, lk = document.getElementById('mrLink'); if (!lk) return r;
+      lk.closest('.campo').insertAdjacentHTML('afterend', `<div class="campo rotulo-inteiro" style="margin-top:12px"><label>Vídeo sobre a promoção</label><input type="url" id="mrVideo" value="${esc((m && m.video) || '')}" placeholder="Link do YouTube, Instagram, TikTok, Drive..."></div>`);
+      const bt = document.getElementById('btSalvarMural'), so = bt.onclick;
+      bt.onclick = function(){
+        const v = ($('#mrVideo') || {}).value || '', antes = new Set((DB.mural || []).map(x => x.id));
+        const res = so.apply(this, arguments);
+        const alvo = id ? vdObj('mural', id) : (DB.mural || []).find(x => !antes.has(x.id));
+        if (alvo && String(alvo.video || '') !== v.trim()) vdGravar('mural', alvo.id, v);
+        return res;
+      };
+      return r;
+    };
+  }
+  /* ── Editar Campanha: o mesmo campo, abaixo do link ── */
+  if (typeof editarCampanha === 'function'){
+    const o = editarCampanha;
+    editarCampanha = function(id){
+      const r = o.apply(this, arguments);
+      const c = id ? vdObj('camp', id) : null, lk = document.getElementById('cpLink'); if (!lk) return r;
+      lk.closest('.campo').insertAdjacentHTML('afterend', `<div class="campo" style="margin-top:13px"><label>Vídeo sobre a promoção</label><input type="url" id="cpVideo" value="${esc((c && c.video) || '')}" placeholder="Link do YouTube, Instagram, TikTok, Drive..."></div>`);
+      const bt = document.getElementById('btSalvarCampanha'), so = bt.onclick;
+      bt.onclick = function(){
+        const v = ($('#cpVideo') || {}).value || '', antes = new Set((DB.campanhas || []).map(x => x.id));
+        const res = so.apply(this, arguments);
+        const alvo = id ? vdObj('camp', id) : (DB.campanhas || []).find(x => !antes.has(x.id));
+        if (alvo && String(alvo.video || '') !== v.trim()) vdGravar('camp', alvo.id, v);
+        return res;
+      };
+      return r;
+    };
+  }
+  /* ── Colar Anúncio: link de vídeo no texto vira o vídeo do anúncio ── */
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(){
+      const a = o.apply(this, arguments);
+      try {
+        if (a && a.links && a.links.length){
+          const v = a.links.find(u => vdInfo(u));
+          if (v){ a.video = v; if (!a.link || a.link === v) a.link = a.links.find(u => u !== v) || ''; }
+        }
+      } catch(_){}
+      return a;
+    };
+  }
+  if (typeof gravarAnuncios === 'function'){
+    const o = gravarAnuncios;
+    gravarAnuncios = function(){
+      const lidos = (typeof anunciosLidos !== 'undefined' && anunciosLidos) || [], antes = new Set((DB.mural || []).map(x => x.id));
+      const r = o.apply(this, arguments);
+      try {
+        let mudou = false;
+        (DB.mural || []).filter(m => !antes.has(m.id) && !m.video).forEach(m => {
+          const a = lidos.find(x => x && x.video && x.titulo === m.titulo);
+          if (a){ vdLigados('mural', m.id).forEach(x => { x.video = a.video; }); mudou = true; }
+        });
+        if (mudou){ salvar(); try { renderMural(); } catch(_){} }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* a campanha que nasce de um anúncio já leva o vídeo dele */
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = o.apply(this, arguments);
+      try { if (m && m.video && m.campId) vdLigados('mural', m.id).forEach(x => { if (!x.video) x.video = m.video; }); } catch(_){}
+      return r;
+    };
+  }
+})();
+</script>
 </body>
 </html>
