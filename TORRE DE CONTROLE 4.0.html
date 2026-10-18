@@ -64482,12 +64482,37 @@ function rgMontar(d, c){
     ${s.lembrar.length ? `<div class="rg-lembrar"><svg><use href="#i-alerta"/></svg><div><b class="tit">Não deixe de fazer</b><ul>${s.lembrar.map(l => `<li>${rgTxt(l)}</li>`).join('')}</ul></div></div>` : ''}
   </div>`;
 }
+/* ALTURA ÚNICA (regra permanente do Jadiel, 18/10/2026): a janela mede todas
+   as abas (Regras, Tempo de Clube, Simular) e, dentro de Regras, todos os
+   assuntos; fica com a MAIOR altura. Trocar de aba ou de assunto nunca muda o
+   tamanho da janela. O limite é a altura da tela: daí em diante, rola por dentro. */
+function rgAlturaUnica(){
+  const d = document.getElementById('dlgRegras'); if (!d || !d.open) return;
+  const painel = d.querySelector('.dr-painel'); if (!painel) return;
+  painel.style.height = ''; painel.classList.remove('altura-fixa');
+  const abas = [...d.querySelectorAll('.dr-aba-painel')], secs = [...d.querySelectorAll('[data-rg-sec]')];
+  const abaVis = abas.map(p => p.hasAttribute('data-oculta')), secVis = secs.map(x => x.hidden);
+  const box = d.querySelector('.dr-dica-clube'), fechada = box && box.classList.contains('fechada');
+  if (box) box.classList.remove('fechada');
+  let h = painel.offsetHeight;
+  abas.forEach(p => {
+    abas.forEach(q => { if (q === p) q.removeAttribute('data-oculta'); else q.setAttribute('data-oculta', ''); });
+    const sub = p.querySelectorAll('[data-rg-sec]');
+    if (sub.length) sub.forEach(x => { sub.forEach(y => { y.hidden = y !== x; }); h = Math.max(h, painel.offsetHeight); });
+    else h = Math.max(h, painel.offsetHeight);
+  });
+  abas.forEach((p, i) => { if (abaVis[i]) p.setAttribute('data-oculta', ''); else p.removeAttribute('data-oculta'); });
+  secs.forEach((x, i) => { x.hidden = secVis[i]; });
+  if (fechada) box.classList.add('fechada');
+  painel.style.height = h + 'px'; painel.classList.add('altura-fixa');
+}
 (function(){
   if (typeof abrirRegras !== 'function') return;
   const o = abrirRegras;
   abrirRegras = function(id){
     const r = o.apply(this, arguments);
     try { const d = document.getElementById('dlgRegras'), c = (DB.campanhas || []).find(x => x.id === id); if (d && c) rgMontar(d, c); } catch(e){ console.error(e); }
+    try { rgAlturaUnica(); } catch(e){ console.error(e); }
     return r;
   };
   document.addEventListener('click', e => {
