@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-17 20:10';
+const BUILD = '2026-10-17 21:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -63389,6 +63389,10 @@ html.rm body.folha-aberta{ position:static; inset:auto; width:auto; overflow:hid
 .heroi-numeros:has(> :nth-child(3):last-child) > * > b, .heroi-numeros:has(> :nth-child(3):last-child) > * > span{ text-align:center !important; margin-left:auto; margin-right:auto; }
 .heroi-numeros:has(> :nth-child(3):last-child) > .hn-det{ align-items:center; padding-left:24px !important; padding-right:24px !important; }
 @media (max-width:600px){ .heroi-numeros:has(> :nth-child(3):last-child) > .hn-det{ padding-left:18px !important; padding-right:18px !important; } .heroi-numeros:has(> :nth-child(3):last-child) .hn-seta{ right:5px; } }
+/* "O que muda na sua carteira": a altura travada cortava a tabela quando ela tem mais linhas
+   (no celular os rótulos ficam em cima dos números) e o fim escorria por cima da nota de baixo.
+   Agora a caixa tem essa altura como mínimo e cresce quando o conteúdo pede (17/10/2026) */
+.ct-ad{ height:auto !important; min-height:var(--card-milheiro-a); }
 </style>
 <script id="rm-js">
 /* ══ BARRA DE ROLAGEM ENTRE O CONTEÚDO E A BARRA DA DIREITA (17/10/2026, pedido do Jadiel) ══
@@ -63424,6 +63428,28 @@ html.rm body.folha-aberta{ position:static; inset:auto; width:auto; overflow:hid
   }
   if (document.body) aplicar(); else document.addEventListener('DOMContentLoaded', aplicar);
   mq.addEventListener('change', aplicar);
+})();
+</script>
+
+<style id="lmp-css">
+/* Celular: "Limpar" na fileira do "Ocultar Passos", encostado à direita, logo acima do "Recomeçar" */
+.olho > #btCtLimpar{ margin-left:auto; flex:0 0 auto; text-transform:none; letter-spacing:normal; }
+</style>
+<script id="lmp-js">
+/* ══ LIMPAR AO LADO DO "OCULTAR PASSOS" NO CELULAR (17/10/2026, pedido do Jadiel) ══
+   No celular e no tablet o botão sai da fileira do Roteador e do Bumerangue e vai
+   para a fileira do "Ocultar Passos", alinhado à direita, em cima do "Recomeçar".
+   No computador ele volta ao lugar de sempre. É o mesmo botão (mesma função). */
+(function(){
+  const mq = matchMedia('(max-width:860px)');
+  function mover(){
+    const bt = document.getElementById('btCtLimpar'), sel = document.getElementById('btCtVer'), bum = document.getElementById('btCtBumerangue');
+    if (!bt || !sel || !bum) return;
+    if (mq.matches){ if (bt.previousElementSibling !== sel) sel.insertAdjacentElement('afterend', bt); }
+    else if (bt.previousElementSibling !== bum) bum.insertAdjacentElement('afterend', bt);
+  }
+  mq.addEventListener('change', mover);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mover); else mover();
 })();
 </script>
 </body>
