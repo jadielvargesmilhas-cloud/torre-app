@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-18 18:20';
+const BUILD = '2026-10-20 08:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -64529,6 +64529,472 @@ function rgAlturaUnica(){
     const bs = [...b.parentElement.children], i = bs.indexOf(b), n = bs[(i + (e.key === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length];
     n.click(); n.focus();
   }, true);
+})();
+</script>
+<style id="dd-css">
+/* ══ LISTAS DE AVISOS EM COLUNA ESTREITA (18/10/2026) ═════════════════════════
+   No tablet, a coluna do Início tem ~600px: título, número e botões lado a lado
+   espremiam o título numa coluna de uma palavra por linha. A regra agora segue a
+   LARGURA DA COLUNA (não a da tela): coluna estreita empilha o título por
+   inteiro em cima e põe número e botões na fileira de baixo. */
+.pilha:has(> .av-item){ container-type:inline-size; }
+@container (max-width:620px){
+  .av-item{ flex-wrap:wrap; align-items:flex-start; row-gap:10px; }
+  .av-item > .item-corpo{ flex:1 1 100%; }
+  .av-item > .item-num{ flex:1 1 auto; justify-content:flex-start; text-align:left; white-space:normal; align-self:center; }
+  .av-item > .av-acoes{ margin-left:auto; }
+  .av-item > .av-seta{ display:none; }
+}
+</style>
+<script id="dd-js">
+/* ══ CAMPANHA REPETIDA NOS AVISOS (18/10/2026, auditoria pedida pelo Jadiel) ══
+   Causa achada: um anúncio que vale para mais de um banco (Missão LATAM Pass:
+   Esfera e Livelo) vira uma campanha por banco, com o mesmo título e o mesmo
+   prazo, e cada campanha gerava o seu aviso. Agora o aviso é um só por
+   promoção (mesmo tipo, destino, prazo e título), dizendo os bancos:
+   "de Esfera e Livelo para LATAM Pass". Ocultar, adiar ou marcar como feito vale
+   para o grupo inteiro. O mesmo vale para a lista de campanhas do Início. */
+const ddGrupo = c => [c.tipo, c.para || '', c.fim || '', semAcento(c.titulo || '').replace(/\s+/g, ' ')].join('|');
+const ddIrmas = c => (DB.campanhas || []).filter(x => ddGrupo(x) === ddGrupo(c));
+const ddLista = ns => ns.length > 1 ? ns.slice(0, -1).join(', ') + ' e ' + ns[ns.length - 1] : (ns[0] || '');
+const ddOrigens = cs => ddLista([...new Set(cs.map(x => x.de).filter(Boolean))].map(k => prog(k).n));
+const ddGrupoOculto = c => ddIrmas(c).some(x => avisoEscondido('camp:' + x.id));
+(function(){
+  if (typeof avisos === 'function'){
+    const o = avisos;
+    avisos = function(){
+      const l = o.apply(this, arguments), vistos = new Set(), out = [];
+      l.forEach(a => {
+        let g = '';
+        const c = a.ref && /^camp:/.test(a.ref) ? (DB.campanhas || []).find(x => x.id === a.ref.slice(5)) : null;
+        if (c){
+          if (ddGrupoOculto(c)) return;
+          g = 'c|' + ddGrupo(c);
+          const ir = ddIrmas(c);
+          if (ir.length > 1 && !vistos.has(g)){ const og = ddOrigens(ir); if (og && /destino\s/.test(a.s || '')) a.s = a.s.replace(/destino\s/, `de ${og} para `); else if (og) a.s = (a.s ? a.s + ' · ' : '') + og; }
+        } else g = 'a|' + (a.tipo || '') + '|' + (a.t || '') + '|' + (a.s || '') + '|' + (a.fim || '');
+        if (vistos.has(g)) return;
+        vistos.add(g); out.push(a);
+      });
+      return out;
+    };
+  }
+  /* lista de campanhas do Início: uma linha por promoção */
+  if (typeof campanhasVivas === 'function' && typeof renderMesa === 'function'){
+    const cv = campanhasVivas; let naMesa = false;
+    campanhasVivas = function(){
+      const l = cv.apply(this, arguments); if (!naMesa) return l;
+      const vistos = new Set();
+      return l.filter(c => { const g = ddGrupo(c); if (vistos.has(g)) return false; vistos.add(g); return !ddGrupoOculto(c); });
+    };
+    const rm = renderMesa;
+    renderMesa = function(){
+      naMesa = true; let r;
+      try { r = rm.apply(this, arguments); } finally { naMesa = false; }
+      try {
+        document.querySelectorAll('#mesaJanelas .av-item[data-av^="camp:"]').forEach(el => {
+          const c = (DB.campanhas || []).find(x => x.id === el.dataset.av.slice(5)); if (!c) return;
+          const ir = ddIrmas(c), og = ddOrigens(ir); if (ir.length < 2 || !og) return;
+          const sub = el.querySelector('.item-sub'); if (sub) sub.textContent = sub.textContent.replace(/^[^·]*→\s*/, `${og} → `);
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+<style id="as-css">
+/* ══ ANIVERSÁRIO SMILES (19/10/2026) ══ usa o desenho da página Black Friday
+   (bf-*); aqui só o que é novo: a lista de 2026 com o botão de cadastrar. */
+.as-lista{ display:grid; gap:8px; }
+.as-item{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:6px 14px; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-0); }
+.as-item .as-tipo{ grid-row:span 2; width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:color-mix(in srgb, var(--ouro) 13%, transparent); color:var(--ouro); }
+.as-item .as-tipo svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2; }
+.as-item .as-tit{ font-weight:600; color:var(--giz); font-size:calc(14px * var(--esc)); line-height:1.35; min-width:0; }
+.as-item .as-sub{ grid-column:2; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.4; }
+.as-item .as-lado{ grid-column:3; grid-row:1 / span 2; display:flex; flex-direction:column; align-items:flex-end; gap:6px; text-align:right; }
+.as-item .as-v{ font:700 calc(19px * var(--esc))/1 var(--f-m, inherit); color:var(--ouro); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.as-item .as-v small{ display:block; font:600 calc(10.5px * var(--esc))/1.3 var(--f-b, inherit); color:var(--grafite); letter-spacing:.04em; margin-top:3px; }
+.as-item .as-acoes{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.as-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:99px; font-size:calc(11px * var(--esc)); font-weight:700; letter-spacing:.03em; }
+.as-chip.jade{ background:color-mix(in srgb, var(--jade) 14%, transparent); color:var(--jade); }
+.as-chip.x{ background:color-mix(in srgb, var(--grafite) 12%, transparent); color:var(--grafite); }
+.as-chip svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.4; }
+.as-cab{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.as-cab .bf-tit{ margin:0; }
+.as-cab .bt{ margin-left:auto; }
+.as-vazio{ padding:14px; border-radius:12px; border:1px dashed var(--fio); color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.cp-fato.as-selo{ background:color-mix(in srgb, var(--ouro) 14%, transparent); color:var(--ouro); font-weight:700; }
+@container (max-width:560px){
+  .as-item{ grid-template-columns:auto minmax(0,1fr); padding:12px; gap:8px 12px; }
+  .as-item .as-tipo{ grid-row:auto; width:34px; height:34px; border-radius:10px; }
+  .as-item .as-sub{ grid-column:1 / -1; }
+  .as-item .as-lado{ grid-column:1 / -1; grid-row:auto; flex-direction:row; align-items:center; justify-content:space-between; text-align:left; padding-top:8px; border-top:1px solid var(--fio); }
+  .as-item .as-acoes{ flex-wrap:nowrap; flex:0 0 auto; }
+  .as-item .as-lado{ gap:10px; }
+  .as-item .as-v{ flex:1 1 auto; min-width:0; }
+  .as-item .as-v small{ white-space:normal; }
+}
+.as-chip{ white-space:nowrap; }
+#asPagina{ container-type:inline-size; }
+.bf-heroi.as-heroi::after{ content:'SMILES'; }
+/* celular e tablet em pé: o conteúdo ocupa a coluna única da grade. A regra
+   ".casco > .coluna{grid-column:3}" vencia a do celular e criava colunas extras:
+   numa página de conteúdo estreito, a tela ficava com meia largura vazia. */
+@media (max-width:860px){ .casco > .coluna{ grid-column:1 / -1; } }
+</style>
+<script id="as-js">
+/* ══ ANIVERSÁRIO SMILES (19/10/2026, pedido do Jadiel) ════════════════════════
+   Página provisória, no estilo da Black Friday: só aparece em outubro (o mês do
+   aniversário da Smiles, 18/10, data do calendário do Passageiro de Primeira) e
+   some depois. Toda campanha da Smiles com data em outubro ganha a marca
+   "Aniversário Smiles" do ano, para servir de régua nos anos seguintes.
+
+   Régua do ano passado: ofertas da Smiles em outubro de 2025 (e a de 2024),
+   pesquisadas em 19/10/2026 nas matérias listadas em "link". Nenhuma delas foi
+   chamada de "aniversário" pela Smiles; são as ofertas do mês do aniversário.
+   O que saiu em outubro de 2026 até 19/10 também foi pesquisado: cada item tem
+   o botão Cadastrar, e todos de uma vez num toque. */
+const AS_SMILES = {k:'aniv-smiles', dia:'10-18', ini:'10-01', fim:'10-31'};
+const AS_2025 = [
+  {cat:'tr', de:'', deN:'Todos os parceiros', v:80, pub:'2025-10-13', fim:'2025-10-14',
+   fx:[['Diamante ou Clube 20.000', 80], ['Clube Smiles', 70], ['Ouro e Prata', 60], ['Demais', 40]], lim:'300 mil milhas de bônus por CPF',
+   r:'Livelo, Esfera e todos os parceiros. Cadastro antes de transferir.', link:'https://pontospravoar.com/smiles-oferece-ate-80-porcento-bonus-transferencia-pontos-seus-parceiros/'},
+  {cat:'tr', de:'', deN:'Todos os parceiros', v:80, pub:'2025-10-29', fim:'2025-10-30',
+   fx:[['Diamante ou Clube 20.000', 80], ['Clube Smiles', 70], ['Ouro e Prata', 60], ['Demais', 40]], lim:'300 mil milhas de bônus por CPF',
+   r:'Saiu em 29/10 e foi prorrogada até 30/10.', link:'https://pontospravoar.com/prorrogou-smiles-oferece-ate-80-porcento-bonus-transferencia-pontos-todos-parceiros/'},
+  {cat:'tr', de:'', deN:'Banestes', v:88, pub:'', fim:'2025-10-03',
+   fx:[['Clube ou Diamante', 88], ['Demais', 50]], lim:'300 mil milhas de bônus por CPF', r:'Aniversário do Banestes. +1.500 milhas na primeira transferência.',
+   link:'https://pontospravoar.com/smiles-oferece-ate-88-porcento-bonus-transferencia-pontos-banestes/'},
+  {cat:'tr', de:'itau', deN:'Itaú', v:60, pub:'', fim:'2025-10-17', fx:[['Clube ou Diamante', 60], ['Demais', 30]], lim:'300 mil milhas de bônus por CPF',
+   link:'https://www.cartoesdecredito.me/?p=71475'},
+  {cat:'tr', de:'', deN:'Inter Loop', v:70, pub:'', fim:'2025-10-21', fx:[['Clube ou Diamante', '70% a 80%'], ['Demais', 40]], lim:'300 mil milhas de bônus por CPF',
+   r:'A matéria diz 70% no título e 80% no texto.', link:'https://www.melhorescartoes.com.br/smiles-inter-70-bonus-out25.html'},
+  {cat:'tr', de:'', deN:'Nubank Ultravioleta', v:70, pub:'', fim:'2025-10-24', fx:[['Clube ou Diamante', 70], ['Demais', 40]], lim:'300 mil milhas de bônus por CPF',
+   link:'https://www.melhoresdestinos.com.br/milhas/smiles-nubank-bonus-out25'},
+  {cat:'tr', de:'', deN:'BRB', v:70, pub:'', fim:'2025-10-29', fx:[['Clube ou Diamante', 70], ['Demais', 40]], lim:'300 mil milhas de bônus por CPF',
+   link:'https://www.cartoesdecredito.me/?p=72310'}
+];
+const AS_2024 = {deN:'Todos os parceiros', v:70, fim:'2024-10-15', link:'https://www.cartoesdecredito.me/?p=45729',
+  txt:'70% para Diamante ou Clube 20.000, 60% a 68% para os outros planos do Clube, 30% para os demais.'};
+/* outubro de 2026 até 19/10, pesquisado. "c" é a campanha pronta para cadastrar. */
+const AS_2026 = [
+  {id:'banestes', tipo:'tr', tit:'Banestes para Smiles', v:'80%', vr:'de bônus', ate:'2026-10-09', sub:'80% para Clube, Diamante e Magno · 40% para os demais',
+   link:'https://pontospravoar.com/ultimas-horas-confira-promocoes-transferencia-pontos-terminam-hoje/', chave:/banestes/,
+   c:{tipo:'transferencia', de:'', para:'smiles', bonus:80, fim:'2026-10-09', limite:300000, titulo:'Banestes para Smiles: até 80% de bônus na transferência',
+      regra:'Bônus de 80% para assinantes do Clube Smiles e clientes Diamante e Magno. Bônus de 40% para os demais clientes. Limite de 300.000 milhas de bônus por CPF e Conta Família.'}},
+  {id:'bnb', tipo:'tr', tit:'Banco do Nordeste para Smiles', v:'70%', vr:'de bônus', ate:'2026-10-09', sub:'70% para Clube, Diamante e Magno · 40% para os demais',
+   link:'https://www.cartoesdecredito.me/?p=91147', chave:/nordeste|\bbnb\b/,
+   c:{tipo:'transferencia', de:'', para:'smiles', bonus:70, fim:'2026-10-09', limite:300000, titulo:'Banco do Nordeste para Smiles: até 70% de bônus na transferência',
+      regra:'Bônus de 70% para assinantes do Clube Smiles e clientes Diamante e Magno. Bônus de 40% para os demais clientes. Limite de 300.000 milhas de bônus por CPF e Conta Família.'}},
+  {id:'uau', tipo:'tr', tit:'Uau CAIXA para Smiles', v:'70%', vr:'de bônus', ate:'2026-10-09', sub:'Só em 09/10 · 70% para Clube, Diamante e Magno · 40% para os demais · +1.000 pontos na 1ª transferência',
+   link:'https://www.cartoesdecredito.me/?p=91175', chave:/uau|caixa/,
+   c:{tipo:'transferencia', de:'uau', para:'smiles', bonus:70, inicio:'2026-10-09', fim:'2026-10-09', limite:300000, titulo:'Uau CAIXA para Smiles: até 70% de bônus na transferência',
+      regra:'Válido somente em 09/10/2026. Bônus de 70% para assinantes do Clube Smiles e clientes Diamante e Magno. Bônus de 40% para os demais clientes. 1.000 pontos extras na primeira transferência. Limite de 300.000 milhas de bônus por CPF e Conta Família.'}},
+  {id:'semparar', tipo:'tr', tit:'Sem Parar Mais para Smiles', v:'80%', vr:'de bônus', ate:'2026-10-14', sub:'80% para Clube, Diamante e Magno · 50% para os demais',
+   link:'https://www.cartoesdecredito.me/?p=91249', chave:/sem parar/,
+   c:{tipo:'transferencia', de:'', para:'smiles', bonus:80, fim:'2026-10-14', limite:300000, titulo:'Sem Parar Mais para Smiles: até 80% de bônus na transferência',
+      regra:'Bônus de 80% para assinantes do Clube Smiles e clientes Diamante e Magno. Bônus de 50% para os demais clientes. Limite de 300.000 milhas de bônus por CPF e Conta Família. Não é cumulativa com outras promoções.'}},
+  {id:'compra375', tipo:'cp', tit:'Compra de milhas Smiles', v:'375%', vr:'de bônus', ate:'2026-10-16', sub:'Só com Clube Smiles · 375% Clube 20.000 ou Diamante a 325% Clube 1.000 · milheiro de R$ 16,84 a R$ 18,82',
+   link:'https://pontospravoar.com/ganhe-ate-375-de-bonus-na-compra-de-milhas-smiles/', chave:/compra|milhas/,
+   c:{tipo:'compra', de:'', para:'smiles', bonus:375, desconto:0, fim:'2026-10-16', limite:300000, titulo:'Smiles: compra de milhas com até 375% de bônus',
+      regra:'Bônus de 375% para Clube 20.000 ou Diamante, 365% Clube 10.000, 355% Clube 7.000, 345% Clube 5.000, 335% Clube 2.000 e 325% Clube 1.000. Milheiro de R$ 16,84 a R$ 18,82. Exige Clube Smiles ativo. Mínimo de 1.000 e máximo de 300.000 milhas em 12 meses. Compra com cupom de desconto não participa.'}},
+  {id:'polishop', tipo:'lj', tit:'Polishop no Shopping Smiles', v:'26', vr:'milhas por real', ate:'2026-10-18', sub:'26 para Clube 20.000 ou Diamante · 24,5 para o Clube · 1 sem Clube',
+   link:'https://pontospravoar.com/aproveite-shopping-smiles-oferece-ate-26-milhas-real-compras-polishop/', chave:/polishop/,
+   c:{tipo:'bonificada', parceiro:'Polishop', para:'smiles', ptsPorReal:26, faixas:[{rot:'Clube 20.000 ou Diamante', v:26}, {rot:'Clube Smiles', v:24.5}, {rot:'Sem Clube', v:1}], fim:'2026-10-18',
+      titulo:'Polishop no Shopping Smiles: até 26 milhas por real', regra:'26 milhas por real para Clube 20.000 ou Diamante. 24,5 milhas por real para os demais planos do Clube. 1 milha por real para quem não tem Clube.'}},
+  {id:'clube270', tipo:'cl', tit:'Clube Smiles: milhas na assinatura', v:'30 mil', vr:'milhas, no Clube 20.000', ate:'2026-10-13', sub:'Anual: 9 mil (Clube 1.000) a 30 mil (Clube 20.000) · os "270 mil" do anúncio são o total de 12 meses',
+   link:'https://pontospravoar.com/prorrogou-assine-clube-smiles-receba-ate-270-mil-milhas/'},
+  {id:'aa', tipo:'ps', tit:'American Airlines Day', v:'50.100', vr:'milhas, GRU–Miami', ate:'2026-10-14', sub:'Só em 14/10 · 50.100 milhas com Clube ou Diamante · 56.000 para os demais',
+   link:'https://pontospravoar.com/american-airlines-day-resgate-passagens-internacionais-smiles-partir-50-mil-milhas-taxas/'},
+  {id:'clube30', tipo:'cl', tit:'Clube Smiles: milhas na hora', v:'30 mil', vr:'milhas, no Clube 20.000', ate:'2026-10-16', sub:'14 mil (Clube 1.000) · 15 mil (2.000) · 20 mil (5.000) · 25 mil (10.000) · 30 mil (20.000)',
+   link:'https://pontospravoar.com/assine-clube-smiles-receba-ate-50-mil-milhas-hora/'}
+];
+const AS_ICO = {tr:'troca', cp:'carrinho', lj:'sacola', cl:'atualizar', ps:'aviao'};
+const AS_TIPO_DB = {tr:'transferencia', cp:'compra', lj:'bonificada'};
+
+function asJanela(ano){ return {ini:`${ano}-${AS_SMILES.ini}`, fim:`${ano}-${AS_SMILES.fim}`, dia:`${ano}-${AS_SMILES.dia}`}; }
+function temporadaAnivSmiles(hoje){ const h = hoje || hojeISO(), j = asJanela(Number(h.slice(0, 4))); return Object.assign(j, {visivel:h >= j.ini && h <= j.fim}); }
+/* campanha da Smiles com data em outubro = campanha do aniversário daquele ano */
+function asDoAniversario(c){
+  if (!c || c.para !== 'smiles') return '';
+  const d = String(c.inicio || c.fim || '').slice(0, 10), d2 = String(c.fim || '').slice(0, 10);
+  for (const x of [d, d2]){ if (!x) continue; const j = asJanela(Number(x.slice(0, 4))); if (x >= j.ini && x <= j.fim) return AS_SMILES.k + '-' + x.slice(0, 4); }
+  return '';
+}
+function asMarcar(){
+  let mudou = false;
+  (DB.campanhas || []).forEach(c => { const k = asDoAniversario(c); if (k && !(c.temporadas || []).includes(k)){ c.temporadas = (c.temporadas || []).concat(k); mudou = true; } });
+  return mudou;
+}
+const asTxt = c => (typeof semAcento === 'function' ? semAcento([c.titulo, c.regra, c.parceiro].filter(Boolean).join(' ')) : '').toLowerCase();
+/* já está cadastrada? mesmo tipo, Smiles, mesmo fim e a origem no texto */
+function asJaTem(x){
+  if (!x.c) return null;
+  return (DB.campanhas || []).find(c => c.para === 'smiles' && c.tipo === x.c.tipo && (c.fim || '') === x.c.fim &&
+    (x.c.de ? c.de === x.c.de : x.c.parceiro ? _bfSem(c.parceiro) === _bfSem(x.c.parceiro) : x.chave.test(asTxt(c)))) || null;
+}
+function asCadastrar(ids){
+  let n = 0;
+  AS_2026.filter(x => ids.includes(x.id) && x.c && !asJaTem(x)).forEach(x => {
+    DB.campanhas.push(Object.assign({id:uid(), desconto:0, limite:0, inicio:x.c.inicio || '', link:x.link, origem:'aniv-smiles', historico:x.c.fim < hojeISO()}, x.c));
+    n++;
+  });
+  if (n){ asMarcar(); salvar(); try { renderCampanhas(); } catch(_){} }
+  renderAnivSmiles();
+  avisar(n ? (n === 1 ? 'Campanha cadastrada no histórico do Aniversário Smiles.' : `${n} campanhas cadastradas no histórico do Aniversário Smiles.`) : 'Já estava cadastrada.', 'ok');
+}
+/* 2026 contra 2025, origem por origem */
+function asAchar26(r, ano){
+  const j = asJanela(ano);
+  return (DB.campanhas || []).filter(c => c.para === 'smiles' && c.tipo === 'transferencia' && (c.fim || '') >= j.ini && (c.fim || '') <= j.fim)
+    .filter(c => r.de ? c.de === r.de : /todos/.test(_bfSem(r.deN)) ? (!c.de && /todos|parceiros|bancos/.test(asTxt(c))) : _bfSem(r.deN).split(/\s+/).filter(w => w.length >= 3).some(w => asTxt(c).includes(w)))
+    .sort((a, b) => (Number(b.bonus) || 0) - (Number(a.bonus) || 0));
+}
+function renderAnivSmiles(){
+  const alvo = document.getElementById('asPagina'); if (!alvo) return;
+  const h = hojeISO(), ano = Number(h.slice(0, 4)), j = asJanela(ano);
+  const dDia = Math.round((Date.parse(j.dia) - Date.parse(h)) / 864e5), dFim = Math.round((Date.parse(j.fim) - Date.parse(h)) / 864e5);
+  const contagem = dDia > 0 ? `<b>${dDia}</b><span>${dDia === 1 ? 'dia' : 'dias'} para o aniversário</span>` : dDia === 0 ? '<b>Hoje</b><span>é o aniversário da Smiles</span>'
+    : dFim >= 0 ? `<b>${dFim}</b><span>${dFim === 1 ? 'dia' : 'dias'} até o fim de outubro</span>` : '<b>Passou</b><span>o mês do aniversário</span>';
+  /* rotas de 2025, uma por origem (a de maior bônus) */
+  const rotas = new Map();
+  AS_2025.forEach(e => { const k = e.de || _bfSem(e.deN); if (!rotas.has(k)) rotas.set(k, []); rotas.get(k).push(e); });
+  const linhas = [...rotas.values()].map(es => { es.sort((a, b) => b.v - a.v || String(a.fim).localeCompare(b.fim)); const r = es[0], a26 = asAchar26(r, ano);
+    const v26 = a26.length ? Number(a26[0].bonus) || 0 : null, d = v26 == null ? null : v26 - r.v;
+    const k = v26 == null ? (h > j.fim ? 'nao' : 'espera') : d > 0.5 ? 'melhor' : d < -0.5 ? 'pior' : 'igual';
+    return {r, es, a26, v26, d, k}; }).sort((a, b) => b.r.v - a.r.v);
+  const conta = k => linhas.filter(x => x.k === k).length;
+  const SELO = {melhor:['jade', `Melhor que ${ano - 1}`], igual:['ouro', `Igual a ${ano - 1}`], pior:['brasa', `Pior que ${ano - 1}`], espera:['x', 'Ainda não saiu'], nao:['x', 'Não repetiu']};
+  const linha = x => {
+    const r = x.r, [cor, rot] = SELO[x.k];
+    const disco = r.de ? discoProg(r.de) : `<span class="disco-prog" style="--marca:#8a93a6">${esc(r.deN.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 2).toUpperCase())}</span>`;
+    const fx = (r.fx || []).map(([q, n]) => `<span class="bf-fx${n === r.v ? ' top' : ''}"><em>${esc(q)}</em><b>${esc(typeof n === 'number' ? n + '%' : n)}</b></span>`).join('');
+    const vezes = x.es.length > 1 ? `<span class="bf-vezes" data-dica="${esc(x.es.map(e => `${e.pub ? _bfDM(e.pub) + ' a ' : 'até '}${_bfDM(e.fim)}: ${e.v}%`).join(' · '))}">${x.es.length} vezes em out/${ano - 1}</span>` : '';
+    const lado = x.v26 != null ? `<div class="bf-26-v ${cor}">${nBRdec(x.v26)}%</div><div class="bf-26-s">${Math.abs(x.d) <= 0.5 ? `o mesmo de ${ano - 1}` : `${x.d > 0 ? '+' : ''}${nBRdec(x.d)} pontos percentuais`} · ${esc((x.a26[0].titulo || '').slice(0, 60))}</div>`
+      : `<div class="bf-26-v x">—</div><div class="bf-26-s">${x.k === 'nao' ? `Não apareceu em outubro de ${ano}.` : 'Quando sair, cadastre em Campanhas: ela aparece aqui sozinha.'}</div>`;
+    return `<article class="bf-rota ${cor}"><div class="bf-25">
+        <div class="bf-rt">${disco}<svg class="bf-seta"><use href="#i-seta"/></svg>${discoProg('smiles')}<div><div class="bf-nome">${esc(r.deN)}</div>
+          <div class="bf-data">${r.pub ? `${_bfDM(r.pub)} a ` : 'até '}${_bfDM(r.fim)} de ${ano - 1} ${vezes}</div></div></div>
+        <div class="bf-max"><b>${r.v}%</b><span>máximo em ${ano - 1}</span></div>
+        <div class="bf-fxs">${fx}</div>
+        <div class="bf-reg">${r.lim ? `<span>${esc(r.lim)}</span>` : ''}${r.r ? `<span>${esc(r.r)}</span>` : ''}</div>
+        <a class="bf-link" href="${esc(r.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ver a matéria</a>
+      </div><div class="bf-26"><div class="bf-26-rot">${ano} <span class="bf-selo ${cor}">${rot}</span></div>${lado}</div></article>`;
+  };
+  /* o que saiu em outubro deste ano: o que já está cadastrado e o que a pesquisa achou */
+  const cadAno = (DB.campanhas || []).filter(c => (c.temporadas || []).includes(AS_SMILES.k + '-' + ano)).sort((a, b) => String(b.fim || '').localeCompare(String(a.fim || '')));
+  const pesq = ano === 2026 ? AS_2026 : [];
+  const faltam = pesq.filter(x => x.c && !asJaTem(x));
+  const usadas = new Set(pesq.map(asJaTem).filter(Boolean).map(c => c.id));
+  const itemPesq = x => { const ja = asJaTem(x);
+    return `<div class="as-item"><span class="as-tipo"><svg><use href="#i-${AS_ICO[x.tipo]}"/></svg></span>
+      <div class="as-tit">${esc(x.tit)}</div><div class="as-sub">Até ${dataBR(x.ate)} · ${esc(x.sub)}</div>
+      <div class="as-lado"><div class="as-v">${esc(x.v)}<small>${esc(x.vr)}</small></div><div class="as-acoes">
+        ${ja ? `<span class="as-chip jade"><svg><use href="#i-ok"/></svg>Cadastrada</span>` : x.c ? `<button type="button" class="bt p primario" data-as-cad="${x.id}"><svg><use href="#i-mais"/></svg>Cadastrar</button>` : '<span class="as-chip x">Só consulta</span>'}
+        <a class="bt p fantasma icone" href="${esc(x.link)}" target="_blank" rel="noopener" data-dica="Ver a matéria" aria-label="Ver a matéria"><svg><use href="#i-link"/></svg></a></div></div></div>`; };
+  const itemCad = c => { const t = c.tipo === 'compra' ? 'cp' : c.tipo === 'bonificada' ? 'lj' : c.tipo === 'clube' ? 'cl' : 'tr';
+    const v = c.tipo === 'bonificada' ? [nBRdec(Math.max(Number(c.ptsPorReal) || 0, ...(c.faixas || []).map(f => Number(f.v) || 0))), 'milhas por real']
+      : c.tipo === 'compra' && c.desconto && !c.bonus ? [nBRdec(c.desconto) + '%', 'de desconto'] : [nBRdec(Number(c.bonus) || 0) + '%', 'de bônus'];
+    return `<div class="as-item"><span class="as-tipo"><svg><use href="#i-${AS_ICO[t]}"/></svg></span>
+      <div class="as-tit">${esc(c.titulo || '')}</div><div class="as-sub">${c.fim ? 'Até ' + dataBR(c.fim) : 'Sem prazo'}${c.de ? ' · ' + esc(prog(c.de).n) + ' → Smiles' : ''}</div>
+      <div class="as-lado"><div class="as-v">${v[0]}<small>${v[1]}</small></div><div class="as-acoes"><span class="as-chip jade"><svg><use href="#i-ok"/></svg>Cadastrada</span>
+        ${c.tipo !== 'bonificada' ? `<button type="button" class="bt p fantasma icone" onclick="abrirRegras('${c.id}', this)" data-dica="Regras Completas" aria-label="Regras Completas"><svg><use href="#i-info"/></svg></button>` : ''}</div></div></div>`; };
+  const outrasCad = cadAno.filter(c => !usadas.has(c.id));
+  const max25 = Math.max(...AS_2025.map(e => e.v));
+  const licoes = [
+    {num:'14/10 · 15/10', rot:`${ano - 1} e ${ano - 2}`, tit:'A campanha para todos os parceiros saiu na semana do aniversário', txt:`Em ${ano - 2} terminou em 15/10 (até 70%). Em ${ano - 1}, em 14/10 (até 80%).`},
+    {num:'2 vezes', rot:`13 a 14/10 e 29 a 30/10 de ${ano - 1}`, tit:`Em ${ano - 1} ela voltou no fim do mês`, txt:'A mesma faixa de 80% saiu de novo em 29/10 e foi prorrogada até 30/10. Quem perdeu a primeira teve outra chance.'},
+    {num:'80%', rot:`teto para todos os parceiros em ${ano - 1}`, tit:'O máximo pediu Diamante ou Clube 20.000', txt:'Clube Smiles: 70%. Ouro e Prata: 60%. Demais clientes: 40%.'},
+    {num:'300 mil', rot:'milhas de bônus por CPF', tit:'O limite foi o mesmo em todas', txt:'Vale por CPF e Conta Família, em todas as ofertas de outubro.'},
+    {num:'0', rot:'ofertas chamadas de aniversário', tit:'A Smiles não usou o nome "aniversário"', txt:`Nas matérias de outubro de ${ano - 2} e ${ano - 1}, nenhuma oferta levou esse nome. A Torre junta tudo da Smiles em outubro para comparar.`}
+  ];
+  alvo.innerHTML = `
+    <section class="bf-heroi as-heroi">
+      <div class="bf-h-txt"><div class="bf-eyebrow">Aniversário Smiles · ${dataBR(j.dia).slice(0, 5)} · outubro inteiro</div>
+        <h2>Outubro da Smiles: ${ano} contra ${ano - 1}</h2>
+        <p>Tudo da Smiles cadastrado com data em outubro entra aqui sozinho, marcado como Aniversário Smiles ${ano}. No ano que vem, ele vira a régua.</p></div>
+      <div class="bf-cont">${contagem}<small>${dataBR(j.dia)}</small></div>
+      <div class="bf-placar">
+        <div class="jade"><b>${conta('melhor')}</b><span>melhores</span></div>
+        <div class="ouro"><b>${conta('igual')}</b><span>iguais</span></div>
+        <div class="brasa"><b>${conta('pior')}</b><span>piores</span></div>
+        <div><b>${conta('espera') + conta('nao')}</b><span>${conta('nao') ? 'sem campanha' : 'ainda não saíram'}</span></div>
+      </div>
+    </section>
+    <section class="bf-bloco"><div class="as-cab"><div class="bf-tit">O que já saiu em outubro de ${ano}</div>
+      ${faltam.length ? `<button type="button" class="bt p primario" data-as-todas><svg><use href="#i-mais"/></svg>Cadastrar ${faltam.length === 1 ? 'a que falta' : `as ${faltam.length} que faltam`}</button>` : ''}</div>
+      <div class="as-lista">${pesq.map(itemPesq).join('')}${outrasCad.map(itemCad).join('')}${!pesq.length && !outrasCad.length ? '<div class="as-vazio">Nada da Smiles cadastrado em outubro ainda.</div>' : ''}</div>
+      ${pesq.length ? `<p class="bf-fonte">Pesquisado em 19/10/${ano}. Nenhuma campanha para todos os parceiros foi encontrada em outubro de ${ano} até essa data.</p>` : ''}</section>
+    <section class="bf-bloco"><div class="bf-tit">O que outubro de ${ano - 1} ensinou</div><ol class="bf-licoes">${licoes.map((l, i) => `<li><div class="bf-l-num"><b>${l.num}</b><span>${esc(l.rot)}</span></div><div class="bf-l-txt"><h4><em>${i + 1}</em>${esc(l.tit)}</h4><p>${esc(l.txt)}</p></div></li>`).join('')}</ol></section>
+    <section class="bf-grupo"><div class="bf-g-cab">${discoProg('smiles')}<h3>Transferências para a Smiles</h3><span>${linhas.length} ${linhas.length === 1 ? 'rota' : 'rotas'} · teto de ${max25}%</span></div>
+      ${linhas.map(linha).join('')}
+      <p class="bf-fonte">Em outubro de ${ano - 2}: ${esc(AS_2024.txt)} Até ${dataBR(AS_2024.fim)}. <a href="${esc(AS_2024.link)}" target="_blank" rel="noopener">Ver a matéria</a></p></section>`;
+  alvo.querySelectorAll('[data-as-cad]').forEach(b => b.onclick = () => asCadastrar([b.dataset.asCad]));
+  const todas = alvo.querySelector('[data-as-todas]'); if (todas) todas.onclick = () => asCadastrar(faltam.map(x => x.id));
+}
+function aplicarTemporadaAnivSmiles(){
+  const t = temporadaAnivSmiles(), area = (AREAS || []).find(a => a.k === 'promocoes');
+  const ITEM = ['fabrica', 'fb-aniv-smiles', 'Aniversário Smiles', '#i-estrela'];
+  if (area && area.menu && area.menu[0]){
+    const itens = area.menu[0].itens, i = itens.findIndex(x => x[1] === 'fb-aniv-smiles');
+    if (t.visivel && i < 0) itens.push(ITEM);
+    if (!t.visivel && i >= 0) itens.splice(i, 1);
+  }
+  /* a aba e o painel nascem aqui, ao lado dos da Black Friday */
+  if (!document.querySelector('.aba[data-aba="fb-aniv-smiles"]')){
+    const ab = document.querySelector('.aba[data-aba="fb-black"]');
+    if (ab) ab.insertAdjacentHTML('afterend', '<button class="aba" data-aba="fb-aniv-smiles">Aniversário Smiles</button>');
+    const pn = document.getElementById('p-fb-black');
+    if (pn) pn.insertAdjacentHTML('afterend', '<div class="painel-aba" id="p-fb-aniv-smiles"><div class="pilha" style="gap:18px"><div class="linha sec-cab"></div><div id="asPagina"></div></div></div>');
+    const nova = document.querySelector('.aba[data-aba="fb-aniv-smiles"]');
+    if (nova && ab && ab.onclick && !nova.onclick) nova.onclick = () => irParaAba('fabrica', 'fb-aniv-smiles');
+  }
+  const aba = document.querySelector('.aba[data-aba="fb-aniv-smiles"]'); if (aba) aba.hidden = !t.visivel;
+  if (!t.visivel){ const p = document.getElementById('p-fb-aniv-smiles'); if (p && p.classList.contains('on')) try { irParaAba('fabrica', 'fb-ofertas'); } catch(_){} }
+  try { _marcaColuna = ''; marcarColunaMenu(); } catch(_){}
+  return t.visivel;
+}
+(function(){
+  /* o calendário de temporadas também passa a conhecer o mês do aniversário */
+  try { if (typeof TEMPORADAS !== 'undefined' && !TEMPORADAS.some(t => t.k === 'aniv-smiles'))
+    TEMPORADAS.push({k:'aniv-smiles', nome:'Aniversário da Smiles', artigo:'o aniversário da Smiles', ini:AS_SMILES.ini, fim:AS_SMILES.fim, progs:['smiles']}); } catch(_){}
+  /* toda campanha salva da Smiles em outubro ganha a marca do aniversário */
+  if (typeof salvar === 'function'){ const s = salvar; salvar = function(){ try { asMarcar(); } catch(_){} return s.apply(this, arguments); }; }
+  /* selo no cartão da campanha */
+  if (typeof cartaoCampanha === 'function'){
+    const o = cartaoCampanha;
+    cartaoCampanha = function(c){
+      let h = o.apply(this, arguments);
+      try { const k = asDoAniversario(c); if (k) h = h.replace('<div class="cp-fatos">', `<div class="cp-fatos"><span class="cp-fato as-selo">Aniversário Smiles ${k.slice(-4)}</span>`); } catch(_){}
+      return h;
+    };
+  }
+  if (typeof renderFabrica === 'function'){
+    const rf = renderFabrica;
+    renderFabrica = function(){ const x = rf.apply(this, arguments); try { renderAnivSmiles(); } catch(e){ console.error(e); } return x; };
+    try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === rf) RENDER[k] = renderFabrica; }); } catch(_){}
+  }
+  const ir = () => { try { if (asMarcar()) salvar(); aplicarTemporadaAnivSmiles(); renderAnivSmiles(); } catch(e){ console.error(e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(ir, 80)); else setTimeout(ir, 80);
+  setInterval(() => { try { aplicarTemporadaAnivSmiles(); } catch(_){} }, 3600000);
+})();
+</script>
+<style id="mn-css">
+/* ══ ANÚNCIO COM PASSO A PASSO E RESGATE TODO MÊS (20/10/2026) ══ */
+.mr-passos{ margin-top:12px; border:1px solid var(--fio); border-radius:14px; padding:12px 14px; background:var(--sup-1); }
+.mr-passos-tit{ display:flex; align-items:center; gap:8px; font-size:calc(11px * var(--esc)); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); margin-bottom:10px; }
+.mr-passos-tit svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.mr-passos ol{ list-style:none; margin:0; padding:0; display:grid; gap:8px; counter-reset:mp; }
+.mr-passos li{ counter-increment:mp; display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:10px; align-items:center; font-size:calc(14px * var(--esc)); color:var(--giz); line-height:1.4; }
+.mr-passos li::before{ content:counter(mp); width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font:700 calc(12.5px * var(--esc))/1 var(--f-m, inherit);
+  background:color-mix(in srgb, var(--ouro) 16%, transparent); color:var(--ouro); }
+.mr-passos li .bt{ white-space:nowrap; }
+.mr-mensal{ display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 14px; border-radius:12px; border:1px solid color-mix(in srgb, var(--anil-claro) 35%, var(--fio));
+  background:color-mix(in srgb, var(--anil-claro) 8%, var(--sup-0)); font-size:calc(13px * var(--esc)); color:var(--giz); }
+.mr-mensal svg{ flex:0 0 auto; width:18px; height:18px; fill:none; stroke:var(--anil-claro); stroke-width:2; }
+.mr-mensal b{ color:var(--anil-claro); }
+@media (max-width:560px){ .mr-passos li{ grid-template-columns:26px minmax(0,1fr); } .mr-passos li .bt{ grid-column:2; justify-self:start; width:auto !important; flex:0 0 auto; } }
+</style>
+<script id="mn-js">
+/* ══ ANÚNCIO COM PASSO A PASSO E RESGATE TODO MÊS (20/10/2026, Jadiel: anúncio
+   ELO e Uber) ═══════════════════════════════════════════════════════════════
+   1. Passo a passo: as linhas numeradas do anúncio (1️⃣, 2️⃣... ou "1 - ...")
+      viram uma lista numerada no cartão, cada passo com o seu link quando o
+      link vem logo abaixo dele ("Cadastre-se na página da promoção" → Abrir).
+   2. Regulamento: o link do regulamento (PDF ou "regulamento" no texto) ganha
+      botão próprio ao lado do link da promoção.
+   3. Todo mês: anúncio que pede para resgatar ou ativar "mensalmente" (ou
+      "por mês" com resgate) avisa no começo de cada mês, enquanto valer:
+      "Resgate do mês". Feito ou ocultado vale só para aquele mês. */
+const MN_NUM = /^\s*(?:(\d{1,2})️?⃣|(\d{1,2})\s*[-–.)]\s+)/u;
+const mnLimpo = l => SEM_EMOJI(String(l || '')).replace(/[*_~]/g, '').replace(/\s+/g, ' ').trim();
+function mnLer(bloco){
+  const ls = (bloco || []).map(l => String(l || '').trim()).filter(Boolean), passos = [];
+  ls.forEach((l, i) => {
+    if (MN_NUM.test(l)){ const t = mnLimpo(l.replace(MN_NUM, '')).replace(/[:;]+$/, ''); if (t) passos.push({t}); return; }
+    const u = (l.match(/^https?:\/\/\S+$/) || [])[0];
+    if (u && passos.length && i > 0 && MN_NUM.test(ls[i - 1])) passos[passos.length - 1].link = u.replace(/[.,;]+$/, '');
+  });
+  const txt = semAcento(ls.join(' '));
+  const mensal = /mensalmente|todo mes|todos os meses|a cada mes/.test(txt) && /resgat|ativ|cadastr|voucher|cupo/.test(txt);
+  return {passos: passos.length >= 2 ? passos : [], mensal};
+}
+const mnReg = links => (links || []).find(u => /regulamento|\.pdf(\?|$)/i.test(u)) || '';
+(function(){
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments);
+      try {
+        if (a){ const x = mnLer(bloco); a.passos = x.passos; a.mensal = x.mensal; a.regulamento = mnReg(a.links);
+          if (a.regulamento && a.link === a.regulamento) a.link = (a.links || []).find(u => u !== a.regulamento && !(typeof vdInfo === 'function' && vdInfo(u))) || a.link; }
+      } catch(e){ console.error(e); }
+      return a;
+    };
+  }
+  if (typeof gravarAnuncios === 'function'){
+    const o = gravarAnuncios;
+    gravarAnuncios = function(){
+      const lidos = (typeof anunciosLidos !== 'undefined' && anunciosLidos) || [], antes = new Set((DB.mural || []).map(x => x.id));
+      const r = o.apply(this, arguments);
+      try {
+        let mudou = false;
+        (DB.mural || []).filter(m => !antes.has(m.id)).forEach(m => {
+          const a = lidos.find(x => x && x.titulo === m.titulo); if (!a) return;
+          if (a.passos && a.passos.length){
+            m.passos = a.passos;
+            /* o passo sai do texto corrido: não aparece duas vezes */
+            const ps = a.passos.map(p => semAcento(p.t));
+            m.texto = String(m.texto || '').split('\n').filter(l => { const s = semAcento(mnLimpo(l)).replace(/[:;.]+$/, ''); return s && !ps.some(p => p === s || p.startsWith(s) || s.startsWith(p)); }).join('\n');
+          }
+          if (a.mensal) m.mensal = true;
+          if (a.regulamento) m.regulamento = a.regulamento;
+          mudou = true;
+        });
+        if (mudou){ salvar(); try { renderMural(); } catch(_){} }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* no cartão do mural */
+  if (typeof renderMural === 'function'){
+    const o = renderMural;
+    renderMural = function(){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#mrLista .mural-cartao').forEach(el => {
+          const lp = el.querySelector('.mural-topo [onclick^="editarMural("]'); if (!lp || el.querySelector('.mr-passos, .mr-mensal, .mr-reg')) return;
+          const id = (lp.getAttribute('onclick').match(/editarMural\('([^']+)'/) || [])[1], m = (DB.mural || []).find(x => x.id === id); if (!m) return;
+          const pz = el.querySelector('.mural-prazo');
+          if (m.regulamento && pz) pz.insertAdjacentHTML('beforeend', `<a class="mural-link mr-reg" href="${esc(m.regulamento)}" target="_blank" rel="noopener"><svg><use href="#i-documento"/></svg><span>Regulamento</span></a>`);
+          let h = '';
+          if (m.passos && m.passos.length) h += `<div class="mr-passos"><div class="mr-passos-tit"><svg><use href="#i-rota"/></svg>Passo a passo</div><ol>${m.passos.map(p => `<li><span>${esc(p.t)}</span>${p.link ? `<a class="bt p primario" href="${esc(p.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir</a>` : ''}</li>`).join('')}</ol></div>`;
+          if (m.mensal && m.fim) h += `<div class="mr-mensal"><svg><use href="#i-calendario"/></svg><span><b>Todo mês</b>: a Torre avisa no começo de cada mês para resgatar, até ${dataBR(m.fim)}.</span></div>`;
+          if (h){ const ap = el.querySelector('.vd') || pz || el.querySelector('.mural-topo'); ap.insertAdjacentHTML('afterend', h); }
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* aviso do começo de cada mês: dias 1 a 5; e nos 3 últimos dias, se o mês não foi marcado como feito */
+  if (typeof avisos === 'function'){
+    const o = avisos;
+    avisos = function(){
+      const l = o.apply(this, arguments);
+      try {
+        const h = hojeISO(), mes = h.slice(0, 7), dia = Number(h.slice(8, 10));
+        const ult = new Date(Number(h.slice(0, 4)), Number(h.slice(5, 7)), 0).getDate();
+        (DB.mural || []).filter(m => m.mensal && m.fim && m.fim >= h && !m.lida).forEach(m => {
+          const fimMes = ult - dia, k = (dia <= 5 ? 'mensal:' : 'mensal:fim-') + m.id + ':' + mes;
+          if (avisoEscondido(k)) return;
+          if (dia <= 5) l.push({grau:2, tipo:'mural', dias:0, ref:k, fim:m.fim, t:`Resgate do mês: ${m.titulo}`, s:`Começou o mês: resgate de novo · vale até ${dataBR(m.fim)}`, ir:['fabrica', 'fb-mural']});
+          else if (fimMes <= 2) l.push({grau:2, tipo:'mural', dias:fimMes, ref:k, fim:m.fim, t:`Use antes do fim do mês: ${m.titulo}`, s:`O que não for usado não passa para o mês que vem · ${fimMes === 0 ? 'último dia' : `faltam ${fimMes} ${fimMes === 1 ? 'dia' : 'dias'}`}`, ir:['fabrica', 'fb-mural']});
+        });
+      } catch(e){ console.error(e); }
+      return l;
+    };
+  }
 })();
 </script>
 </body>
