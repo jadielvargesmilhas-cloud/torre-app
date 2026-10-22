@@ -9918,6 +9918,23 @@ html.cofre-trancado body > *:not(#cofreTela):not(script){ visibility:hidden !imp
 </style>
 </head>
 <body>
+<style id="rvc-css">
+/* celular: no botão, só o nome da loja e "Registrar Compra" (22/10/2026) */
+.rv-c{ display:none; }
+@media (max-width:560px){ .rv-l{ display:none; } .rv-c{ display:inline; } }
+@media (max-width:560px){
+  .ds-acoes .rv-ir, .ds-acoes [onclick^="comprarDesejo"]{ white-space:nowrap !important; padding-left:10px !important; padding-right:10px !important; gap:6px !important; min-width:0; }
+  .ds-acoes .rv-ir .rv-c{ overflow:hidden; text-overflow:ellipsis; }
+}
+@media (max-width:400px){ .ds-acoes .rv-ir > svg, .ds-acoes [onclick^="comprarDesejo"] > svg{ display:none; } }
+</style>
+<script id="rvc-js">
+/* "Shopping Polishop" → "Polishop"; cada palavra com inicial maiúscula */
+function lojaCurta(n){
+  const t = String(n || '').replace(/^\s*(shopping|loja)\s+/i, '').trim() || String(n || '');
+  return t.toLowerCase().replace(/(^|[\s\-\/])([a-zà-ú])/g, (m, a, b) => a + b.toUpperCase());
+}
+</script>
 <script>
 /* F5: se há uma tela guardada para voltar, o miolo fica escondido até a volta
    terminar. Sem isso, o Painel aparecia por um instante antes da tela certa. */
@@ -11817,7 +11834,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-21 23:15';
+const BUILD = '2026-10-22 09:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -45291,7 +45308,7 @@ function renderDesejos(){
       ${melhor.topo && melhor.topo > melhor.mult ? `<div class="lc-dica">Com ${esc(((melhor.camp.faixas || []).find(f => Number(f.v) === melhor.topo) || {}).rot || 'o degrau máximo')}, seriam ${nBRdec(melhor.topo)} por real: ${nBR(d.valor * melhor.topo)} pontos.</div>` : ''}
       ${caminhosItemHTML(x)}
       <div class="ds-acoes">
-        <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg>Registrar a compra</button>
+        <button class="bt p primario" onclick="comprarDesejo('${d.id}')"><svg><use href="#i-ok"/></svg><span class="rv-l">Registrar a compra</span><span class="rv-c">Registrar Compra</span></button>
         ${melhor.link ? `<a class="bt p fantasma" href="${esc(melhor.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a loja</a>` : ''}
         <button class="bt p fantasma icone" onclick="dispensarOfertaDesejo('${d.id}',this)" data-dica="Não me interessa agora" aria-label="Não me interessa agora"><svg><use href="#i-olho-fechado"/></svg></button>
         <button class="bt p fantasma icone" onclick="editarDesejo('${d.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -59976,7 +59993,7 @@ function vereditoItemHTML(x){
       <div><span>Volta para você</span><b class="jade">${brl(o.retorno)}</b><small>${pct(o.retorno / valor * 100, 1)} do preço</small></div>
       <div><span>Pontos</span><b>+${nBR(Math.floor(valor * o.mult))}</b><small>${nBRdec(o.mult)} por real</small></div>
     </div>
-    ${o.link ? `<a class="bt primario rv-ir" href="${esc(o.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para ${md === 'shopping' ? 'o Shopping ' + pg : 'a ' + lj}</a>` : ''}
+    ${o.link ? `<a class="bt primario rv-ir" href="${esc(o.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg><span class="rv-l">Ir para ${md === 'shopping' ? 'o Shopping ' + pg : 'a ' + lj}</span><span class="rv-c">${esc(lojaCurta(lj))}</span></a>` : ''}
     <div class="rv-bts">
       <button type="button" class="rv-bt" data-rv-lojas="${esc(d.id)}"${nOf < 2 ? ' disabled' : ''}><svg><use href="#i-sacola"/></svg><span><b>Comparar lojas</b><small>${nOf < 2 ? 'só esta oferta hoje' : nOf + ' lugares vendem'}</small></span></button>
       <button type="button" class="rv-bt" data-rv-contas="${esc(d.id)}"${nCt < 2 ? ' disabled' : ''}><svg><use href="#i-usuarios"/></svg><span><b>Comparar contas</b><small>${nCt < 2 ? (nCt ? 'só uma conta' : 'nenhuma conta') : nCt + ' contas'}</small></span></button>
@@ -60232,7 +60249,7 @@ function opcoesItemHTML(x){
     <div class="op-tit">${(() => { const tot = new Set((x.todas || []).map(o => normLoja(o.loja.n))).size; return tot > of.length ? `${tot} lojas vendem · ${of.length} opções` : of.length > 1 ? `${of.length} lojas vendem este item` : 'Onde comprar'; })()}<small>${sel ? 'toque de novo para fechar' : 'toque numa opção para ver as contas'}</small></div>
     <div class="op-linha" style="--n:${of.length}">${tiles}</div>
     ${contas}
-    ${ir.link ? `<a class="bt primario rv-ir" href="${esc(ir.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a ${esc(ir.loja.n)}</a>` : ''}
+    ${ir.link ? `<a class="bt primario rv-ir" href="${esc(ir.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg><span class="rv-l">Ir para a ${esc(ir.loja.n)}</span><span class="rv-c">${esc(lojaCurta(ir.loja.n))}</span></a>` : ''}
   </div>`;
 }
 /* troca a resposta do cartão pelas opções; a escolha também vale para "Ir para" e para o aviso */
