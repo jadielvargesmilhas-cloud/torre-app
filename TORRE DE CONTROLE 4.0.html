@@ -11834,7 +11834,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-22 09:40';
+const BUILD = '2026-10-22 17:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -65026,6 +65026,84 @@ const mnReg = links => (links || []).find(u => /regulamento|\.pdf(\?|$)/i.test(u
         });
       } catch(e){ console.error(e); }
       return l;
+    };
+  }
+})();
+</script>
+<script id="ml-js">
+/* ══ UM ANÚNCIO, VÁRIAS LOJAS (22/10/2026, anúncio "Shopping Smiles oferece até
+   26x1 em vários parceiros") ════════════════════════════════════════════════
+   Quando o anúncio lista duas ou mais lojas, cada uma com o seu "X milhas por
+   real", cada loja vira a sua campanha em Lojas parceiras. As milhas extras por
+   plano de Clube ("+ 0,5 milha por real para o Clube 2.000...") entram como
+   faixas de cada loja, já somadas: Polishop 24,5 no Clube 1.000 vira 25, 25,5 e
+   26 nos outros planos. Antes, as lojas e os extras viravam uma campanha só, com
+   um nome de loja que não existe. */
+const ML_LOJA = /^([\d]+(?:[.,]\d+)?)\s*(?:milhas?|pontos?)\s*(?:por real|\/\s*real|x\s*1)\s+(?:no|na|nos|nas|em|da|do|pela|pelo)\s+(?:site\s+d[aeo]\s+)?(.+?)$/i;
+const ML_ADIC = /^\+\s*([\d]+(?:[.,]\d+)?)\s*(?:milhas?|pontos?)\s*(?:por real|\/\s*real)\s*(?:para\s+)?(.+)$/i;
+const mlNum = t => Number(String(t).replace(',', '.')) || 0;
+const mlCap = t => t.charAt(0).toUpperCase() + t.slice(1);
+function mlLer(bloco){
+  const ls = (bloco || []).map(l => SEM_EMOJI(String(l || '')).replace(/[*_~]/g, '').replace(/^[\s\-•·>]+/, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const lojas = [], adic = []; let base = '';
+  ls.forEach(l => {
+    const b = l.match(/assinantes\s+(?:do\s+)?(clube\s+[\d.]+)/i); if (b && !base && !ML_ADIC.test(l)) base = mlCap(b[1].replace(/\s+/g, ' '));
+    let m = l.match(ML_ADIC);
+    if (m){ adic.push({v:mlNum(m[1]), rot:mlCap(m[2].replace(/^(?:os\s+)?assinantes\s+(?:d[oa]s?\s+)?/i, '').replace(/[.;:]+$/, '').trim())}); return; }
+    m = l.match(ML_LOJA);
+    if (m){ const n = m[2].replace(/[.;:!]+$/, '').trim(); if (n && n.length <= 40 && !/clube|assinante|categoria|diamante/i.test(n)) lojas.push({n, v:mlNum(m[1])}); }
+  });
+  const vistos = new Set();
+  return {lojas: lojas.filter(x => { const k = normLoja(x.n); if (vistos.has(k)) return false; vistos.add(k); return true; }), adic, base: base || 'Clube Smiles'};
+}
+function mlFaixas(loja, x){
+  return [{rot:x.base, v:loja.v}].concat(x.adic.map(a => ({rot:a.rot, v:Math.round((loja.v + a.v) * 10) / 10}))).sort((p, q) => q.v - p.v);
+}
+(function(){
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments);
+      try {
+        if (a && a.sugestao && a.sugestao.tipo === 'bonificada'){
+          const x = mlLer(bloco);
+          if (x.lojas.length >= 2){
+            const sg = a.sugestao, extra = Math.max(0, ...x.adic.map(q => q.v));
+            sg.lojas = x.lojas.map(l => ({n:l.n, v:l.v, faixas:mlFaixas(l, x), ptsPorReal:Math.round((l.v + extra) * 10) / 10})).sort((p, q) => q.ptsPorReal - p.ptsPorReal);
+            sg.parceiro = sg.lojas[0].n; sg.ptsPorReal = sg.lojas[0].ptsPorReal; sg.faixas = sg.lojas[0].faixas;
+          }
+        }
+      } catch(e){ console.error(e); }
+      return a;
+    };
+  }
+  if (typeof rotuloSugestao === 'function'){
+    const o = rotuloSugestao;
+    rotuloSugestao = function(sg){
+      if (sg && sg.tipo === 'bonificada' && sg.lojas && sg.lojas.length > 1)
+        return `entra em Lojas parceiras: ${sg.lojas.length} lojas (${sg.lojas.map(l => l.n).join(', ')}), até ${nBRdec(sg.ptsPorReal)} pontos ${prog(sg.para).n} por real`;
+      return o.apply(this, arguments);
+    };
+  }
+  if (typeof muralParaLojas === 'function'){
+    const o = muralParaLojas;
+    muralParaLojas = function(m){
+      const sg = m && m.sugestao;
+      if (!sg || sg.tipo !== 'bonificada' || !sg.lojas || sg.lojas.length < 2 || m.campId) return o.apply(this, arguments);
+      DB.campanhas = DB.campanhas || [];
+      const regra = String(m.texto || '').split('\n').filter(Boolean).map(l => /[.!?;]$/.test(l) ? l.replace(/;$/, '.') : l + '.').join('\n');
+      let primeira = '', novas = 0;
+      sg.lojas.forEach((l, i) => {
+        const igual = DB.campanhas.find(c => c.tipo === 'bonificada' && c.para === sg.para && normLoja(c.parceiro || '') === normLoja(l.n) && (c.fim || '') === (m.fim || ''));
+        if (igual){ primeira = primeira || igual.id; return; }
+        const id = 'mural-bf-' + m.id + '-' + (i + 1);
+        DB.campanhas.push({id, tipo:'bonificada', parceiro:l.n, cat:sg.cat || 'geral', de:'', para:sg.para, ptsPorReal:l.ptsPorReal, bonus:0, desconto:0, limite:0,
+          fim:m.fim || '', faixas:l.faixas, titulo:`${l.n} no Shopping ${prog(sg.para).n}: até ${nBRdec(l.ptsPorReal)} ${sg.para === 'smiles' || sg.para === 'azul' || sg.para === 'latampass' ? 'milhas' : 'pontos'} por real`,
+          regra, link:m.link || '', origem:'mural', grupoMural:m.id});
+        primeira = primeira || id; novas++;
+      });
+      m.campId = primeira;
+      return novas > 0;
     };
   }
 })();
