@@ -11817,7 +11817,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-20 08:30';
+const BUILD = '2026-10-21 23:15';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -61314,7 +61314,10 @@ svg[data-ic="prata"]{ stroke:url(#gIcPrata) !important; --ic:#8E9AB0; }
         b.onclick = () => r.classList.add('todos');
         r.after(b);
       }
-      b.textContent = `Ver mais (${n - 5})`;
+      /* só escreve quando muda: escrever o mesmo texto de novo também conta como
+         mudança na página, e o vigia abaixo chamava esta função sem parar (a
+         tela travava ao salvar com mais de 5 campanhas fechando, 20/10/2026) */
+      const t = `Ver mais (${n - 5})`; if (b.textContent !== t) b.textContent = t;
     });
   }
   let pend = false;
@@ -64554,12 +64557,25 @@ function rgAlturaUnica(){
    promoção (mesmo tipo, destino, prazo e título), dizendo os bancos:
    "de Esfera e Livelo para LATAM Pass". Ocultar, adiar ou marcar como feito vale
    para o grupo inteiro. O mesmo vale para a lista de campanhas do Início. */
-const ddGrupo = c => [c.tipo, c.para || '', c.fim || '', semAcento(c.titulo || '').replace(/\s+/g, ' ')].join('|');
-const ddIrmas = c => (DB.campanhas || []).filter(x => ddGrupo(x) === ddGrupo(c));
+/* Índice dos grupos, montado uma vez e reaproveitado: antes, cada aviso
+   comparava o título de cada campanha com o de todas as outras, e com muitas
+   campanhas no ar a tela travava por segundos ao salvar (corrigido em 20/10/2026). */
+const ddGrupoCalc = c => [c.tipo, c.para || '', c.fim || '', semAcento(c.titulo || '').replace(/\s+/g, ' ')].join('|');
+let _ddIdx = null, _ddT = 0;
+function ddIndice(){
+  const cs = DB.campanhas || [], agora = Date.now();
+  if (_ddIdx && _ddIdx.cs === cs && _ddIdx.n === cs.length && agora - _ddT < 400) return _ddIdx;
+  const g = new Map(), por = new Map();
+  cs.forEach(c => { const k = ddGrupoCalc(c); g.set(c, k); if (!por.has(k)) por.set(k, []); por.get(k).push(c); });
+  _ddIdx = {cs, n:cs.length, g, por}; _ddT = agora; return _ddIdx;
+}
+const ddGrupo = c => { const ix = ddIndice(); return ix.g.get(c) || ddGrupoCalc(c); };
+const ddIrmas = c => ddIndice().por.get(ddGrupo(c)) || [c];
 const ddLista = ns => ns.length > 1 ? ns.slice(0, -1).join(', ') + ' e ' + ns[ns.length - 1] : (ns[0] || '');
 const ddOrigens = cs => ddLista([...new Set(cs.map(x => x.de).filter(Boolean))].map(k => prog(k).n));
 const ddGrupoOculto = c => ddIrmas(c).some(x => avisoEscondido('camp:' + x.id));
 (function(){
+  if (typeof salvar === 'function'){ const sv = salvar; salvar = function(){ _ddIdx = null; return sv.apply(this, arguments); }; }
   if (typeof avisos === 'function'){
     const o = avisos;
     avisos = function(){
