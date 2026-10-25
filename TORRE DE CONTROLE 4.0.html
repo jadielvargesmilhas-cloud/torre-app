@@ -11836,7 +11836,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 12:40';
+const BUILD = '2026-10-25 14:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -48396,7 +48396,9 @@ function nomeArquivo(tipo, d){
 
 raiz.VEM = Object.assign(raiz.VEM || {}, {
   calcular, gerarCotacao, gerarComparacao, htmlPrevia, imagemPrevia, dadosDaPrevia, nomeArquivo, prepararViagem,
-  brl, pct, milhar, slug, localEm, naBrasilia, hora, diaCurto, minutos, hm, FUSOS, SITE_PADRAO, fuso
+  brl, pct, milhar, slug, localEm, naBrasilia, hora, diaCurto, minutos, hm, FUSOS, SITE_PADRAO, fuso,
+  /* Página da Viagem (25/10/2026): o mesmo desenho dos voos e da rota da cotação */
+  htmlViagem, arco, madrugada, ICONES, ICONE_BAGAGEM, ZAP, isoZ
 });
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -52511,6 +52513,8 @@ function dispensarOfertaDesejo(id, btn){
   _avMapa[k] = {ref:k, tipo:'desejo', t:`${d.n} na ${m.loja.n}`, curto:`${d.n} na ${m.loja.n}`, s:`${nBRdec(m.mult)} por real · ${prog(m.prog).n}`, fim:m.fim || ''};
   avMenuMotivo(k, btn, {titulo:`Por que não agora? ${esc(m.loja.n)}, ${nBRdec(m.mult)}×`, forte:true, depois:motivo => {
     let resolvido = false;
+    /* vale só para ESTA campanha da loja (25/10/2026): estoque volta, produto parecido aparece */
+    if (!_ehEspera(motivo)) try { const st = avEstado(); if (st[k]){ st[k].sig = sigOfertaDesejo(m); salvar(); } } catch(_){}
     if (motivo === 'Já resolvi de outro jeito'){ d.feito = true; d.resolvidoFora = hojeISO(); resolvido = true; salvar(); }
     prRedesenharTudoSeguro();
     try { if (typeof renderMesa === 'function') renderMesa(); } catch(e){}
@@ -65269,9 +65273,11 @@ function dpQualificados(){
         el.querySelector('.rl-ver').onclick = () => { sair(); _sessao.add(d.id + '#' + k); try { irItemMenu('fabrica', 'fb-compras'); setTimeout(() => { const it = document.querySelector(`.ds-item[data-id="${d.id}"]`); if (it) it.scrollIntoView({block:'center', behavior:'smooth'}); }, 350); } catch(_){} };
         el.querySelector('.rl-depois').onclick = () => { _sessao.add(d.id + '#' + k); sair(); };
         /* "Não serve" (25/10/2026, pedido do Jadiel): abre os mesmos motivos do
-           "Não me interessa agora" do item. Na oferta por loja, dispensa aquela
-           loja para este item de vez (não volta na próxima campanha dela); a
-           decisão aparece no item e pode ser desfeita lá. */
+           "Não me interessa agora" do item. Vale só para ESTA campanha daquela
+           loja: se a loja abrir campanha nova (outro multiplicador ou outro
+           prazo), o item volta a chamar, porque o estoque pode ter voltado ou
+           pode haver produto parecido. A decisão aparece no item e pode ser
+           desfeita lá. */
         if (!x.viaOferta && typeof dispensarOfertaDesejo === 'function') el.querySelector('.rl-ok').onclick = ev => { dispensarOfertaDesejo(d.id, ev.currentTarget); };
         else el.querySelector('.rl-ok').onclick = () => { DB.cfg.dpAlerta = DB.cfg.dpAlerta || {}; DB.cfg.dpAlerta[d.id] = k; salvar(); sair(); avisar('Combinado: este aviso volta só se aparecer outra promoção para o item.', 'ok', 4000); };
         pilha.appendChild(el);
@@ -65338,6 +65344,9 @@ function dpQualificados(){
 .emp-val b{ font:700 calc(18px * var(--esc))/1 var(--f-m, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
 .emp-dica{ margin:10px 0 0; font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.45; }
 .emp-vazio{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; padding:4px 0 8px; }
+.emp-troca{ display:flex; gap:9px; align-items:flex-start; margin-top:4px; padding:10px 12px; border-radius:12px; border:1px solid color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:color-mix(in srgb, var(--ouro) 9%, var(--sup-1)); font-size:calc(12px * var(--esc)); line-height:1.45; color:var(--giz); }
+.emp-troca > svg{ width:15px; height:15px; flex:0 0 auto; margin-top:2px; fill:none; stroke:var(--ouro); stroke-width:2; }
+.emp-troca-d{ display:block; margin-top:4px; color:var(--grafite); }
 .emp-pe{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 16px; border-top:1px solid var(--fio); background:var(--sup-0); }
 .emp-pe .esticar{ flex:1; }
 @media (max-width:900px){ .emp-grade{ grid-template-columns:minmax(0,1fr); } }
@@ -65359,23 +65368,41 @@ function dpQualificados(){
    protege a conta (regulamento Smiles, cláusula 5.3.1). Ao registrar, a emissão
    já abre com a conta e os passageiros escolhidos. */
 const EMP_SITE = {smiles:'https://www.smiles.com.br/', latampass:'https://latampass.latam.com/pt_br/', azul:'https://www.voeazul.com.br/br/pt/home', tap:'https://www.flytap.com/pt-br/', iberia:'https://www.iberia.com/br/', connect:'https://www.copaair.com/pt-br/'};
+/* Obrigatórios na tela de passageiros: nome, sobrenome e nascimento (o nome
+   igual ao documento). Os outros aparecem para copiar quando existem; se não
+   existem, não atrapalham. Ajustar aqui quando o Jadiel mandar o print da tela. */
+const EMP_OBRIG = ['nome', 'sobre', 'nasc'];
 const empSel = reg => (reg.emitirSel = reg.emitirSel || {contaId:'', pax:[]});
 function empPaxNecessarios(reg){
   const c = ((reg.estado || vemEst || {}).comum) || {};
   return (Number(c.adultos) || 0) + (Number(c.criancas) || 0) + (Number(c.bebes) || 0) || 1;
 }
 const empChaveP = p => String((p && p.cpf) || '').replace(/\D/g, '') || semAcento(String((p && p.nome) || '').toLowerCase());
-function empContas(progK, paxIds, milhas){
+/* Mesma régua do "Simular a próxima venda": entre as contas que comportam a
+   emissão (milhas e vagas de CPF), a melhor é a que dá mais resultado, ou seja,
+   a de milhas mais baratas; no empate, a que gasta menos vagas novas e a que
+   fica com mais vagas sobrando. */
+function empContas(progK, paxIds, milhas, r){
   if (!progK) return [];
-  const pol = politicaCPF(progK), lim = Number(pol.limite) || 0;
+  const pol = politicaCPF(progK), lim = Number(pol.limite) || 0, mi = Number(milhas) || 0;
   const pes = paxIds.map(pessoa).filter(Boolean);
-  return (DB.contas || []).map(c => {
-    const saldo = soma((DB.saldos || []).filter(s => s.contaId === c.id && s.prog === progK).map(s => Number(s.qtd) || 0));
+  const pos = typeof posicoesDeVenda === 'function' ? posicoesDeVenda().filter(l => l.prog === progK) : [];
+  return pos.map(l => {
+    const c = l.conta, saldo = Number(l.qtd) || 0;
     const usados = cpfsUsados(c.id, progK), jaSet = new Set(usados.map(u => String(u.cpf || '').replace(/\D/g, '') || String(u.nome || '').toLowerCase()));
     const novos = pes.filter(p => !jaSet.has(empChaveP(p))).length;
     const gastas = usados.length + cotaAjuste(c.id, progK), livres = lim ? Math.max(0, lim - gastas) : null;
-    return {c, saldo, livres, lim, novos, temMilhas:saldo >= (Number(milhas) || 0), temVagas:livres == null || livres >= novos};
-  }).filter(x => x.saldo > 0).sort((a, b) => (b.temMilhas && b.temVagas) - (a.temMilhas && a.temVagas) || (b.livres ?? 99) - (a.livres ?? 99) || b.saldo - a.saldo);
+    const custo = mi / 1000 * (Number(l.cpm) || 0), res = r ? (Number(r.cobrado) || 0) - custo - (Number(r.taxas) || 0) : null;
+    return {c, saldo, livres, lim, novos, custo, res, temMilhas:saldo >= mi, temVagas:livres == null || livres >= novos};
+  }).sort((a, b) => ((b.temMilhas && b.temVagas) - (a.temMilhas && a.temVagas)) || ((b.res ?? 0) - (a.res ?? 0)) || (a.novos - b.novos) || ((b.livres ?? 99) - (a.livres ?? 99)) || b.saldo - a.saldo);
+}
+/* troca de titular: fica registrada na cotação, com data, hora e motivo */
+function empTrocasHTML(sel, progK){
+  const t = (sel.trocas || []).slice(-1)[0]; if (!t) return '';
+  const nm = id => { const c = (DB.contas || []).find(x => x.id === id); return c ? nomeCurto(c.nome) : 'outra conta'; };
+  const d = new Date(t.em), quando = `${dataBR(d.toISOString().slice(0, 10))} às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `<div class="emp-troca"><svg><use href="#i-info"/></svg><div><b>Troca de titular</b>: ${esc(nm(t.de))} → ${esc(nm(t.para))}, ${quando} (${esc(t.motivo)}).${(sel.trocas || []).length > 1 ? ` <span class="fraco">${sel.trocas.length} trocas nesta cotação.</span>` : ''}
+    <span class="emp-troca-d">Confira as milhas na nova conta antes de pagar: o preço pode mudar de uma conta para outra (com ou sem Clube ${esc(prog(progK).n)}, por exemplo).</span></div></div>`;
 }
 function empCopiar(txt, el){
   const ok = () => { if (el){ el.classList.add('copiado'); setTimeout(() => el.classList.remove('copiado'), 1400); } avisar(`Copiado: ${txt}`, 'ok', 1800); };
@@ -65387,26 +65414,28 @@ function empHTML(reg){
   if (!progK || progK === 'pagante') return '';
   const sel = empSel(reg), precisa = empPaxNecessarios(reg);
   sel.pax = (sel.pax || []).filter(id => pessoa(id));
-  const contas = empContas(progK, sel.pax, r.milhas);
+  const contas = empContas(progK, sel.pax, r.milhas, r);
   if (!sel.contaId || !contas.some(x => x.c.id === sel.contaId)){ const m = contas.find(x => x.temMilhas && x.temVagas) || contas[0]; sel.contaId = m ? m.c.id : ''; }
   const contaOk = contas.find(x => x.c.id === sel.contaId);
   const paxOk = sel.pax.length === precisa;
   const DADOS = [['nome', 'Nome', p => p.primeiro || String(p.nome || '').split(' ')[0]], ['sobre', 'Sobrenome', p => p.sobrenome || String(p.nome || '').split(' ').slice(1).join(' ')],
     ['nasc', 'Nascimento', p => p.nasc ? dataBR(p.nasc) : ''], ['cpf', 'CPF', p => p.cpf || ''], ['sexo', 'Sexo', p => ({F:'Feminino', M:'Masculino'})[p.sexo] || '']];
-  const faltaAlgo = sel.pax.some(id => { const p = pessoa(id); return DADOS.some(([, , f]) => !f(p)); });
+  DADOS.push(['mail', 'E-mail', p => p.email || ''], ['fone', 'Telefone', p => p.fone || '']);
+  const faltaAlgo = sel.pax.some(id => { const p = pessoa(id); return DADOS.some(([k, , f]) => EMP_OBRIG.includes(k) && !f(p)); });
   const contasH = contas.length ? contas.slice(0, 6).map(x => `<button type="button" class="emp-conta${x.c.id === sel.contaId ? ' on' : ''}${x.temMilhas ? '' : ' sem'}${x.temVagas ? '' : ' alerta'}" data-emp-conta="${esc(x.c.id)}">
       <span class="emp-r"></span><b>${esc(nomeCurto(x.c.nome))}</b>
       <span class="emp-cpf">${x.livres == null ? '∞' : x.livres}<small>${x.livres == null ? 'sem limite' : x.livres === 1 ? 'vaga de CPF' : 'vagas de CPF'}</small></span>
-      <small>${nBR(x.saldo)} ${prog(progK).n}${x.temMilhas ? '' : ' · <b style="color:var(--brasa);display:inline">faltam ' + nBR((Number(r.milhas) || 0) - x.saldo) + '</b>'}${x.temVagas || x.livres == null ? '' : ' · <b style="color:var(--brasa);display:inline">precisa de ' + x.novos + '</b>'}</small></button>`).join('')
+      <small>${nBR(x.saldo)} ${prog(progK).n}${x.res != null && x.temMilhas ? ' · <span style="white-space:nowrap">rende <b style="display:inline;color:var(--' + (x.res >= 0 ? 'jade' : 'brasa') + ')">' + brl(x.res) + '</b></span>' : ''}${x.temMilhas ? '' : ' · <b style="color:var(--brasa);display:inline">faltam ' + nBR((Number(r.milhas) || 0) - x.saldo) + '</b>'}${x.temVagas || x.livres == null ? '' : ' · <b style="color:var(--brasa);display:inline">precisa de ' + x.novos + '</b>'}</small></button>`).join('')
     : `<p class="emp-vazio">Nenhuma conta com saldo em ${esc(prog(progK).n)}. Cadastre o saldo em Carteira.</p>`;
   const paxH = sel.pax.map(id => { const p = pessoa(id);
     return `<div class="emp-pax"><div class="emp-pax-n">${esc(p.nome || '')}<span class="etq">${({adulto:'Adulto', crianca:'Criança', bebe:'Bebê'})[faixaPax(p, r.data)] || 'Adulto'}</span></div><div class="emp-copias">${DADOS.map(([k, rot, f]) => { const v = f(p);
+      if (!v && !EMP_OBRIG.includes(k)) return '';
       return v ? `<button type="button" class="emp-cp" data-emp-copiar="${esc(v)}" title="Copiar ${rot}"><em>${rot}</em><span>${esc(v)}</span><svg><use href="#i-copiar"/></svg></button>`
         : `<button type="button" class="emp-cp falta" data-emp-pessoa="${esc(p.id)}" title="Completar o cadastro"><em>${rot}</em><span>falta</span></button>`; }).join('')}</div></div>`; }).join('');
   return `<section class="emp" data-emp="${esc(reg.id)}">
     <div class="emp-cab"><span class="emp-ic"><svg><use href="#i-bilhete"/></svg></span><div><b>Conferência para emitir</b><small>Tudo pronto para copiar e colar na ${esc(prog(progK).n)}</small></div></div>
     <div class="emp-grade">
-      <div class="emp-bl"><div class="emp-bl-tit"><i>1</i>Conta que emite${contaOk && contaOk.temMilhas && contaOk.temVagas ? '<span class="emp-ok">pronta</span>' : '<span class="emp-falta">confira</span>'}</div>${contasH}</div>
+      <div class="emp-bl"><div class="emp-bl-tit"><i>1</i>Conta que emite${contaOk && contaOk.temMilhas && contaOk.temVagas ? '<span class="emp-ok">pronta</span>' : '<span class="emp-falta">confira</span>'}</div>${contasH}${empTrocasHTML(sel, progK)}</div>
       <div class="emp-bl"><div class="emp-bl-tit"><i>2</i>Passageiros ${sel.pax.length} de ${precisa}${paxOk && !faltaAlgo ? '<span class="emp-ok">prontos</span>' : '<span class="emp-falta">' + (paxOk ? 'falta dado' : sel.pax.length > precisa ? 'cotação: ' + precisa : 'escolha') + '</span>'}</div>
         ${paxH || '<p class="emp-vazio">Escolha quem vai viajar: os dados vêm do cadastro, com botão de copiar em cada um.</p>'}
         <button type="button" class="bt p fantasma" data-emp-pax><svg><use href="#i-usuarios"/></svg>${sel.pax.length ? 'Trocar passageiros' : 'Escolher do cadastro'}</button></div>
@@ -65436,18 +65465,543 @@ function empHTML(reg){
     const o = cqRascunhoEmissao;
     cqRascunhoEmissao = function(reg, parte){
       const r = o.apply(this, arguments);
-      try { if (r && reg && reg.emitirSel && !parte){ if (reg.emitirSel.contaId) r.contaId = reg.emitirSel.contaId; if ((reg.emitirSel.pax || []).length) r.pax = reg.emitirSel.pax.slice(); } } catch(_){}
+      try { if (r && reg && reg.emitirSel && !parte){ if (reg.emitirSel.contaId) r.contaId = reg.emitirSel.contaId; if ((reg.emitirSel.trocas || []).length) r.trocasConta = reg.emitirSel.trocas.slice(); if ((reg.emitirSel.pax || []).length) r.pax = reg.emitirSel.pax.slice(); } } catch(_){}
       return r;
     };
   }
   document.addEventListener('click', e => {
     const cp = e.target.closest('[data-emp-copiar]'); if (cp){ e.preventDefault(); return empCopiar(cp.dataset.empCopiar, cp); }
     const ct = e.target.closest('[data-emp-conta]');
-    if (ct){ const reg = cqAtual(); if (!reg) return; empSel(reg).contaId = ct.dataset.empConta; salvar(); return cqRenderP5(); }
+    if (ct){ const reg = cqAtual(); if (!reg) return; const sel = empSel(reg), novo = ct.dataset.empConta;
+      if (novo !== sel.contaId){
+        const r = cqRascunhoEmissao(reg) || {}, progK = r._progEscolhido || r.prog || '';
+        const xs = empContas(progK, sel.pax || [], r.milhas, r), de = xs.find(x => x.c.id === sel.contaId);
+        const motivo = !de ? 'escolha sua' : !de.temVagas ? 'sem vagas de CPF suficientes' : !de.temMilhas ? 'sem milhas suficientes' : 'escolha sua';
+        (sel.trocas = sel.trocas || []).push({em:new Date().toISOString(), de:sel.contaId || '', para:novo, motivo});
+        sel.contaId = novo; salvar();
+      }
+      return cqRenderP5(); }
     const px = e.target.closest('[data-emp-pax]');
     if (px){ const reg = cqAtual(); if (!reg) return; const sel = empSel(reg);
       abrirSeletorPax(sel.pax, ids => { sel.pax = (ids || []).slice(); salvar(); try { cqRender(); } catch(_){ cqRenderP5(); } }); return; }
     const pe = e.target.closest('[data-emp-pessoa]'); if (pe){ editarPessoa(pe.dataset.empPessoa); return; }
+  });
+})();
+</script>
+
+<script id="dsp-js">
+/* ══ "NÃO SERVE" VALE SÓ PARA AQUELA CAMPANHA (25/10/2026, pedido do Jadiel) ═══
+   "A loja não tinha o produto naquele momento. Depois pode voltar ao estoque,
+   ou aparecer um produto parecido, de qualidade igual e preço igual ou melhor,
+   numa promoção nova." Então a dispensa de uma loja para um item guarda a
+   assinatura da campanha (loja, pontos por real e prazo). Quando a campanha
+   daquela loja muda ou acaba, a dispensa cai sozinha e o item volta a ser
+   avaliado. "Esperar uma campanha melhor" segue a regra própria dela. */
+function sigOfertaDesejo(o){ return o ? String(o.loja && o.loja.id) + '|' + Number(o.mult) + '|' + (o.fim || '') : ''; }
+(function(){
+  if (typeof dispensasAtivas !== 'function') return;
+  const orig = dispensasAtivas;
+  dispensasAtivas = function(){
+    const zs = orig.apply(this, arguments);
+    let st; try { st = avEstado(); } catch(_){ return zs; }
+    let mudou = false;
+    const out = zs.filter(z => {
+      const e = st[z.k]; if (!e || !e.sig || z.tipo !== 'desejo') return true;
+      const d = (DB.desejos || []).find(y => _chaveDesejo(y) === z.did); if (!d) return true;
+      const agora = _candOrig(d, true).filter(o => normLoja(o.loja.n) === normLoja(z.lojaN)).map(sigOfertaDesejo);
+      if (agora.includes(e.sig)) return true;
+      delete st[z.k]; mudou = true; return false;
+    });
+    if (mudou) try { salvar(); } catch(_){}
+    return out;
+  };
+})();
+</script>
+<style id="ck-css">
+/* ══ CHECK-IN ABERTO (25/10/2026) ══════════════════════════════════════════════ */
+.ck-card .rn-sino{ background:color-mix(in srgb, var(--jade) 16%, transparent) !important; color:var(--jade) !important; }
+.ck-card .rn-olho{ color:var(--jade) !important; }
+.ck-card .ck-loc{ font-family:var(--f-m, inherit); letter-spacing:.06em; font-weight:700; }
+.etq.ck{ display:inline-flex; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-family:var(--f-b); font-weight:600; }
+.etq.ck .ponto{ width:7px; height:7px; border-radius:50%; background:currentColor; }
+button.etq.ck{ cursor:pointer; border:1px solid currentColor; background:transparent; }
+</style>
+<script id="ck-js">
+/* ══ CHECK-IN ABERTO E AINDA NÃO FEITO (25/10/2026, pedido do Jadiel) ══════════
+   "A Torre me notifica se o check-in abriu e o cliente ainda não fez."
+   Cada trecho emitido (ida e volta, separados) tem a sua janela: abre X horas
+   antes do voo, conforme a companhia, e fecha na hora do voo. Enquanto estiver
+   aberta e não marcada como feita, a Torre:
+   1. abre um aviso em janela (o mesmo desenho do lembrete de renovação), com
+      WhatsApp para o cliente (mensagem pronta, com o localizador e o site da
+      companhia), "Marcar feito" e "Depois";
+   2. põe o aviso no sino;
+   3. mostra o selo "check-in aberto" no voo, em Emitidos, com "marcar feito".
+   Janelas de abertura (Passageiro de Primeira, conferir de tempos em tempos):
+   GOL 48 h, LATAM 48 h, Azul 72 h; as outras, 24 h por segurança (melhor avisar
+   um pouco tarde do que mandar o cliente fazer antes de abrir). Dá para mudar
+   em DB.cfg.checkinHoras, por código da companhia. */
+const CK_HORAS = {G3:48, LA:48, JJ:48, AD:72};
+const CK_CIA = {G3:{n:'GOL', site:'https://www.voegol.com.br/'}, LA:{n:'LATAM', site:'https://www.latamairlines.com/br/pt'}, JJ:{n:'LATAM', site:'https://www.latamairlines.com/br/pt'},
+  AD:{n:'Azul', site:'https://www.voeazul.com.br/'}, TP:{n:'TAP', site:'https://www.flytap.com/pt-br/'}};
+const CK_PROG_CIA = {smiles:'G3', latampass:'LA', azul:'AD', tap:'TP'};
+function ckHoras(cia){ const c = (DB.cfg && DB.cfg.checkinHoras) || {}; return Number(c[cia]) || CK_HORAS[cia] || 24; }
+function ckLinhas(r){
+  return String(r.itin || '').split(/\n+/).map(l => {
+    const m = l.trim().match(/^([A-Z0-9]{2})\s?0*(\d{1,4})\b/); if (!m) return null;
+    const d = l.match(/(\d{4}-\d{2}-\d{2})/) || l.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    const iso = !d ? '' : d[0].includes('-') ? d[1] : `${d[3]}-${d[2]}-${d[1]}`;
+    return {cia:m[1], num:m[2], data:iso};
+  }).filter(Boolean);
+}
+function ckCiaDe(r, trecho){
+  const ls = ckLinhas(r);
+  if (ls.length){
+    if (trecho === 'volta'){ const v = ls.find(l => l.data && l.data === r.dataVolta); if (v) return v.cia; return ls[ls.length - 1].cia; }
+    return ls[0].cia;
+  }
+  const t = String(r.desc || '');
+  if (/\bGOL\b|\bG3\b/i.test(t)) return 'G3';
+  if (/LATAM|\bLA\b/.test(t)) return 'LA';
+  if (/\bAzul\b|\bAD\b/.test(t)) return 'AD';
+  if (/\bTAP\b|\bTP\b/.test(t)) return 'TP';
+  return CK_PROG_CIA[r.prog] || '';
+}
+function ckTrechos(r){
+  const out = [];
+  if (r.data) out.push({k:'ida', data:r.data, hora:r.hora || ''});
+  if (r.trajeto === 'idavolta' && r.dataVolta) out.push({k:'volta', data:r.dataVolta, hora:r.horaVolta || ''});
+  return out.map(t => { const cia = ckCiaDe(r, t.k), partida = new Date(`${t.data}T${/^\d{2}:\d{2}$/.test(t.hora) ? t.hora : '00:00'}:00`);
+    return Object.assign(t, {cia, partida, abre:new Date(partida.getTime() - ckHoras(cia) * 36e5)}); });
+}
+function ckAbertos(){
+  const agora = new Date(), out = [];
+  (DB.reservas || []).forEach(r => {
+    if (r.tipo !== 'voo' || r.status === 'cancelada' || r.status === 'realizada') return;
+    ckTrechos(r).forEach(t => {
+      if (isNaN(t.partida) || agora < t.abre || agora >= t.partida) return;
+      if ((r.checkin || {})[t.k]) return;
+      out.push({r, t});
+    });
+  });
+  return out.sort((a, b) => a.t.partida - b.t.partida);
+}
+function ckRota(r, k){
+  const base = String(r.desc || '').split(' · ')[0].replace(/\s*\((ida e volta|ida|volta)\)/, '');
+  const m = base.match(/^([A-Z]{3})\s*→\s*([A-Z]{3})/);
+  if (m && k === 'volta') return `${m[2]} → ${m[1]}`;
+  return m ? `${m[1]} → ${m[2]}` : base;
+}
+function ckQuando(t){
+  const hoje = hojeISO(), am = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  const dia = t.data === hoje ? 'hoje' : t.data === am ? 'amanhã' : dataBR(t.data);
+  return dia + (t.hora ? ' às ' + t.hora : '');
+}
+function ckNomeCia(cia){ return (CK_CIA[cia] || {}).n || cia || 'companhia'; }
+function ckWhats(r, t){
+  const f = r.quem === 'terceiro' ? cqFoneCliente(r.cliente) : ''; if (!f) return '';
+  const nome = String(r.cliente || '').trim().split(' ')[0], c = CK_CIA[t.cia] || {};
+  const txt = `Olá, ${nome}! O check-in do seu voo ${ckRota(r, t.k).replace(' → ', ' para ')}, ${ckQuando(t)}${c.n ? ' (' + c.n + ')' : ''}, já está aberto.`
+    + (r.loc ? ` Localizador: ${r.loc}.` : '') + (c.site ? ` É só entrar no site ou no app da ${c.n}: ${c.site}` : '')
+    + ` Se precisar, eu faço com você. Boa viagem!`;
+  return `https://wa.me/${f}?text=${encodeURIComponent(txt)}`;
+}
+function ckMarcar(id, k, feito){
+  const r = (DB.reservas || []).find(x => x.id === id); if (!r) return;
+  r.checkin = r.checkin || {};
+  if (feito === false) delete r.checkin[k]; else r.checkin[k] = new Date().toISOString();
+  salvar();
+  try { if (typeof renderBalcao === 'function') renderBalcao(); } catch(_){}
+}
+(function(){
+  /* 1. no sino */
+  if (typeof avisos === 'function'){
+    const o = avisos;
+    avisos = function(){
+      const L = o.apply(this, arguments);
+      try {
+        ckAbertos().forEach(({r, t}) => L.push({grau:3, tipo:'checkin', dias:0, curto:'check-in aberto', ref:`checkin:${r.id}:${t.k}`,
+          t:`Check-in aberto: ${r.quem === 'terceiro' ? (r.cliente || 'cliente') : 'sua viagem'}`,
+          s:`${ckRota(r, t.k)} · ${ckNomeCia(t.cia)} · voo ${ckQuando(t)}${r.loc ? ' · localizador ' + r.loc : ''}`,
+          ir:r.quem === 'terceiro' ? ['emitidos'] : ['rota', 'rt-plano'], fn:`abrirFichaReserva('${r.id}')`}));
+      } catch(e){ console.error(e); }
+      return L;
+    };
+  }
+  /* 3. selo no voo */
+  if (typeof seloJanela24h === 'function'){
+    const o = seloJanela24h;
+    seloJanela24h = function(r){
+      let h = o.apply(this, arguments);
+      try {
+        if (r && r.tipo === 'voo' && r.status !== 'cancelada'){
+          const ab = ckAbertos().filter(x => x.r.id === r.id);
+          ab.forEach(({t}) => { h += ` <button type="button" class="etq ck brasa" data-ck-feito="${esc(r.id)}" data-ck-k="${t.k}" data-dica="Check-in aberto${t.k === 'volta' ? ' da volta' : ''}. Toque quando estiver feito."><i class="ponto pulsa"></i>check-in ${t.k === 'volta' ? 'da volta ' : ''}aberto · marcar feito</button>`; });
+          Object.keys(r.checkin || {}).forEach(k => { const t = ckTrechos(r).find(x => x.k === k); if (t && new Date() < t.partida) h += ` <button type="button" class="etq ck jade" data-ck-desfazer="${esc(r.id)}" data-ck-k="${k}" data-dica="Check-in feito. Toque para desfazer."><i class="ponto"></i>check-in ${k === 'volta' ? 'da volta ' : ''}feito</button>`; });
+        }
+      } catch(e){ console.error(e); }
+      return h;
+    };
+  }
+  document.addEventListener('click', e => {
+    const d = e.target.closest('[data-ck-desfazer]');
+    if (d){ e.preventDefault(); e.stopPropagation(); ckMarcar(d.dataset.ckDesfazer, d.dataset.ckK, false); avisar('Desfeito: o check-in voltou a aparecer como aberto.', 'ok', 2400); try { mostrarAvisosRenovacao(); } catch(_){} return; }
+    const b = e.target.closest('[data-ck-feito]'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    ckMarcar(b.dataset.ckFeito, b.dataset.ckK);
+    avisar('Check-in marcado como feito.', 'ok', 2400);
+    try { mostrarAvisosRenovacao(); } catch(_){}
+  }, true);
+  /* 2. aviso em janela */
+  if (typeof mostrarAvisosRenovacao !== 'function') return;
+  const _sessao = new Set();
+  const mr = mostrarAvisosRenovacao;
+  mostrarAvisosRenovacao = function(){
+    const ret = mr.apply(this, arguments);
+    try {
+      const pilha = document.getElementById('rnPilha'); if (!pilha) return ret;
+      pilha.querySelectorAll('[data-ck]').forEach(e => e.remove());
+      ckAbertos().filter(x => !_sessao.has(x.r.id + ':' + x.t.k)).slice(0, 3).forEach(({r, t}) => {
+        const zap = ckWhats(r, t), quem = r.quem === 'terceiro' ? esc(r.cliente || 'Cliente') : 'Sua viagem';
+        const el = document.createElement('div');
+        el.className = 'rn-card rl-card ck-card'; el.setAttribute('role', 'alert'); el.dataset.ck = r.id + ':' + t.k;
+        el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-bilhete"/></svg></div>
+          <div class="rn-txt"><div class="rn-olho">Check-in aberto</div><b>${quem}${t.k === 'volta' ? ' · volta' : ''}</b>
+          <p>${esc(ckRota(r, t.k))} · ${esc(ckNomeCia(t.cia))} · voo ${esc(ckQuando(t))}${r.loc ? ` · <span class="ck-loc">${esc(r.loc)}</span>` : ''}</p></div></div>
+          <div class="rn-acoes">${zap ? `<button type="button" class="rl-ver" data-zap="${esc(zap)}">Avisar no WhatsApp</button>` : ''}<button type="button" class="rl-depois">Depois</button><button type="button" class="rl-ok">Marcar feito</button></div>`;
+        const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
+        const z = el.querySelector('.rl-ver'); if (z) z.onclick = () => { window.open(z.dataset.zap, '_blank', 'noopener'); _sessao.add(r.id + ':' + t.k); setTimeout(sair, 150); };
+        el.querySelector('.rl-depois').onclick = () => { _sessao.add(r.id + ':' + t.k); sair(); };
+        el.querySelector('.rl-ok').onclick = () => { ckMarcar(r.id, t.k); sair(); avisar('Check-in marcado como feito. Se foi engano, toque no selo do voo em Emitidos.', 'ok', 3600); };
+        pilha.appendChild(el);
+      });
+    } catch(e){ console.error(e); }
+    return ret;
+  };
+  let _sinal = null, _t = 0;
+  const conferir = () => { let s = ''; try { s = ckAbertos().map(x => x.r.id + ':' + x.t.k).join('|'); } catch(_){ return; }
+    if (s !== _sinal){ _sinal = s; try { mostrarAvisosRenovacao(); } catch(e){ console.error(e); } } };
+  if (typeof salvar === 'function'){ const sv = salvar; salvar = function(){ const r = sv.apply(this, arguments); clearTimeout(_t); _t = setTimeout(conferir, 600); return r; }; }
+  setTimeout(conferir, 2600);
+  setInterval(conferir, 60000);
+})();
+</script>
+
+<style id="vg-css">
+/* ══ PÁGINA DA VIAGEM: o painel dentro da Torre (25/10/2026) ═══════════════════ */
+.vg-painel{ margin:16px auto 0; max-width:640px; text-align:left; border:1px solid var(--fio); border-radius:16px; padding:14px 16px; background:linear-gradient(160deg, color-mix(in srgb, var(--jade) 8%, var(--sup-0)), var(--sup-0) 60%); }
+.vg-painel-cab{ display:flex; align-items:center; gap:10px; }
+.vg-painel-cab .vg-ic{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:color-mix(in srgb, var(--jade) 16%, transparent); color:var(--jade); flex:0 0 auto; }
+.vg-painel-cab .vg-ic svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; }
+.vg-painel-cab b{ display:block; font-size:calc(14px * var(--esc)); color:var(--giz); }
+.vg-painel-cab small{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.vg-painel-cab .etq{ margin-left:auto; }
+.vg-link{ display:flex; gap:8px; align-items:center; margin:10px 0 0; padding:8px 10px; border-radius:10px; background:var(--sup-1); border:1px solid var(--fio); font:500 calc(12px * var(--esc))/1.3 var(--f-m, inherit); color:var(--grafite); overflow:hidden; }
+.vg-link span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+.vg-bts{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+@media (max-width:560px){ .vg-bts .bt{ flex:1 1 auto; justify-content:center; } }
+</style>
+<script id="vg-js">
+/* ══ PÁGINA DA VIAGEM DO CLIENTE (25/10/2026, pedido do Jadiel) ═════════════════
+   Depois de emitida, a cotação vira uma página premium para o cliente, no mesmo
+   desenho da cotação (céu, rota, voos):
+   - localizador em destaque, com botão de copiar, e contagem regressiva;
+   - os voos, ida e volta;
+   - a lista do que fazer até a viagem, com data: documento, check-in (abre X
+     horas antes, conforme a companhia, com o botão para o site dela), bagagem,
+     assento e hora de chegar ao aeroporto. O cliente marca o que já fez (fica
+     guardado no aparelho dele) e, no check-in, avisa você pelo WhatsApp;
+   - sala VIP, transfer e hotel, cada um com o WhatsApp pronto;
+   - "Precisa de ajuda?", também pelo WhatsApp.
+   SEGURANÇA: o repositório das páginas é público, e localizador com sobrenome
+   permite mexer na reserva. Por isso o conteúdo da página vai CIFRADO (AES-GCM)
+   e a chave vai só no fim do link (#k=...), que o navegador não manda a lugar
+   nenhum e que não fica no GitHub. Sem o link completo, a página não mostra nada.
+   O título e a prévia do WhatsApp são genéricos, sem nome nem destino. */
+const VG_CIA = {GOL:'G3', LATAM:'LA', Azul:'AD', AZUL:'AD', TAP:'TP'};
+function vg64(buf){ const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function vgEsc(t){ return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function vgReservas(reg){
+  const ids = reg.emissoes ? [reg.emissoes.ida, reg.emissoes.volta] : [reg.reservaId];
+  return ids.map(i => (DB.reservas || []).find(r => r.id === i)).filter(Boolean);
+}
+function vgDiaHora(dt){
+  const D = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  return `${D[dt.getDay()]}, ${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')} às ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+}
+function vgZapNum(){ let n = String((vemCfg() || {}).whatsapp || '').replace(/\D/g, ''); if (n && !n.startsWith('55')) n = '55' + n; return n; }
+function vgZap(num, txt){ return num ? `https://wa.me/${num}?text=${encodeURIComponent(txt)}` : '#'; }
+
+/* conteúdo da página (vai cifrado) */
+function vgConteudo(reg){
+  const ops = cqOpcoes(reg), x = ops[(reg.aprovada || {}).op || 0] || ops[0]; if (!x) throw new Error('A cotação não tem a opção aprovada.');
+  const V = window.VEM, d = x.d, res = vgReservas(reg); if (!res.length) throw new Error('A emissão ainda não foi registrada.');
+  const viagens = d.viagens.map(V.prepararViagem), ida = viagens[0], volta = viagens[1] || null;
+  const O = ida.origem, Dd = ida.destino, cabine = d.cabine || 'Econômica';
+  const cliente = String(d.cliente || res[0].cliente || '').trim(), primeiro = cliente.split(' ')[0];
+  const locs = [...new Set(res.map(r => String(r.loc || '').trim()).filter(Boolean))];
+  const pax = [...new Set(res.flatMap(r => r.pax || []))].map(pessoa).filter(Boolean).map(p => p.nome);
+  const intl = viagens.some(v => v.voos.some(f => f.origem.pais !== 'Brasil' || f.destino.pais !== 'Brasil'));
+  const cias = [...new Set(viagens.flatMap(v => v.voos.map(f => f.cia)))];
+  const num = vgZapNum(), rota = `${O.cidade} → ${Dd.cidade}`, locTxt = locs.join(' e ');
+  const ref = `${rota}${locTxt ? ', localizador ' + locTxt : ''}`;
+  const trechos = res.flatMap((r, i) => ckTrechos(r).map(t => Object.assign({}, t, {rot:res.length > 1 ? (i ? 'volta' : 'ida') : t.k})));
+  const temCrianca = res.some(r => (r.pax || []).some(id => { const p = pessoa(id); return p && faixaPax(p, r.data) !== 'adulto'; }));
+  const I = V.ICONES;
+  const det = [
+    `<li class="det-data">${I.data}<span><b>${volta ? 'Ida' : ''}${volta ? ': ' : ''}${vgEsc(V.diaCurto(ida.saida))}/${ida.saida.y}</b>${volta ? `<b class="det-volta">Volta: ${vgEsc(V.diaCurto(volta.saida))}/${volta.saida.y}</b>` : ''}<em class="contagem" id="contagem" data-voo="${ida.saida.ms}">Em breve</em></span></li>`,
+    `<li>${I.pessoa}<span>${vgEsc(pax.length ? pax.join(', ') : cliente)}</span></li>`,
+    `<li>${I.assento}<span>${vgEsc(cabine)}</span></li>`,
+    `<li>${I.aviao}<span>${vgEsc(cias.join(' + '))}</span></li>`];
+  const locH = locs.length ? `<div class="vg-loc"><span class="vg-loc-rot">Localizador${locs.length > 1 ? 'es' : ''}</span>${locs.map(l => `<button type="button" class="vg-loc-cod" data-copiar="${vgEsc(l)}" aria-label="Copiar o localizador ${vgEsc(l)}">${vgEsc(l)}<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg></button>`).join('')}<small>Você vai usar no check-in e no aeroporto.</small></div>` : '';
+  const ciaInfo = t => CK_CIA[t.cia] || {n:'a companhia', site:''};
+  const itens = [];
+  itens.push({k:'doc', t:'Documento com foto', q:'Até o dia do voo', s: intl
+    ? 'Passaporte válido. Muitos países pedem 6 meses de validade a partir da chegada, e alguns pedem visto: confira as regras do destino.'
+    : 'RG, CNH ou passaporte válidos, com o nome igual ao da passagem.' + (temCrianca ? ' Criança: leve certidão de nascimento ou documento com foto.' : '')});
+  trechos.forEach(t => {
+    const c = ciaInfo(t), h = ckHoras(t.cia);
+    itens.push({k:'checkin-' + t.rot, t:`Check-in da ${t.rot}`, q:`Abre ${vgDiaHora(t.abre)} (${h} horas antes do voo)`,
+      s:`Pelo site ou app da ${c.n}, com o localizador e o sobrenome.`, bt: c.site ? {href:c.site, t:`Fazer check-in na ${c.n}`} : null,
+      avisa: vgZap(num, `Olá! Fiz o check-in da ${t.rot} da viagem ${ref}.`)});
+  });
+  const bag = (d.bagagem || []).map(b => b.texto + (b.incluida === false ? ' (conforme a tarifa)' : '')).filter(Boolean);
+  if (bag.length) itens.push({k:'bagagem', t:'Bagagem', q:'Antes de fechar a mala', s:bag.join(' · ') + '.'});
+  itens.push({k:'assento', t:'Assento', q:'Até o check-in', s:`Escolha pelo site ou app da ${cias.join(' ou ')}. Dependendo da tarifa, marcar antes é pago; no check-in costuma haver assentos sem custo.`});
+  itens.push({k:'aeroporto', t:'Chegar ao aeroporto', q:`${intl ? '3 horas' : '2 horas'} antes do voo`, s:`Em ${O.aeroporto || O.cidade}. Com bagagem despachada, chegue com folga para a fila do balcão.`});
+  const listaH = itens.map(it => `<div class="vg-item" data-k="${it.k}">
+      <label class="vg-marca"><input type="checkbox" data-item="${it.k}"><span class="vg-cx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="vg-txt"><b>${vgEsc(it.t)}</b><span class="vg-quando">${vgEsc(it.q)}</span><small>${vgEsc(it.s)}</small></span></label>
+      ${it.bt || it.avisa ? `<div class="vg-acoes">${it.bt ? `<a class="vg-bt" href="${vgEsc(it.bt.href)}" target="_blank" rel="noopener">${vgEsc(it.bt.t)}</a>` : ''}${it.avisa ? `<a class="vg-bt vg-avisa" href="${vgEsc(it.avisa)}" target="_blank" rel="noopener">${V.ZAP}Avisar que fiz</a>` : ''}</div>` : ''}
+    </div>`).join('\n');
+  const EXTRAS = [
+    {k:'vip', t:'Sala VIP', s:'Espere o voo com conforto: comida, bebida, Wi-Fi e tomada.', ic:'<path d="M4 18h16M6 18v-5a6 6 0 0 1 12 0v5M12 4v3"/>', msg:`Olá! Quero saber de sala VIP para a viagem ${ref}.`},
+    {k:'transfer', t:'Transfer', s:'Do aeroporto ao hotel, sem fila de táxi e com preço fechado.', ic:'<path d="M5 16V9.5L7 5h10l2 4.5V16M5 16h14M5 16v2M19 16v2"/><circle cx="8" cy="13" r="1"/><circle cx="16" cy="13" r="1"/>', msg:`Olá! Quero um transfer para a viagem ${ref}.`},
+    {k:'hotel', t:'Hotel', s:'Hospedagem no destino, com milhas ou com desconto.', ic:'<path d="M3 19.5V6.5M3 15h18v4.5M21 15v-3.2c0-1.5-1.2-2.8-2.8-2.8H11v6"/><circle cx="7" cy="11.2" r="2"/>', msg:`Olá! Quero ver hotel em ${Dd.cidade} para a viagem ${ref}.`}];
+  const extrasH = EXTRAS.map(e => `<a class="vg-extra" href="${vgEsc(vgZap(num, e.msg))}" target="_blank" rel="noopener"><span class="vg-extra-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${e.ic}</svg></span><b>${e.t}</b><small>${e.s}</small><span class="vg-extra-cta">Quero saber</span></a>`).join('');
+  const voosH = volta ? V.htmlViagem(ida, cabine, `Ida, ${V.diaCurto(ida.saida)}`) + '\n' + V.htmlViagem(volta, cabine, `Volta, ${V.diaCurto(volta.saida)}`) : V.htmlViagem(ida, cabine);
+  const mad = [V.madrugada(ida), volta ? V.madrugada(volta) : ''].filter(Boolean).join('\n');
+  const html = `
+  <section class="ceu" aria-label="Viagem de ${vgEsc(O.cidade)} para ${vgEsc(Dd.cidade)}">
+    <div class="topo-ceu"><div class="marca"><img class="logo" src="data:image/webp;base64,${V.assets.logo}" alt="VEM" width="440" height="248"><span class="marca-texto">Viagens &amp; Experiências com Milhas</span></div><span class="vg-selo">Emitida</span></div>
+    <p class="saudacao"><span class="nome">Olá, ${vgEsc(primeiro)}.</span><span class="linha2">Sua viagem está confirmada.</span></p>
+    <div class="rota">${V.arco(ida.paradas)}<div class="codigos"><div class="codigo">${vgEsc(O.iata)}<small>${vgEsc(O.cidade)}</small></div><div class="codigo dir">${vgEsc(Dd.iata)}<small>${vgEsc(Dd.cidade)}</small></div></div></div>
+    ${locH}
+    <div class="picote" aria-hidden="true"></div>
+    <ul class="detalhes">${det.join('')}</ul>
+  </section>
+${mad}
+  <h2>Até a viagem</h2>
+  <div class="vg-progresso"><div class="vg-barra"><i id="vgBarra"></i></div><span id="vgConta">0 de ${itens.length} feitos</span></div>
+  <div class="caixa vg-lista">${listaH}</div>
+  <p class="nota">O que você marca fica guardado neste aparelho.</p>
+
+  <h2>${volta ? 'Os voos' : 'O voo'}</h2>
+  ${voosH}
+  <p class="nota">Os horários estão no fuso de cada aeroporto.</p>
+
+  <h2>Deixe a viagem ainda melhor</h2>
+  <div class="vg-extras">${extrasH}</div>
+
+  <section class="vg-ajuda">
+    <div><b>Precisa de ajuda?</b><p>Mudança de voo, cancelamento, bagagem ou qualquer dúvida: é só chamar.</p></div>
+    <a class="zap" href="${vgEsc(vgZap(num, `Olá! Preciso de ajuda com a viagem ${ref}.`))}" target="_blank" rel="noopener">${V.ZAP}Falar no WhatsApp</a>
+  </section>
+
+  <div class="rodape"><p>Página feita em ${dataBR(hojeISO())}, para ${vgEsc(pax.length ? pax.join(', ') : cliente)}.</p><div class="assina"><i></i><span>VEM · Viagens &amp; Experiências com Milhas</span></div></div>`;
+  return {html, cliente, primeiro, locs, ida, O, Dd, itens:itens.length};
+}
+
+/* script da página: decifra, depois contagem, lista, copiar e a órbita do avião */
+const VG_JS = `(function(){
+  var main = document.getElementById('vg');
+  function de64(s){ s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function aviso(t, s){ main.innerHTML = '<section class="vg-tranca"><b>' + t + '</b><p>' + s + '</p></section>'; }
+  var m = location.hash.match(/k=([A-Za-z0-9_-]+)/);
+  if (!m){ aviso('Abra pelo link completo', 'Esta página é protegida. Use o link que você recebeu no WhatsApp, inteiro.'); return; }
+  var D; try { D = JSON.parse(document.getElementById('dados').textContent); } catch(e){ aviso('Página incompleta', 'Peça um link novo no WhatsApp.'); return; }
+  if (!window.crypto || !crypto.subtle){ aviso('Navegador sem suporte', 'Abra o link no Chrome, no Safari ou no navegador do celular.'); return; }
+  crypto.subtle.importKey('raw', de64(m[1]), 'AES-GCM', false, ['decrypt'])
+    .then(function(k){ return crypto.subtle.decrypt({name:'AES-GCM', iv:de64(D.iv)}, k, de64(D.c)); })
+    .then(function(b){ main.innerHTML = new TextDecoder().decode(b); iniciar(); })
+    .catch(function(){ aviso('Link incompleto', 'O fim do link se perdeu. Abra de novo pelo WhatsApp ou peça um link novo.'); });
+  function iniciar(){
+    var c = document.getElementById('contagem');
+    if (c){ var voo = Number(c.getAttribute('data-voo')), dias = Math.ceil((voo - Date.now()) / 864e5), horas = Math.ceil((voo - Date.now()) / 36e5);
+      c.textContent = voo < Date.now() ? 'Boa viagem!' : horas <= 24 ? (horas <= 1 ? 'Embarque em menos de 1 hora' : 'Faltam ' + horas + ' horas') : dias === 1 ? 'É amanhã' : 'Faltam ' + dias + ' dias'; }
+    var chave = 'vem-viagem-' + D.id, feito = {};
+    try { feito = JSON.parse(localStorage.getItem(chave) || '{}') || {}; } catch(e){}
+    var cxs = document.querySelectorAll('[data-item]');
+    function conta(){ var n = 0; cxs.forEach(function(x){ if (x.checked) n++; x.closest('.vg-item').classList.toggle('feito', x.checked); });
+      document.getElementById('vgConta').textContent = n === cxs.length ? 'Tudo pronto. Boa viagem!' : n + ' de ' + cxs.length + ' feitos';
+      document.getElementById('vgBarra').style.width = (cxs.length ? n / cxs.length * 100 : 0) + '%'; }
+    cxs.forEach(function(x){ x.checked = !!feito[x.getAttribute('data-item')];
+      x.addEventListener('change', function(){ feito[x.getAttribute('data-item')] = x.checked ? new Date().toISOString() : undefined; try { localStorage.setItem(chave, JSON.stringify(feito)); } catch(e){} conta(); }); });
+    conta();
+    document.querySelectorAll('[data-copiar]').forEach(function(b){ b.addEventListener('click', function(){ var t = b.getAttribute('data-copiar');
+      var ok = function(){ b.classList.add('copiado'); setTimeout(function(){ b.classList.remove('copiado'); }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, ok); else ok(); }); });
+    var caminho = document.getElementById('feita'), aviao = document.getElementById('aviao'); if (!caminho || !aviao) return;
+    var L = caminho.getTotalLength();
+    function pos(t){ var l = L * t, p = caminho.getPointAtLength(l), a = caminho.getPointAtLength(Math.max(0, l - 1)), q = caminho.getPointAtLength(Math.min(L, l + 1));
+      aviao.setAttribute('transform', 'translate(' + p.x + ' ' + p.y + ') rotate(' + (Math.atan2(q.y - a.y, q.x - a.x) * 180 / Math.PI) + ')');
+      caminho.style.strokeDasharray = L; caminho.style.strokeDashoffset = L * (1 - t); }
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){ pos(1); return; }
+    var ini = null; function passo(ts){ if (ini === null) ini = ts; var t = Math.min(1, (ts - ini) / 2600); pos(t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2); if (t < 1) requestAnimationFrame(passo); }
+    pos(0); requestAnimationFrame(passo);
+  }
+})();`;
+const VG_CSS = `
+.vg-selo{ margin-left:auto; align-self:flex-start; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#0F1A3A; background:linear-gradient(135deg,#F7D65E,#F2B61B); padding:6px 12px; border-radius:999px; }
+.topo-ceu{ display:flex; align-items:flex-start; gap:12px; }
+.vg-loc{ position:relative; margin:16px 0 4px; padding:14px 16px; border-radius:18px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+.vg-loc-rot{ width:100%; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.7); }
+.vg-loc-cod{ all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:10px; font:800 30px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing:.14em; color:#F7D65E; }
+.vg-loc-cod svg{ width:18px; height:18px; fill:none; stroke:rgba(255,255,255,.75); stroke-width:2; }
+.vg-loc-cod.copiado svg{ stroke:#3CC486; }
+.vg-loc-cod.copiado::after{ content:"copiado"; font:700 11px/1 "Archivo", system-ui, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#3CC486; }
+.vg-loc small{ width:100%; color:rgba(255,255,255,.7); font-size:13px; }
+.vg-progresso{ display:flex; align-items:center; gap:12px; margin:-2px 0 12px; font-size:14px; color:var(--tinta-2); font-weight:600; }
+.vg-barra{ flex:1; height:8px; border-radius:99px; background:var(--sup-2); border:1px solid var(--fio); overflow:hidden; }
+.vg-barra i{ display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg, var(--verde), #3CC486); transition:width .35s ease; }
+.vg-lista{ padding:6px 0 !important; }
+.vg-item{ padding:14px 18px; border-top:1px solid var(--fio); }
+.vg-item:first-child{ border-top:0; }
+.vg-marca{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px; align-items:start; cursor:pointer; }
+.vg-marca input{ position:absolute; opacity:0; pointer-events:none; }
+.vg-cx{ width:26px; height:26px; border-radius:9px; border:2px solid var(--fio); display:grid; place-items:center; background:var(--sup); transition:all .2s ease; margin-top:1px; }
+.vg-cx svg{ width:16px; height:16px; fill:none; stroke:#fff; stroke-width:3; opacity:0; }
+.vg-marca input:focus-visible + .vg-cx{ outline:3px solid var(--azul); outline-offset:2px; }
+.vg-item.feito .vg-cx{ background:var(--verde); border-color:var(--verde); }
+.vg-item.feito .vg-cx svg{ opacity:1; }
+.vg-txt b{ display:block; font-size:17px; }
+.vg-item.feito .vg-txt b{ color:var(--tinta-2); text-decoration:line-through; text-decoration-color:var(--verde); }
+.vg-quando{ display:inline-block; margin:4px 0 2px; font-size:13px; font-weight:700; color:var(--ouro-texto); }
+.vg-txt small{ display:block; font-size:14px; color:var(--tinta-2); line-height:1.5; }
+.vg-acoes{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 0 40px; }
+.vg-bt{ display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-2); color:var(--tinta); font-size:14px; font-weight:700; text-decoration:none; }
+.vg-bt svg{ width:16px; height:16px; }
+.vg-avisa{ display:none; border-color:var(--verde); color:var(--verde); background:var(--verde-fundo); }
+.vg-item.feito .vg-avisa{ display:inline-flex; }
+.vg-extras{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; }
+.vg-extra{ display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:var(--raio); background:var(--sup); border:1px solid var(--fio); color:var(--tinta); text-decoration:none; transition:transform .2s ease, border-color .2s ease; }
+.vg-extra:hover{ transform:translateY(-2px); border-color:var(--ouro); }
+.vg-extra-ic{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:linear-gradient(135deg, var(--noite-2), var(--noite)); }
+.vg-extra-ic svg{ width:20px; height:20px; fill:none; stroke:#F7D65E; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.vg-extra b{ font-size:16px; margin-top:4px; }
+.vg-extra small{ font-size:13.5px; color:var(--tinta-2); line-height:1.45; flex:1; }
+.vg-extra-cta{ font-size:13px; font-weight:800; color:var(--ouro-texto); }
+.vg-extra-cta::after{ content:" →"; }
+.vg-ajuda{ margin:26px 0 8px; padding:20px; border-radius:var(--raio); background:linear-gradient(170deg, var(--noite-2), var(--noite)); color:#fff; display:flex; flex-wrap:wrap; align-items:center; gap:14px 20px; }
+.vg-ajuda > div{ flex:1 1 240px; }
+.vg-ajuda b{ font-size:18px; }
+.vg-ajuda p{ margin:4px 0 0; color:rgba(255,255,255,.75); font-size:14.5px; }
+.vg-ajuda .zap{ margin:0; flex:0 1 auto; }
+.vg-tranca{ margin:18vh auto 0; max-width:420px; text-align:center; padding:28px 24px; border-radius:var(--raio); background:var(--sup); border:1px solid var(--fio); }
+.vg-tranca b{ font-size:19px; }
+.vg-tranca p{ color:var(--tinta-2); }
+@media (max-width:620px){ .vg-extras{ grid-template-columns:minmax(0,1fr); } .vg-extra{ display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:14px; } .vg-extra-ic{ grid-row:span 3; } .vg-extra b{ margin-top:0; } .vg-acoes{ margin-left:0; } .vg-loc-cod{ font-size:26px; } .vg-ajuda .zap{ width:100%; justify-content:center; } }
+`;
+async function vgGerar(reg){
+  const c = vgConteudo(reg);
+  const k = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const chave = await crypto.subtle.importKey('raw', k, 'AES-GCM', false, ['encrypt']);
+  const cif = await crypto.subtle.encrypt({name:'AES-GCM', iv}, chave, new TextEncoder().encode(c.html));
+  const ant = reg.viagem || {};
+  const nome = ant.nome || ('viagem-' + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, '0')).join(''));
+  const site = String(vemCfg().site || VEM_PADRAO.site).replace(/\/+$/, '') + '/';
+  const pagina = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>VEM · Sua viagem</title>
+<meta property="og:title" content="VEM · Sua viagem">
+<meta property="og:description" content="Os voos, o localizador e tudo o que fazer até o embarque.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+${window.VEM.assets.css}
+.sub-viagem{ margin:18px 0 10px; font-size:15px; font-weight:700; color:var(--tinta-2); text-transform:none; }
+.det-volta{ font-weight:600 !important; }
+${VG_CSS}
+</style>
+</head>
+<body>
+<main class="pagina" id="vg"><section class="vg-tranca"><b>Abrindo a sua viagem…</b></section></main>
+<script type="application/json" id="dados">${JSON.stringify({id:nome, iv:vg64(iv), c:vg64(cif)})}<\/script>
+<script>${VG_JS}<\/script>
+</body>
+</html>
+`;
+  return {nome, pagina, k:vg64(k), url:site + nome + '.html', link:site + nome + '.html#k=' + vg64(k), c};
+}
+function vgWhatsCliente(reg){
+  const v = reg.viagem; if (!v) return '#';
+  const res = vgReservas(reg), cli = (res[0] && res[0].cliente) || ((reg.resumo || {}).cliente) || '';
+  const f = cqFoneCliente(cli), nome = String(cli).trim().split(' ')[0];
+  const txt = `Olá, ${nome}! Sua viagem está confirmada. Aqui está a sua Página da Viagem, com os voos, o localizador e o que fazer até o embarque: ${v.link}`;
+  return f ? `https://wa.me/${f}?text=${encodeURIComponent(txt)}` : `https://wa.me/?text=${encodeURIComponent(txt)}`;
+}
+let vgEstado = {};
+async function vgPublicar(reg){
+  if (!reg) return;
+  if (vgEstado[reg.id] === 'indo') return;
+  let g; try { g = await vgGerar(reg); } catch(e){ avisar('Não deu para montar a página: ' + (e.message || e), 'erro', 6000); return; }
+  if (!cqPodePublicar()){
+    vemBaixarArquivo(new Blob([g.pagina], {type:'text/html;charset=utf-8'}), g.nome + '.html');
+    reg.viagem = {nome:g.nome, k:g.k, link:g.link, em:new Date().toISOString(), noAr:false, baixada:true}; salvar(); cqRenderP5();
+    avisar('Sem a chave da Nuvem, a página foi baixada. Suba o arquivo no repositório das cotações e envie o link.', 'ok', 7000); return;
+  }
+  vgEstado[reg.id] = 'indo'; cqRenderP5();
+  try {
+    await cqGitPut(cqRepoPaginas(), g.nome + '.html', paraBase64(g.pagina), `Viagem ${hojeISO()}`);   /* sem nome de cliente: o histórico é público */
+    reg.viagem = {nome:g.nome, k:g.k, link:g.link, em:new Date().toISOString(), noAr:false}; salvar();
+    vgEstado[reg.id] = 'esperando'; cqRenderP5();
+    const marca = JSON.parse(g.pagina.match(/id="dados">(.*?)<\/script>/)[1]).c.slice(0, 40);
+    const fim = Date.now() + 4 * 60 * 1000;
+    while (Date.now() < fim){
+      await new Promise(ok => setTimeout(ok, 5000));
+      try { const r = await fetch(g.url + '?v=' + Date.now(), {cache:'no-store'}); if (r.ok && (await r.text()).includes(marca)){ reg.viagem.noAr = true; salvar(); break; } } catch(_){}
+    }
+    vgEstado[reg.id] = reg.viagem.noAr ? 'ok' : 'demorando'; cqRenderP5();
+    if (reg.viagem.noAr) avisar('A Página da Viagem está no ar.', 'ok');
+  } catch(e){ vgEstado[reg.id] = 'erro:' + (e.message || e); cqRenderP5(); }
+}
+function vgPainelHTML(reg){
+  const v = reg.viagem, st = vgEstado[reg.id] || '';
+  const etq = st === 'indo' ? '<span class="etq ouro"><i class="ponto pulsa"></i>subindo</span>' : st === 'esperando' ? '<span class="etq ouro"><i class="ponto pulsa"></i>entrando no ar</span>'
+    : st.startsWith('erro:') ? '<span class="etq brasa">não subiu</span>' : v && v.noAr ? '<span class="etq jade">no ar</span>' : v && v.baixada ? '<span class="etq">baixada</span>' : v ? '<span class="etq">enviada ao GitHub</span>' : '';
+  const sub = st.startsWith('erro:') ? esc(st.slice(5)) : v ? `Feita em ${dataBR(v.em.slice(0, 10))}. Protegida: só abre com o link completo.` : 'Voos, localizador, lista até o embarque, extras e ajuda, para mandar ao cliente.';
+  return `<div class="vg-painel" data-vg-painel>
+    <div class="vg-painel-cab"><span class="vg-ic"><svg><use href="#i-bilhete"/></svg></span><div><b>Página da Viagem</b><small>${sub}</small></div>${etq}</div>
+    ${v ? `<div class="vg-link"><span>${esc(v.link)}</span></div>` : ''}
+    <div class="vg-bts">${v ? `<a class="bt primario" href="${esc(vgWhatsCliente(reg))}" target="_blank" rel="noopener" data-vg-zap><svg><use href="#i-seta"/></svg>Enviar ao cliente no WhatsApp</a>
+      <button type="button" class="bt fantasma" data-vg-copiar><svg><use href="#i-copiar"/></svg>Copiar o link</button>
+      <a class="bt fantasma" href="${esc(v.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ver a página</a>
+      <button type="button" class="bt fantasma" data-vg-gerar${st === 'indo' || st === 'esperando' ? ' disabled' : ''}><svg><use href="#i-lapis"/></svg>Atualizar</button>`
+      : `<button type="button" class="bt primario" data-vg-gerar${st === 'indo' ? ' disabled' : ''}><svg><use href="#i-bilhete"/></svg>Criar a Página da Viagem</button>`}</div>
+  </div>`;
+}
+(function(){
+  if (typeof cqRenderP5 === 'function'){
+    const o = cqRenderP5;
+    cqRenderP5 = function(){
+      const r = o.apply(this, arguments);
+      try { const cx = $('#cqP5'), reg = cqAtual(); if (!cx || !reg || cqStatus(reg) !== 'emitida' || !vgReservas(reg).length) return r;
+        const ok = cx.querySelector('.cq-ok'); if (!ok) return r;
+        const velho = cx.querySelector('[data-vg-painel]'); if (velho) velho.remove();
+        ok.insertAdjacentHTML('beforeend', vgPainelHTML(reg)); } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-vg-gerar]'); if (g){ e.preventDefault(); vgPublicar(cqAtual()); return; }
+    const c = e.target.closest('[data-vg-copiar]');
+    if (c){ const reg = cqAtual(); if (reg && reg.viagem) empCopiar(reg.viagem.link, c); return; }
+    const z = e.target.closest('[data-vg-zap]'); if (z){ const reg = cqAtual(); if (reg && reg.viagem){ reg.viagem.enviada = new Date().toISOString(); salvar(); } }
   });
 })();
 </script>
