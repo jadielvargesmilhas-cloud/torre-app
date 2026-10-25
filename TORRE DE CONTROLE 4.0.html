@@ -11836,7 +11836,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 12:10';
+const BUILD = '2026-10-25 12:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -65264,11 +65264,16 @@ function dpQualificados(){
         el.className = 'rn-card rl-card dp-card'; el.setAttribute('role', 'alert'); el.dataset.dp = d.id;
         el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
           <div class="rn-txt"><div class="rn-olho">Prioridade alta</div><b>${esc(d.n)} entrou em promoção</b><p>${linha}</p></div></div>
-          <div class="rn-acoes"><button type="button" class="rl-ver">Ver na lista</button><button type="button" class="rl-depois">Depois</button><button type="button" class="rl-ok">Resolvido</button></div>`;
+          <div class="rn-acoes"><button type="button" class="rl-ver">Ver na lista</button><button type="button" class="rl-depois">Depois</button><button type="button" class="rl-ok" aria-haspopup="menu">Não serve</button></div>`;
         const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
         el.querySelector('.rl-ver').onclick = () => { sair(); _sessao.add(d.id + '#' + k); try { irItemMenu('fabrica', 'fb-compras'); setTimeout(() => { const it = document.querySelector(`.ds-item[data-id="${d.id}"]`); if (it) it.scrollIntoView({block:'center', behavior:'smooth'}); }, 350); } catch(_){} };
         el.querySelector('.rl-depois').onclick = () => { _sessao.add(d.id + '#' + k); sair(); };
-        el.querySelector('.rl-ok').onclick = () => { DB.cfg.dpAlerta = DB.cfg.dpAlerta || {}; DB.cfg.dpAlerta[d.id] = k; salvar(); sair(); avisar('Combinado: este aviso volta só se aparecer outra promoção para o item.', 'ok', 4000); };
+        /* "Não serve" (25/10/2026, pedido do Jadiel): abre os mesmos motivos do
+           "Não me interessa agora" do item. Na oferta por loja, dispensa aquela
+           loja para este item de vez (não volta na próxima campanha dela); a
+           decisão aparece no item e pode ser desfeita lá. */
+        if (!x.viaOferta && typeof dispensarOfertaDesejo === 'function') el.querySelector('.rl-ok').onclick = ev => { dispensarOfertaDesejo(d.id, ev.currentTarget); };
+        else el.querySelector('.rl-ok').onclick = () => { DB.cfg.dpAlerta = DB.cfg.dpAlerta || {}; DB.cfg.dpAlerta[d.id] = k; salvar(); sair(); avisar('Combinado: este aviso volta só se aparecer outra promoção para o item.', 'ok', 4000); };
         pilha.appendChild(el);
       });
     } catch(e){ console.error(e); }
