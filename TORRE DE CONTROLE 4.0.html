@@ -8560,7 +8560,7 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
 }
 @media (max-width:400px){ #barraModulos.muitos .bm-item{ font-size:min(calc(9.2px * var(--esc)), 9.8px) !important; } }
 /* barra com muitos itens: cada item ocupa a largura do seu nome, para nomes como Campanhas e Aniversário caberem inteiros (22/10/2026) */
-@media (max-width:400px){ #barraModulos.muitos .bm-item:not(.bm-sair){ flex:1 1 auto !important; } }
+@media (max-width:560px){ #barraModulos.muitos .bm-item:not(.bm-sair){ flex:1 1 auto !important; } }
 
 /* celular: sem a lupa na barra de cima (10/10/2026), para o nome da área caber
    inteiro; a busca continua no computador */
@@ -11836,7 +11836,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 10:40';
+const BUILD = '2026-10-25 11:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -65223,6 +65223,66 @@ function adcAtivos(para, fimCamp){
       return r;
     };
   }
+})();
+</script>
+<script id="dp-js">
+/* ══ AVISO EM JANELA PARA ITEM DE PRIORIDADE ALTA (25/10/2026) ═════════════════
+   Item da Lista de desejos marcado como prioridade ALTA que entra em promoção
+   (campanha com prazo ou loja em promoção, ou desconto/cashback que bate o alvo)
+   ganha um aviso em janela, no mesmo desenho do lembrete de renovação do clube:
+   "Ver na lista" e "Resolvido". Resolvido vale para aquela promoção; se vier
+   outra melhor, avisa de novo. Prioridade média e "quando der" seguem só no
+   sino, como sempre. */
+function dpChave(x){ return x.viaOferta ? 'of|' + x.oferta.id + '|' + x.oferta.pct : x.melhor.loja.id + '|' + x.melhor.mult + '|' + (x.melhor.fim || ''); }
+function dpQualificados(){
+  const h = hojeISO(), vistos = (DB.cfg && DB.cfg.dpAlerta) || {};
+  return avaliarDesejos().filter(x => {
+    if (!x.atingiu || Number(x.d.prioridade) < 3) return false;
+    if (x.viaOferta) return !!x.oferta && vistos[x.d.id] !== dpChave(x);
+    if (!x.melhor) return false;
+    const m = x.melhor; if (m.fim && m.fim < h) return false;
+    if (!m.emPromo && !m.fim) return false;   /* multiplicador de sempre não é promoção */
+    return vistos[x.d.id] !== dpChave(x);
+  });
+}
+(function(){
+  if (typeof mostrarAvisosRenovacao !== 'function') return;
+  const _sessao = new Set();
+  const mr = mostrarAvisosRenovacao;
+  mostrarAvisosRenovacao = function(){
+    const r = mr.apply(this, arguments);
+    try {
+      const pilha = document.getElementById('rnPilha'); if (!pilha) return r;
+      pilha.querySelectorAll('[data-dp]').forEach(e => e.remove());
+      dpQualificados().filter(x => !_sessao.has(x.d.id + '#' + dpChave(x))).slice(0, 2).forEach(x => {
+        const d = x.d, k = dpChave(x), valor = Number(d.valor) || 0;
+        let linha;
+        if (x.viaOferta){ const o = x.oferta; linha = `<b style="display:inline">${pct(o.pct, 0)} de ${o.tipo === 'cashback' ? 'cashback' : 'desconto'}</b> em ${esc(o.loja)}: ${brl(valor)} devolvem <b style="display:inline">${brl(valor * o.pct / 100)}</b>.`; }
+        else { const m = x.melhor, dd = m.fim ? diasAte(m.fim) : null;
+          linha = `<b style="display:inline">${nBRdec(m.mult)} pontos por real</b> em ${esc(m.loja.n)} (${esc(prog(m.loja.prog).n)}): ${brl(valor)} devolvem <b style="display:inline">${brl(m.retorno)}</b>${dd === null ? '' : dd === 0 ? '. Último dia.' : `. Fecha ${prazoTexto(dd)}.`}`; }
+        const el = document.createElement('div');
+        el.className = 'rn-card rl-card dp-card'; el.setAttribute('role', 'alert'); el.dataset.dp = d.id;
+        el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
+          <div class="rn-txt"><div class="rn-olho">Prioridade alta</div><b>${esc(d.n)} entrou em promoção</b><p>${linha}</p></div></div>
+          <div class="rn-acoes"><button type="button" class="rl-ver">Ver na lista</button><button type="button" class="rl-depois">Depois</button><button type="button" class="rl-ok">Resolvido</button></div>`;
+        const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
+        el.querySelector('.rl-ver').onclick = () => { sair(); _sessao.add(d.id + '#' + k); try { irItemMenu('fabrica', 'fb-compras'); setTimeout(() => { const it = document.querySelector(`.ds-item[data-id="${d.id}"]`); if (it) it.scrollIntoView({block:'center', behavior:'smooth'}); }, 350); } catch(_){} };
+        el.querySelector('.rl-depois').onclick = () => { _sessao.add(d.id + '#' + k); sair(); };
+        el.querySelector('.rl-ok').onclick = () => { DB.cfg.dpAlerta = DB.cfg.dpAlerta || {}; DB.cfg.dpAlerta[d.id] = k; salvar(); sair(); avisar('Combinado: este aviso volta só se aparecer outra promoção para o item.', 'ok', 4000); };
+        pilha.appendChild(el);
+      });
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  /* promoção cadastrada depois: confere na hora */
+  let _t = 0, _sinal = null;
+  const conferir = () => {
+    let s = ''; try { s = dpQualificados().map(x => x.d.id + ':' + dpChave(x)).join('|'); } catch(_){ return; }
+    if (s !== _sinal){ _sinal = s; try { mostrarAvisosRenovacao(); } catch(e){ console.error(e); } }
+  };
+  if (typeof salvar === 'function'){ const sv = salvar; salvar = function(){ const r = sv.apply(this, arguments); clearTimeout(_t); _t = setTimeout(conferir, 500); return r; }; }
+  setTimeout(conferir, 2500);
+  setInterval(conferir, 60000);
 })();
 </script>
 </body>
