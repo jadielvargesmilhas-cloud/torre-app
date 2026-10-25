@@ -8559,6 +8559,8 @@ tr.lanc-tot > td{ padding:14px 16px !important; }
   #barraModulos.muitos .bm-item.bm-sair{ padding-left:9px !important; padding-right:5px !important; }
 }
 @media (max-width:400px){ #barraModulos.muitos .bm-item{ font-size:min(calc(9.2px * var(--esc)), 9.8px) !important; } }
+/* barra com muitos itens: cada item ocupa a largura do seu nome, para nomes como Campanhas e Aniversário caberem inteiros (22/10/2026) */
+@media (max-width:400px){ #barraModulos.muitos .bm-item:not(.bm-sair){ flex:1 1 auto !important; } }
 
 /* celular: sem a lupa na barra de cima (10/10/2026), para o nome da área caber
    inteiro; a busca continua no computador */
@@ -11834,7 +11836,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-22 17:40';
+const BUILD = '2026-10-25 10:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -40177,7 +40179,7 @@ function pintarBarraModulos(v){
     const its = area.menu.flatMap(g => g.itens);
     document.body.classList.add('com-modulos'); document.body.classList.add('barra-itens');
     bm.classList.toggle('muitos', its.length >= 5);
-    bm.innerHTML = its.map((it, i) => `<button type="button" class="bm-item${itemAberto(it) ? ' on' : ''}" data-i="${i}"><svg><use href="${it[3]}"/></svg><span>${esc(CURTO_ITEM[it[2]] || it[2])}</span></button>`).join('');
+    bm.innerHTML = its.map((it, i) => `<button type="button" class="bm-item${itemAberto(it) ? ' on' : ''}" data-i="${i}"><svg><use href="${it[3]}"/></svg><span>${esc(CURTO_ITEM[it[2]] || (/^Anivers[aá]rio\b/i.test(it[2]) ? 'Aniversário' : it[2]))}</span></button>`).join('');
     $$('.bm-item', bm).forEach(b => b.onclick = () => { const it = its[+b.dataset.i]; irItemMenu(it[0], it[1], it[4]); });
     poeSairNaBarra(bm);
     return;
@@ -65000,6 +65002,7 @@ const mnReg = links => (links || []).find(u => /regulamento|\.pdf(\?|$)/i.test(u
           const lp = el.querySelector('.mural-topo [onclick^="editarMural("]'); if (!lp || el.querySelector('.mr-passos, .mr-mensal, .mr-reg')) return;
           const id = (lp.getAttribute('onclick').match(/editarMural\('([^']+)'/) || [])[1], m = (DB.mural || []).find(x => x.id === id); if (!m) return;
           const pz = el.querySelector('.mural-prazo');
+          if (m.regulamento && m.link === m.regulamento && pz){ const ln = pz.querySelector('.mural-link:not(.mr-reg)'); if (ln) ln.remove(); }
           if (m.regulamento && pz) pz.insertAdjacentHTML('beforeend', `<a class="mural-link mr-reg" href="${esc(m.regulamento)}" target="_blank" rel="noopener"><svg><use href="#i-documento"/></svg><span>Regulamento</span></a>`);
           let h = '';
           if (m.passos && m.passos.length) h += `<div class="mr-passos"><div class="mr-passos-tit"><svg><use href="#i-rota"/></svg>Passo a passo</div><ol>${m.passos.map(p => `<li><span>${esc(p.t)}</span>${p.link ? `<a class="bt p primario" href="${esc(p.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir</a>` : ''}</li>`).join('')}</ol></div>`;
@@ -65104,6 +65107,120 @@ function mlFaixas(loja, x){
       });
       m.campId = primeira;
       return novas > 0;
+    };
+  }
+})();
+</script>
+<style id="adc-css">
+/* ══ BÔNUS ADICIONAL PAGANDO COM CARTÃO (25/10/2026) ══ */
+.mr-adic{ margin-top:12px; padding:12px 14px; border-radius:14px; border:1px solid color-mix(in srgb, var(--jade) 35%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, var(--sup-0)); }
+.mr-adic-tit{ display:flex; align-items:center; gap:8px; font-size:calc(11px * var(--esc)); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--jade); margin-bottom:8px; }
+.mr-adic-tit svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+.mr-adic ul{ list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.mr-adic li{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; font-size:calc(13.5px * var(--esc)); color:var(--giz); line-height:1.4; }
+.mr-adic li b{ font-variant-numeric:tabular-nums; }
+.mr-adic li .fraco{ font-size:calc(12px * var(--esc)); }
+.mr-adic p{ margin:0; font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.cp-fato.adc-fato{ background:color-mix(in srgb, var(--jade) 12%, transparent); color:var(--jade); }
+</style>
+<script id="adc-js">
+/* ══ BÔNUS ADICIONAL PAGANDO COM CARTÃO (25/10/2026, anúncio "Cartões ELO e
+   Livelo: 5% de bônus adicionais na compra de pontos") ══════════════════════
+   Esse tipo de anúncio não é uma campanha de compra: é um extra que SOMA com a
+   campanha de compra que estiver no ar. Antes, a Torre lia os números do
+   exemplo do texto ("54% de desconto", "milheiro a R$ 38,50") e criava uma
+   campanha de compra da Livelo com 54% de desconto que não existe.
+
+   Agora:
+   - não cria campanha; fica no mural como "Bônus adicional";
+   - em cada campanha de compra do mesmo programa que estiver no ar no mesmo
+     período, aparece o selo "Pagando com cartão Elo: +5% de bônus" com o
+     milheiro já recalculado;
+   - no cartão do mural, a lista dessas campanhas com o milheiro somado, ou o
+     aviso de que hoje não há campanha para somar. */
+const ADC_PROGS = [['livelo', /livelo/i], ['esfera', /esfera/i], ['smiles', /smiles/i], ['latampass', /latam/i], ['azul', /\bazul\b/i], ['itau', /ita[uú] ?pontos/i]];
+function adcLer(titulo, texto){
+  const t = String(titulo || '') + '\n' + String(texto || ''), s = semAcento(t);
+  if (!/(bonus|pontos?) (extras? )?adiciona|pontos? extras?/.test(s) || !/compra de pontos|comprarem pontos|comprar pontos/.test(s)) return null;
+  const ct = t.match(/cart(?:[õo]es|[ãa]o)\s+(elo|visa|mastercard|master|amex|american express|hipercard)/i); if (!ct) return null;
+  const b = (t.match(/([\d]+(?:[.,]\d+)?)\s*%\s*(?:de\s+)?(?:b[oô]nus|pontos?\s+extras?)/i) || [])[1]; if (!b) return null;
+  const pr = ADC_PROGS.find(([, r]) => r.test(titulo)) || ADC_PROGS.find(([, r]) => r.test(t)); if (!pr) return null;
+  const lim = (t.match(/limitad[ao]s?\s+(?:em|a)\s+(?:at[eé]\s+)?([\d.]+)\s*pontos/i) || [])[1];
+  const cartao = ct[1].toLowerCase() === 'elo' ? 'Elo' : ct[1].charAt(0).toUpperCase() + ct[1].slice(1).toLowerCase();
+  return {para:pr[0], bonus:Number(b.replace(',', '.')), limite:lim ? Number(lim.replace(/\./g, '')) : 0, cartao, clube:/assinantes?\s+(do\s+)?clube/i.test(t), cumulativo:/cumulativ/i.test(s)};
+}
+/* o milheiro de uma campanha de compra com o extra somado ao bônus dela */
+function adcMilheiro(c, a){
+  const p = precoCheioDe(c); if (!(p > 0)) return null;
+  return p * (1 - (Number(c.desconto) || 0) / 100) / (1 + ((Number(c.bonus) || 0) + a.bonus) / 100);
+}
+function adcAtivos(para, fimCamp){
+  const h = hojeISO();
+  return (DB.mural || []).filter(m => m.adicional && m.adicional.para === para && (!m.fim || m.fim >= h) && (!fimCamp || !m.inicio || m.inicio <= fimCamp));
+}
+(function(){
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments);
+      try {
+        if (a){ const x = adcLer(a.titulo, (bloco || []).join('\n'));
+          if (x){ a.adicional = x; a.sugestao = null; a.cat = 'pontos'; a.destaque = `+${nBRdec(x.bonus)}% com cartão ${x.cartao}`; } }
+      } catch(e){ console.error(e); }
+      return a;
+    };
+  }
+  if (typeof gravarAnuncios === 'function'){
+    const o = gravarAnuncios;
+    gravarAnuncios = function(){
+      const lidos = (typeof anunciosLidos !== 'undefined' && anunciosLidos) || [], antes = new Set((DB.mural || []).map(x => x.id));
+      const r = o.apply(this, arguments);
+      try {
+        let mudou = false;
+        (DB.mural || []).filter(m => !antes.has(m.id)).forEach(m => { const a = lidos.find(x => x && x.adicional && x.titulo === m.titulo); if (a){ m.adicional = a.adicional; m.inicio = m.inicio || hojeISO(); mudou = true; } });
+        if (mudou){ salvar(); try { renderMural(); } catch(_){} try { renderCampanhas(); } catch(_){} }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* selo na campanha de compra */
+  if (typeof cartaoCampanha === 'function'){
+    const o = cartaoCampanha;
+    cartaoCampanha = function(c){
+      let h = o.apply(this, arguments);
+      try {
+        if (c && c.tipo === 'compra'){
+          const ads = adcAtivos(c.para, c.fim);
+          if (ads.length){
+            const a = ads[0].adicional, mil = adcMilheiro(c, a);
+            const selo = `<span class="cp-fato adc-fato" data-dica="${esc(`Soma com esta campanha.${a.limite ? ` Até ${nBR(a.limite)} pontos extras.` : ''}${a.clube ? ` Só para assinantes do Clube ${prog(c.para).n}.` : ''}`)}">Pagando com cartão ${esc(a.cartao)}: <b>+${nBRdec(a.bonus)}% de bônus</b>${mil ? ` · milheiro <b>${brl2(mil)}</b>` : ''}</span>`;
+            h = h.replace('<div class="cp-fatos">', '<div class="cp-fatos">' + selo);
+          }
+        }
+      } catch(e){ console.error(e); }
+      return h;
+    };
+  }
+  /* no cartão do mural */
+  if (typeof renderMural === 'function'){
+    const o = renderMural;
+    renderMural = function(){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#mrLista .mural-cartao').forEach(el => {
+          const lp = el.querySelector('.mural-topo [onclick^="editarMural("]'); if (!lp || el.querySelector('.mr-adic')) return;
+          const id = (lp.getAttribute('onclick').match(/editarMural\('([^']+)'/) || [])[1], m = (DB.mural || []).find(x => x.id === id); if (!m || !m.adicional) return;
+          const a = m.adicional, n = prog(a.para).n;
+          const cs = campanhasVivas('compra').filter(c => c.para === a.para && (!m.fim || !c.inicio || c.inicio <= m.fim));
+          const corpo = cs.length
+            ? `<ul>${cs.map(c => { const mil = adcMilheiro(c, a), ant = cpmProjetadoCampanha(c);
+                return `<li><span>${esc(c.titulo || 'Compra de pontos ' + n)}</span><b>${mil ? brl2(mil) : ''}</b>${mil && ant ? `<span class="fraco">antes ${brl2(ant)}</span>` : ''}</li>`; }).join('')}</ul>`
+            : `<p>Hoje não há campanha de compra da ${esc(n)} no ar para somar. Sozinhos, os ${nBRdec(a.bonus)}% raramente compensam: espere uma campanha de desconto.</p>`;
+          const pz = el.querySelector('.mural-prazo'), ap = el.querySelector('.mr-passos, .vd') || pz || el.querySelector('.mural-topo');
+          ap.insertAdjacentHTML('afterend', `<div class="mr-adic"><div class="mr-adic-tit"><svg><use href="#i-mais"/></svg>Soma com a compra de pontos ${esc(n)}${a.limite ? ` · até ${nBR(a.limite)} pontos extras` : ''}</div>${corpo}</div>`);
+        });
+      } catch(e){ console.error(e); }
+      return r;
     };
   }
 })();
