@@ -11836,7 +11836,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 16:40';
+const BUILD = '2026-10-25 15:55';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -65720,6 +65720,7 @@ function ckMarcar(id, k, feito){
    O título e a prévia do WhatsApp são genéricos, sem nome nem destino. */
 const VG_CIA = {GOL:'G3', LATAM:'LA', Azul:'AD', AZUL:'AD', TAP:'TP'};
 function vg64(buf){ const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function vgDe64(s){ s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
 function vgEsc(t){ return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function vgReservas(reg){
   const ids = reg.emissoes ? [reg.emissoes.ida, reg.emissoes.volta] : [reg.reservaId];
@@ -65785,7 +65786,10 @@ function vgPasse(reg){
 }
 async function vgGerar(reg){
   const {V} = vgPasse(reg);
-  const k = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  /* a chave é da viagem, não da versão (25/10/2026): ao atualizar a página, o link
+     que o cliente já recebeu continua abrindo. Só o iv muda a cada versão. */
+  const ant0 = reg.viagem || {};
+  const k = ant0.k ? vgDe64(ant0.k) : crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
   const chave = await crypto.subtle.importKey('raw', k, 'AES-GCM', false, ['encrypt']);
   const cif = await crypto.subtle.encrypt({name:'AES-GCM', iv}, chave, new TextEncoder().encode(JSON.stringify(V)));
   const ant = reg.viagem || {};
