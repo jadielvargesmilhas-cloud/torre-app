@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 20:00';
+const BUILD = '2026-10-26 20:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -69742,6 +69742,41 @@ function impItemAzul(t){
   return {...base, tipo:'bonificada', organico:true, nota:`Compra em ${pn}`};
 }
 
+/* Uma movimentação da Smiles → um lançamento da Torre (26/10/2026). A
+   extensão já faz a conta de milhas igual à página da Smiles e manda só data,
+   milhas, tipo, produto e parceiro. O "alias" do parceiro diz de onde veio:
+   CSA cartão Santander, LIV Livelo, SAB Esfera, SIR Uau Caixa, G3 voo GOL,
+   G3V programa Smiles (clube), UER Uber. */
+const IMP_SMILES_ORIGEM = [[/livelo/i, 'livelo'], [/esfera/i, 'esfera'], [/uau|caixa/i, 'uau'], [/ita[uú]|iupp/i, 'iupp'], [/\bc6\b|[aá]tomos/i, 'atomos'], [/banri/i, 'banriclube']];
+const IMP_SMILES_ALIAS = {LIV:'livelo', SAB:'esfera', SIR:'uau'};
+const IMP_SMILES_DESTINO = [[/lifemiles/i, 'lifemiles'], [/accor|all\b/i, 'accor'], [/tap\b/i, 'tap']];
+function impItemSmiles(t){
+  if (!t) return null;
+  const q = Math.round(Number(t.points) || 0); if (!q) return null;
+  const data = String(t.date || '').slice(0, 10);
+  const pr = String(t.product || ''), pa = String(t.partner || ''), al = String(t.alias || '').toUpperCase(), sub = String(t.subType || '');
+  const tit = impTitulo(pr && !/^voo$/i.test(pr) ? pr : (t.carrier || pa || 'Smiles'));
+  const base = {ext:'smiles:' + (t.key || [data, pr, q].join('|')), data, qtd:q, parceiro:tit, codigo:al};
+  if (String(t.type) === 'Redemption' || q < 0){
+    const d = (IMP_SMILES_DESTINO.find(([re]) => re.test(pr) || re.test(pa)) || [])[1];
+    if (/transfer[eê]ncia de milhas/i.test(pr) || (d && al !== 'G3')) return {...base, qtd:-Math.abs(q), tipo:'transferencia', destino:d || '', nota:`Saída de milhas${d ? ' para ' + prog(d).n : ''} · ${tit}`};
+    if (/^voo$/i.test(pr) || /voos|turismo/i.test(sub) || al === 'G3' || al === 'SV3') return {...base, qtd:-Math.abs(q), tipo:'resgatePass', parceiro:impTitulo(t.carrier || pa || 'Smiles'), nota:`Emissão · ${impTitulo(t.carrier || pa || 'Smiles')}${t.pnr ? ' · ' + t.pnr : ''}`};
+    return {...base, qtd:-Math.abs(q), tipo:'resgateProd', nota:`Resgate · ${tit}`};
+  }
+  if (al === 'G3' && /voos/i.test(sub)) return {...base, tipo:'organico', organico:true, parceiro:'GOL', nota:'Milhas de voo GOL'};
+  if (al === 'G3V' && /clube/i.test(pr) && !/b[oô]nus/i.test(pr)) return {...base, parceiro:'Clube Smiles', tipo:'clube', clube:true, nota:`Clube Smiles · ${tit}`};
+  if (/transfer[eê]ncia bancos parceiros/i.test(sub) && al !== 'CSA'){
+    const org = (IMP_SMILES_ORIGEM.find(([re]) => re.test(pr)) || [])[1] || IMP_SMILES_ALIAS[al];
+    if (org && PROGRAMAS[org]){
+      if (/b[oô]nus/i.test(pr) || t.bonus) return {...base, tipo:'transferencia', bonusTransf:true, origemProg:org, nota:`Bônus da transferência · ${prog(org).n} · ${tit}`};
+      return {...base, tipo:'transferencia', origemProg:org, nota:`Vinda de ${prog(org).n} · ${tit}`};
+    }
+  }
+  if (al === 'CSA' || /cart[aã]o/i.test(pr)) return {...base, tipo:'cartao', organico:true, nota:`Cartão · ${tit}`};
+  if (/compra de milhas|smiles compra|compra milhas/i.test(pr)) return {...base, tipo:'compra', pedeValor:true, nota:'Compra de milhas Smiles'};
+  return {...base, tipo:'bonificada', organico:true, nota:`${t.bonus ? 'Bônus · ' : ''}${tit}`};
+}
+
 /* De quem é este extrato: vínculo já confirmado antes, ou nome (e começo do CPF). */
 function impContaDe(p){
   const v = (DB.cfg.impVinculo || {})[p.id];
@@ -69806,7 +69841,7 @@ function impAplicarAcertos(contaId, progK, saldo, dataRef, quandoTxt, agora){
 function impAnalisar(p, contaId){
   const progK = p.prog || 'livelo';
   const hoje = hojeISO();
-  const itens = (p.tx || []).map(t => p.prog === 'esfera' ? impItemEsfera(t) : p.prog === 'azul' ? impItemAzul(t) : impItemLivelo(t)).filter(x => x && x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
+  const itens = (p.tx || []).map(t => p.prog === 'esfera' ? impItemEsfera(t) : p.prog === 'azul' ? impItemAzul(t) : p.prog === 'smiles' ? impItemSmiles(t) : impItemLivelo(t)).filter(x => x && x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
   itens.sort((a, b) => b.data.localeCompare(a.data));
   const daConta = (DB.lancamentos || []).filter(l => l.contaId === contaId && l.prog === progK);
   const jaExt = new Set(daConta.map(l => l.ext).filter(Boolean));
@@ -69821,12 +69856,12 @@ function impAnalisar(p, contaId){
     /* Lançamento feito à mão: mesma quantidade em até 3 dias. Na Azul a data do
        crédito costuma andar mais (compra no parceiro, cartão), então vale até 10
        dias, sempre o mais próximo. */
-    const janela = progK === 'azul' ? 10 : 3;
+    const janela = progK === 'azul' || progK === 'smiles' ? 10 : 3;
     const livres = daConta.filter(l => !l.ext && !usados.has(l.id) && l.data);
     const perto = arr => arr.sort((a, b) => Math.abs(impDias(a.data, x.data)) - Math.abs(impDias(b.data, x.data)))[0];
     const par = perto(livres.filter(l => Number(l.qtd) === x.qtd && Math.abs(impDias(l.data, x.data)) <= janela));
     if (par){ usados.add(par.id); x.estado = 'existe'; x.lancId = par.id; return; }
-    if (progK === 'azul'){
+    if (progK === 'azul' || progK === 'smiles'){
       /* transferência lançada à mão com o bônus arredondado (675.000 contra 677.000) */
       if (x.tipo === 'transferencia' && x.qtd > 0){
         const t = perto(livres.filter(l => l.tipo === 'transferencia' && Number(l.qtd) > 0 && Math.abs(impDias(l.data, x.data)) <= 3 && Math.abs(Number(l.qtd) - x.qtd) <= x.qtd * 0.01));
@@ -69848,7 +69883,8 @@ function impAnalisar(p, contaId){
     const grupo = livres.filter(l => Math.abs(impDias(l.data, base.data)) <= 1 && (l.id === base.id || (base.assinaturaId ? l.assinaturaId === base.assinaturaId : !l.assinaturaId)));
     const soma = grupo.reduce((s2, l) => s2 + (Number(l.qtd) || 0), 0);
     if (soma === x.qtd && grupo.length > 1){ grupo.forEach(l => usados.add(l.id)); x.estado = 'existe'; x.lancId = base.id; x.lancIds = [base.id].concat(grupo.filter(l => l.id !== base.id).map(l => l.id)); return; }
-    if (!base.autoClube) return;
+    /* mês do clube lançado pela Torre e o extrato trouxe o crédito real (igual ou maior, com bônus): fica o do extrato */
+    if (!base.autoClube && !(base.assinaturaId && base.cicloClube !== undefined && grupo.length === 1 && x.qtd >= Number(base.qtd))) return;
     const outros = soma - (Number(base.qtd) || 0);
     if (x.qtd - outros > 0){ grupo.forEach(l => usados.add(l.id)); x.estado = 'atualiza'; x.lancId = base.id; x.antes = Number(base.qtd); x.qtdLanc = x.qtd - outros; x.lancIds = grupo.filter(l => l.id !== base.id).map(l => l.id); }
   });
@@ -70071,7 +70107,7 @@ window.addEventListener('message', ev => {
   const res = DB.cfg.impResolvidos || {};
   const velhos = ev.data.fila.filter(p => res[p.id] && Number(res[p.id]) >= Number(p.capturadoEm || 0)).map(p => p.id);
   if (velhos.length) try { window.postMessage({ __vemTorre:'resolvido', ids:velhos }, '*'); } catch(_){}
-  impFila = ev.data.fila.filter(p => p && ['livelo', 'esfera', 'azul'].includes(p.prog) && Array.isArray(p.tx) && !velhos.includes(p.id));
+  impFila = ev.data.fila.filter(p => p && ['livelo', 'esfera', 'azul', 'smiles'].includes(p.prog) && Array.isArray(p.tx) && !velhos.includes(p.id));
   impFila.forEach(x => { if (x.capturadoEm !== (impVistos[x.id] || 0)){ impVistos[x.id] = x.capturadoEm; impAdiados.delete(x.id); } });
   impProximo();
 });
