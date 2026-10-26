@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 15:20';
+const BUILD = '2026-10-26 16:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -63724,6 +63724,229 @@ function cdxCadastrar(c, f){
   };
   if (document.readyState === 'complete') ligarImp(); else addEventListener('load', ligarImp);
   setTimeout(ligarImp, 3000);
+})();
+</script>
+<script id="ajustes-1526-js">
+/* ══ 26/10/2026 ══════════════════════════════════════════════════════════════
+   1. "Carteira e Diário não batem" era alarme falso: a conta somava todas as
+      linhas, inclusive as anteriores a um Saldo Inicial (que é fotografia e
+      recomeça a soma) e as de data futura. Agora soma igual ao resto da Torre.
+   2. Ofertas de lojas do mesmo programa que fecham no mesmo dia viram um aviso
+      só ("26 ofertas da Esfera fecham hoje"), para não esconder o resto. */
+divergenciasSaldo = function(){
+  return (DB.saldos || []).filter(s => (Number(s.qtd) || 0) > 0).map(s => {
+    const L = (DB.lancamentos || []).filter(l => l.prog === s.prog && l.contaId === s.contaId && jaAconteceu(l))
+      .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || (a.criadoEm || 0) - (b.criadoEm || 0));
+    let noDiario = 0; L.forEach(l => { if (l.tipo === 'inicial') noDiario = Number(l.qtd) || 0; else noDiario += Number(l.qtd) || 0; });
+    noDiario = Math.max(0, noDiario);
+    const naCarteira = Number(s.qtd) || 0;
+    return {id:s.id, prog:s.prog, contaId:s.contaId, naCarteira, noDiario, dif:naCarteira - noDiario};
+  }).filter(d => Math.abs(d.dif) > 1);
+};
+(function(){
+  if (typeof avisos !== 'function') return;
+  const av = avisos;
+  avisos = function(){
+    const L = av.apply(this, arguments);
+    try {
+      const grupos = {};
+      L.forEach((a, i) => { if (a.tipo !== 'loja') return; const m = String(a.s || '').match(/^(.+?) · fora da promo/); const k = (m ? m[1] : '') + '|' + a.dias; (grupos[k] = grupos[k] || []).push(i); });
+      const tirar = new Set();
+      Object.entries(grupos).forEach(([k, idx]) => {
+        if (idx.length < 3) return;
+        const [progN, d] = k.split('|'), dias = Number(d), itens = idx.map(i => L[i]);
+        const quando = dias === 0 ? 'fecham hoje' : dias === 1 ? 'fecham amanhã' : dias < 0 ? 'fecharam' : `fecham em ${dias} dias`;
+        const nomes = itens.map(a => a.curto || a.t);
+        idx.forEach(i => tirar.add(i));
+        L.push({grau:Math.max(...itens.map(a => a.grau || 1)), tipo:'loja', dias, fim:itens[0].fim || '', curto:`${itens.length} ofertas ${progN}`,
+          t:`${itens.length} ofertas de lojas ${progN ? 'da ' + progN : ''} ${quando}`.replace(/\s+/g, ' '),
+          s:`${nomes.slice(0, 3).join(' · ')}${nomes.length > 3 ? ` · e mais ${nomes.length - 3}` : ''}. Clique para ver todas.`, ir:['fabrica','fb-compras'], ref:'lojas:' + k});
+      });
+      if (tirar.size) return L.filter((a, i) => !tirar.has(i));
+    } catch(e){ console.error(e); }
+    return L;
+  };
+})();
+</script>
+
+<style id="ccx-css">
+/* ══ CUSTO DOS CLUBES QUE VIERAM DO EXTRATO (26/10/2026) ══ */
+.ccx-tot{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+.ccx-tot > div{ border:1px solid var(--fio); border-radius:14px; padding:10px 12px; }
+.ccx-tot small{ display:block; color:var(--grafite); font-size:calc(11.5px * var(--esc)); letter-spacing:.04em; text-transform:uppercase; }
+.ccx-tot b{ display:block; color:var(--giz); font:700 calc(17px * var(--esc)) var(--f-d, inherit); margin-top:2px; }
+@media (max-width:520px){ .ccx-tot{ grid-template-columns:minmax(0,1fr); } }
+.ccx-linha{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:12px; align-items:end; }
+@media (max-width:620px){ .ccx-linha{ grid-template-columns:minmax(0,1fr); } }
+.ccx-fonte{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.45; }
+.ccx-fonte b{ color:var(--giz); }
+.ccx-vazio .cdx-valor{ border-color:color-mix(in srgb, var(--ouro, #d9a441) 70%, var(--fio)); }
+</style>
+<script id="ccx-js">
+/* ══ CUSTO DOS CLUBES QUE VIERAM DO EXTRATO (26/10/2026, pedido do Jadiel) ══
+   O extrato trouxe meses de clube que foram pagos (clube já cancelado, ou meses
+   anteriores à assinatura cadastrada) e entraram com custo zero. Isso baratea o
+   milheiro sem ser verdade. Aqui cada período ganha o valor que se pagava por
+   mês: a Torre sugere (do clube cancelado, do clube atual ou da tabela do plano)
+   e o Jadiel confere antes de lançar. Créditos extras no mesmo mês (bônus
+   trimestral, por exemplo) dividem o custo daquele mês, sem cobrar duas vezes.
+   Não mexe em fatura: esses meses já foram pagos. */
+function ccxModa(arr){ const c = {}; arr.forEach(v => c[v] = (c[v] || 0) + 1); return Number(Object.keys(c).sort((a, b) => c[b] - c[a] || b - a)[0]) || 0; }
+function ccxDias(a, b){ return Math.abs((new Date(a + 'T12:00:00') - new Date(b + 'T12:00:00')) / 864e5); }
+function ccxCiclos(ls){
+  const out = []; let cur = null;
+  ls.forEach(l => { if (!cur || ccxDias(cur.ini, l.data) >= 20){ cur = {ini:l.data, linhas:[]}; out.push(cur); } cur.linhas.push(l); });
+  return out;
+}
+function custosDeClubeFaltando(){
+  const ign = (DB.cfg && DB.cfg.ccxIgnorar) || {};
+  let pend = new Set(); try { pend = new Set(clubesDoExtrato().map(c => c.k)); } catch(_){}
+  const hoje = hojeISO(), segs = {};
+  (DB.lancamentos || []).filter(l => l.tipo === 'clube' && l.imp && !l.assinaturaId && !l.bonusClube && !l.ccx && !(Number(l.custo) > 0) && Number(l.qtd) > 0 && l.data && l.data <= hoje)
+    .forEach(l => {
+      const k = l.contaId + '|' + l.prog;
+      if (pend.has(k) || !(DB.contas || []).some(c => c.id === l.contaId)) return;
+      const A = (DB.assinaturas || []).filter(a => a.contaId === l.contaId && a.prog === l.prog && a.inicio);
+      const ativa = A.find(a => a.status === 'ativa' && l.data >= a.inicio);
+      let fonte = null, tipo = 'antes';
+      if (ativa){
+        const coberto = (DB.lancamentos || []).some(x => x.assinaturaId === ativa.id && x.cicloClube !== undefined && ccxDias(x.data, l.data) <= 6);
+        if (coberto) return;            /* o mês já tem a mensalidade lançada */
+        fonte = ativa; tipo = 'atual';
+      } else {
+        const outra = A.filter(a => a.status !== 'ativa' && l.data >= a.inicio && (!a.renova || l.data < a.renova)).sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
+        if (outra){ fonte = outra; tipo = 'cancelado'; }
+      }
+      const sk = k + '|' + (fonte ? fonte.id : 'antes');
+      if (ign[sk]) return;
+      (segs[sk] = segs[sk] || {sk, k, contaId:l.contaId, prog:l.prog, tipo, fonte, linhas:[]}).linhas.push(l);
+    });
+  return Object.values(segs).map(s => {
+    s.linhas.sort((a, b) => a.data.localeCompare(b.data) || (a.criadoEm || 0) - (b.criadoEm || 0));
+    s.ciclos = ccxCiclos(s.linhas);
+    s.base = ccxModa(s.ciclos.map(c => Number(c.linhas[0].qtd)));
+    s.pontos = s.linhas.reduce((t, l) => t + (Number(l.qtd) || 0), 0);
+    let mes = 0, origem = '';
+    const mensal = a => { try { return Math.round(valorMensalAssin(a) * 100) / 100; } catch(_){ return 0; } };
+    const nomePl = a => { const pl = (catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.planoId); return pl ? pl.n : 'clube'; };
+    /* clube cadastrado só serve de referência se for do tamanho do que caiu: quem
+       trocou o Clube 25.000 pelo de 1.000 não pagava o preço do de 1.000, e um
+       cadastro de Clube 20.000 não explica créditos de 8.167 */
+    const qPl = a => { const pl = (catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.planoId); return pl ? Number(pl.qtd) || 0 : 0; };
+    const doTamanho = a => qPl(a) <= s.base && qPl(a) >= s.base * 0.6;
+    if (s.fonte && doTamanho(s.fonte)){ mes = mensal(s.fonte); origem = s.tipo === 'cancelado' ? `do clube cancelado (${esc(nomePl(s.fonte))})` : `do clube cadastrado (${esc(nomePl(s.fonte))})`; }
+    if (!mes){
+      const ref = (DB.assinaturas || []).filter(a => a.contaId === s.contaId && a.prog === s.prog && a.inicio && mensal(a) > 0 && qPl(a) <= s.base && qPl(a) >= s.base * 0.6)
+        .sort((a, b) => a.inicio.localeCompare(b.inicio))[0];
+      if (ref){ mes = mensal(ref); origem = `do clube cadastrado depois (${esc(nomePl(ref))}), supondo o mesmo plano`; }
+    }
+    if (!mes){
+      const pl = (catalogoDe(s.prog) || {planos:[]}).planos.filter(x => Number(x.qtd) <= s.base).sort((a, b) => Number(b.qtd) - Number(a.qtd))[0];
+      let v = 0; try { v = pl ? Number(valorCobranca(pl, 'mensal', 1)) || 0 : 0; } catch(_){}
+      if (pl && v){ mes = v; origem = `da tabela do plano ${esc(pl.n)} no mensal`; }
+    }
+    s.mes = mes; s.origem = origem;
+    return s;
+  }).sort((a, b) => nomeConta(a.contaId).localeCompare(nomeConta(b.contaId), 'pt-BR') || a.prog.localeCompare(b.prog) || a.linhas[0].data.localeCompare(b.linhas[0].data));
+}
+/* Lança o valor do mês em cada ciclo; créditos do mesmo ciclo dividem o valor
+   pela quantidade de pontos. Devolve o que mudou, para poder desfazer. */
+function ccxAplicar(s, valorMes){
+  const v = Math.round((Number(valorMes) || 0) * 100) / 100; if (!(v > 0)) return [];
+  const feitos = [];
+  /* meses do clube que está ativo: o crédito do extrato vira o mês do clube
+     (como no cadastro pelo extrato), para a Torre não lançar o mesmo mês de novo */
+  const usados = new Set();
+  const ligar = l => {
+    if (s.tipo !== 'atual' || !s.fonte) return;
+    for (let i = 0; i <= 12; i++){
+      let d; try { d = dataDoCiclo(s.fonte, i); } catch(_){ return; }
+      if (!d || usados.has(i) || ccxDias(d, l.data) > 6) continue;
+      if ((DB.lancamentos || []).some(x => x.assinaturaId === s.fonte.id && Number(x.cicloClube) === i)) continue;
+      usados.add(i); l.assinaturaId = s.fonte.id; l.cicloClube = i; l.bonusIncluso = true; return;
+    }
+  };
+  s.ciclos.forEach(c => {
+    const tot = c.linhas.reduce((t, l) => t + (Number(l.qtd) || 0), 0) || 1;
+    let resto = Math.round(v * 100);
+    c.linhas.forEach((l, i) => {
+      const cent = i === c.linhas.length - 1 ? resto : Math.round(v * 100 * (Number(l.qtd) || 0) / tot);
+      resto -= cent;
+      feitos.push({id:l.id, custo:l.custo, nota:l.nota, liga:'assinaturaId' in l});
+      if (i === 0) ligar(l);
+      l.custo = cent / 100;
+      l.ccx = {mes:v, em:hojeISO()};
+      l.nota = String(l.nota || '').replace(/ · custo do clube.*$/, '') + ` · custo do clube: ${moedaTxt(v)} por mês`;
+    });
+  });
+  return feitos;
+}
+function ccxDesfazer(feitos){
+  (feitos || []).forEach(f => { const l = (DB.lancamentos || []).find(x => x.id === f.id); if (!l) return; l.custo = f.custo || 0; l.nota = f.nota || ''; delete l.ccx; if (!f.liga){ delete l.assinaturaId; delete l.cicloClube; delete l.bonusIncluso; } });
+  salvar(); try { aplicarTudo(); } catch(_){}
+  avisar('Desfeito: os custos voltaram a zero.', 'ok', 4000);
+}
+const ccxMesAno = iso => { const d = new Date(iso + 'T12:00:00'); return d.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'}).replace('.', '').replace(' de ', '/'); };
+function abrirCustosDeClube(){
+  const L = custosDeClubeFaltando();
+  if (!L.length){ avisar('Todos os créditos de clube do extrato já têm custo.', 'ok'); return; }
+  const cpm = (v, s) => s.pontos > 0 && v > 0 ? brl(v * s.ciclos.length / s.pontos * 1000) : '–';
+  abrirFolha({ largura:'larga', titulo:`Clubes pagos sem custo no Diário <span class="etq" style="margin-left:8px">${L.length}</span>`,
+    corpo:`<div class="cdx"><p class="fraco" style="margin:0">Estes créditos de clube vieram do extrato com custo zero, mas foram pagos (clube já cancelado ou meses antes do cadastro). Com custo zero o milheiro fica mais barato do que foi de verdade. Confira quanto se pagava por mês e lance. Crédito extra no mesmo mês (bônus) divide o custo daquele mês, sem cobrar duas vezes. Fatura não muda: esses meses já foram pagos.</p>
+      ${L.map((s, i) => `<div class="cdx-card${s.mes ? '' : ' ccx-vazio'}" style="--marca:${prog(s.prog).cor}" data-ccx="${i}">
+        <div class="cdx-topo">${discoProg(s.prog)}<div><b>${esc(prog(s.prog).n)} · ${esc(nomeCurto(nomeConta(s.contaId)))}</b>
+          <small>${ccxMesAno(s.linhas[0].data)} a ${ccxMesAno(s.linhas[s.linhas.length - 1].data)} · ${s.ciclos.length} ${s.ciclos.length > 1 ? 'meses' : 'mês'} de clube · ${nBR(s.pontos)} pontos</small></div>
+          <label><input type="checkbox" class="cdx-ok" checked> Lançar</label></div>
+        <div class="cdx-meses">${s.ciclos.map(c => c.linhas.map((l, j) => `<span class="${j ? 'b' : ''}" title="${j ? 'Crédito extra no mesmo mês: divide o custo do mês' : 'Mês do clube'}">${dataBR(l.data).slice(0, 5)}/${l.data.slice(2, 4)} · ${nBR(l.qtd)}</span>`).join('')).join('')}</div>
+        <div class="ccx-linha">
+          <div class="campo"><label>Pagava por mês (R$)</label><input type="text" inputmode="decimal" data-moeda class="cdx-valor" value="${s.mes ? moedaTxt(s.mes) : ''}"></div>
+          <div class="ccx-tot"><div><small>Meses</small><b>${s.ciclos.length}</b></div><div><small>Custo total</small><b class="ccx-total">${s.mes ? brl(s.mes * s.ciclos.length) : '–'}</b></div><div><small>Milheiro</small><b class="ccx-cpm">${cpm(s.mes, s)}</b></div></div>
+        </div>
+        <div class="ccx-fonte">${s.mes ? `Valor sugerido ${s.origem}. <b>Confira</b> se era isso mesmo que se pagava.` : `<b>Sem referência de preço.</b> Digite quanto se pagava por mês, ou desmarque.`}</div>
+      </div>`).join('')}</div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><div class="esticar"></div><button class="bt fantasma" id="ccxIgnorar">Não foram pagos</button><button class="bt primario" id="ccxSalvar"><svg><use href="#i-ok"/></svg>Lançar custos</button>` });
+  document.querySelectorAll('[data-ccx]').forEach(card => {
+    const s = L[Number(card.dataset.ccx)], inp = card.querySelector('.cdx-valor');
+    inp.addEventListener('input', () => { const v = moedaNum(inp.value) || 0;
+      card.querySelector('.ccx-total').textContent = v ? brl(v * s.ciclos.length) : '–'; card.querySelector('.ccx-cpm').textContent = cpm(v, s);
+      card.classList.toggle('ccx-vazio', !v); });
+    card.querySelector('.cdx-ok').onchange = e => card.classList.toggle('fora', !e.target.checked);
+  });
+  const marcados = () => [...document.querySelectorAll('[data-ccx]')].filter(card => card.querySelector('.cdx-ok').checked);
+  $('#ccxIgnorar').onclick = () => {
+    const m = marcados(); if (!m.length){ avisar('Marque os que não foram pagos.', 'alerta'); return; }
+    DB.cfg.ccxIgnorar = DB.cfg.ccxIgnorar || {}; m.forEach(card => { DB.cfg.ccxIgnorar[L[Number(card.dataset.ccx)].sk] = hojeISO(); });
+    salvar(); fecharFolha(); avisar('Combinado: esses créditos ficam sem custo e o aviso some.', 'ok', 4000);
+  };
+  $('#ccxSalvar').onclick = () => {
+    const m = marcados();
+    const semValor = m.filter(card => !(moedaNum(card.querySelector('.cdx-valor').value) > 0));
+    if (semValor.length){ semValor[0].scrollIntoView({block:'center', behavior:'smooth'}); semValor[0].querySelector('.cdx-valor').focus(); avisar('Falta o valor por mês em um deles (ou desmarque).', 'alerta', 5000); return; }
+    let feitos = [], meses = 0, total = 0;
+    m.forEach(card => { const s = L[Number(card.dataset.ccx)], v = moedaNum(card.querySelector('.cdx-valor').value) || 0;
+      feitos = feitos.concat(ccxAplicar(s, v)); meses += s.ciclos.length; total += v * s.ciclos.length; });
+    if (!feitos.length){ avisar('Nada marcado para lançar.', 'alerta'); return; }
+    salvar(); fecharFolha(); try { aplicarTudo(); } catch(_){}
+    window._ccxUltimo = feitos;
+    avisar(`Custo lançado em ${meses} meses de clube: ${brl(total)} no total. O milheiro já foi recalculado. <button type="button" class="bt p" onclick="ccxDesfazer(window._ccxUltimo)">Desfazer</button>`, 'ok', 12000);
+  };
+}
+(function(){
+  if (typeof avisos !== 'function') return;
+  const av = avisos;
+  avisos = function(){
+    const L = av.apply(this, arguments);
+    try {
+      const S = custosDeClubeFaltando();
+      if (S.length){
+        const contas = new Set(S.map(s => s.contaId)).size, meses = S.reduce((t, s) => t + s.ciclos.length, 0);
+        L.push({grau:2, fixo:true, tipo:'ccx', dias:null, ir:['fabrica','fb-clubes'], curto:`${meses} meses de clube sem custo`,
+          t:`${meses} meses de clube pagos estão com custo zero`,
+          s:`${contas} ${contas > 1 ? 'contas' : 'conta'}: o milheiro está mais barato do que foi. Clique para conferir e lançar.`, fn:'abrirCustosDeClube()'});
+      }
+    } catch(e){ console.error(e); }
+    return L;
+  };
 })();
 </script>
 
