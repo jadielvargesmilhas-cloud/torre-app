@@ -9918,6 +9918,7 @@ html.cofre-trancado body > *:not(#cofreTela):not(script){ visibility:hidden !imp
 .cf-lembrado svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; }
 .cf-lembrar-bt{ align-self:flex-start; margin:6px 0 0 !important; font-size:calc(12.5px * var(--esc)); }
 </style>
+<meta name="vem-torre" content="1">
 </head>
 <body>
 <style id="rvc-css">
@@ -11836,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 22:10';
+const BUILD = '2026-10-25 22:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -65405,7 +65406,7 @@ function empContas(progK, paxIds, milhas, r){
 function empTrocasHTML(sel, progK){
   const t = (sel.trocas || []).slice(-1)[0]; if (!t) return '';
   const nm = id => { const c = (DB.contas || []).find(x => x.id === id); return c ? nomeCurto(c.nome) : 'outra conta'; };
-  const d = new Date(t.em), quando = `${dataBR(d.toISOString().slice(0, 10))} às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const d = new Date(t.em), quando = `${dataBR(isoLocal(d))} às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   return `<div class="emp-troca"><svg><use href="#i-info"/></svg><div><b>Troca de titular</b>: ${esc(nm(t.de))} → ${esc(nm(t.para))}, ${quando} (${esc(t.motivo)}).${(sel.trocas || []).length > 1 ? ` <span class="fraco">${sel.trocas.length} trocas nesta cotação.</span>` : ''}
     <span class="emp-troca-d">Confira as milhas na nova conta antes de pagar: o preço pode mudar de uma conta para outra (com ou sem Clube ${esc(prog(progK).n)}, por exemplo).</span></div></div>`;
 }
@@ -65598,7 +65599,7 @@ function ckRota(r, k){
   return m ? `${m[1]} → ${m[2]}` : base;
 }
 function ckQuando(t){
-  const hoje = hojeISO(), am = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  const hoje = hojeISO(), am = isoLocal(new Date(Date.now() + 864e5));
   const dia = t.data === hoje ? 'hoje' : t.data === am ? 'amanhã' : dataBR(t.data);
   return dia + (t.hora ? ' às ' + t.hora : '');
 }
@@ -66187,7 +66188,7 @@ function renderMensagens(){
   const host = document.getElementById('cmCorpo'); if (!host) return;
   const todos = cmItens(), itens = cmFiltro ? todos.filter(x => x.tipo === cmFiltro) : todos;
   const cont = {}; todos.forEach(x => { cont[x.tipo] = (cont[x.tipo] || 0) + 1; });
-  const hoje = Object.values(cmFeitos()).filter(v => v && String(v.em || '').slice(0, 10) === hojeISO());
+  const hoje = Object.values(cmFeitos()).filter(v => v && (v.em ? isoLocal(new Date(v.em)) : '') === hojeISO());
   const diaTxt = new Date(hojeISO() + 'T12:00:00').toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
   host.innerHTML = `<section class="cmd-topo">
       <div class="olho jade">Central de mensagens</div>
@@ -66235,7 +66236,7 @@ function cmMarcar(ref, como){ cmFeitos()[ref] = {em:new Date().toISOString(), co
     const en = e.target.closest('[data-cm-enviar]'); if (en){ const ref = en.dataset.cmEnviar; setTimeout(() => sair(ref, 'enviada'), 120); return; }
     const pu = e.target.closest('[data-cm-pular]'); if (pu){ sair(pu.dataset.cmPular, 'pulada'); avisar('Pulada. Ela não volta para esta etapa.', 'ok', 2200); return; }
     const ab = e.target.closest('[data-cm-abrir]'); if (ab){ const host = document.getElementById('cmCorpo'), x = ((host && host._itens) || []).find(y => y.ref === ab.dataset.cmAbrir); if (x && x.abrir){ try { (new Function(x.abrir))(); } catch(err){ console.error(err); } } return; }
-    const de = e.target.closest('[data-cm-desfazer]'); if (de){ const F = cmFeitos(), ult = Object.entries(F).filter(([, v]) => v && String(v.em || '').slice(0, 10) === hojeISO()).sort((a, b) => String(b[1].em).localeCompare(String(a[1].em)))[0]; if (ult){ delete F[ult[0]]; salvar(); renderMensagens(); avisar('Desfeito: a mensagem voltou para a lista.', 'ok', 2200); } return; }
+    const de = e.target.closest('[data-cm-desfazer]'); if (de){ const F = cmFeitos(), ult = Object.entries(F).filter(([, v]) => v && (v.em ? isoLocal(new Date(v.em)) : '') === hojeISO()).sort((a, b) => String(b[1].em).localeCompare(String(a[1].em)))[0]; if (ult){ delete F[ult[0]]; salvar(); renderMensagens(); avisar('Desfeito: a mensagem voltou para a lista.', 'ok', 2200); } return; }
   });
 })();
 </script>
@@ -68619,6 +68620,384 @@ function pxAbrir(id){
     };
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-px]'); if (b){ e.preventDefault(); e.stopPropagation(); pxAbrir(b.dataset.px); } }, true);
+})();
+</script>
+
+<style id="imp-css">
+/* ══ EXTRATO DOS PROGRAMAS DE PONTOS → TORRE (25/10/2026) ══════════════════════
+   Conferência do extrato que a extensão "VEM · Assistente da Torre" traz da
+   Livelo: o que é novo, o que já estava, o acerto de saldo; e o aviso das
+   compras de pontos que entraram sem o valor pago. */
+.imp-cab{ display:flex; align-items:center; gap:14px; padding:4px 0 14px; border-bottom:1px solid var(--fio); }
+.imp-cab .imp-ic{ width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:#003084; color:#fff; font-weight:800; font-size:15px; letter-spacing:.4px; box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ouro) 70%, transparent); }
+.imp-cab .imp-ic span{ color:var(--ouro-hi); }
+.imp-cab b{ display:block; font-size:calc(16px * var(--esc)); color:var(--giz); }
+.imp-cab small{ display:block; margin-top:2px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.imp-conta{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:14px 0 4px; }
+.imp-conta label{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.imp-conta select{ min-width:220px; flex:1 1 220px; max-width:360px; }
+.imp-conta .imp-falta{ flex:1 1 100%; color:var(--brasa); font-size:calc(12.5px * var(--esc)); }
+.imp-nums{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin:14px 0; }
+.imp-num{ border:1px solid var(--fio); border-radius:14px; padding:10px 12px; background:var(--sup-1); min-width:0; }
+.imp-num span{ display:block; font-size:calc(11.5px * var(--esc)); color:var(--grafite); text-transform:uppercase; letter-spacing:.8px; }
+.imp-num b{ display:block; margin-top:4px; font-size:calc(20px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.imp-num.jade b{ color:var(--jade); }
+.imp-num.ouro b{ color:var(--ouro-hi); }
+.imp-num small{ display:block; font-size:calc(11.5px * var(--esc)); color:var(--grafite); margin-top:2px; }
+.imp-notas{ display:flex; flex-direction:column; gap:8px; margin:0 0 14px; }
+.imp-notas .nota{ margin:0; }
+.imp-lista{ border:1px solid var(--fio); border-radius:14px; overflow:hidden; }
+.imp-lista h4{ margin:0; padding:10px 14px; font-size:calc(13px * var(--esc)); color:var(--giz-2); background:var(--sup-1); border-bottom:1px solid var(--fio); }
+.imp-lin{ display:grid; grid-template-columns:92px minmax(0,1.1fr) minmax(0,1.6fr) 120px; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--fio-suave); font-size:calc(13px * var(--esc)); }
+.imp-lin:last-child{ border-bottom:0; }
+.imp-lin .d{ color:var(--grafite); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.imp-lin .t{ color:var(--giz-2); }
+.imp-lin .n{ color:var(--giz); min-width:0; }
+.imp-lin .n small{ display:block; color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.imp-lin .q{ text-align:right; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.imp-lin .q.mais{ color:var(--jade); } .imp-lin .q.menos{ color:var(--brasa); }
+.imp-lin .selo{ display:inline-block; margin-left:6px; padding:1px 7px; border-radius:99px; font-size:calc(10.5px * var(--esc)); font-weight:700; vertical-align:1px; background:color-mix(in srgb, var(--ouro) 18%, transparent); color:var(--ouro-hi); }
+.imp-mais{ margin-top:12px; }
+.imp-mais summary{ cursor:pointer; color:var(--giz-2); font-size:calc(13px * var(--esc)); padding:6px 0; }
+.imp-vazio{ padding:14px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+/* informar valores */
+.iv-lin{ display:grid; grid-template-columns:minmax(0,1.5fr) 150px 170px; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--fio-suave); }
+.iv-lin b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
+.iv-lin small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.iv-lin input, .iv-lin select{ width:100%; }
+@media (max-width:760px){
+  .imp-nums{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .imp-lin{ grid-template-columns:minmax(0,1fr) auto; gap:2px 10px; }
+  .imp-lin .d{ grid-column:1; grid-row:1; }
+  .imp-lin .q{ grid-column:2; grid-row:1 / span 2; align-self:center; }
+  .imp-lin .t{ grid-column:1; grid-row:2; font-size:calc(12px * var(--esc)); }
+  .imp-lin .n{ grid-column:1 / -1; grid-row:3; }
+  .iv-lin{ grid-template-columns:1fr 1fr; }
+  .iv-lin > div:first-child{ grid-column:1 / -1; }
+  .imp-conta select{ max-width:none; }
+}
+</style>
+<script id="imp-js">
+/* ══ EXTRATO DOS PROGRAMAS DE PONTOS → TORRE (25/10/2026) ═════════════════════
+   A extensão "VEM · Assistente da Torre" ouve o extrato que a própria página da
+   Livelo recebe e o guarda no Chrome. Aqui a Torre recebe esse extrato, mostra a
+   conferência e, com a confirmação do Jadiel:
+     · lança só o que é novo (cada movimentação da Livelo tem número próprio, e é
+       ele que impede lançar duas vezes);
+     · reconhece o que já estava na Torre (mesma conta, mesma quantidade, até 3
+       dias de diferença) e só marca o vínculo, sem duplicar;
+     · crédito do Clube Livelo encaixa no mês da assinatura, para o aviso de
+       "lançar o mês do clube" não pedir de novo;
+     · resgate para companhia aérea entra como saída da Livelo, "a conferir" até
+       lermos o extrato da companhia (decisão do Jadiel, 25/10/2026);
+     · no fim, um único acerto deixa o saldo da Torre igual ao da Livelo;
+     · compra de pontos entra sem valor e vira aviso de prioridade alta até o
+       valor ser informado. */
+const IMP_DESTINO = { SML:'smiles', MTP:'latampass', AZL:'azul', TAP:'tap', IBE:'iberia' };
+const IMP_COMPRA_PARCEIRO = ['OKT', 'IVM'];
+let impFila = [], impAberto = null; const impVistos = {};
+
+function impNum(s){ const t = String(s == null ? '' : s).trim(); const n = Number(t.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')); return isFinite(n) ? n : 0; }
+function impISO(br){ const m = String(br || '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; }
+function impDias(a, b){ return Math.round((new Date(a + 'T12:00:00') - new Date(b + 'T12:00:00')) / 864e5); }
+function impPalavras(s){ return semAcento(s).replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(p => p.length > 1 && !['de','da','do','das','dos','e'].includes(p)); }
+function impTitulo(t){
+  const s = String(t || '').trim();
+  if (s && s === s.toUpperCase()) return s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()).replace(/\bDo\b/g, 'do').replace(/\bDe\b/g, 'de');
+  return s;
+}
+
+/* Uma movimentação da Livelo → um lançamento da Torre (ainda sem conta). */
+function impItemLivelo(t){
+  let q = impNum(t.points);
+  if (q > 0 && t.config && t.config.symbol === '-') q = -q;
+  const data = impISO(t.date), code = String(t.code || ''), part = String(t.partner || ''), tit = impTitulo(t.title);
+  const ext = 'livelo:' + (t.id ? 'id' + t.id : t.orderId ? 'p' + t.orderId : [data, code, t.title, q].join('|'));
+  const base = { ext, data, qtd:q, parceiro:tit, codigo:code };
+  if (code === 'L') return {...base, tipo:'clube', nota:`Bônus do ${tit}`, bonusLivelo:true};
+  if (code === 'I' && /clube livelo/i.test(t.title)) return {...base, tipo:'clube', clube:true, nota:'Clube Livelo · crédito do mês'};
+  if (code === 'I' && /compra de pontos/i.test(t.title)) return {...base, tipo:'compra', pedeValor:true, nota:'Compra de pontos Livelo'};
+  if (code === 'I' && /turbo/i.test(t.title)) return {...base, tipo:'compra', pedeValor:true, nota:'Turbo Livelo'};
+  if (code === 'I' && IMP_COMPRA_PARCEIRO.includes(part)) return {...base, tipo:'compra', pedeValor:true, nota:`Entrada via ${tit}`};
+  if (code === 'I' && q > 0) return {...base, tipo:'bonificada', organico:true, nota:`Compra em ${tit}`};
+  if (code === 'R'){
+    const dest = IMP_DESTINO[part];
+    if (dest && PROGRAMAS[dest]) return {...base, qtd:-Math.abs(q), tipo:'transferencia', destinoPendente:dest, nota:`Saída para ${prog(dest).n} · a conferir quando lermos a ${prog(dest).n}`};
+    return {...base, qtd:-Math.abs(q), tipo:'resgateProd', nota:`Resgate · ${tit}`};
+  }
+  if (/CASHPLUSPOINTS/.test(code)) return {...base, qtd:-Math.abs(q), tipo:'resgateProd', nota:`Pontos + Dinheiro · ${tit}`};
+  return q < 0 ? {...base, tipo:'ajusteSaida', nota:`${impTitulo(t.description) || 'Saída'} · ${tit}`}
+               : {...base, tipo:'ajusteEntrada', nota:`${impTitulo(t.description) || 'Entrada'} · ${tit}`};
+}
+
+/* De quem é este extrato: vínculo já confirmado antes, ou nome (e começo do CPF). */
+function impContaDe(p){
+  const v = (DB.cfg.impVinculo || {})[p.id];
+  if (v && (DB.contas || []).some(c => c.id === v)) return v;
+  const alvo = impPalavras(p.titular || p.cabecalho), cab = impPalavras(p.cabecalho);
+  if (!alvo.length) return '';
+  const cands = (DB.contas || []).filter(c => {
+    const pc = impPalavras(c.nome); if (!pc.length) return false;
+    const cpf = soDigitos(c.cpf || '');
+    if (p.cpfInicio && cpf && !cpf.startsWith(p.cpfInicio)) return false;
+    const primeiro = pc[0] === alvo[0], ultimo = pc[pc.length - 1] === alvo[alvo.length - 1];
+    const contido = pc.every(x => alvo.includes(x)) || alvo.every(x => pc.includes(x));
+    const doCab = cab.length && cab.every(x => pc.includes(x));
+    return (primeiro && ultimo) || contido || doCab;
+  });
+  return cands.length === 1 ? cands[0].id : '';
+}
+
+/* A soma do Diário como a Torre faz (saldo inicial é fotografia). */
+function impSomaDiario(lancs){
+  let s = 0;
+  [...lancs].filter(jaAconteceu).sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || (a.criadoEm || 0) - (b.criadoEm || 0))
+    .forEach(l => { if (l.tipo === 'inicial') s = Number(l.qtd) || 0; else s += Number(l.qtd) || 0; });
+  return Math.max(0, s);
+}
+
+function impAnalisar(p, contaId){
+  const progK = p.prog || 'livelo';
+  const hoje = hojeISO();
+  const itens = (p.tx || []).map(impItemLivelo).filter(x => x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
+  itens.sort((a, b) => b.data.localeCompare(a.data));
+  const daConta = (DB.lancamentos || []).filter(l => l.contaId === contaId && l.prog === progK);
+  const jaExt = new Set(daConta.map(l => l.ext).filter(Boolean));
+  const usados = new Set();
+  itens.forEach(x => {
+    if (jaExt.has(x.ext)){ x.estado = 'importado'; return; }
+    if (!contaId){ x.estado = 'novo'; return; }
+    const par = daConta.find(l => !l.ext && !usados.has(l.id) && Number(l.qtd) === x.qtd && l.data && Math.abs(impDias(l.data, x.data)) <= 3);
+    if (par){ usados.add(par.id); x.estado = 'existe'; x.lancId = par.id; return; }
+    x.estado = 'novo';
+  });
+  /* Clube: o crédito novo encaixa no mês da assinatura daquela conta */
+  const assin = contaId ? (DB.assinaturas || []).filter(a => a.prog === progK && a.contaId === contaId) : [];
+  const ciclosTomados = new Set((DB.lancamentos || []).filter(l => l.assinaturaId && l.cicloClube !== undefined).map(l => l.assinaturaId + '#' + Number(l.cicloClube)));
+  itens.filter(x => x.estado === 'novo' && x.clube).forEach(x => {
+    for (const a of assin){
+      if (!a.inicio) continue;
+      for (let i = 0; i <= 12; i++){
+        let d; try { d = dataDoCiclo(a, i); } catch(_){ d = ''; }
+        if (!d || Math.abs(impDias(d, x.data)) > 6 || ciclosTomados.has(a.id + '#' + i)) continue;
+        ciclosTomados.add(a.id + '#' + i); x.assinaturaId = a.id; x.cicloClube = i; x.assinatura = a; return;
+      }
+    }
+  });
+  const novos = itens.filter(x => x.estado === 'novo');
+  const antes = impSomaDiario(daConta);
+  const depois = impSomaDiario(daConta.concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:i}))));
+  const saldo = Number(p.saldo);
+  const acerto = isFinite(saldo) ? saldo - depois : 0;
+  const naCarteira = contaId ? Number(((DB.saldos || []).find(s => s.contaId === contaId && s.prog === progK) || {}).qtd) || 0 : 0;
+  return { progK, itens, novos, existe:itens.filter(x => x.estado === 'existe'), importado:itens.filter(x => x.estado === 'importado'),
+    antes, depois, acerto, saldo, naCarteira, semValor:novos.filter(x => x.pedeValor), transf:novos.filter(x => x.destinoPendente) };
+}
+
+/* O que a Livelo já programou para cair (mensalidades e bônus do Clube),
+   comparado com o Clube cadastrado na Torre. */
+function impClubeHTML(p, contaId){
+  const L = (p.previstos || []).map(t => ({data:impISO(t.date), qtd:Math.abs(impNum(t.points)), bonus:String(t.code) === 'L' || /b[oô]nus/i.test(t.description || ''), clube:/clube/i.test(t.title || '')}))
+    .filter(x => x.data && x.qtd).sort((a, b) => a.data.localeCompare(b.data));
+  if (!L.length) return '';
+  const meses = L.filter(x => !x.bonus), bon = L.filter(x => x.bonus), total = L.reduce((s, x) => s + x.qtd, 0);
+  const mensal = meses.length ? meses[0].qtd : 0;
+  const bate = p.aReceber && p.aReceber.qtd ? total === Number(p.aReceber.qtd) : null;
+  const linhas = [];
+  if (meses.length) linhas.push(`<b>Mensalidade:</b> ${nBR(mensal)} pontos em ${meses.length} ${meses.length === 1 ? 'mês' : 'meses'} (${dataBR(meses[0].data)} a ${dataBR(meses[meses.length - 1].data)}).`);
+  if (bon.length) linhas.push(`<b>Bônus:</b> ${bon.map(x => `${nBR(x.qtd)} em ${dataBR(x.data)}`).join(', ')}.`);
+  linhas.push(`<b>Total programado:</b> ${nBR(total)} pontos${bate === true ? ', igual aos pontos a receber da Livelo' : bate === false ? `, diferente dos ${nBR(p.aReceber.qtd)} a receber que a Livelo mostra` : ''}.`);
+  let cmp = '';
+  const a = contaId ? (DB.assinaturas || []).find(x => x.prog === (p.prog || 'livelo') && x.contaId === contaId && x.status === 'ativa') : null;
+  if (contaId && !a) cmp = `<div class="nota brasa" style="margin-top:8px"><svg><use href="#i-alerta"/></svg><div>A Torre não tem o <b>Clube Livelo</b> ativo nesta conta. Cadastre em <b>Acumular › Clubes</b> para a Torre lembrar de cada mensalidade e bônus.</div></div>`;
+  else if (a){
+    const dif = [];
+    try { const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(x => x.id === a.planoId), c = creditosDoPlano(pl);
+      if (c && c.mensal && mensal && Number(c.mensal) !== mensal) dif.push(`a mensalidade na Torre é ${nBR(c.mensal)}, e a Livelo programou ${nBR(mensal)}`); } catch(_){}
+    try { const pb = proximosBonus(a) || [];
+      const fora = bon.filter(x => !pb.some(y => y.qtd === x.qtd && Math.abs(impDias(y.data, x.data)) <= 6));
+      if (fora.length) dif.push(`${fora.length === 1 ? 'o bônus' : 'os bônus'} de ${fora.map(x => `${nBR(x.qtd)} em ${dataBR(x.data)}`).join(', ')} não ${fora.length === 1 ? 'está previsto' : 'estão previstos'} no Clube da Torre`); } catch(_){}
+    cmp = dif.length
+      ? `<div class="nota ouro" style="margin-top:8px"><svg><use href="#i-alerta"/></svg><div><b>Confira o Clube na Torre:</b> ${esc(dif.join('; '))}. Ajuste em <b>Acumular › Clubes</b>.</div></div>`
+      : `<div class="nota jade" style="margin-top:8px"><svg><use href="#i-ok"/></svg><div>O Clube cadastrado na Torre bate com o que a Livelo programou.</div></div>`;
+  }
+  return `<div class="imp-lista" style="margin-top:12px"><h4>Clube Livelo · o que já está programado para cair</h4><div class="imp-vazio" style="color:var(--giz-2)">${linhas.join('<br>')}${cmp}</div></div>`;
+}
+
+function impLinha(x){
+  const nome = nomeTipoLanc(x.tipo);
+  const selo = x.pedeValor ? '<span class="selo">sem valor</span>' : x.destinoPendente ? '<span class="selo">a conferir</span>' : '';
+  return `<div class="imp-lin"><span class="d">${dataBR(x.data)}</span><span class="t">${esc(nome)}${selo}</span>
+    <span class="n">${esc(x.parceiro)}<small>${esc(x.nota)}</small></span>
+    <span class="q ${x.qtd >= 0 ? 'mais' : 'menos'}">${x.qtd >= 0 ? '+' : '−'} ${nBR(Math.abs(x.qtd))}</span></div>`;
+}
+
+function impAbrir(p){
+  impAberto = p;
+  const contaId = impContaDe(p);
+  impPintar(p, contaId);
+}
+function impPintar(p, contaId){
+  const r = impAnalisar(p, contaId), n = prog(r.progK).n;
+  const datas = r.itens.map(x => x.data).sort();
+  const opc = `<option value="">Escolha a conta</option>` + (DB.contas || []).map(c => `<option value="${esc(c.id)}"${c.id === contaId ? ' selected' : ''}>${esc(c.nome)}</option>`).join('');
+  const sinal = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nBR(Math.abs(v));
+  const notas = [];
+  if (contaId){
+    notas.push(Math.abs(r.acerto) < 1
+      ? `<div class="nota jade"><svg><use href="#i-ok"/></svg><div>Depois de importar, o saldo da Torre fica <b>${nBR(r.saldo)}</b>, igual ao da ${esc(n)}. Não precisa de acerto.</div></div>`
+      : `<div class="nota"><svg><use href="#i-info"/></svg><div>Depois de importar, a Torre lança <b>um acerto de ${sinal(r.acerto)} pontos</b> com o nome "Acerto com o extrato ${esc(n)} de ${esc(String(p.atualizado || '').slice(0, 10))}", para o saldo ficar <b>${nBR(r.saldo)}</b>, igual ao da ${esc(n)}.</div></div>`);
+  }
+  if (r.semValor.length) notas.push(`<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div><b>${r.semValor.length} ${r.semValor.length === 1 ? 'compra de pontos entra' : 'compras de pontos entram'} sem o valor pago.</b> A ${esc(n)} não mostra quanto você pagou. Depois a Torre te avisa para completar, e o custo do milheiro fica certo.</div></div>`);
+  if (r.transf.length){
+    const pr = [...new Set(r.transf.map(x => prog(x.destinoPendente).n))].join(', ');
+    notas.push(`<div class="nota"><svg><use href="#i-troca"/></svg><div><b>${r.transf.length} ${r.transf.length === 1 ? 'transferência' : 'transferências'} para ${esc(pr)}</b> entram como saída da ${esc(n)}, marcadas "a conferir". As milhas que chegaram lá, com o bônus, entram quando lermos o extrato da companhia.</div></div>`);
+  }
+  if (p.aReceber && p.aReceber.qtd && !(p.previstos || []).length) notas.push(`<div class="nota"><svg><use href="#i-relogio"/></svg><div>${nBR(p.aReceber.qtd)} pontos a receber a partir de ${esc(p.aReceber.data)}. Ainda não entram: aparecem no extrato quando caírem.</div></div>`);
+  const novosHTML = r.novos.length ? r.novos.map(impLinha).join('') : `<div class="imp-vazio">Nada novo neste extrato: tudo já está na Torre.</div>`;
+  abrirFolha({ largura:'larga', titulo:`Extrato ${esc(n)}`,
+    corpo:`<div class="imp">
+      <div class="imp-cab"><div class="imp-ic">V<span>EM</span></div><div><b>${esc(n)} · ${esc(p.titular || 'conta')}</b>
+        <small>Trazido pelo Assistente da Torre · ${nBR(r.itens.length)} movimentações${datas.length ? ` de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}` : ''}</small></div></div>
+      <div class="imp-conta"><label for="impConta">Conta na Torre</label><select id="impConta">${opc}</select>
+        ${contaId ? '' : `<span class="imp-falta">Não achei uma conta com o nome "${esc(p.titular || p.cabecalho)}". Escolha de quem é esta conta ${esc(n)}.</span>`}</div>
+      <div class="imp-nums">
+        <div class="imp-num jade"><span>Novas</span><b>${nBR(r.novos.length)}</b><small>entram agora</small></div>
+        <div class="imp-num"><span>Já na Torre</span><b>${nBR(r.existe.length)}</b><small>só ganham o vínculo</small></div>
+        <div class="imp-num"><span>Já importadas</span><b>${nBR(r.importado.length)}</b><small>de vezes anteriores</small></div>
+        <div class="imp-num ouro"><span>Saldo ${esc(n)}</span><b>${nBR(r.saldo)}</b><small>Torre hoje: ${contaId ? nBR(r.naCarteira) : 'n/d'}</small></div>
+      </div>
+      <div class="imp-notas">${notas.join('')}</div>
+      <div class="imp-lista"><h4>Movimentações novas</h4>${novosHTML}</div>
+      ${impClubeHTML(p, contaId)}
+      ${r.existe.length ? `<details class="imp-mais"><summary>Ver as ${r.existe.length} que já estavam na Torre</summary><div class="imp-lista">${r.existe.map(impLinha).join('')}</div></details>` : ''}
+    </div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="impDescartar">Descartar este extrato</button><div class="esticar"></div>
+      <button class="bt primario" id="impOk"${contaId ? '' : ' disabled'}><svg><use href="#i-ok"/></svg>${r.novos.length ? `Importar ${nBR(r.novos.length)} ${r.novos.length === 1 ? 'movimentação' : 'movimentações'}` : Math.abs(r.acerto) >= 1 ? 'Lançar o acerto' : 'Marcar como conferido'}</button>` });
+  $('#impConta').onchange = e => impPintar(p, e.target.value);
+  $('#impOk').onclick = () => { const c = $('#impConta').value; if (!c){ avisar('Escolha de quem é esta conta.', 'alerta'); return; } impImportar(p, c); };
+  $('#impDescartar').onclick = () => confirmar('Descartar este extrato',
+    'O extrato sai da fila do Assistente sem lançar nada. Para trazer de novo, é só abrir o extrato na Livelo e enviar outra vez.',
+    () => { impResolver(p); fecharFolha(); avisar('Extrato descartado.', 'ok', 3000); }, 'Descartar');
+}
+
+function impImportar(p, contaId){
+  const r = impAnalisar(p, contaId), agora = Date.now(), hoje = hojeISO();
+  DB.cfg.impVinculo = DB.cfg.impVinculo || {}; DB.cfg.impVinculo[p.id] = contaId;
+  r.existe.forEach(x => { const l = DB.lancamentos.find(y => y.id === x.lancId); if (l && !l.ext) l.ext = x.ext; });
+  r.novos.slice().reverse().forEach((x, i) => {
+    const l = { id:uid(), criadoEm:agora + i, data:x.data, contaId, prog:r.progK, tipo:x.tipo, qtd:x.qtd, custo:0,
+      forma:x.organico ? 'organico' : '', cartaoId:'', parcelas:x.organico ? 0 : 1, nota:x.nota, origem:'', saiu:0,
+      mexeuSaldo:true, ext:x.ext, imp:r.progK, importadoEm:hoje };
+    if (x.pedeValor) l.pedeValor = true;
+    if (x.destinoPendente){ l.destinoPendente = x.destinoPendente; l.aConferir = true; }
+    if (x.assinaturaId){
+      const a = x.assinatura; l.assinaturaId = a.id; l.cicloClube = x.cicloClube; l.cartaoId = a.cartaoId || '';
+      try { l.custo = Math.round(valorMensalAssin(a) * 100) / 100; } catch(_){}
+    }
+    DB.lancamentos.push(l);
+  });
+  const lancs = DB.lancamentos.filter(l => l.contaId === contaId && l.prog === r.progK);
+  const dif = Number(p.saldo) - impSomaDiario(lancs);
+  let acertou = 0;
+  if (isFinite(dif) && Math.abs(dif) >= 1){
+    const quando = String(p.atualizado || '').slice(0, 10) || dataBR(hoje);
+    DB.lancamentos.push({ id:uid(), criadoEm:agora + r.novos.length + 1, data:hoje, contaId, prog:r.progK,
+      tipo:dif > 0 ? 'ajusteEntrada' : 'ajusteSaida', qtd:Math.round(dif), custo:0, forma:'organico', cartaoId:'', parcelas:0,
+      nota:`Acerto com o extrato ${prog(r.progK).n} de ${quando}`, origem:'', saiu:0, mexeuSaldo:true, ext:`${r.progK}:acerto:${hoje}:${agora}`, imp:r.progK, importadoEm:hoje });
+    acertou = Math.round(dif);
+  }
+  acertarSaldoDe(contaId, r.progK);
+  DB.cfg.impUltimo = DB.cfg.impUltimo || {}; DB.cfg.impUltimo[contaId + '|' + r.progK] = {em:agora, saldo:Number(p.saldo)};
+  salvar(); impResolver(p); fecharFolha();
+  try { aplicarTudo(); } catch(_){ try { renderLancamentos(); renderSaldo(); } catch(__){} }
+  try { mostrarAvisosRenovacao(); } catch(_){}
+  avisar(`${prog(r.progK).n} de ${nomeCurto(nomeConta(contaId))}: ${r.novos.length} ${r.novos.length === 1 ? 'movimentação lançada' : 'movimentações lançadas'}${r.existe.length ? `, ${r.existe.length} já estavam` : ''}${acertou ? `, acerto de ${acertou > 0 ? '+' : '−'}${nBR(Math.abs(acertou))}` : ''}. Saldo: ${nBR(p.saldo)}.`, 'ok', 7000);
+  setTimeout(impProximo, 600);
+}
+
+/* A extensão apaga da fila o que a Torre resolveu (importou ou descartou). */
+function impResolver(p){
+  DB.cfg.impResolvidos = DB.cfg.impResolvidos || {};
+  DB.cfg.impResolvidos[p.id] = p.capturadoEm || Date.now();
+  salvar();
+  impFila = impFila.filter(x => x.id !== p.id);
+  impAberto = null;
+  try { window.postMessage({ __vemTorre:'resolvido', ids:[p.id] }, '*'); } catch(_){}
+}
+const impAdiados = new Set();
+function impProximo(){
+  const aberta = document.body.classList.contains('folha-aberta');
+  if (impAberto && !aberta){ impAdiados.add(impAberto.id); impAberto = null; }   /* fechou sem importar: fica para depois */
+  if (impAberto) return;
+  const p = impFila.find(x => !impAdiados.has(x.id)); if (!p) return;
+  if (aberta){ setTimeout(impProximo, 2500); return; }
+  impAbrir(p);
+}
+window.addEventListener('message', ev => {
+  if (ev.source !== window || !ev.data || ev.data.__vemPonte !== 'fila' || !Array.isArray(ev.data.fila)) return;
+  const res = DB.cfg.impResolvidos || {};
+  const velhos = ev.data.fila.filter(p => res[p.id] && Number(res[p.id]) >= Number(p.capturadoEm || 0)).map(p => p.id);
+  if (velhos.length) try { window.postMessage({ __vemTorre:'resolvido', ids:velhos }, '*'); } catch(_){}
+  impFila = ev.data.fila.filter(p => p && p.prog === 'livelo' && Array.isArray(p.tx) && !velhos.includes(p.id));
+  impFila.forEach(x => { if (x.capturadoEm !== (impVistos[x.id] || 0)){ impVistos[x.id] = x.capturadoEm; impAdiados.delete(x.id); } });
+  impProximo();
+});
+setTimeout(() => { try { window.postMessage({ __vemTorre:'pronta' }, '*'); } catch(_){} }, 800);
+
+/* ── aviso: compras de pontos sem o valor pago ────────────────────────────────
+   Mesmo desenho do "Prioridade alta" da Lista de desejos. Some sozinho quando
+   todas tiverem valor. */
+function impSemValor(){ return (DB.lancamentos || []).filter(l => l.pedeValor && !(Number(l.custo) > 0)); }
+function impInformarValores(){
+  const L = impSemValor().sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  if (!L.length){ avisar('Todas as compras já têm valor.', 'ok'); return; }
+  const formas = [['cartao', 'Cartão de Crédito'], ['pix', 'Pix ou Transferência']];
+  abrirFolha({ largura:'media', titulo:'Quanto você pagou',
+    corpo:`<p class="fraco" style="margin:0 0 10px">Informe o valor pago em cada compra. Sem ele, o custo do milheiro fica errado. Deixe em branco o que ainda não souber: o aviso continua só para esses.</p>
+      ${L.map(l => `<div class="iv-lin" data-id="${esc(l.id)}"><div><b>${nBR(l.qtd)} ${esc(prog(l.prog).n)}</b><small>${dataBR(l.data)} · ${esc(nomeCurto(nomeConta(l.contaId)))} · ${esc(l.nota || '')}</small></div>
+        <input class="iv-v" inputmode="decimal" placeholder="R$ 0,00" aria-label="Valor pago">
+        <select class="iv-f" aria-label="Forma de pagamento">${formas.map(f => `<option value="${f[0]}">${f[1]}</option>`).join('')}</select></div>`).join('')}`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><div class="esticar"></div><button class="bt primario" id="ivSalvar"><svg><use href="#i-ok"/></svg>Salvar valores</button>` });
+  $('#ivSalvar').onclick = () => {
+    let n = 0;
+    document.querySelectorAll('.iv-lin').forEach(el => {
+      const v = impNum(String(el.querySelector('.iv-v').value).replace(/[R$\s]/g, '')); if (!(v > 0)) return;
+      const l = DB.lancamentos.find(x => x.id === el.dataset.id); if (!l) return;
+      l.custo = Math.round(v * 100) / 100; l.forma = el.querySelector('.iv-f').value; l.parcelas = 1; delete l.pedeValor; n++;
+    });
+    salvar(); fecharFolha();
+    try { aplicarTudo(); } catch(_){}
+    try { mostrarAvisosRenovacao(); } catch(_){}
+    avisar(n ? `${n} ${n === 1 ? 'valor salvo' : 'valores salvos'}. O custo do milheiro foi refeito.` : 'Nenhum valor informado.', n ? 'ok' : 'alerta', 4000);
+  };
+}
+(function(){
+  if (typeof mostrarAvisosRenovacao !== 'function') return;
+  let depois = false;
+  const mr = mostrarAvisosRenovacao;
+  mostrarAvisosRenovacao = function(){
+    const r = mr.apply(this, arguments);
+    try {
+      const pilha = document.getElementById('rnPilha'); if (!pilha) return r;
+      pilha.querySelectorAll('[data-imp]').forEach(e => e.remove());
+      const L = impSemValor(); if (!L.length || depois) return r;
+      const pontos = L.reduce((s, l) => s + (Number(l.qtd) || 0), 0);
+      const progs = [...new Set(L.map(l => prog(l.prog).n))].join(' e ');
+      const quem = [...new Set(L.map(l => nomeCurto(nomeConta(l.contaId))))];
+      const el = document.createElement('div');
+      el.className = 'rn-card rl-card dp-card'; el.setAttribute('role', 'alert'); el.dataset.imp = '1';
+      el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
+        <div class="rn-txt"><div class="rn-olho">Prioridade alta</div><b>${L.length === 1 ? 'Compra de pontos sem valor' : `${L.length} compras de pontos sem valor`}</b>
+        <p><b style="display:inline">${nBR(pontos)} pontos ${esc(progs)}</b> de ${esc(quem.length > 2 ? quem.slice(0, 2).join(', ') + ' e mais ' + (quem.length - 2) : quem.join(' e '))} estão sem o valor pago. Sem ele, o custo do milheiro fica errado.</p></div></div>
+        <div class="rn-acoes"><button type="button" class="rl-ver">Informar valores</button><button type="button" class="rl-depois">Depois</button></div>`;
+      const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
+      el.querySelector('.rl-ver').onclick = () => { sair(); impInformarValores(); };
+      el.querySelector('.rl-depois').onclick = () => { depois = true; sair(); };
+      pilha.appendChild(el);
+    } catch(e){ console.error(e); }
+    return r;
+  };
 })();
 </script>
 
