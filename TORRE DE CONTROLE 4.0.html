@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 10:40';
+const BUILD = '2026-10-26 11:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -68991,6 +68991,32 @@ function impItemEsfera(t){
                : {...base, parceiro:impTitulo(tn || loc), tipo:'ajusteEntrada', organico:true, nota:`${impTitulo(tn)} · ${impTitulo(loc)}`};
 }
 
+/* Uma movimentação da Azul Fidelidade → um lançamento da Torre (26/10/2026).
+   Cada uma tem chave própria ("key"), que impede lançar duas vezes. A data vem
+   em UTC: 03:00 UTC é meia-noite no Brasil, então vale a data local. */
+const IMP_AZUL_ORIGEM = [[/^SANTANDER$|ESFERA/i, 'esfera'], [/LIVELO/i, 'livelo'], [/ITAU|ITAÚ|IUPP/i, 'iupp'], [/BRADESCO|LOOP/i, 'loop'], [/C6/i, 'c6']];
+function impItemAzul(t){
+  if (!t) return null;
+  const q = Math.round(Number(t.points) || 0); if (!q) return null;
+  let data = ''; try { data = isoLocal(new Date(t.date)); } catch(_){}
+  const pc = String((t.partner || {}).code || ''), pn = impTitulo((t.partner || {}).name || pc), tc = String((t.type || {}).code || '');
+  const base = { ext:'azul:' + (t.key || [data, pc, tc, q].join('|')), data, qtd:q, parceiro:pn, codigo:tc };
+  if (tc === 'AN' || q < 0) return pc === 'AD'
+    ? {...base, qtd:-Math.abs(q), tipo:'resgatePass', nota:'Resgate de passagem · Azul'}
+    : {...base, qtd:-Math.abs(q), tipo:'resgateProd', nota:`Resgate · ${pn}`};
+  if (tc === 'AI'){
+    const rota = String(t.comments || '').replace(/^.*?\|\s*From\s*/i, '').replace(/\s+/g, ' ').replace(/ International Airport/gi, '').replace(/ to /i, ' → ').trim();
+    return {...base, tipo:'organico', organico:true, nota:rota ? `Voo · ${rota}` : 'Pontos de voo'};
+  }
+  if (pc === 'CLUBE_TA') return {...base, parceiro:'Clube Azul', tipo:'clube', clube:true, nota:'Clube Azul · crédito do mês'};
+  if (pc === 'TA_ITAU' || /cart[aã]o azul/i.test(pn)) return {...base, tipo:'cartao', organico:true, nota:`Pontos do cartão · ${pn}`};
+  if (pc === 'SANTANPROM' || /promocional/i.test(pn)) return {...base, tipo:'transferencia', bonusTransf:true, origemProg:'esfera', nota:`Bônus da transferência · ${pn}`};
+  const org = (IMP_AZUL_ORIGEM.find(([re]) => re.test(pc) || re.test(pn)) || [])[1];
+  if (org && PROGRAMAS[org]) return {...base, tipo:'transferencia', origemProg:org, nota:`Vinda de ${prog(org).n} · ${pn}`};
+  if (/^(AD)$/.test(pc)) return {...base, tipo:'ajusteEntrada', nota:`${impTitulo((t.type || {}).name) || 'Entrada'} · Azul`};
+  return {...base, tipo:'bonificada', organico:true, nota:`Compra em ${pn}`};
+}
+
 /* De quem é este extrato: vínculo já confirmado antes, ou nome (e começo do CPF). */
 function impContaDe(p){
   const v = (DB.cfg.impVinculo || {})[p.id];
@@ -69055,7 +69081,7 @@ function impAplicarAcertos(contaId, progK, saldo, dataRef, quandoTxt, agora){
 function impAnalisar(p, contaId){
   const progK = p.prog || 'livelo';
   const hoje = hojeISO();
-  const itens = (p.tx || []).map(t => p.prog === 'esfera' ? impItemEsfera(t) : impItemLivelo(t)).filter(x => x && x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
+  const itens = (p.tx || []).map(t => p.prog === 'esfera' ? impItemEsfera(t) : p.prog === 'azul' ? impItemAzul(t) : impItemLivelo(t)).filter(x => x && x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
   itens.sort((a, b) => b.data.localeCompare(a.data));
   const daConta = (DB.lancamentos || []).filter(l => l.contaId === contaId && l.prog === progK);
   const jaExt = new Set(daConta.map(l => l.ext).filter(Boolean));
@@ -69067,10 +69093,44 @@ function impAnalisar(p, contaId){
       x.estado = 'importado'; return;
     }
     if (!contaId){ x.estado = 'novo'; return; }
-    const par = daConta.find(l => !l.ext && !usados.has(l.id) && Number(l.qtd) === x.qtd && l.data && Math.abs(impDias(l.data, x.data)) <= 3);
+    /* Lançamento feito à mão: mesma quantidade em até 3 dias. Na Azul a data do
+       crédito costuma andar mais (compra no parceiro, cartão), então vale até 10
+       dias, sempre o mais próximo. */
+    const janela = progK === 'azul' ? 10 : 3;
+    const livres = daConta.filter(l => !l.ext && !usados.has(l.id) && l.data);
+    const perto = arr => arr.sort((a, b) => Math.abs(impDias(a.data, x.data)) - Math.abs(impDias(b.data, x.data)))[0];
+    const par = perto(livres.filter(l => Number(l.qtd) === x.qtd && Math.abs(impDias(l.data, x.data)) <= janela));
     if (par){ usados.add(par.id); x.estado = 'existe'; x.lancId = par.id; return; }
+    if (progK === 'azul'){
+      /* transferência lançada à mão com o bônus arredondado (675.000 contra 677.000) */
+      if (x.tipo === 'transferencia' && x.qtd > 0){
+        const t = perto(livres.filter(l => l.tipo === 'transferencia' && Number(l.qtd) > 0 && Math.abs(impDias(l.data, x.data)) <= 3 && Math.abs(Number(l.qtd) - x.qtd) <= x.qtd * 0.01));
+        if (t){ usados.add(t.id); x.estado = 'existe'; x.lancId = t.id; x.difMao = x.qtd - Number(t.qtd); return; }
+      }
+      /* crédito do clube lançado à mão em duas linhas (10.000 do plano + 15.000 do bônus) */
+      if (x.tipo === 'clube'){
+        const dia = livres.filter(l => l.tipo === 'clube' && Math.abs(impDias(l.data, x.data)) <= 1);
+        if (dia.length > 1 && dia.reduce((s, l) => s + (Number(l.qtd) || 0), 0) === x.qtd){
+          dia.forEach(l => usados.add(l.id)); x.estado = 'existe'; x.lancId = dia[0].id; x.lancIds = dia.map(l => l.id); return;
+        }
+      }
+    }
     x.estado = 'novo';
   });
+  /* Transferência que chegou: casa com a saída "a conferir" do banco de origem
+     (Esfera, Livelo...), da mesma conta, em até 5 dias. O crédito vem maior que
+     a saída quando houve bônus (até 3 vezes). */
+  const conciliar = [];
+  if (contaId){
+    const pend = (DB.lancamentos || []).filter(l => l.contaId === contaId && l.destinoPendente === progK && l.aConferir && Number(l.qtd) < 0);
+    const tomadas = new Set();
+    itens.filter(x => x.tipo === 'transferencia' && x.qtd > 0 && !x.bonusTransf && x.estado !== 'importado').forEach(x => {
+      const c = pend.filter(l => !tomadas.has(l.id) && (!x.origemProg || l.prog === x.origemProg) && Math.abs(impDias(l.data, x.data)) <= 5
+        && x.qtd >= Math.abs(Number(l.qtd)) && x.qtd <= Math.abs(Number(l.qtd)) * 3)
+        .sort((a, b) => Math.abs(impDias(a.data, x.data)) - Math.abs(impDias(b.data, x.data)))[0];
+      if (c){ tomadas.add(c.id); conciliar.push({saida:c, item:x}); x.saidaConferida = c.id; }
+    });
+  }
   /* Clube: o crédito novo encaixa no mês da assinatura daquela conta */
   const assin = contaId ? (DB.assinaturas || []).filter(a => a.prog === progK && a.contaId === contaId) : [];
   const ciclosTomados = new Set((DB.lancamentos || []).filter(l => l.assinaturaId && l.cicloClube !== undefined).map(l => l.assinaturaId + '#' + Number(l.cicloClube)));
@@ -69097,7 +69157,7 @@ function impAnalisar(p, contaId){
   const acertoIgual = exAb === abertura && exAc === acerto;
   const naCarteira = contaId ? Number(((DB.saldos || []).find(s => s.contaId === contaId && s.prog === progK) || {}).qtd) || 0 : 0;
   return { progK, itens, novos, atualiza, existe:itens.filter(x => x.estado === 'existe'), importado:itens.filter(x => x.estado === 'importado'),
-    antes, depois, acerto, abertura, aberturaData, acertoIgual, saldo, naCarteira, semValor:novos.filter(x => x.pedeValor), transf:novos.filter(x => x.destinoPendente) };
+    antes, depois, acerto, abertura, aberturaData, acertoIgual, saldo, naCarteira, semValor:novos.filter(x => x.pedeValor), transf:novos.filter(x => x.destinoPendente), conciliar };
 }
 
 /* O que a Livelo já programou para cair (mensalidades e bônus do Clube),
@@ -69155,7 +69215,7 @@ function impPintar(p, contaId){
   const notas = [];
   if (contaId){
     const partes = [];
-    if (r.abertura) partes.push(`um <b>saldo anterior de ${nBR(r.abertura)} pontos</b> em ${dataBR(r.aberturaData)}, porque o extrato só mostra o último ano e nele saiu mais do que entrou`);
+    if (r.abertura) partes.push(`um <b>saldo anterior de ${nBR(r.abertura)} pontos</b> em ${dataBR(r.aberturaData)}, porque o extrato lido começa em ${dataBR(datas[0] || r.aberturaData)} e, desde então, saiu mais do que entrou`);
     if (Math.abs(r.acerto) >= 1) partes.push(`um <b>acerto de ${sinal(r.acerto)} pontos</b> hoje`);
     notas.push(r.acertoIgual || !partes.length
       ? `<div class="nota jade"><svg><use href="#i-ok"/></svg><div>Depois de importar, o saldo da Torre fica <b>${nBR(r.saldo)}</b>, igual ao da ${esc(n)}. Não precisa de acerto.</div></div>`
@@ -69166,6 +69226,14 @@ function impPintar(p, contaId){
     const pr = [...new Set(r.transf.map(x => prog(x.destinoPendente).n))].join(', ');
     notas.push(`<div class="nota"><svg><use href="#i-troca"/></svg><div><b>${r.transf.length} ${r.transf.length === 1 ? 'transferência' : 'transferências'} para ${esc(pr)}</b> entram como saída da ${esc(n)}, marcadas "a conferir". As milhas que chegaram lá, com o bônus, entram quando lermos o extrato da companhia.</div></div>`);
   }
+  if (r.conciliar && r.conciliar.length){
+    notas.push(`<div class="nota jade"><svg><use href="#i-troca"/></svg><div><b>${r.conciliar.length} ${r.conciliar.length === 1 ? 'transferência conferida' : 'transferências conferidas'}:</b> ${r.conciliar.map(c => {
+      const bon = Math.abs(Number(c.saida.qtd)) ? Math.round((c.item.qtd / Math.abs(Number(c.saida.qtd)) - 1) * 100) : 0;
+      return `${esc(prog(c.saida.prog).n)} ${dataBR(c.saida.data)} −${nBR(Math.abs(Number(c.saida.qtd)))} → +${nBR(c.item.qtd)}${bon > 0 ? ` (${bon}% de bônus)` : ''}`; }).join('; ')}. Elas saem do "a conferir".</div></div>`);
+  }
+  const difs = r.existe.filter(x => x.difMao);
+  if (difs.length) notas.push(`<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>${difs.map(x => `A transferência de ${dataBR(x.data)} foi lançada à mão com ${nBR(x.qtd - x.difMao)}, e a ${esc(n)} creditou ${nBR(x.qtd)}`).join('; ')}. A diferença entra no acerto do saldo.</div></div>`);
+  if (p.paginas && p.paginas.total && p.paginas.lidas < p.paginas.total) notas.push(`<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>Foram lidas <b>${p.paginas.lidas} de ${p.paginas.total} páginas</b> do extrato. O saldo fica certo, mas o histórico só vai completo se você abrir as outras páginas na ${esc(n)} e enviar de novo.</div></div>`);
   if (p.aReceber && p.aReceber.qtd && !(p.previstos || []).length) notas.push(`<div class="nota"><svg><use href="#i-relogio"/></svg><div>${nBR(p.aReceber.qtd)} pontos a receber a partir de ${esc(p.aReceber.data)}. Ainda não entram: aparecem no extrato quando caírem.</div></div>`);
   const novosHTML = (r.novos.length ? r.novos.map(impLinha).join('') : `<div class="imp-vazio">Nada novo neste extrato: tudo já está na Torre.</div>`)
     + (r.atualiza.length ? `<h4>Atualizadas (o mês ainda estava em andamento)</h4>` + r.atualiza.map(x => impLinha({...x, nota:`${x.nota} · antes ${nBR(x.antes)}`})).join('') : '');
@@ -69191,14 +69259,16 @@ function impPintar(p, contaId){
   $('#impConta').onchange = e => impPintar(p, e.target.value);
   $('#impOk').onclick = () => { const c = $('#impConta').value; if (!c){ avisar('Escolha de quem é esta conta.', 'alerta'); return; } impImportar(p, c); };
   $('#impDescartar').onclick = () => confirmar('Descartar este extrato',
-    'O extrato sai da fila do Assistente sem lançar nada. Para trazer de novo, é só abrir o extrato na Livelo e enviar outra vez.',
+    'O extrato sai da fila do Assistente sem lançar nada. Para trazer de novo, é só abrir o extrato no programa e enviar outra vez.',
     () => { impResolver(p); fecharFolha(); avisar('Extrato descartado.', 'ok', 3000); }, 'Descartar');
 }
 
 function impImportar(p, contaId){
   const r = impAnalisar(p, contaId), agora = Date.now(), hoje = hojeISO();
   DB.cfg.impVinculo = DB.cfg.impVinculo || {}; DB.cfg.impVinculo[p.id] = contaId;
-  r.existe.forEach(x => { const l = DB.lancamentos.find(y => y.id === x.lancId); if (l && !l.ext) l.ext = x.ext; });
+  r.existe.forEach(x => {
+    (x.lancIds || [x.lancId]).forEach((id, i) => { const l = DB.lancamentos.find(y => y.id === id); if (l && !l.ext) l.ext = i ? x.ext + '#' + (i + 1) : x.ext; });
+  });
   r.atualiza.forEach(x => { const l = DB.lancamentos.find(y => y.id === x.lancId); if (l){ l.qtd = x.qtd; l.nota = x.nota; l.data = x.data; } });
   r.novos.slice().reverse().forEach((x, i) => {
     const l = { id:uid(), criadoEm:agora + i, data:x.data, contaId, prog:r.progK, tipo:x.tipo, qtd:x.qtd, custo:0,
@@ -69206,11 +69276,21 @@ function impImportar(p, contaId){
       mexeuSaldo:true, ext:x.ext, imp:r.progK, importadoEm:hoje };
     if (x.pedeValor) l.pedeValor = true;
     if (x.destinoPendente){ l.destinoPendente = x.destinoPendente; l.aConferir = true; }
+    if (x.origemProg) l.origemProg = x.origemProg;
+    if (x.bonusTransf) l.bonusTransf = true;
     if (x.assinaturaId){
       const a = x.assinatura; l.assinaturaId = a.id; l.cicloClube = x.cicloClube; l.cartaoId = a.cartaoId || '';
       try { l.custo = Math.round(valorMensalAssin(a) * 100) / 100; } catch(_){}
     }
     DB.lancamentos.push(l);
+  });
+  (r.conciliar || []).forEach(c => {
+    const s = DB.lancamentos.find(y => y.id === c.saida.id); if (!s) return;
+    const chegou = DB.lancamentos.find(y => y.contaId === contaId && y.prog === r.progK && (y.ext === c.item.ext || (c.item.lancId && y.id === c.item.lancId)));
+    s.aConferir = false; s.conferidoEm = hoje;
+    s.chegou = {prog:r.progK, qtd:c.item.qtd, data:c.item.data, lancId:chegou ? chegou.id : ''};
+    s.nota = String(s.nota || '').replace(/\s*·\s*a conferir.*$/i, '') + ` · chegou ${nBR(c.item.qtd)} na ${prog(r.progK).n} em ${dataBR(c.item.data)}`;
+    if (chegou){ chegou.origemLanc = s.id; if (!/saída de/.test(chegou.nota || '')) chegou.nota = `${chegou.nota || ''} · saída de ${nBR(Math.abs(Number(s.qtd)))} da ${prog(s.prog).n} em ${dataBR(s.data)}`.replace(/^ · /, ''); }
   });
   const quando = String(p.atualizado || '').slice(0, 10) || dataBR(hoje);
   const ac = impAplicarAcertos(contaId, r.progK, Number(p.saldo), hoje, quando, agora + r.novos.length + 1);
@@ -69247,7 +69327,7 @@ window.addEventListener('message', ev => {
   const res = DB.cfg.impResolvidos || {};
   const velhos = ev.data.fila.filter(p => res[p.id] && Number(res[p.id]) >= Number(p.capturadoEm || 0)).map(p => p.id);
   if (velhos.length) try { window.postMessage({ __vemTorre:'resolvido', ids:velhos }, '*'); } catch(_){}
-  impFila = ev.data.fila.filter(p => p && ['livelo', 'esfera'].includes(p.prog) && Array.isArray(p.tx) && !velhos.includes(p.id));
+  impFila = ev.data.fila.filter(p => p && ['livelo', 'esfera', 'azul'].includes(p.prog) && Array.isArray(p.tx) && !velhos.includes(p.id));
   impFila.forEach(x => { if (x.capturadoEm !== (impVistos[x.id] || 0)){ impVistos[x.id] = x.capturadoEm; impAdiados.delete(x.id); } });
   impProximo();
 });
