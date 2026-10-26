@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 17:00';
+const BUILD = '2026-10-26 18:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -60539,8 +60539,40 @@ function lojasConhecidasParaItem(extras){
   });
   return m;
 }
+/* procurar loja por CATEGORIA (26/10/2026, pedido do Jadiel): "informática",
+   "celular", "perfume"... mostra as lojas que vendem aquilo, pelo que a Torre
+   já sabe de cada loja (VENDE_LOJA). O nome da loja continua valendo. */
+const LOJAS_BUSCA_CAT = [
+  {rot:'informática', tags:['informatica'], pal:['informatica', 'computador', 'notebook', 'impressora', 'periferico', 'teclado', 'mouse', 'monitor']},
+  {rot:'eletrônicos', tags:['informatica', 'celular', 'tv', 'games', 'fones', 'eletro', 'arcondicionado'], pal:['eletronico', 'tecnologia']},
+  {rot:'celular', tags:['celular'], pal:['celular', 'smartphone', 'iphone']},
+  {rot:'TV', tags:['tv'], pal:['tv', 'televis']},
+  {rot:'games', tags:['games'], pal:['game', 'videogame', 'console']},
+  {rot:'fones e áudio', tags:['fones'], pal:['fone', 'audio', 'caixa de som']},
+  {rot:'eletrodomésticos', tags:['eletro', 'arcondicionado'], pal:['eletrodomestico', 'geladeira', 'fogao', 'ar condicionado', 'lavadora']},
+  {rot:'moda', tags:['roupas', 'calcados', 'tenis', 'bolsas', 'joias', 'oculos', 'infantil_roupas'], pal:['moda', 'roupa', 'calcado', 'sapato', 'bolsa', 'joia', 'oculos']},
+  {rot:'beleza', tags:['perfume', 'maquiagem', 'cosmeticos'], pal:['beleza', 'perfume', 'maquiagem', 'cosmetico']},
+  {rot:'casa', tags:['cozinha', 'cama_mesa_banho', 'moveis', 'colchao', 'decoracao', 'construcao', 'casa_papel'], pal:['casa', 'movel', 'moveis', 'decoracao', 'cozinha', 'construcao', 'colchao', 'cama']},
+  {rot:'farmácia', tags:['farmacia'], pal:['farmacia', 'remedio', 'drogaria']},
+  {rot:'esporte', tags:['esporte_equip', 'tenis_corrida', 'suplementos'], pal:['esporte', 'academia', 'suplemento', 'corrida']},
+  {rot:'pet', tags:['pet', 'plano_pet'], pal:['pet', 'cachorro', 'gato', 'racao']},
+  {rot:'viagem', tags:['hotel', 'carro', 'passagem', 'seguro_viagem', 'ingresso'], pal:['viagem', 'hotel', 'passagem', 'aluguel de carro', 'carro', 'ingresso']},
+  {rot:'alimentação', tags:['mercado', 'vinho', 'cafe', 'chocolate'], pal:['alimenta', 'comida', 'mercado', 'supermercado', 'vinho', 'cafe', 'chocolate']},
+  {rot:'presentes', tags:['flores', 'brinquedos', 'chocolate'], pal:['presente', 'flor', 'brinquedo']}
+];
+function lojasBuscaCategoria(txt){
+  const s = semAcento(String(txt || '')).toLowerCase().replace(/\s+/g, ' ').trim(); if (s.length < 2) return null;
+  return LOJAS_BUSCA_CAT.find(g => g.pal.some(p => s === p || s.startsWith(p) || (s.length >= 4 && p.startsWith(s)))) || null;
+}
+function lojaDaCategoriaBusca(nome, g){
+  const vende = oQueALojaVende(nome);
+  if (vende) return g.tags.some(t => vende.includes(t));
+  return LOJAS_DE_TUDO.test(nome || '') && !g.tags.some(t => ['hotel', 'carro', 'passagem', 'seguro_viagem', 'ingresso', 'farmacia', 'plano_pet'].includes(t));
+}
 function montarLojasItem(dOrig){
   const box = document.getElementById('dsLojasBox'); if (!box) return;
+  const _rol = (box.querySelector('.li-lista') || {}).scrollTop || 0;
+  requestAnimationFrame(() => { const li = box.querySelector('.li-lista'); if (li && _rol) li.scrollTop = _rol; });
   const nome = ($('#dsN') || {}).value || '', cat = ($('#dsCat') || {}).value || 'geral';
   const dTmp = {n:nome, cat};
   const sim = new Set((box._sim || dOrig.lojasSim || []).map(_nL)), nao = new Set((box._nao || dOrig.lojasNao || []).map(_nL));
@@ -60557,7 +60589,8 @@ function montarLojasItem(dOrig){
     return {...l, k, auto, on, extra};
   });
   const busca = _nL(box._busca || '');
-  const vis = lojas.filter(l => !busca || l.k.includes(busca));
+  const catB = lojasBuscaCategoria(box._busca || '');
+  const vis = lojas.filter(l => !busca || l.k.includes(busca) || (catB && lojaDaCategoriaBusca(l.n, catB)));
   const ordem = (a, b) => (b.auto - a.auto) || a.n.localeCompare(b.n, 'pt');
   const vv = vis.filter(l => l.viva).sort(ordem), vs = vis.filter(l => !l.viva).sort(ordem);
   const nOn = lojas.filter(l => l.on).length;
@@ -60566,18 +60599,22 @@ function montarLojasItem(dOrig){
       <span class="li-n"><span class="li-t"><b>${esc(l.n)}</b>${l.auto ? '<em class="li-sug">vende o tipo</em>' : ''}</span><small>${l.viva ? Object.entries(l.progs).map(([p, v]) => `${esc(prog(p).n)} ${nBRdec(v)}`).join(' · ')
         : l.ult ? `Sem promoção hoje · última: ${esc(prog(l.ult.prog).n)} ${nBRdec(l.ult.v)} até ${dataBR(l.ult.fim).slice(0, 5)}` : l.extra ? 'Você incluiu · sem promoção hoje' : 'Sem promoção hoje'}</small></span></label>`;
   const txt = String(box._busca || '').trim();
-  const podeIncluir = txt.length >= 2 && !lojas.some(l => l.k === busca);
+  const podeIncluir = txt.length >= 2 && !catB && !lojas.some(l => l.k === busca);
   box.innerHTML = `<div class="li-cab"><b>${nOn} de ${lojas.length} lojas marcadas</b><small>Marcadas = a Torre procura o item nelas. Já vêm marcadas as que vendem ${esc(cat)}${nome ? ` (${esc(nome)})` : ''}. Marque também lojas sem promoção hoje: quando aparecer promoção nelas, a Torre avisa.</small></div>
     <div class="li-barra"><input type="search" id="dsLojasBusca" placeholder="Procurar loja" value="${esc(box._busca || '')}">
       <button type="button" class="bt p fantasma" data-li="sug">Só as sugeridas</button><button type="button" class="bt p fantasma" data-li="todas">Todas</button><button type="button" class="bt p fantasma" data-li="nenhuma">Nenhuma</button></div>
     <div class="li-lista">
+      ${catB ? `<p class="li-catb"><svg><use href="#i-busca"/></svg><span>Lojas que vendem <b>${esc(catB.rot)}</b>, pelo que a Torre sabe de cada uma: <b>${vis.length}</b>.</span></p>` : ''}
       ${vv.length ? `<div class="li-grupo">Em promoção hoje <span>${vv.length}</span></div>${vv.map(linha).join('')}` : ''}
       ${vs.length ? `<div class="li-grupo">Sem promoção hoje <span>${vs.length}</span><small>a Torre avisa quando aparecer</small></div>${vs.map(linha).join('')}` : ''}
       ${!vv.length && !vs.length ? `<p class="fraco li-vazio">Nenhuma loja com esse nome na Torre.</p>` : ''}
       ${podeIncluir ? `<button type="button" class="li-add" data-li-add><svg><use href="#i-mais"/></svg>Incluir a loja “${esc(txt)}”</button>` : ''}
     </div>`;
   const grava = () => { const st = box._estado; box._sim = st.filter(l => l.on && (!l.auto || l.extra)).map(l => l.n); box._nao = st.filter(l => !l.on && l.auto).map(l => l.n); box._extra = box._extra.filter(x => st.some(l => l.on && _nL(l.n) === _nL(x))); };
-  box.querySelectorAll('[data-lk]').forEach(c => c.onchange = () => { const l = box._estado.find(x => x.k === c.dataset.lk); l.on = c.checked; grava(); montarLojasItem(dOrig); });
+  /* marcar não redesenha a lista: a loja fica onde está e a rolagem não volta ao topo (26/10/2026) */
+  box.querySelectorAll('[data-lk]').forEach(c => c.onchange = () => { const l = box._estado.find(x => x.k === c.dataset.lk); l.on = c.checked; grava();
+    const lab = c.closest('.li-l'); if (lab) lab.classList.toggle('on', c.checked);
+    const cab = box.querySelector('.li-cab > b'); if (cab) cab.textContent = `${box._estado.filter(x => x.on).length} de ${box._estado.length} lojas marcadas`; });
   box.querySelectorAll('[data-li]').forEach(b => b.onclick = () => { const a = b.dataset.li; box._estado.forEach(l => { l.on = a === 'todas' ? true : a === 'nenhuma' ? false : l.auto; }); grava(); montarLojasItem(dOrig); });
   const add = box.querySelector('[data-li-add]');
   if (add) add.onclick = () => { const n = txt.replace(/\s+/g, ' '); box._extra.push(n); box._estado.push({n, k:_nL(n), auto:false, on:true, extra:true, viva:false, progs:{}}); box._busca = ''; grava(); montarLojasItem(dOrig); avisar(`${esc(n)} incluída. Quando aparecer promoção nela, a Torre avisa.`, 'ok', 4000); };
@@ -63815,7 +63852,11 @@ function custosDeClubeFaltando(){
         fonte = ativa; tipo = 'atual';
       } else {
         const outra = A.filter(a => a.status !== 'ativa' && l.data >= a.inicio && (!a.renova || l.data < a.renova)).sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
-        if (outra){ fonte = outra; tipo = 'cancelado'; }
+        if (outra){
+          /* o mês do clube cancelado já lançado pela Torre (com custo) cobre o crédito: não cobra de novo */
+          if ((DB.lancamentos || []).some(x => x.assinaturaId === outra.id && x.cicloClube !== undefined && Number(x.custo) > 0 && ccxDias(x.data, l.data) <= 6)) return;
+          fonte = outra; tipo = 'cancelado';
+        }
       }
       const sk = k + '|' + (fonte ? fonte.id : 'antes');
       if (ign[sk]) return;
@@ -70111,6 +70152,11 @@ function impInformarValores(){
 </script>
 
 
+<style id="lic-css">
+.li-catb{ display:flex; gap:8px; align-items:flex-start; margin:0 0 8px; padding:9px 12px; border-radius:12px; font-size:calc(13px * var(--esc)); color:var(--grafite); background:color-mix(in srgb, var(--anil-claro) 9%, var(--sup-1)); border:1px solid color-mix(in srgb, var(--anil-claro) 30%, var(--fio)); grid-column:1 / -1; }
+.li-catb svg{ flex:0 0 auto; width:15px; height:15px; margin-top:2px; fill:none; stroke:var(--anil-claro); stroke-width:2; }
+.li-catb b{ color:var(--giz); }
+</style>
 <style id="cpx-css">
 /* ══ CAMPANHA PREMIUM (26/10/2026) ═══════════════════════════════════════════
    Capa da campanha (de onde sai, para onde vai), e um assunto por vez:
@@ -70675,6 +70721,469 @@ function impInformarValores(){
       return r;
     };
   }
+})();
+</script>
+
+<style id="hlj-css">
+/* ══ HISTÓRICO DAS LOJAS MARCADAS (26/10/2026) ═══════════════════════════════
+   Para cada loja marcada no item: o recorde (e se ele ficou fora das últimas
+   5), as 5 últimas campanhas em barras, a média e o que ela paga hoje. */
+.hl{ margin-top:14px; border:1px solid var(--fio); border-radius:18px; overflow:hidden; background:linear-gradient(160deg, var(--sup-1), var(--sup-0)); }
+.hl-cab{ display:flex; align-items:center; gap:10px; padding:14px 16px 6px; flex-wrap:wrap; }
+.hl-cab .ic{ width:32px; height:32px; border-radius:10px; display:grid; place-items:center; flex:none; background:linear-gradient(145deg, var(--ouro), #E5488F); box-shadow:0 6px 16px -6px #E5488F; }
+.hl-cab .ic svg{ width:16px; height:16px; fill:none; stroke:#fff; stroke-width:2; }
+.hl-cab > div{ flex:1; min-width:200px; }
+.hl-cab b{ display:block; color:var(--giz); font-size:calc(14.5px * var(--esc)); }
+.hl-cab small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.hl-fil{ display:flex; gap:6px; flex-wrap:wrap; }
+.hl-fil button{ all:unset; cursor:pointer; padding:6px 11px; border-radius:99px; border:1px solid var(--fio); font-size:calc(12px * var(--esc)); font-weight:600; color:var(--grafite); background:var(--sup-0); }
+.hl-fil button.on{ background:var(--giz); color:var(--sup-0); border-color:var(--giz); }
+.hl-fil button:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
+.hl-lista{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap:10px; padding:10px 16px 16px; }
+.hl-c{ border:1px solid var(--fio); border-radius:16px; background:var(--sup-1); padding:14px; display:grid; gap:12px; position:relative; overflow:hidden; }
+.hl-c.viva{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+.hl-topo{ display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+.hl-topo > div:first-child{ flex:1 1 140px; min-width:0; }
+.hl-barras{ overflow:hidden; }
+.hl-topo b.n{ display:block; color:var(--giz); font:700 calc(15px * var(--esc))/1.25 var(--f-d, inherit); overflow-wrap:anywhere; }
+.hl-topo small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.hl-hoje{ flex:none; text-align:right; padding:6px 10px; border-radius:12px; background:color-mix(in srgb, var(--jade) 12%, var(--sup-0)); border:1px solid color-mix(in srgb, var(--jade) 40%, transparent); }
+.hl-hoje em{ display:block; font-style:normal; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--jade); }
+.hl-hoje b{ display:block; font:700 calc(17px * var(--esc))/1.15 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.hl-hoje small{ display:block; font-size:calc(11px * var(--esc)); color:var(--grafite); }
+.hl-rec{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; background:linear-gradient(120deg, color-mix(in srgb, var(--ouro) 16%, var(--sup-0)), var(--sup-0) 75%); border:1px solid color-mix(in srgb, var(--ouro) 35%, var(--fio)); }
+.hl-rec > b{ font:700 calc(24px * var(--esc))/1 var(--f-d, inherit); color:var(--ouro); font-variant-numeric:tabular-nums; }
+.hl-rec span{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.4; }
+.hl-rec span b{ color:var(--giz); }
+.hl-rec .fora{ display:inline-block; margin-top:3px; padding:1px 7px; border-radius:99px; font:700 calc(10px * var(--esc))/1.5 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase; color:var(--ouro); border:1px solid color-mix(in srgb, var(--ouro) 50%, transparent); }
+.hl-ult-t{ font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); margin-bottom:6px; }
+.hl-barras{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:6px; align-items:end; height:118px; }
+.hl-b{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; height:100%; min-width:0; }
+.hl-b > b{ font:700 calc(12px * var(--esc))/1 var(--f-m, inherit); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.hl-b > i{ display:block; width:100%; max-width:42px; border-radius:7px 7px 3px 3px; background:color-mix(in srgb, var(--anil-claro) 70%, transparent); min-height:4px; }
+.hl-b.rec > i{ background:linear-gradient(180deg, var(--ouro), color-mix(in srgb, var(--ouro) 60%, #000)); }
+.hl-b.rec > b{ color:var(--ouro); }
+.hl-b > small{ font-size:calc(10.5px * var(--esc)); color:var(--grafite); text-align:center; line-height:1.2; white-space:nowrap; }
+.hl-b.hl-nada > i{ background:transparent; border:1px dashed var(--fio); height:22px; min-height:0; }
+.hl-pe{ display:flex; gap:8px 14px; flex-wrap:wrap; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.hl-pe b{ color:var(--giz); }
+.hl-vazio{ padding:4px 16px 16px; color:var(--grafite); font-size:calc(13px * var(--esc)); line-height:1.5; }
+.hd-dec{ display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:18px; border:1px solid color-mix(in srgb, var(--z) 45%, var(--fio)); background:linear-gradient(120deg, color-mix(in srgb, var(--z) 15%, var(--sup-1)), var(--sup-1) 75%); margin-bottom:14px; }
+.hd-dec .ico{ flex:none; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--z); color:var(--sup-0); }
+.hd-dec .ico svg{ width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
+.hd-dec small{ display:block; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.hd-dec b.t{ display:block; font:700 calc(20px * var(--esc))/1.2 var(--f-d, inherit); color:var(--z); margin:3px 0 4px; }
+.hd-dec p{ margin:0; font-size:calc(13.5px * var(--esc)); line-height:1.5; color:var(--grafite); }
+.hd-dec p b{ color:var(--giz); }
+.hd-op{ display:grid; gap:10px; margin-bottom:16px; }
+.hd-op-t{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; font:700 calc(11px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); }
+.hd-op-t .disco-prog{ width:22px !important; height:22px !important; font-size:8px !important; }
+.hd-bk{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); font-size:calc(13px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.hd-bk > b{ flex:none; font:700 calc(18px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; min-width:46px; }
+.hd-bk.melhor{ border-color:color-mix(in srgb, var(--brasa) 40%, var(--fio)); background:color-mix(in srgb, var(--brasa) 6%, var(--sup-0)); }
+.hd-bk.pior{ border-color:color-mix(in srgb, var(--jade) 40%, var(--fio)); background:color-mix(in srgb, var(--jade) 6%, var(--sup-0)); }
+.hd-bk span b{ color:var(--giz); }
+.li-hist{ margin-right:14px; }
+.hd-resto{ display:flex; align-items:center; gap:8px; padding:9px 12px 4px; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.hd-resto i{ width:6px; height:6px; border-radius:50%; background:var(--grafite-dim, var(--fio)); flex:none; }
+.hd-dest{ margin-top:10px; border-radius:14px; border:1px solid color-mix(in srgb, var(--ouro) 30%, var(--fio)); background:linear-gradient(135deg, color-mix(in srgb, var(--ouro) 9%, var(--sup-1)), var(--sup-1) 70%); padding:12px 14px; }
+.hd-dest-t{ display:flex; align-items:center; gap:8px; justify-content:space-between; flex-wrap:wrap; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); margin-bottom:8px; }
+.hd-dest-t button{ all:unset; cursor:pointer; text-transform:none; letter-spacing:0; font:600 calc(12.5px * var(--esc))/1.2 var(--f-b, inherit); color:var(--anil-claro); text-decoration:underline; text-underline-offset:3px; }
+.hd-dest ol{ list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.hd-dest li{ display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:10px; align-items:center; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.hd-dest li .m{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font:700 calc(12px * var(--esc))/1 var(--f-m, inherit); color:var(--sup-0); background:var(--grafite); }
+.hd-dest li:nth-child(1) .m{ background:linear-gradient(145deg, #F4C95D, #B8860B); } .hd-dest li:nth-child(2) .m{ background:linear-gradient(145deg, #D9DEE7, #8E99A8); } .hd-dest li:nth-child(3) .m{ background:linear-gradient(145deg, #E2A06B, #9A5B2B); }
+.hd-dest li b{ color:var(--giz); }
+.hd-dest li .v{ text-align:right; font:700 calc(14px * var(--esc))/1.1 var(--f-m, inherit); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.hd-dest li .v small{ display:block; font:500 calc(11px * var(--esc))/1.3 var(--f-b, inherit); color:var(--grafite); }
+.hd-dest .hd-cmp{ margin-top:8px; padding-top:8px; border-top:1px dashed var(--fio); font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.hd-dest .hd-cmp b{ color:var(--giz); }
+</style>
+<script id="hlj-js">
+/* ══ HISTÓRICO DAS LOJAS MARCADAS (26/10/2026, pedido do Jadiel) ═════════════
+   "As 5 últimas campanhas de cada loja, a maior pontuação e, se ela não estiver
+   entre as 5, mostrar que foi a maior e quando." Lê todas as ofertas de loja já
+   cadastradas (Lojas Parceiras, inclusive as encerradas). Respeita o programa
+   escolhido no item e o jeito do alvo (pontos por real ou % de volta). */
+let hlOrdem = 'recorde', hlSoHoje = false;
+function hlOfertas(nome, progF){
+  const k = normLoja(nome), vistos = new Set(), out = [];
+  (DB.lojas || []).forEach(l => {
+    if (normLoja(l.n) !== k || l.porDolar) return;
+    const v = Number(l.promo) || 0; if (!(v > 0)) return;
+    if (progF && l.prog !== progF) return;
+    const dia = l.fim || l.em || l.inicio || ''; if (!dia) return;
+    const ch = l.prog + '|' + dia; if (vistos.has(ch)) return; vistos.add(ch);
+    const vm = typeof valorMilheiro === 'function' ? valorMilheiro(l.prog) || 0 : 0;
+    out.push({n:l.n, prog:l.prog, dia, mult:v, pc:vm > 0 ? v * vm / 10 : 0, viva:dia >= hojeISO()});
+  });
+  return out.sort((a, b) => b.dia.localeCompare(a.dia));
+}
+function hlHTML(lojas, progF, tipo, semCab){
+  const met = o => tipo === 'mult' ? o.mult : o.pc;
+  const fmt = v => tipo === 'mult' ? `${nBRdec(Math.round(v * 10) / 10)} pts/real` : pct(v, 1);
+  const fmtC = v => tipo === 'mult' ? nBRdec(Math.round(v * 10) / 10) + '×' : pct(v, 1);
+  let L = lojas.map(n => { const of = hlOfertas(n, progF); const rec = of.length ? of.reduce((m, o) => met(o) > met(m) ? o : m, of[0]) : null;
+    return {n, of, rec, hoje:of.filter(o => o.viva).sort((a, b) => met(b) - met(a))[0] || null}; });
+  const total = L.length;
+  if (hlSoHoje) L = L.filter(x => x.hoje);
+  L.sort(hlOrdem === 'nome' ? (a, b) => a.n.localeCompare(b.n, 'pt') : hlOrdem === 'recente' ? (a, b) => String((b.of[0] || {}).dia || '').localeCompare(String((a.of[0] || {}).dia || ''))
+    : (a, b) => (b.rec ? met(b.rec) : -1) - (a.rec ? met(a.rec) : -1));
+  const cab = `<div class="hl-cab"><span class="ic"><svg><use href="#i-grafico"/></svg></span><div><b>Histórico das lojas marcadas</b>
+      <small>${total} ${total === 1 ? 'loja' : 'lojas'}${progF ? ' · só ' + esc(prog(progF).n) : ' · todos os programas'} · ${tipo === 'mult' ? 'pontos por real' : '% do preço de volta'}</small></div>
+    <div class="hl-fil" role="group" aria-label="Ordem">${[['recorde', 'Maior recorde'], ['recente', 'Mais recente'], ['nome', 'A a Z']].map(([k, r]) => `<button type="button" data-hlo="${k}" class="${hlOrdem === k ? 'on' : ''}">${r}</button>`).join('')}
+      <button type="button" data-hlh class="${hlSoHoje ? 'on' : ''}">Só com promoção hoje</button></div></div>`;
+  if (!total) return `<div class="hl">${cab}<div class="hl-vazio">Marque as lojas acima: o histórico de cada uma aparece aqui.</div></div>`;
+  const card = x => {
+    if (!x.of.length) return `<div class="hl-c"><div class="hl-topo"><div><b class="n">${esc(x.n)}</b><small>Nenhuma campanha registrada ainda${progF ? ' na ' + esc(prog(progF).n) : ''}.</small></div></div>
+      <div class="hl-pe"><span>Quando aparecer promoção nela, a Torre guarda e mostra aqui.</span></div></div>`;
+    const ult = x.of.slice(0, 5), idxRec = x.of.indexOf(x.rec), max = met(x.rec) || 1;
+    const media = x.of.reduce((t, o) => t + met(o), 0) / x.of.length;
+    const progs = [...new Set(x.of.map(o => o.prog))];
+    const barras = ult.slice().reverse().map(o => `<div class="hl-b${o === x.rec ? ' rec' : ''}" title="${esc(prog(o.prog).n)} · até ${dataBR(o.dia)} · ${fmt(met(o))}">
+        <b>${fmtC(met(o))}</b><i style="height:${Math.max(4, met(o) / max * 78).toFixed(0)}px"></i><small>${dataBR(o.dia).slice(0, 5)}<br>${esc(siglaProg(o.prog))}</small></div>`).join('')
+      + Array.from({length:5 - ult.length}, () => '<div class="hl-b hl-nada"><b>&nbsp;</b><i></i><small>&nbsp;<br>&nbsp;</small></div>').join('');
+    const hojeVsRec = x.hoje ? (met(x.hoje) >= met(x.rec) - 1e-9 ? 'é o recorde' : `${pct((1 - met(x.hoje) / met(x.rec)) * 100, 0)} abaixo do recorde`) : '';
+    return `<div class="hl-c${x.hoje ? ' viva' : ''}">
+      <div class="hl-topo"><div><b class="n">${esc(x.n)}</b><small>${x.of.length} ${x.of.length === 1 ? 'campanha registrada' : 'campanhas registradas'} · ${progs.map(p => esc(prog(p).n)).join(', ')}</small></div>
+        ${x.hoje ? `<div class="hl-hoje"><em>Hoje</em><b>${fmtC(met(x.hoje))}</b><small>${esc(prog(x.hoje.prog).n)} · ${hojeVsRec}</small></div>` : ''}</div>
+      <div class="hl-rec"><b>${fmtC(met(x.rec))}</b><span>Recorde: <b>${esc(prog(x.rec.prog).n)}</b>, até ${dataBR(x.rec.dia)}.<br>${idxRec === 0 ? 'Foi a campanha mais recente.' : `Foi há ${idxRec} ${idxRec === 1 ? 'campanha' : 'campanhas'}.`}${idxRec >= 5 ? '<br><span class="fora">Fora das últimas 5</span>' : ''}</span></div>
+      <div><div class="hl-ult-t">${ult.length < 5 ? `${ult.length === 1 ? 'A única campanha' : `As ${ult.length} campanhas`}` : 'As 5 últimas campanhas'}</div><div class="hl-barras">${barras}</div></div>
+      <div class="hl-pe"><span>Média <b>${fmt(media)}</b></span><span>Última: <b>${dataBR(x.of[0].dia)}</b></span></div>
+    </div>`;
+  };
+  if (semCab) return L.map(card).join('');
+  return `<div class="hl">${cab}${L.length ? `<div class="hl-lista">${L.map(card).join('')}</div>` : '<div class="hl-vazio">Nenhuma das lojas marcadas está com promoção hoje.</div>'}</div>`;
+}
+function hlDesenhar(){
+  const alvo = document.getElementById('dsHistLojas'), box = document.getElementById('dsLojasBox'); if (!alvo || !box) return;
+  const lojas = (box._estado || []).filter(l => l.on).map(l => l.n);
+  const tipo = ((document.querySelector('#segAlvo button.on') || {}).dataset || {}).t || 'mult';
+  alvo.innerHTML = hlHTML(lojas, (document.getElementById('dsProg') || {}).value || '', tipo);
+  alvo.querySelectorAll('[data-hlo]').forEach(b => b.onclick = () => { hlOrdem = b.dataset.hlo; hlDesenhar(); });
+  const h = alvo.querySelector('[data-hlh]'); if (h) h.onclick = () => { hlSoHoje = !hlSoHoje; hlDesenhar(); };
+}
+/* Na lista de desejos ("Hora de comprar"): botão "Histórico e Black" abre uma
+   janela com a decisão (comprar agora ou esperar a Black) e o histórico de cada
+   opção, no programa da própria opção. */
+const _hdX = {};
+if (typeof opcoesItemHTML === 'function'){
+  const o = opcoesItemHTML;
+  opcoesItemHTML = function(x){ try { let of = ofertasComparadas(x); if (!of.length) of = [x.melhor]; _hdX[x.d.id] = {x, of:of.filter(Boolean)}; } catch(_){} return o.apply(this, arguments); };
+  if (typeof vereditoItemHTML !== 'undefined') vereditoItemHTML = opcoesItemHTML;
+}
+if (typeof foraDoItemHTML === 'function'){
+  const o = foraDoItemHTML;
+  foraDoItemHTML = function(x){
+    const h = o.apply(this, arguments);
+    if (!x || !x.d || !_hdX[x.d.id]) return h;
+    return h.replace('<button type="button" class="link-reconsiderar li-aj"', `<button type="button" class="link-reconsiderar li-aj li-hist" onclick="abrirHistItem('${esc(x.d.id)}')">Histórico e Black</button><button type="button" class="link-reconsiderar li-aj"`);
+  };
+}
+/* No cartão do item abaixo do alvo: as linhas "nada agora" viram uma linha só,
+   e entra o pódio das melhores campanhas destas lojas nos últimos 12 meses. */
+function hdDestaques(x){
+  const d = x.d, nomes = [...new Set([...(x.todas || []).map(o => o.loja && o.loja.n), ...(d.lojasSim || [])].filter(Boolean))];
+  const lim = (() => { const z = new Date(hojeISO() + 'T12:00:00'); z.setFullYear(z.getFullYear() - 1); return z.toISOString().slice(0, 10); })();
+  const tudo = []; nomes.forEach(n => hlOfertas(n, '').filter(o => o.dia >= lim).forEach(o => tudo.push(o)));
+  if (!tudo.length) return '';
+  const met = o => d.alvoTipo === 'mult' ? o.mult : o.pc;
+  tudo.sort((a, b) => (b.pc - a.pc) || (b.mult - a.mult));
+  const vistos = new Set(), top = []; tudo.forEach(o => { const k = normLoja(o.n); if (vistos.has(k) || top.length >= 3) return; vistos.add(k); top.push(o); });
+  const valor = Number(d.valor) || 0, hoje = x.melhor || null;
+  const cmp = hoje && top[0] ? (hoje.pc >= top[0].pc - 1e-9 ? `Hoje a <b>${esc(hoje.loja.n)}</b> paga o mesmo que o melhor dos últimos 12 meses.`
+    : `O melhor de hoje (<b>${esc(hoje.loja.n)}</b>, ${nBRdec(hoje.mult)}×) devolve <b>${pct(hoje.pc, 1)}</b>; o melhor do ano devolveu <b>${pct(top[0].pc, 1)}</b>${valor ? `: <b>${brl(valor * (top[0].pc - hoje.pc) / 100)}</b> a mais neste item` : ''}.`) : '';
+  return `<div class="hd-dest"><div class="hd-dest-t"><span>Melhores campanhas destas lojas · 12 meses</span>${_hdX[d.id] ? `<button type="button" onclick="abrirHistItem('${esc(d.id)}')">Histórico e Black</button>` : ''}</div>
+    <ol>${top.map((o, i) => `<li><span class="m">${i + 1}</span><span><b>${esc(o.n)}</b> · ${esc(prog(o.prog).n)} · até ${dataBR(o.dia).slice(0, 5)}${o.viva ? ' · <b class="cp-jade">aberta</b>' : ''}</span>
+      <span class="v">${nBRdec(o.mult)}×<small>${pct(o.pc, 1)} de volta${valor ? ' · ' + brl(valor * o.pc / 100) : ''}</small></span></li>`).join('')}</ol>
+    ${cmp ? `<div class="hd-cmp">${cmp}</div>` : ''}</div>`;
+}
+if (typeof caminhosItemHTML === 'function'){
+  const o = caminhosItemHTML;
+  caminhosItemHTML = function(x){
+    let h = o.apply(this, arguments);
+    try {
+      if (!x || !x.d || x.d.id === '__qc') return h;
+      if (!_hdX[x.d.id] && x.melhor){ let of = []; try { of = ofertasComparadas(x); } catch(_){} if (!of.length) of = [x.melhor]; _hdX[x.d.id] = {x, of:of.filter(Boolean)}; }
+      const tpl = document.createElement('template'); tpl.innerHTML = h;
+      tpl.content.querySelectorAll('.lc-cams').forEach(b => {
+        const off = [...b.querySelectorAll('.lc-cam.cam-off')];
+        if (off.length && off.length < b.querySelectorAll('.lc-cam').length){
+          const nomes = off.map(l => (l.querySelector('.cam-longo') || {}).textContent || '').filter(Boolean);
+          off.forEach(l => l.remove());
+          b.insertAdjacentHTML('beforeend', `<div class="hd-resto"><i></i><span>${esc(nomes.join(', ').replace(/, ([^,]*)$/, ' e $1'))}: nada agora</span></div>`);
+        }
+      });
+      h = tpl.innerHTML;
+      const dest = hdDestaques(x);
+      if (dest){ if (dest.indexOf('abrirHistItem') >= 0) h = h.replace(/<button type="button" class="link-reconsiderar li-aj li-hist"[^>]*>Histórico e Black<\/button>/, ''); const i = h.indexOf('<div class="li-fora">'); h = i >= 0 ? h.slice(0, i) + dest + h.slice(i) : h + dest; }
+    } catch(e){ console.error(e); }
+    return h;
+  };
+}
+const ICD = {agora:'<path d="M5 12.5l4.5 4.5L19 7.5"/>', esperar:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', ok:'<path d="M5 12.5l4.5 4.5L19 7.5"/>', so:'<path d="M12 7v6M12 16.5v.5"/>'};
+function hdDecisao(o, d){
+  const of = hlOfertas(o.loja.n, o.prog), hoje = Number(o.mult) || 0;
+  const rec = of.length ? Math.max(...of.map(x => x.mult)) : 0, media = of.length ? of.reduce((t, x) => t + x.mult, 0) / of.length : 0;
+  const bk = typeof blackRefLoja === 'function' ? blackRefLoja(o.prog, o.loja.n) : null;
+  const dias = Math.round((Date.parse(BLACK_DIA_2026) - Date.parse(hojeISO())) / 864e5);
+  const f = v => nBRdec(Math.round(v * 10) / 10) + ' por real';
+  if (rec && hoje >= rec - 1e-9 && (!bk || bk.nivel !== 'loja' || hoje >= bk.v)) return {k:'agora', z:'var(--jade)', t:'Compre agora', p:`<b>${f(hoje)}</b> na ${esc(prog(o.prog).n)} é o recorde da ${esc(o.loja.n)}${bk && bk.nivel === 'loja' ? `, e bate a Black 2025 (${f(bk.v)})` : ''}.`};
+  if (bk && bk.nivel === 'loja' && bk.v > hoje && dias > 0 && dias <= 45) return {k:'esperar', z:'var(--ouro)', t:'Vale esperar a Black', p:`${bk.nivel === 'loja' ? `Na Black 2025 a <b>${esc(o.loja.n)}</b> pagou <b>${f(bk.v)}</b> na ${esc(prog(o.prog).n)}` : `Na Black 2025, a melhor loja da ${esc(prog(o.prog).n)} (${esc(bk.e.loja)}) pagou <b>${f(bk.v)}</b>`}${bk.e && bk.e.pub ? ` (${dataBR(bk.e.pub).slice(0, 5)})` : ''}, contra <b>${f(hoje)}</b> hoje. Faltam <b>${dias} dias</b> para a Black.${(d && d.urgente) ? '' : ' Se não tiver pressa, espere.'}`};
+  if (media && hoje >= media) return {k:'ok', z:'var(--jade)', t:'Bom momento', p:`<b>${f(hoje)}</b> fica acima da média da ${esc(o.loja.n)} (${f(media)}). O recorde foi <b>${f(rec)}</b>.`};
+  if (!of.length || of.length < 2) return {k:'so', z:'var(--anil-claro)', t:'Pouco histórico', p:`A Torre ainda tem pouca campanha registrada da ${esc(o.loja.n)} na ${esc(prog(o.prog).n)} para comparar. Cada promoção cadastrada melhora essa conta.`};
+  return {k:'so', z:'var(--ouro)', t:'Só se precisar agora', p:`<b>${f(hoje)}</b> está abaixo da média da ${esc(o.loja.n)} (${f(media)}); o recorde foi <b>${f(rec)}</b>.`};
+}
+function abrirHistItem(id){
+  const r = _hdX[id]; if (!r) return;
+  const d = r.x.d, ops = r.of.slice(0, 3);
+  const dec = hdDecisao(ops[0], d);
+  const bkLinha = o => { const bk = typeof blackRefLoja === 'function' ? blackRefLoja(o.prog, o.loja.n) : null; const hoje = Number(o.mult) || 0;
+    if (!bk) return `<div class="hd-bk"><b>–</b><span>Sem Black 2025 registrada para a ${esc(prog(o.prog).n)}.</span></div>`;
+    const cls = bk.v > hoje ? 'melhor' : 'pior';
+    return `<div class="hd-bk ${cls}"><b>${nBRdec(bk.v)}×</b><span>Black 2025: ${bk.nivel === 'loja' ? `a <b>${esc(o.loja.n)}</b> pagou` : `a melhor loja da ${esc(prog(o.prog).n)} (<b>${esc(bk.e.loja)}</b>) pagou`} ${nBRdec(bk.v)} por real${bk.e && bk.e.pub ? `, em ${dataBR(bk.e.pub).slice(0, 5)}` : ''}. ${bk.v > hoje ? `Hoje paga <b>${nBRdec(bk.v - hoje)} a menos</b>.` : bk.v === hoje ? 'Hoje paga <b>o mesmo</b>.' : `Hoje paga <b>${nBRdec(hoje - bk.v)} a mais</b>.`}</span></div>`; };
+  abrirFolha({titulo:`Histórico e Black · ${esc(d.n || 'item')}`, largura:'larga',
+    corpo:`<div class="hd-dec" style="--z:${dec.z}"><span class="ico"><svg viewBox="0 0 24 24">${ICD[dec.k]}</svg></span><div><small>1ª opção · ${esc(ops[0].loja.n)} na ${esc(prog(ops[0].prog).n)}</small><b class="t">${dec.t}</b><p>${dec.p}</p></div></div>
+      ${ops.map((o, i) => `<div class="hd-op"><div class="hd-op-t">${i + 1}ª opção · ${discoProg(o.prog, 'p')}${esc(o.loja.n)} · ${esc(prog(o.prog).n)} · hoje ${nBRdec(o.mult)}×</div>
+        ${hlHTML([o.loja.n], o.prog, 'mult', true)}${bkLinha(o)}</div>`).join('')}`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+}
+(function(){
+  if (typeof editarDesejo !== 'function') return;
+  const o = editarDesejo;
+  editarDesejo = function(){
+    const r = o.apply(this, arguments);
+    try {
+      const box = document.getElementById('dsLojasBox');
+      if (box && !document.getElementById('dsHistLojas')){
+        box.insertAdjacentHTML('afterend', '<div id="dsHistLojas"></div>');
+        new MutationObserver(() => hlDesenhar()).observe(box, {childList:true});
+        box.addEventListener('change', e => { if (e.target.matches('[data-lk]')) setTimeout(hlDesenhar, 0); });
+        ['dsProg', 'dsCat'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', () => setTimeout(hlDesenhar, 0)); });
+        document.querySelectorAll('#segAlvo button').forEach(b => b.addEventListener('click', () => setTimeout(hlDesenhar, 0)));
+        hlDesenhar();
+      }
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+
+
+<style id="z26-css">
+/* ══ 26/10/2026: contas numa janela, prévia ao passar o mouse, Black ══ */
+.op-contas{ display:none !important; }
+.oc-dica{ position:fixed; z-index:9999; pointer-events:none; width:min(300px, calc(100vw - 24px)); padding:12px 14px; border-radius:14px;
+  background:var(--sup-0); border:1px solid var(--fio-forte, var(--fio)); box-shadow:0 18px 40px rgba(0,0,0,.28); font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45;
+  opacity:0; transform:translateY(4px); transition:opacity .15s, transform .15s; }
+.oc-dica.on{ opacity:1; transform:none; }
+.oc-dica em{ display:block; font-style:normal; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--ouro); margin-bottom:4px; }
+.oc-dica b{ color:var(--giz); }
+.oc-dica small{ display:block; margin-top:6px; color:var(--grafite); }
+.oc{ display:grid; gap:14px; }
+.oc-topo{ display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:16px; border:1px solid var(--fio); background:linear-gradient(135deg, color-mix(in srgb, var(--marca) 14%, var(--sup-1)), var(--sup-1) 70%); }
+.oc-topo .disco-prog{ width:44px !important; height:44px !important; }
+.oc-topo > div{ flex:1; min-width:0; }
+.oc-topo b{ display:block; color:var(--giz); font:700 calc(17px * var(--esc))/1.2 var(--f-d, inherit); }
+.oc-topo small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.oc-topo .v{ text-align:right; flex:none; } .oc-topo .v b{ font-size:calc(22px * var(--esc)); color:var(--jade); }
+@media (max-width:560px){ .oc-topo{ flex-wrap:wrap; } .oc-topo > div:not(.v){ flex:1 1 180px; } .oc-topo .v{ flex-basis:100%; text-align:left; padding-left:58px; } }
+.oc > p.fraco{ font-size:calc(13px * var(--esc)); }
+.oc-cen{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap:10px; }
+.oc-c{ position:relative; padding:14px; border-radius:16px; border:1px solid var(--fio); background:var(--sup-1); display:grid; gap:8px; align-content:start; }
+.oc-c.k-mais{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); background:linear-gradient(150deg, color-mix(in srgb, var(--jade) 12%, var(--sup-1)), var(--sup-1) 70%); }
+.oc-c.k-baixa{ border-color:color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:linear-gradient(150deg, color-mix(in srgb, var(--ouro) 12%, var(--sup-1)), var(--sup-1) 70%); }
+.oc-c.k-uso{ border-color:color-mix(in srgb, var(--anil-claro) 45%, var(--fio)); background:linear-gradient(150deg, color-mix(in srgb, var(--anil-claro) 12%, var(--sup-1)), var(--sup-1) 70%); }
+.oc-c > em{ font-style:normal; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); }
+.oc-c.k-mais > em{ color:var(--jade); } .oc-c.k-baixa > em{ color:var(--ouro); } .oc-c.k-uso > em{ color:var(--anil-claro); }
+.oc-pess{ display:flex; align-items:center; gap:10px; }
+.oc-pess .tit-av{ width:34px; height:34px; flex:none; }
+.oc-pess b{ display:block; color:var(--giz); font-size:calc(14.5px * var(--esc)); }
+.oc-pess small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.oc-num{ font:700 calc(20px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.oc-num small{ font:500 calc(12px * var(--esc))/1 var(--f-b, inherit); color:var(--grafite); margin-left:4px; }
+.oc-c p{ margin:0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.oc-c p b{ color:var(--giz); }
+.oc-tab{ border:1px solid var(--fio); border-radius:16px; overflow:hidden; }
+.oc-tab-t{ padding:10px 14px; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); background:var(--sup-1); border-bottom:1px solid var(--fio); }
+.oc-l{ display:grid; grid-template-columns:minmax(0,1.4fr) repeat(3, minmax(0,1fr)); gap:10px; align-items:center; padding:10px 14px; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.oc-l + .oc-l{ border-top:1px solid var(--fio); }
+.oc-l .p{ display:flex; align-items:center; gap:8px; min-width:0; } .oc-l .p .tit-av{ width:26px; height:26px; flex:none; }
+.oc-l .p b{ color:var(--giz); overflow-wrap:anywhere; }
+.oc-l .n{ text-align:right; font-variant-numeric:tabular-nums; } .oc-l .n b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
+.oc-l .n small{ font-size:calc(11px * var(--esc)); }
+.oc-l.cab{ font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; padding-top:8px; padding-bottom:8px; }
+@media (max-width:560px){ .oc-l{ grid-template-columns:minmax(0,1fr) auto; } .oc-l .n.x{ display:none; } .oc-l.cab .n.x{ display:none; } }
+.bfa{ margin-top:4px; }
+.bfa-l{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid color-mix(in srgb, var(--jade) 35%, var(--fio)); background:linear-gradient(120deg, color-mix(in srgb, var(--jade) 9%, var(--sup-1)), var(--sup-1) 70%); }
+.bfa-l + .bfa-l{ margin-top:8px; }
+.bfa-l b{ color:var(--giz); } .bfa-l small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.bfa-v{ text-align:right; font:700 calc(18px * var(--esc))/1.1 var(--f-d, inherit); color:var(--jade); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.bfa-v small{ font:500 calc(11.5px * var(--esc))/1.3 var(--f-b, inherit); color:var(--grafite); }
+</style>
+<script id="z26-js">
+(function(){
+  /* ── 1. Aniversário Smiles: o menu aparece só de 5 dias antes a 5 dias depois ── */
+  if (typeof temporadaAnivSmiles === 'function'){
+    temporadaAnivSmiles = function(hoje){
+      const h = hoje || hojeISO(), j = asJanela(Number(h.slice(0, 4)));
+      const d = Math.round((Date.parse(h + 'T12:00:00') - Date.parse(j.dia + 'T12:00:00')) / 864e5);
+      return Object.assign(j, {visivel:Math.abs(d) <= 5, dias:d});
+    };
+  }
+
+  /* ── 2. Black: lojas parceiras entram no placar, e o bloco "Antes da Black" ── */
+  if (typeof bfAchar26 === 'function'){
+    const o = bfAchar26;
+    bfAchar26 = function(r){
+      const L = o.apply(this, arguments);
+      try {
+        if (r.cat === 'lj'){
+          const [ini, fim] = BLACK_JANELA_26, nomes = _bfSem(r.loja).split(/\s*(?:,|\be\b)\s*/).map(x => x.trim()).filter(w => w.length >= 3);
+          (DB.lojas || []).forEach(l => {
+            const d = String(l.inicio || l.fim || '').slice(0, 10); if (!d || d < ini || d > fim || l.porDolar) return;
+            if (r.para && l.prog !== r.para) return;
+            const n = _bfSem(l.n); if (!nomes.some(w => n.includes(w) || w.includes(n))) return;
+            const v = Number(l.promo) || 0; if (v > 0) L.push({c:{titulo:`${l.n} (Lojas Parceiras)`, fim:l.fim}, v});
+          });
+          L.sort((a, b) => b.v - a.v);
+        }
+      } catch(e){ console.error(e); }
+      return L;
+    };
+  }
+  window.bfAntesHTML = function(){
+    const h = hojeISO(), it = [];
+    (DB.lojas || []).filter(l => (l.fim || '') >= h).forEach(l => { const b = blackDaLoja(l); if (b && b.ref && b.v > b.ref.v) it.push({nome:l.n, prog:l.prog, v:b.v, ref:b.ref, un:'×', fim:l.fim, tipo:'Loja parceira'}); });
+    (DB.campanhas || []).filter(c => (c.fim || '') >= h && !c.historico).forEach(c => { const b = blackDaCampanha(c); if (b && b.ref && b.v > b.ref.v) it.push({nome:c.titulo || '', prog:c.para, v:b.v, ref:b.ref, un:b.un, fim:c.fim, tipo:c.tipo === 'transferencia' ? 'Transferência' : c.tipo === 'compra' ? 'Compra de pontos' : 'Campanha'}); });
+    it.sort((a, b) => (b.ref.nivel === 'loja' || b.ref.nivel === 'rota') - (a.ref.nivel === 'loja' || a.ref.nivel === 'rota') || (b.v - b.ref.v) - (a.v - a.ref.v));
+    const f = (v, un) => un === '%' ? nBRdec(v) + '%' : nBRdec(v) + '×';
+    return `<section class="bf-bloco bfa"><div class="bf-tit">Antes da Black: já batem 2025 <span class="etq" style="margin-left:6px">${it.length}</span></div>
+      ${it.length ? it.map(x => { const d = diasAte(x.fim);
+        return `<div class="bfa-l">${discoProg(x.prog)}<div><b>${esc(x.nome)}</b><small>${esc(x.tipo)} · ${esc(prog(x.prog).n)} · ${d === 0 ? 'último dia' : d === 1 ? 'fecha amanhã' : 'até ' + dataBR(x.fim).slice(0, 5)} · ${x.ref.nivel === 'loja' || x.ref.nivel === 'rota' ? `na Black 2025 pagou ${f(x.ref.v, x.un)}` : `${esc(x.ref.txt)} pagou ${f(x.ref.v, x.un)}`}</small></div>
+          <div class="bfa-v">${f(x.v, x.un)}<small>+${nBRdec(Math.round((x.v - x.ref.v) * 10) / 10)} sobre 2025</small></div></div>`; }).join('')
+        : '<p class="fraco" style="margin:0">Nada aberto hoje supera a Black 2025. Quando aparecer, entra aqui sozinho.</p>'}</section>`;
+  };
+  if (typeof renderBlack === 'function'){
+    const o = renderBlack;
+    renderBlack = function(){
+      const r = o.apply(this, arguments);
+      try { const alvo = document.getElementById('bfBlack'); const her = alvo && alvo.querySelector('.bf-heroi');
+        if (her){ const v = alvo.querySelector('.bfa'); if (v) v.remove(); her.insertAdjacentHTML('afterend', bfAntesHTML()); } } catch(e){ console.error(e); }
+      return r;
+    };
+    try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderBlack; }); } catch(_){}
+  }
+
+  /* ── 2b. Crédito de clube em dobro (26/10/2026): a Torre lançou o mês do clube
+     (ex.: 1.000) e depois o extrato trouxe o crédito real do mesmo mês (1.334).
+     O Jadiel confirmou no app: caiu só o do extrato. A linha do extrato vira o
+     mês do clube (com o custo), e a lançada pela Torre sai. */
+  window.juntarCiclosDuplicados = function(){
+    const L = DB.lancamentos || [], tirar = [], feitos = [];
+    const dias = (a, b) => Math.abs((Date.parse(a + 'T12:00:00') - Date.parse(b + 'T12:00:00')) / 864e5);
+    L.filter(l => l.tipo === 'clube' && l.assinaturaId && l.cicloClube !== undefined && !l.imp && !l.ext && Number(l.qtd) > 0).forEach(c => {
+      const im = L.find(x => x !== c && x.tipo === 'clube' && x.imp && !x.assinaturaId && !x.bonusClube && x.contaId === c.contaId && x.prog === c.prog && Number(x.qtd) >= Number(c.qtd) && dias(x.data, c.data) <= 6);
+      if (!im) return;
+      feitos.push({im:JSON.parse(JSON.stringify(im)), c:JSON.parse(JSON.stringify(c))});
+      im.assinaturaId = c.assinaturaId; im.cicloClube = c.cicloClube; im.bonusIncluso = true;
+      if (!(Number(im.custo) > 0)) im.custo = Number(c.custo) || 0;
+      if (c.cartaoId && !im.cartaoId) im.cartaoId = c.cartaoId;
+      im.nota = String(im.nota || '') + ' · mês do clube (juntado com o lançado pela Torre)';
+      tirar.push(c);
+    });
+    if (!tirar.length) return 0;
+    DB.lancamentos = L.filter(l => !tirar.includes(l));
+    DB.cfg = DB.cfg || {}; DB.cfg.juntadosClube = (DB.cfg.juntadosClube || []).concat(feitos.map(f => ({em:hojeISO(), ...f})));
+    salvar(); try { aplicarTudo(); } catch(_){}
+    window._jcUltimo = feitos;
+    avisar(`${tirar.length} ${tirar.length === 1 ? 'crédito de clube estava contado' : 'créditos de clube estavam contados'} duas vezes (o lançado pela Torre e o do extrato). Ficou só o do extrato, com o custo do clube. <button type="button" class="bt p" onclick="desfazerJuntarCiclos()">Desfazer</button>`, 'ok', 14000);
+    return tirar.length;
+  };
+  window.desfazerJuntarCiclos = function(){
+    (window._jcUltimo || []).forEach(f => { const i = DB.lancamentos.findIndex(l => l.id === f.im.id); if (i >= 0) DB.lancamentos[i] = f.im; if (!DB.lancamentos.some(l => l.id === f.c.id)) DB.lancamentos.push(f.c); });
+    window._jcUltimo = []; salvar(); try { aplicarTudo(); } catch(_){} avisar('Desfeito.', 'ok', 3000);
+  };
+  /* não roda sozinho: o saldo precisa ser conferido no app antes (26/10/2026) */
+
+  /* ── 3. Contas de cada opção: prévia ao passar o mouse e janela ao tocar ── */
+  const livres1 = (contaId, p) => { try { const pol = politicaCPF(p); if (!(pol.limite > 0)) return null; return Math.max(0, pol.limite - cpfsUsados(contaId, p).length); } catch(_){ return null; } };
+  /* ponto de banco não tem limite de CPF: o que conta é quanto a conta ainda vende nas companhias */
+  const livresCPF = (contaId, p) => { if ((prog(p) || {}).tipo !== 'pontos') return livres1(contaId, p);
+    const vs = ['smiles', 'latampass', 'azul'].map(a => livres1(contaId, a)).filter(v => v != null); return vs.length ? vs.reduce((t, v) => t + v, 0) : null; };
+  window.ocDados = function(desId, chave){
+    const r = (typeof _hdX !== 'undefined') && _hdX[desId]; if (!r) return null;
+    const o = r.of.find(x => _chaveOf(x) === chave) || r.of[0]; if (!o) return null;
+    const valor = Number(r.x.d.valor) || 0;
+    const rs = (DB.contas || []).length ? _contasOrdenadas(o, valor).map(c => Object.assign({}, c, {livres:livresCPF(c.id, o.prog)})) : [];
+    return {o, valor, d:r.x.d, rs};
+  };
+  function cenarios(D){
+    const rs = D.rs.filter(r => r.pts > 0); if (!rs.length) return [];
+    const out = [], usados = new Set();
+    const mais = rs.slice().sort((a, b) => b.pts - a.pts || (b.queda || 0) - (a.queda || 0))[0];
+    const iguais = rs.every(r => r.pts === mais.pts);
+    if (!iguais){ out.push({k:'mais', rot:'Mais pontos', r:mais, txt:`Gera <b>+${nBR(mais.pts)}</b> pontos${mais.clube ? ', com o ' + esc(_ctPlano(mais.clube)) : ''}.`}); usados.add(mais.id); }
+    const baixa = rs.filter(r => r.queda > 0 && r.antes > 0).sort((a, b) => b.queda / b.antes - a.queda / a.antes)[0];
+    if (baixa) out.push({k:'baixa', rot:'Baixa mais o milheiro', r:baixa, txt:`O milheiro cai de <b>${brl2(baixa.antes)}</b> para <b>${brl2(baixa.depois)}</b> (${_ctPct(baixa)}).`});
+    const uso = rs.filter(r => r.livres === 0).sort((a, b) => b.pts - a.pts)[0];
+    if (uso) out.push({k:'uso', rot:'Conta que não vende mais', r:uso, txt:`Sem CPF livre para vender${(prog(D.o.prog) || {}).tipo === 'pontos' ? ' na Smiles, LATAM e Azul' : ' na ' + esc(prog(D.o.prog).n)}: os pontos ficam para a família usar. Boa conta para compras do dia a dia.`});
+    const livre = rs.filter(r => r.livres > 0 && !usados.has(r.id)).sort((a, b) => b.livres - a.livres || b.pts - a.pts)[0];
+    if (livre && (!uso || livre.id !== uso.id)) out.push({k:'venda', rot:'Mais CPFs para vender', r:livre, txt:`Tem <b>${livre.livres}</b> CPF${livre.livres > 1 ? 's' : ''} livre${livre.livres > 1 ? 's' : ''}: pontos aqui viram venda mais fácil.`});
+    return out;
+  }
+  /* a mesma pessoa em vários cenários vira um cartão só, com todos os motivos */
+  const agrupar = cs => { const m = new Map(); cs.forEach(c => { const g = m.get(c.r.id); if (g){ g.rot += ' · ' + c.rot; g.txt += '<br>' + c.txt; } else m.set(c.r.id, Object.assign({}, c)); }); return [...m.values()]; };
+  window.abrirContasOpcao = function(desId, chave){
+    const D = ocDados(desId, chave); if (!D) return;
+    const o = D.o, cs = cenarios(D);
+    const corpo = !D.rs.length ? '<p class="op-dica">Cadastre as contas da família para a Torre dizer em qual comprar.</p>' : `<div class="oc">
+      <div class="oc-topo" style="--marca:${prog(o.prog).cor}">${discoProg(o.prog)}<div><b>${esc(o.loja.n)}</b><small>${nBRdec(o.mult)} por real na ${esc(prog(o.prog).n)} · ${esc(D.d.n || '')} de ${brl(D.valor)}</small></div>
+        <div class="v"><b>${brl(o.retorno)}</b><small>de volta</small></div></div>
+      ${D.rs.length > 1 && D.rs.every(r => r.pts === D.rs[0].pts) ? `<p class="fraco" style="margin:0">Todas as contas geram <b>+${nBR(D.rs[0].pts)}</b> pontos: a escolha fica pelo milheiro e pelos CPFs.</p>` : ''}
+      ${cs.length ? `<div class="oc-cen">${agrupar(cs).map(c => `<div class="oc-c k-${c.k}"><em>${c.rot}</em>
+        <div class="oc-pess">${avatarDe(c.r.id, 'tit-av')}<div><b>${esc(nomeCurto(c.r.nome))}</b><small>${c.r.clube ? esc(_ctPlano(c.r.clube)) : 'sem clube'}${c.r.livres != null ? ` · ${c.r.livres} CPF${c.r.livres === 1 ? '' : 's'} livre${c.r.livres === 1 ? '' : 's'}` : ''}</small></div></div>
+        <div class="oc-num">+${nBR(c.r.pts)}<small>pontos</small></div><p>${c.txt}</p></div>`).join('')}</div>` : ''}
+      <div class="oc-tab"><div class="oc-tab-t">Todas as contas</div>
+        <div class="oc-l cab"><span>Conta</span><span class="n">Pontos</span><span class="n">Milheiro depois</span><span class="n x">CPFs livres</span></div>
+        ${D.rs.map(r => `<div class="oc-l"><span class="p">${avatarDe(r.id, 'tit-av')}<span><b>${esc(nomeCurto(r.nome))}</b><br><small>${r.clube ? esc(_ctPlano(r.clube)) : r.semPrograma ? 'sem conta na ' + esc(prog(o.prog).n) : 'sem clube'}</small></span></span>
+          <span class="n"><b>+${nBR(r.pts)}</b><small>${r.incerto ? 'até' : nBRdec(r.mult) + '×'}</small></span>
+          <span class="n"><b>${r.depois != null ? brl2(r.depois) : 'n/d'}</b><small>${r.antes != null ? 'era ' + brl2(r.antes) : 'começa o estoque'}</small></span>
+          <span class="n x"><b>${r.livres == null ? '–' : r.livres}</b><small>${r.livres == null ? 'sem limite' : 'para vender'}</small></span></div>`).join('')}
+      </div></div>`;
+    const dc = document.querySelector('.oc-dica'); if (dc) dc.classList.remove('on');
+    abrirFolha({titulo:`Em qual conta comprar na ${esc(o.loja.n)}`, largura:'larga', corpo,
+      pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>${o.link ? `<a class="bt primario" href="${esc(o.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ir para a ${esc(o.loja.n)}</a>` : ''}`});
+  };
+  /* toque/clique: depois da escolha normal, abre a janela */
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-op][data-op-des]'); if (!b) return;
+    const des = b.dataset.opDes, ch = b.dataset.op;
+    const dc = document.querySelector('.oc-dica'); if (dc) dc.classList.remove('on');
+    window._ocPausa = Date.now() + 1500;
+    setTimeout(() => abrirContasOpcao(des, ch), 0);
+  });
+  /* passar o mouse: prévia com a melhor conta */
+  let dica = null, alvoAtual = null;
+  const esconder = () => { if (dica) dica.classList.remove('on'); alvoAtual = null; };
+  document.addEventListener('mouseover', e => {
+    if (!(window.matchMedia && matchMedia('(hover: hover)').matches)) return;
+    if (document.body.classList.contains('folha-aberta') || Date.now() < (window._ocPausa || 0)){ if (dica) dica.classList.remove('on'); alvoAtual = null; return; }
+    const b = e.target.closest && e.target.closest('[data-op][data-op-des]');
+    if (!b){ if (alvoAtual) esconder(); return; }
+    if (b === alvoAtual) return; alvoAtual = b;
+    const D = ocDados(b.dataset.opDes, b.dataset.op); if (!D) return;
+    const cs = cenarios(D), m = cs[0], bx = cs.find(c => c.k === 'baixa');
+    if (!dica){ dica = document.createElement('div'); dica.className = 'oc-dica'; dica.setAttribute('role', 'tooltip'); document.body.appendChild(dica); }
+    dica.innerHTML = m ? `<em>Melhor conta aqui</em><b>${esc(nomeCurto(m.r.nome))}</b>: +${nBR(m.r.pts)} pontos${bx && bx.r.id !== m.r.id ? `<br>Baixa mais o milheiro: <b>${esc(nomeCurto(bx.r.nome))}</b> (${_ctPct(bx.r)})` : bx ? `, e o milheiro cai ${_ctPct(bx.r)}` : ''}<small>Clique para comparar todas as contas.</small>`
+      : `<em>${esc(D.o.loja.n)}</em>${nBRdec(D.o.mult)} por real na ${esc(prog(D.o.prog).n)}<small>Clique para ver as contas.</small>`;
+    const r = b.getBoundingClientRect(), w = Math.min(300, innerWidth - 24);
+    dica.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
+    dica.style.top = (r.top > 150 ? r.top - 10 : r.bottom + 10) + 'px';
+    dica.style.transform = r.top > 150 ? 'translateY(-100%)' : '';
+    requestAnimationFrame(() => dica.classList.add('on'));
+  });
+  window.addEventListener('scroll', esconder, true);
 })();
 </script>
 
