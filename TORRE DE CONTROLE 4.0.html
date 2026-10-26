@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 23:50';
+const BUILD = '2026-10-26 00:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -68788,6 +68788,40 @@ function impSomaDiario(lancs){
   return Math.max(0, s);
 }
 
+/* ── acerto de saldo (corrigido em 25/10/2026) ───────────────────────────────
+   O extrato só mostra o último ano. Quando nesse ano saiu mais do que entrou,
+   a soma do Diário fica negativa no começo, e a Torre (que não aceita saldo
+   negativo) mostrava 0 mesmo depois do acerto. Agora são dois lançamentos, e
+   os dois são refeitos a cada importação (os antigos saem antes):
+     · "Saldo anterior ao extrato": entra na véspera do primeiro lançamento,
+       do tamanho exato para o saldo nunca ficar negativo no caminho;
+     · "Acerto com o extrato": na data da importação, o que faltar para o
+       saldo ficar igual ao do programa. */
+function impEhAcerto(l){ return !!(l && l.imp && /:(acerto|abertura):/.test(String(l.ext || ''))); }
+function impCalcAcertos(lancs, saldo, dataRef){
+  const L = [...lancs].filter(l => !impEhAcerto(l) && l.data && String(l.data) <= dataRef)
+    .sort((a, b) => String(a.data).localeCompare(String(b.data)) || (a.criadoEm || 0) - (b.criadoEm || 0));
+  let s = 0, min = 0;
+  L.forEach(l => { if (l.tipo === 'inicial') s = Number(l.qtd) || 0; else s += Number(l.qtd) || 0; if (s < min) min = s; });
+  const abertura = min < 0 ? Math.round(-min) : 0;
+  const d0 = new Date((L.length ? L[0].data : dataRef) + 'T12:00:00'); d0.setDate(d0.getDate() - 1);
+  let s2 = abertura;
+  L.forEach(l => { if (l.tipo === 'inicial') s2 = Number(l.qtd) || 0; else s2 += Number(l.qtd) || 0; });
+  const acerto = isFinite(Number(saldo)) ? Math.round(Number(saldo) - s2) : 0;
+  return { abertura, aberturaData:isoLocal(d0), acerto };
+}
+function impAplicarAcertos(contaId, progK, saldo, dataRef, quandoTxt, agora){
+  DB.lancamentos = DB.lancamentos.filter(l => !(l.contaId === contaId && l.prog === progK && impEhAcerto(l)));
+  const c = impCalcAcertos(DB.lancamentos.filter(l => l.contaId === contaId && l.prog === progK), saldo, dataRef);
+  const n = prog(progK).n, base = { contaId, prog:progK, custo:0, forma:'organico', cartaoId:'', parcelas:0, origem:'', saiu:0, mexeuSaldo:true, imp:progK, importadoEm:hojeISO() };
+  if (c.abertura) DB.lancamentos.push({ ...base, id:uid(), criadoEm:1, data:c.aberturaData, tipo:'ajusteEntrada', qtd:c.abertura,
+    nota:`Saldo anterior ao extrato ${n} (o extrato só mostra o último ano)`, ext:`${progK}:abertura:${contaId}` });
+  if (Math.abs(c.acerto) >= 1) DB.lancamentos.push({ ...base, id:uid(), criadoEm:agora || Date.now(), data:dataRef, tipo:c.acerto > 0 ? 'ajusteEntrada' : 'ajusteSaida', qtd:c.acerto,
+    nota:`Acerto com o extrato ${n} de ${quandoTxt}`, ext:`${progK}:acerto:${dataRef}:${agora || Date.now()}` });
+  acertarSaldoDe(contaId, progK);
+  return c;
+}
+
 function impAnalisar(p, contaId){
   const progK = p.prog || 'livelo';
   const hoje = hojeISO();
@@ -68825,10 +68859,15 @@ function impAnalisar(p, contaId){
   const atualiza = itens.filter(x => x.estado === 'atualiza'), mudou = Object.fromEntries(atualiza.map(x => [x.lancId, x.qtd]));
   const depois = impSomaDiario(daConta.map(l => mudou[l.id] !== undefined ? {...l, qtd:mudou[l.id]} : l).concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:i}))));
   const saldo = Number(p.saldo);
-  const acerto = isFinite(saldo) ? saldo - depois : 0;
+  const simulado = daConta.map(l => mudou[l.id] !== undefined ? {...l, qtd:mudou[l.id]} : l).concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:9e15 + i})));
+  const ac = impCalcAcertos(simulado, saldo, hoje), acerto = ac.acerto, abertura = ac.abertura, aberturaData = ac.aberturaData;
+  const exA = daConta.filter(impEhAcerto);
+  const exAb = exA.filter(l => /:abertura:/.test(l.ext)).reduce((t, l) => t + (Number(l.qtd) || 0), 0);
+  const exAc = exA.filter(l => /:acerto:/.test(l.ext)).reduce((t, l) => t + (Number(l.qtd) || 0), 0);
+  const acertoIgual = exAb === abertura && exAc === acerto;
   const naCarteira = contaId ? Number(((DB.saldos || []).find(s => s.contaId === contaId && s.prog === progK) || {}).qtd) || 0 : 0;
   return { progK, itens, novos, atualiza, existe:itens.filter(x => x.estado === 'existe'), importado:itens.filter(x => x.estado === 'importado'),
-    antes, depois, acerto, saldo, naCarteira, semValor:novos.filter(x => x.pedeValor), transf:novos.filter(x => x.destinoPendente) };
+    antes, depois, acerto, abertura, aberturaData, acertoIgual, saldo, naCarteira, semValor:novos.filter(x => x.pedeValor), transf:novos.filter(x => x.destinoPendente) };
 }
 
 /* O que a Livelo já programou para cair (mensalidades e bônus do Clube),
@@ -68885,9 +68924,12 @@ function impPintar(p, contaId){
   const sinal = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nBR(Math.abs(v));
   const notas = [];
   if (contaId){
-    notas.push(Math.abs(r.acerto) < 1
+    const partes = [];
+    if (r.abertura) partes.push(`um <b>saldo anterior de ${nBR(r.abertura)} pontos</b> em ${dataBR(r.aberturaData)}, porque o extrato só mostra o último ano e nele saiu mais do que entrou`);
+    if (Math.abs(r.acerto) >= 1) partes.push(`um <b>acerto de ${sinal(r.acerto)} pontos</b> hoje`);
+    notas.push(r.acertoIgual || !partes.length
       ? `<div class="nota jade"><svg><use href="#i-ok"/></svg><div>Depois de importar, o saldo da Torre fica <b>${nBR(r.saldo)}</b>, igual ao da ${esc(n)}. Não precisa de acerto.</div></div>`
-      : `<div class="nota"><svg><use href="#i-info"/></svg><div>Depois de importar, a Torre lança <b>um acerto de ${sinal(r.acerto)} pontos</b> com o nome "Acerto com o extrato ${esc(n)} de ${esc(String(p.atualizado || '').slice(0, 10))}", para o saldo ficar <b>${nBR(r.saldo)}</b>, igual ao da ${esc(n)}.</div></div>`);
+      : `<div class="nota"><svg><use href="#i-info"/></svg><div>Para o saldo ficar <b>${nBR(r.saldo)}</b>, igual ao da ${esc(n)}, a Torre lança ${partes.join(' e ')}.</div></div>`);
   }
   if (r.semValor.length) notas.push(`<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div><b>${r.semValor.length} ${r.semValor.length === 1 ? 'compra de pontos entra' : 'compras de pontos entram'} sem o valor pago.</b> A ${esc(n)} não mostra quanto você pagou. Depois a Torre te avisa para completar, e o custo do milheiro fica certo.</div></div>`);
   if (r.transf.length){
@@ -68915,7 +68957,7 @@ function impPintar(p, contaId){
       ${r.existe.length ? `<details class="imp-mais"><summary>Ver as ${r.existe.length} que já estavam na Torre</summary><div class="imp-lista">${r.existe.map(impLinha).join('')}</div></details>` : ''}
     </div>`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="impDescartar">Descartar este extrato</button><div class="esticar"></div>
-      <button class="bt primario" id="impOk"${contaId ? '' : ' disabled'}><svg><use href="#i-ok"/></svg>${r.novos.length ? `Importar ${nBR(r.novos.length)} ${r.novos.length === 1 ? 'movimentação' : 'movimentações'}` : r.atualiza.length ? 'Atualizar' : Math.abs(r.acerto) >= 1 ? 'Lançar o acerto' : 'Marcar como conferido'}</button>` });
+      <button class="bt primario" id="impOk"${contaId ? '' : ' disabled'}><svg><use href="#i-ok"/></svg>${r.novos.length ? `Importar ${nBR(r.novos.length)} ${r.novos.length === 1 ? 'movimentação' : 'movimentações'}` : r.atualiza.length ? 'Atualizar' : !r.acertoIgual ? 'Acertar o saldo' : 'Marcar como conferido'}</button>` });
   $('#impConta').onchange = e => impPintar(p, e.target.value);
   $('#impOk').onclick = () => { const c = $('#impConta').value; if (!c){ avisar('Escolha de quem é esta conta.', 'alerta'); return; } impImportar(p, c); };
   $('#impDescartar').onclick = () => confirmar('Descartar este extrato',
@@ -68940,17 +68982,9 @@ function impImportar(p, contaId){
     }
     DB.lancamentos.push(l);
   });
-  const lancs = DB.lancamentos.filter(l => l.contaId === contaId && l.prog === r.progK);
-  const dif = Number(p.saldo) - impSomaDiario(lancs);
-  let acertou = 0;
-  if (isFinite(dif) && Math.abs(dif) >= 1){
-    const quando = String(p.atualizado || '').slice(0, 10) || dataBR(hoje);
-    DB.lancamentos.push({ id:uid(), criadoEm:agora + r.novos.length + 1, data:hoje, contaId, prog:r.progK,
-      tipo:dif > 0 ? 'ajusteEntrada' : 'ajusteSaida', qtd:Math.round(dif), custo:0, forma:'organico', cartaoId:'', parcelas:0,
-      nota:`Acerto com o extrato ${prog(r.progK).n} de ${quando}`, origem:'', saiu:0, mexeuSaldo:true, ext:`${r.progK}:acerto:${hoje}:${agora}`, imp:r.progK, importadoEm:hoje });
-    acertou = Math.round(dif);
-  }
-  acertarSaldoDe(contaId, r.progK);
+  const quando = String(p.atualizado || '').slice(0, 10) || dataBR(hoje);
+  const ac = impAplicarAcertos(contaId, r.progK, Number(p.saldo), hoje, quando, agora + r.novos.length + 1);
+  const acertou = ac.acerto;
   DB.cfg.impUltimo = DB.cfg.impUltimo || {}; DB.cfg.impUltimo[contaId + '|' + r.progK] = {em:agora, saldo:Number(p.saldo)};
   salvar(); impResolver(p); fecharFolha();
   try { aplicarTudo(); } catch(_){ try { renderLancamentos(); renderSaldo(); } catch(__){} }
@@ -68979,6 +69013,7 @@ function impProximo(){
 }
 window.addEventListener('message', ev => {
   if (ev.source !== window || !ev.data || ev.data.__vemPonte !== 'fila' || !Array.isArray(ev.data.fila)) return;
+  try { impRepararAcertos(); } catch(_){}
   const res = DB.cfg.impResolvidos || {};
   const velhos = ev.data.fila.filter(p => res[p.id] && Number(res[p.id]) >= Number(p.capturadoEm || 0)).map(p => p.id);
   if (velhos.length) try { window.postMessage({ __vemTorre:'resolvido', ids:velhos }, '*'); } catch(_){}
@@ -68987,6 +69022,24 @@ window.addEventListener('message', ev => {
   impProximo();
 });
 setTimeout(() => { try { window.postMessage({ __vemTorre:'pronta' }, '*'); } catch(_){} }, 800);
+/* Conserto de 25/10/2026: refaz os acertos das importações já feitas, para o
+   saldo da Torre voltar a bater com o do programa na data em que foi importado
+   (antes ele podia ficar 0). Roda uma vez só. */
+function impRepararAcertos(){
+  if (!DB.cfg || DB.cfg.impReparoV2) return 0;
+  let n = 0; const ok = [];
+  Object.entries(DB.cfg.impUltimo || {}).forEach(([k, v]) => {
+    const [contaId, progK] = k.split('|'); if (!contaId || !progK || !v || !isFinite(Number(v.saldo))) return;
+    if (!(DB.contas || []).some(c => c.id === contaId)) return;
+    const dataRef = isoLocal(new Date(v.em || Date.now()));
+    impAplicarAcertos(contaId, progK, Number(v.saldo), dataRef, dataBR(dataRef), (v.em || Date.now()) + 1);
+    n++; ok.push(`${prog(progK).n} de ${nomeCurto(nomeConta(contaId))}`);
+  });
+  DB.cfg.impReparoV2 = 1; salvar();
+  if (n){ try { aplicarTudo(); } catch(_){} avisar(`Saldo corrigido para bater com o extrato: ${ok.join(', ')}.`, 'ok', 8000); }
+  return n;
+}
+setTimeout(() => { try { impRepararAcertos(); } catch(e){ console.error(e); } }, 1200);
 
 /* ── aviso: compras de pontos sem o valor pago ────────────────────────────────
    Mesmo desenho do "Prioridade alta" da Lista de desejos. Some sozinho quando
