@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 10:10';
+const BUILD = '2026-10-26 10:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -56046,6 +56046,173 @@ function ptRenderVitrine(){
   const _rvPt = renderVender;
   renderVender = function(){ const r = _rvPt.apply(this, arguments); try { ptRenderVitrine(); } catch(e){ console.error('vitrine', e); } return r; };
 }
+</script>
+<style id="pp-css">
+/* ══ PRATELEIRA POR PROGRAMA (26/10/2026, pedido do Jadiel) ═════════════════════
+   Depois de "Tabelas", a logo de cada programa com milhas para emitir. Tocar
+   numa logo mostra todas as contas daquele programa, um cartão por conta: as
+   milhas, o valor proposto para venda e as vagas de CPF que ainda restam. */
+.pp-logos{ display:flex; align-items:center; gap:8px; flex:1 1 auto; min-width:0; overflow-x:auto; padding:4px 2px; scrollbar-width:none; }
+.pp-logos::-webkit-scrollbar{ display:none; }
+.pp-logos::before{ content:''; width:1px; align-self:stretch; margin:4px 6px 4px 2px; background:var(--fio); flex:0 0 1px; }
+.pp-logo{ all:unset; box-sizing:border-box; cursor:pointer; flex:0 0 auto; width:46px; height:46px; border-radius:50%; display:grid; place-items:center; position:relative;
+  border:1px solid var(--fio); background:var(--sup-1, transparent); transition:transform .18s var(--ease, ease), box-shadow .18s var(--ease, ease), border-color .18s; }
+.pp-logo .disco-prog{ width:34px; height:34px; flex:0 0 34px; font-size:calc(11px * var(--esc)); pointer-events:none; }
+.pp-logo:hover{ transform:translateY(-2px); border-color:color-mix(in srgb, var(--marca) 60%, var(--fio)); box-shadow:0 8px 22px color-mix(in srgb, var(--marca) 22%, transparent); }
+.pp-logo.on{ border-color:var(--marca); box-shadow:0 0 0 3px color-mix(in srgb, var(--marca) 28%, transparent), 0 10px 26px color-mix(in srgb, var(--marca) 26%, transparent); }
+.pp-logo:focus-visible{ outline:2px solid var(--ouro); outline-offset:3px; }
+.pv-abas-linha{ flex-wrap:nowrap; justify-content:flex-start; }
+@media (max-width:560px){ .pv-abas-linha{ flex-wrap:wrap; } .pp-logos{ flex:1 1 100%; } .pp-logos::before{ display:none; } }
+
+.pp-sec{ display:flex; flex-direction:column; gap:16px; }
+.pp-sec[hidden]{ display:none !important; }
+.pp-cab{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:16px 18px; border-radius:18px; border:1px solid color-mix(in srgb, var(--marca) 35%, var(--fio));
+  background:linear-gradient(120deg, color-mix(in srgb, var(--marca) 20%, transparent), transparent 62%), var(--sup-1, transparent); position:relative; overflow:hidden; }
+.pp-cab::after{ content:''; position:absolute; right:-60px; top:-60px; width:200px; height:200px; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--marca) 22%, transparent), transparent); pointer-events:none; }
+.pp-cab .disco-prog{ width:54px; height:54px; flex:0 0 54px; font-size:calc(15px * var(--esc)); box-shadow:0 8px 24px color-mix(in srgb, var(--marca) 30%, transparent); }
+.pp-cab-tit{ flex:1 1 220px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.pp-cab-tit small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.08em; }
+.pp-cab-tit b{ color:var(--giz); font:700 calc(22px * var(--esc)) var(--f-d, inherit); letter-spacing:-.01em; }
+.pp-cab-tit span{ color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.pp-fechar{ all:unset; box-sizing:border-box; cursor:pointer; width:36px; height:36px; border-radius:50%; display:grid; place-items:center; color:var(--brasa); border:1px solid color-mix(in srgb, var(--brasa) 55%, transparent); flex-shrink:0; position:relative; z-index:1; }
+.pp-fechar:hover{ background:color-mix(in srgb, var(--brasa) 12%, transparent); }
+.pp-fechar svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+.pp-canais{ display:flex; gap:6px; flex-wrap:wrap; }
+.pp-canais button{ all:unset; cursor:pointer; padding:6px 12px; border-radius:99px; border:1px solid var(--fio); color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.pp-canais button.on{ color:var(--giz); border-color:var(--marca); background:color-mix(in srgb, var(--marca) 16%, transparent); }
+
+.pp-kpis{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1px; background:var(--fio); border:1px solid var(--fio); border-radius:16px; overflow:hidden; }
+.pp-kpis > div{ background:var(--sup-0, #111); padding:12px 16px; display:flex; flex-direction:column; gap:3px; min-width:0; container-type:inline-size; }
+.pp-kpis small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; }
+.pp-kpis b{ color:var(--giz); font:700 calc(min(20px, 11cqi) * var(--esc)) var(--f-m, inherit); letter-spacing:-.02em; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.pp-kpis b.jade{ color:var(--jade); }
+.pp-kpis span{ color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.25; }
+@media (max-width:1100px){ .pp-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+
+.pp-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap:14px; }
+.pp-card{ position:relative; overflow:hidden; border:1px solid var(--fio); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:14px; min-width:0;
+  background:linear-gradient(160deg, color-mix(in srgb, var(--marca) 13%, transparent), transparent 50%), var(--sup-1, transparent);
+  transition:transform .18s var(--ease, ease), box-shadow .18s var(--ease, ease), border-color .18s; }
+.pp-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--marca); opacity:.85; }
+.pp-card:hover{ transform:translateY(-2px); border-color:color-mix(in srgb, var(--marca) 45%, var(--fio)); box-shadow:0 14px 34px color-mix(in srgb, var(--marca) 16%, transparent); }
+.pp-card.travada{ opacity:.7; }
+.pp-quem{ display:flex; align-items:center; gap:10px; min-width:0; }
+.pp-quem .pv-ini{ width:38px; height:38px; flex:0 0 38px; overflow:hidden; }
+.pp-quem .pv-ini img{ width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.pp-quem > div{ min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.2; }
+.pp-quem b{ color:var(--giz); font:700 calc(14.5px * var(--esc)) var(--f-d, inherit); line-height:1.2; overflow-wrap:anywhere; }
+.pp-quem small{ color:var(--grafite); font-size:calc(12px * var(--esc)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pp-quem .etq{ margin:0; flex-shrink:0; }
+.pp-mi{ display:flex; align-items:baseline; gap:8px; }
+.pp-mi b{ color:var(--giz); font:700 calc(30px * var(--esc)) var(--f-m, inherit); letter-spacing:-.035em; line-height:1; font-variant-numeric:tabular-nums; }
+.pp-mi span{ color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.pp-valores{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; container-type:inline-size; }
+.pp-valores > div{ border:1px solid var(--fio); border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:2px; min-width:0; background:var(--sup-0, transparent); }
+.pp-valores small{ color:var(--grafite); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.pp-valores b{ font:700 calc(min(17px, 6.4cqi) * var(--esc)) var(--f-m, inherit); color:var(--giz); white-space:nowrap; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.pp-valores b.jade{ color:var(--jade); } .pp-valores b.ouro{ color:var(--ouro); }
+.pp-valores em{ font-style:normal; color:var(--grafite); font-size:calc(11.5px * var(--esc)); line-height:1.25; }
+.pp-cpf{ display:flex; flex-direction:column; gap:8px; padding-top:12px; border-top:1px dashed var(--fio); }
+.pp-cpf-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.pp-cpf-top small{ color:var(--grafite); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; }
+.pp-cpf-top b{ color:var(--giz); font:600 calc(13.5px * var(--esc)) var(--f-m, inherit); }
+.pp-cpf-top b.jade{ color:var(--jade); } .pp-cpf-top b.brasa{ color:var(--brasa); } .pp-cpf-top b.fraco{ color:var(--grafite); font-weight:500; }
+.pp-pontos{ display:grid; grid-template-columns:repeat(var(--n), minmax(0, 10px)); gap:3px; justify-content:space-between; }
+.pp-pontos i{ width:100%; aspect-ratio:1; height:auto; border-radius:50%; background:var(--jade); box-shadow:0 0 0 1px color-mix(in srgb, var(--jade) 40%, transparent); }
+.pp-pontos i.usado{ background:transparent; box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--grafite) 55%, transparent); }
+.pp-barra{ height:7px; border-radius:99px; background:color-mix(in srgb, var(--grafite) 25%, transparent); overflow:hidden; }
+.pp-barra i{ display:block; height:100%; background:var(--jade); border-radius:99px; }
+</style>
+<script id="pp-js">
+/* ══ PRATELEIRA POR PROGRAMA ════════════════════════════════════════════════════ */
+let ptProg = '';
+function ppPosicoes(){ try { return posicoesDeVenda() || []; } catch(_){ return []; } }
+function ppProgramas(todas){
+  const tot = {};
+  todas.forEach(l => { tot[l.prog] = tot[l.prog] || {q:0, n:0}; tot[l.prog].q += Number(l.qtd) || 0; tot[l.prog].n++; });
+  return Object.keys(tot).filter(p => tot[p].q > 0).sort((a, b) => tot[b].q - tot[a].q || prog(a).n.localeCompare(prog(b).n, 'pt-BR')).map(p => ({p, ...tot[p]}));
+}
+function ppEscolher(p){ ptProg = ptProg === p ? '' : p; ppRender(); try { ptAplicarAba(); } catch(_){} }
+function ppCpf(l, usaCPF){
+  if (!usaCPF) return {txt:'não consome CPF', cls:'fraco', html:''};
+  if (!l.pol || !l.pol.limite) return {txt:'sem teto de CPF', cls:'fraco', html:''};
+  const lim = l.pol.limite, livre = Math.max(0, Math.min(lim, l.resta)), usado = lim - livre;
+  const html = lim <= 40
+    ? `<div class="pp-pontos" style="--n:${lim}" aria-hidden="true">${Array.from({length:lim}, (_, i) => `<i${i < usado ? ' class="usado"' : ''}></i>`).join('')}</div>`
+    : `<div class="pp-barra" aria-hidden="true"><i style="width:${(livre / lim * 100).toFixed(1)}%"></i></div>`;
+  return {txt:livre === 0 ? `sem vaga · ${usado} de ${lim} usados` : `${livre} ${livre === 1 ? 'livre' : 'livres'} de ${lim}`, cls:livre === 0 ? 'brasa' : 'jade', html, livre, lim};
+}
+function ppRender(){
+  const linha = document.querySelector('.pv-abas-linha'), abas = document.getElementById('ptAbas'); if (!linha || !abas) return;
+  let box = document.getElementById('ptLogos');
+  if (!box){ box = document.createElement('div'); box.id = 'ptLogos'; box.className = 'pp-logos'; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Ver as contas de um programa'); abas.insertAdjacentElement('afterend', box); }
+  let sec = document.getElementById('ptPrograma');
+  if (!sec){ sec = document.createElement('section'); sec.id = 'ptPrograma'; sec.className = 'pp-sec'; sec.hidden = true; const v = document.getElementById('ptVitrine'); (v || linha).insertAdjacentElement('afterend', sec); }
+  const todas = ppPosicoes(), progs = ppProgramas(todas);
+  if (ptProg && !progs.some(x => x.p === ptProg)) ptProg = '';
+  box.innerHTML = progs.map(x => `<button type="button" class="pp-logo${x.p === ptProg ? ' on' : ''}" style="--marca:${prog(x.p).cor}" data-pp="${esc(x.p)}" aria-pressed="${x.p === ptProg}"
+      aria-label="${esc(prog(x.p).n)}" data-dica="${esc(prog(x.p).n)}: ${nBR(x.q)} milhas em ${x.n} ${x.n === 1 ? 'conta' : 'contas'}">${discoProg(x.p)}</button>`).join('');
+  box.hidden = !progs.length;
+  box.querySelectorAll('[data-pp]').forEach(b => b.onclick = () => ppEscolher(b.dataset.pp));
+  if (!ptProg){ sec.innerHTML = ''; return; }
+  const p = ptProg, canal = typeof ptCanalDe === 'function' ? ptCanalDe(p) : '', usaCPF = !canaisDe(p) || canalCPF(p, canal);
+  const nomeP = canaisDe(p) ? nomeCanal(p, canal) : prog(p).n;
+  const ls = todas.filter(l => l.prog === p && l.qtd > 0).sort((a, b) => b.qtd - a.qtd || String(a.conta.nome).localeCompare(String(b.conta.nome), 'pt-BR'));
+  const itens = ls.map(l => { const m = ptMeta(l, canal); return {l, m, total:l.qtd / 1000 * m.v, cpf:ppCpf(l, usaCPF)}; });
+  const qtd = soma(itens.map(x => x.l.qtd)), receita = soma(itens.map(x => x.total));
+  const comTeto = itens.filter(x => x.cpf.lim);
+  const livres = soma(comTeto.map(x => x.cpf.livre)), lims = soma(comTeto.map(x => x.cpf.lim));
+  const cpfKpi = !usaCPF ? ['não consome', 'esta opção não usa CPF'] : !comTeto.length ? ['sem teto', 'o programa não limita CPFs']
+    : [`${nBR(livres)} livres`, `de ${nBR(lims)} vagas ${comTeto.length === 1 ? 'na conta' : 'nas ' + comTeto.length + ' contas'}`];
+  const fonte = m => m.fonte === 'minha' ? 'sua meta' : m.fonte === 'mercado' ? 'mediana do mercado' : 'sugestão: custo + 35%';
+  sec.style.setProperty('--marca', prog(p).cor);
+  sec.innerHTML = `<div class="pp-cab">${discoProg(p)}
+      <div class="pp-cab-tit"><small>Milhas para emitir</small><b>${esc(nomeP)}</b><span>${itens.length} ${itens.length === 1 ? 'conta' : 'contas'} com saldo · da que tem mais para a que tem menos</span></div>
+      ${canaisDe(p) ? `<div class="pp-canais" role="tablist" aria-label="Por onde vender">${canaisDe(p).map(c => `<button type="button" role="tab" data-pp-canal="${c.id}" class="${c.id === canal ? 'on' : ''}" aria-selected="${c.id === canal}" data-dica="${esc(c.n)}${c.cpf ? ': consome vaga de CPF' : ': não consome CPF'}">${c.curto}</button>`).join('')}</div>` : ''}
+      <button type="button" class="pp-fechar" data-pp-fechar aria-label="Fechar o programa" data-dica="Fechar e voltar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="pp-kpis">
+      <div><small>Milhas</small><b>${nBR(qtd)}</b><span>somando as ${itens.length === 1 ? 'conta' : itens.length + ' contas'}</span></div>
+      <div><small>Valor proposto médio</small><b class="jade">${brl2(qtd ? receita / qtd * 1000 : 0)}</b><span>por milheiro</span></div>
+      <div><small>Vendendo tudo</small><b>${brl(receita)}</b><span>no valor proposto</span></div>
+      <div><small>CPFs</small><b>${cpfKpi[0]}</b><span>${cpfKpi[1]}</span></div>
+    </div>
+    <div class="pp-cards">${itens.map(x => `<article class="pp-card${x.cpf.lim && x.cpf.livre === 0 ? ' travada' : ''}" data-pp-conta="${esc(x.l.conta.id)}">
+        <div class="pp-quem">${avatarDe(x.l.conta.id, 'pv-ini')}<div><b>${esc(nomeCurto(x.l.conta.nome))}</b><small>${esc(x.l.nivel || prog(p).n)}</small></div>${x.cpf.lim && x.cpf.livre === 0 ? '<span class="etq brasa">sem vaga</span>' : ''}</div>
+        <div class="pp-mi"><b>${nBR(x.l.qtd)}</b><span>milhas</span></div>
+        <div class="pp-valores">
+          <div data-dica="Valor proposto para vender cada mil milhas desta conta (${fonte(x.m)}). Para mudar, ajuste a meta na Vitrine de venda."><small>Valor proposto</small><b class="${x.m.fonte === 'minha' ? 'ouro' : 'jade'}">${brl2(x.m.v)}</b><em>${fonte(x.m)}</em></div>
+          <div data-dica="Quanto entra vendendo todas as milhas desta conta no valor proposto."><small>Vendendo tudo</small><b>${brl(x.total)}</b><em>${nBR(x.l.qtd)} milhas</em></div>
+        </div>
+        <div class="pp-cpf" data-dica="${esc(x.l.pol && x.l.pol.nota ? x.l.pol.nota : 'Vagas de CPF desta conta.')}"><div class="pp-cpf-top"><small>CPFs</small><b class="${x.cpf.cls}">${x.cpf.txt}</b></div>${x.cpf.html}</div>
+      </article>`).join('')}</div>`;
+  sec.querySelector('[data-pp-fechar]').onclick = () => ppEscolher(p);
+  sec.querySelectorAll('[data-pp-canal]').forEach(b => b.onclick = () => { ptEscolherCanal(b.dataset.ppCanal, p); });
+}
+(function(){
+  if (typeof ptAplicarAba === 'function'){
+    const ap = ptAplicarAba;
+    ptAplicarAba = function(){
+      const r = ap.apply(this, arguments);
+      const sec = document.getElementById('ptPrograma'), v = document.getElementById('ptVitrine'), t = document.getElementById('ptTabelas');
+      if (ptProg){
+        if (v) v.hidden = true; if (t) t.hidden = true; if (sec) sec.hidden = false;
+        document.querySelectorAll('#ptAbas [data-pt-aba]').forEach(b => { b.classList.remove('on'); b.setAttribute('aria-selected', 'false'); });
+      } else if (sec) sec.hidden = true;
+      return r;
+    };
+  }
+  /* tocar em Vitrine ou Tabelas fecha o programa aberto */
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#ptAbas [data-pt-aba]'); if (b && ptProg){ ptProg = ''; ppRender(); } }, true);
+  if (typeof renderVender === 'function'){
+    const rv = renderVender;
+    renderVender = function(){ const r = rv.apply(this, arguments); try { ppRender(); ptAplicarAba(); } catch(e){ console.error('prateleira por programa', e); } return r; };
+  }
+  if (typeof ptRenderVitrine === 'function'){
+    const pv = ptRenderVitrine;
+    ptRenderVitrine = function(){ const r = pv.apply(this, arguments); try { if (ptProg) ppRender(); ptAplicarAba(); } catch(e){ console.error(e); } return r; };
+  }
+})();
 </script>
 
 
