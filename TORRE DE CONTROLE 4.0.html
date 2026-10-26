@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-25 22:40';
+const BUILD = '2026-10-25 23:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -68631,6 +68631,7 @@ function pxAbrir(id){
 .imp-cab{ display:flex; align-items:center; gap:14px; padding:4px 0 14px; border-bottom:1px solid var(--fio); }
 .imp-cab .imp-ic{ width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:#003084; color:#fff; font-weight:800; font-size:15px; letter-spacing:.4px; box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ouro) 70%, transparent); }
 .imp-cab .imp-ic span{ color:var(--ouro-hi); }
+.imp-cab .imp-logo{ width:84px; height:auto; flex:0 0 auto; display:block; filter:drop-shadow(0 2px 6px rgba(0,0,0,.25)); }
 .imp-cab b{ display:block; font-size:calc(16px * var(--esc)); color:var(--giz); }
 .imp-cab small{ display:block; margin-top:2px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
 .imp-conta{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:14px 0 4px; }
@@ -68647,6 +68648,7 @@ function pxAbrir(id){
 .imp-notas{ display:flex; flex-direction:column; gap:8px; margin:0 0 14px; }
 .imp-notas .nota{ margin:0; }
 .imp-lista{ border:1px solid var(--fio); border-radius:14px; overflow:hidden; }
+.imp-lista .imp-lin + h4, .imp-lista .imp-vazio + h4{ border-top:1px solid var(--fio); }
 .imp-lista h4{ margin:0; padding:10px 14px; font-size:calc(13px * var(--esc)); color:var(--giz-2); background:var(--sup-1); border-bottom:1px solid var(--fio); }
 .imp-lin{ display:grid; grid-template-columns:92px minmax(0,1.1fr) minmax(0,1.6fr) 120px; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--fio-suave); font-size:calc(13px * var(--esc)); }
 .imp-lin:last-child{ border-bottom:0; }
@@ -68730,10 +68732,40 @@ function impItemLivelo(t){
                : {...base, tipo:'ajusteEntrada', nota:`${impTitulo(t.description) || 'Entrada'} · ${tit}`};
 }
 
+/* Uma movimentação da Esfera → um lançamento da Torre. A extensão já junta as
+   compras no cartão por mês (uma linha por cartão e mês, sem nome de loja). */
+const IMP_DESTINO_ESFERA = [[/smiles/i, 'smiles'], [/azul/i, 'azul'], [/latam/i, 'latampass'], [/iberia/i, 'iberia'], [/\btap\b/i, 'tap'], [/flying|air france|klm/i, 'flyingblue'], [/connect|copa/i, 'connect'], [/british|avios/i, 'british'], [/qatar/i, 'qatar'], [/accor/i, 'accor'], [/aeroplan/i, 'aeroplan'], [/lifemiles|avianca/i, 'lifemiles']];
+const IMP_MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function impItemEsfera(t){
+  if (!t) return null;
+  if (t.k === 'cartao'){
+    const [mm, aa] = String(t.period || '').split('/'), q = Math.round(Number(t.total) || 0); if (!q) return null;
+    return { ext:`esfera:cartao:${t.period}:${semAcento(t.card).replace(/\s+/g, '-')}`, data:t.date, qtd:q, parceiro:impTitulo(t.card || 'Cartão Santander'), codigo:'cartao',
+      tipo:'cartao', organico:true, agregado:true, nota:`Pontos do cartão · ${IMP_MES[Number(mm) - 1] || mm}/${aa} (${nBR(t.n)} ${Number(t.n) === 1 ? 'compra' : 'compras'})` };
+  }
+  let q = Math.round(Number(t.total) || 0); if (!q) return null;
+  const occ = String(t.occType || ''), loc = String(t.location || ''), tn = String(t.typeName || ''), camp = String(t.campaignName || '');
+  if (occ === 'redemption') q = -Math.abs(q);
+  if (t.isReversed) q = -q;
+  const base = { ext:'esfera:id' + t.id, data:t.date, qtd:q, codigo:occ };
+  if (occ === 'redemption'){
+    const d = (IMP_DESTINO_ESFERA.find(([re]) => re.test(loc)) || [])[1];
+    if (d && PROGRAMAS[d]) return {...base, parceiro:prog(d).n, tipo:'transferencia', destinoPendente:d, nota:`Saída para ${prog(d).n} · a conferir quando lermos a ${prog(d).n}`};
+    return {...base, parceiro:impTitulo(loc || tn), tipo:'resgateProd', nota:`Troca de pontos · ${impTitulo(loc || tn)}`};
+  }
+  if (occ === 'club') return {...base, parceiro:'Clube Esfera', tipo:'clube', clube:q > 0, nota:`${impTitulo(tn) || 'Clube Esfera'} · crédito do mês`};
+  if (t.type === 'PP' || /compra de pontos/i.test(tn)) return {...base, parceiro:'Compra de Pontos', tipo:'compra', pedeValor:q > 0, nota:'Compra de pontos Esfera'};
+  if (/rewards/i.test(loc) || /bateu ganhou/i.test(camp) || /santander cart/i.test(loc)) return {...base, parceiro:impTitulo(camp || loc), tipo:'cartao', organico:true, nota:camp ? impTitulo(camp) : impTitulo(loc)};
+  if (occ === 'campaign' || occ === 'accrual') return {...base, parceiro:impTitulo(tn || loc), tipo:q > 0 ? 'bonificada' : 'ajusteSaida', organico:true, nota:camp || `${impTitulo(tn)} · ${impTitulo(loc)}`};
+  return q < 0 ? {...base, parceiro:impTitulo(tn || loc), tipo:'ajusteSaida', nota:`${impTitulo(tn)} · ${impTitulo(loc)}`}
+               : {...base, parceiro:impTitulo(tn || loc), tipo:'ajusteEntrada', organico:true, nota:`${impTitulo(tn)} · ${impTitulo(loc)}`};
+}
+
 /* De quem é este extrato: vínculo já confirmado antes, ou nome (e começo do CPF). */
 function impContaDe(p){
   const v = (DB.cfg.impVinculo || {})[p.id];
   if (v && (DB.contas || []).some(c => c.id === v)) return v;
+  if (p.cpf && String(p.cpf).length === 11){ const c = (DB.contas || []).filter(c => soDigitos(c.cpf || '') === String(p.cpf)); if (c.length === 1) return c[0].id; }
   const alvo = impPalavras(p.titular || p.cabecalho), cab = impPalavras(p.cabecalho);
   if (!alvo.length) return '';
   const cands = (DB.contas || []).filter(c => {
@@ -68759,13 +68791,17 @@ function impSomaDiario(lancs){
 function impAnalisar(p, contaId){
   const progK = p.prog || 'livelo';
   const hoje = hojeISO();
-  const itens = (p.tx || []).map(impItemLivelo).filter(x => x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
+  const itens = (p.tx || []).map(t => p.prog === 'esfera' ? impItemEsfera(t) : impItemLivelo(t)).filter(x => x && x.data && x.qtd && x.data <= hoje);   /* o que ainda vai cair não é movimentação */
   itens.sort((a, b) => b.data.localeCompare(a.data));
   const daConta = (DB.lancamentos || []).filter(l => l.contaId === contaId && l.prog === progK);
   const jaExt = new Set(daConta.map(l => l.ext).filter(Boolean));
   const usados = new Set();
   itens.forEach(x => {
-    if (jaExt.has(x.ext)){ x.estado = 'importado'; return; }
+    if (jaExt.has(x.ext)){
+      const l = x.agregado && daConta.find(y => y.ext === x.ext);
+      if (l && Number(l.qtd) !== x.qtd){ x.estado = 'atualiza'; x.lancId = l.id; x.antes = Number(l.qtd); return; }
+      x.estado = 'importado'; return;
+    }
     if (!contaId){ x.estado = 'novo'; return; }
     const par = daConta.find(l => !l.ext && !usados.has(l.id) && Number(l.qtd) === x.qtd && l.data && Math.abs(impDias(l.data, x.data)) <= 3);
     if (par){ usados.add(par.id); x.estado = 'existe'; x.lancId = par.id; return; }
@@ -68786,11 +68822,12 @@ function impAnalisar(p, contaId){
   });
   const novos = itens.filter(x => x.estado === 'novo');
   const antes = impSomaDiario(daConta);
-  const depois = impSomaDiario(daConta.concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:i}))));
+  const atualiza = itens.filter(x => x.estado === 'atualiza'), mudou = Object.fromEntries(atualiza.map(x => [x.lancId, x.qtd]));
+  const depois = impSomaDiario(daConta.map(l => mudou[l.id] !== undefined ? {...l, qtd:mudou[l.id]} : l).concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:i}))));
   const saldo = Number(p.saldo);
   const acerto = isFinite(saldo) ? saldo - depois : 0;
   const naCarteira = contaId ? Number(((DB.saldos || []).find(s => s.contaId === contaId && s.prog === progK) || {}).qtd) || 0 : 0;
-  return { progK, itens, novos, existe:itens.filter(x => x.estado === 'existe'), importado:itens.filter(x => x.estado === 'importado'),
+  return { progK, itens, novos, atualiza, existe:itens.filter(x => x.estado === 'existe'), importado:itens.filter(x => x.estado === 'importado'),
     antes, depois, acerto, saldo, naCarteira, semValor:novos.filter(x => x.pedeValor), transf:novos.filter(x => x.destinoPendente) };
 }
 
@@ -68824,6 +68861,10 @@ function impClubeHTML(p, contaId){
   return `<div class="imp-lista" style="margin-top:12px"><h4>Clube Livelo · o que já está programado para cair</h4><div class="imp-vazio" style="color:var(--giz-2)">${linhas.join('<br>')}${cmp}</div></div>`;
 }
 
+function impLogo(){
+  let src = ''; try { if (window.VEM && VEM.assets && VEM.assets.logo) src = 'data:image/webp;base64,' + VEM.assets.logo; } catch(_){}
+  return src ? `<img class="imp-logo" src="${src}" alt="VEM">` : '<div class="imp-ic">V<span>EM</span></div>';
+}
 function impLinha(x){
   const nome = nomeTipoLanc(x.tipo);
   const selo = x.pedeValor ? '<span class="selo">sem valor</span>' : x.destinoPendente ? '<span class="selo">a conferir</span>' : '';
@@ -68854,10 +68895,11 @@ function impPintar(p, contaId){
     notas.push(`<div class="nota"><svg><use href="#i-troca"/></svg><div><b>${r.transf.length} ${r.transf.length === 1 ? 'transferência' : 'transferências'} para ${esc(pr)}</b> entram como saída da ${esc(n)}, marcadas "a conferir". As milhas que chegaram lá, com o bônus, entram quando lermos o extrato da companhia.</div></div>`);
   }
   if (p.aReceber && p.aReceber.qtd && !(p.previstos || []).length) notas.push(`<div class="nota"><svg><use href="#i-relogio"/></svg><div>${nBR(p.aReceber.qtd)} pontos a receber a partir de ${esc(p.aReceber.data)}. Ainda não entram: aparecem no extrato quando caírem.</div></div>`);
-  const novosHTML = r.novos.length ? r.novos.map(impLinha).join('') : `<div class="imp-vazio">Nada novo neste extrato: tudo já está na Torre.</div>`;
+  const novosHTML = (r.novos.length ? r.novos.map(impLinha).join('') : `<div class="imp-vazio">Nada novo neste extrato: tudo já está na Torre.</div>`)
+    + (r.atualiza.length ? `<h4>Atualizadas (o mês ainda estava em andamento)</h4>` + r.atualiza.map(x => impLinha({...x, nota:`${x.nota} · antes ${nBR(x.antes)}`})).join('') : '');
   abrirFolha({ largura:'larga', titulo:`Extrato ${esc(n)}`,
     corpo:`<div class="imp">
-      <div class="imp-cab"><div class="imp-ic">V<span>EM</span></div><div><b>${esc(n)} · ${esc(p.titular || 'conta')}</b>
+      <div class="imp-cab">${impLogo()}<div><b>${esc(n)} · ${esc(p.titular || 'conta')}</b>
         <small>Trazido pelo Assistente da Torre · ${nBR(r.itens.length)} movimentações${datas.length ? ` de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}` : ''}</small></div></div>
       <div class="imp-conta"><label for="impConta">Conta na Torre</label><select id="impConta">${opc}</select>
         ${contaId ? '' : `<span class="imp-falta">Não achei uma conta com o nome "${esc(p.titular || p.cabecalho)}". Escolha de quem é esta conta ${esc(n)}.</span>`}</div>
@@ -68873,7 +68915,7 @@ function impPintar(p, contaId){
       ${r.existe.length ? `<details class="imp-mais"><summary>Ver as ${r.existe.length} que já estavam na Torre</summary><div class="imp-lista">${r.existe.map(impLinha).join('')}</div></details>` : ''}
     </div>`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt fantasma" id="impDescartar">Descartar este extrato</button><div class="esticar"></div>
-      <button class="bt primario" id="impOk"${contaId ? '' : ' disabled'}><svg><use href="#i-ok"/></svg>${r.novos.length ? `Importar ${nBR(r.novos.length)} ${r.novos.length === 1 ? 'movimentação' : 'movimentações'}` : Math.abs(r.acerto) >= 1 ? 'Lançar o acerto' : 'Marcar como conferido'}</button>` });
+      <button class="bt primario" id="impOk"${contaId ? '' : ' disabled'}><svg><use href="#i-ok"/></svg>${r.novos.length ? `Importar ${nBR(r.novos.length)} ${r.novos.length === 1 ? 'movimentação' : 'movimentações'}` : r.atualiza.length ? 'Atualizar' : Math.abs(r.acerto) >= 1 ? 'Lançar o acerto' : 'Marcar como conferido'}</button>` });
   $('#impConta').onchange = e => impPintar(p, e.target.value);
   $('#impOk').onclick = () => { const c = $('#impConta').value; if (!c){ avisar('Escolha de quem é esta conta.', 'alerta'); return; } impImportar(p, c); };
   $('#impDescartar').onclick = () => confirmar('Descartar este extrato',
@@ -68885,6 +68927,7 @@ function impImportar(p, contaId){
   const r = impAnalisar(p, contaId), agora = Date.now(), hoje = hojeISO();
   DB.cfg.impVinculo = DB.cfg.impVinculo || {}; DB.cfg.impVinculo[p.id] = contaId;
   r.existe.forEach(x => { const l = DB.lancamentos.find(y => y.id === x.lancId); if (l && !l.ext) l.ext = x.ext; });
+  r.atualiza.forEach(x => { const l = DB.lancamentos.find(y => y.id === x.lancId); if (l){ l.qtd = x.qtd; l.nota = x.nota; l.data = x.data; } });
   r.novos.slice().reverse().forEach((x, i) => {
     const l = { id:uid(), criadoEm:agora + i, data:x.data, contaId, prog:r.progK, tipo:x.tipo, qtd:x.qtd, custo:0,
       forma:x.organico ? 'organico' : '', cartaoId:'', parcelas:x.organico ? 0 : 1, nota:x.nota, origem:'', saiu:0,
@@ -68939,7 +68982,7 @@ window.addEventListener('message', ev => {
   const res = DB.cfg.impResolvidos || {};
   const velhos = ev.data.fila.filter(p => res[p.id] && Number(res[p.id]) >= Number(p.capturadoEm || 0)).map(p => p.id);
   if (velhos.length) try { window.postMessage({ __vemTorre:'resolvido', ids:velhos }, '*'); } catch(_){}
-  impFila = ev.data.fila.filter(p => p && p.prog === 'livelo' && Array.isArray(p.tx) && !velhos.includes(p.id));
+  impFila = ev.data.fila.filter(p => p && ['livelo', 'esfera'].includes(p.prog) && Array.isArray(p.tx) && !velhos.includes(p.id));
   impFila.forEach(x => { if (x.capturadoEm !== (impVistos[x.id] || 0)){ impVistos[x.id] = x.capturadoEm; impAdiados.delete(x.id); } });
   impProximo();
 });
