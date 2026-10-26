@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 18:40';
+const BUILD = '2026-10-26 20:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -22425,7 +22425,7 @@ function abrirRegras(id, gatilho){
       <footer class="dr-pe">
         <button type="button" class="bt fantasma sair" onclick="document.getElementById('dlgRegras').close()">Fechar</button>
         ${voltaCamp ? `<button type="button" class="bt fantasma dr-voltar" onclick="abrirRegras('${voltaCamp}')"><svg><use href="#i-seta-e"/></svg>Voltar para a campanha${nomeVolta.tipo === 'bonificada' && nomeVolta.parceiro ? ` da ${esc(nomeVolta.parceiro)}` : ''}</button>` : ''}
-        ${c.link ? `<a class="bt fantasma" href="${esc(c.link)}" target="_blank" rel="noopener">
+        ${c.link ? `<a class="bt fantasma" href="${esc(c.link)}" target="_blank" rel="noopener" aria-label="Abrir Página da Campanha" title="Abrir Página da Campanha">
           <svg><use href="#i-link"/></svg>Abrir Página da Campanha</a>` : ''}
         ${ehCompra ? `<button type="button" class="bt primario" onclick="comprarAgora('${c.id}')">
           <svg><use href="#i-sacola"/></svg>Comprar Agora</button>` : ''}
@@ -71015,11 +71015,25 @@ function abrirHistItem(id){
 .oc-l.cab{ font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; padding-top:8px; padding-bottom:8px; }
 @media (max-width:560px){ .oc-l{ grid-template-columns:minmax(0,1fr) auto; } .oc-l .n.x{ display:none; } .oc-l.cab .n.x{ display:none; } }
 .bfa{ margin-top:4px; }
-.bfa-l{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid color-mix(in srgb, var(--jade) 35%, var(--fio)); background:linear-gradient(120deg, color-mix(in srgb, var(--jade) 9%, var(--sup-1)), var(--sup-1) 70%); }
+.bfa-l{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:'d t v' 'd a a'; gap:8px 12px; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid color-mix(in srgb, var(--jade) 35%, var(--fio)); background:linear-gradient(120deg, color-mix(in srgb, var(--jade) 9%, var(--sup-1)), var(--sup-1) 70%); }
 .bfa-l + .bfa-l{ margin-top:8px; }
 .bfa-l b{ color:var(--giz); } .bfa-l small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); }
 .bfa-v{ text-align:right; font:700 calc(18px * var(--esc))/1.1 var(--f-d, inherit); color:var(--jade); font-variant-numeric:tabular-nums; white-space:nowrap; }
-.bfa-v small{ font:500 calc(11.5px * var(--esc))/1.3 var(--f-b, inherit); color:var(--grafite); }
+.bfa-v small{ font:500 calc(11.5px * var(--esc))/1.3 var(--f-b, inherit); color:var(--grafite); display:block; }
+.bfa-l > .disco-prog{ grid-area:d; align-self:start; margin-top:2px; }
+.bfa-t{ grid-area:t; min-width:0; display:grid; gap:4px; } .bfa-v{ grid-area:v; }
+.bfa-t > b{ font-size:calc(15px * var(--esc)); }
+.bfa-chips{ display:flex; flex-wrap:wrap; gap:4px; }
+.bfa-chips i{ font-style:normal; padding:2px 8px; border-radius:99px; font-size:calc(11px * var(--esc)); color:var(--grafite); background:color-mix(in srgb, var(--giz) 6%, transparent); border:1px solid var(--fio); }
+.bfa-chips i.hoje{ color:var(--brasa); border-color:color-mix(in srgb, var(--brasa) 45%, transparent); background:color-mix(in srgb, var(--brasa) 8%, transparent); font-weight:600; }
+.bfa-t small b{ color:var(--giz); }
+.bfa-a{ grid-area:a; display:flex; justify-content:flex-end; }
+.bfa-ir{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:99px; font-weight:600; font-size:calc(13px * var(--esc));
+  color:var(--sup-0); background:var(--jade); box-shadow:0 6px 16px -6px color-mix(in srgb, var(--jade) 70%, transparent); transition:transform .15s, filter .15s; }
+.bfa-ir:hover{ transform:translateY(-1px); filter:brightness(1.05); } .bfa-ir:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
+.bfa-ir svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; }
+@media (max-width:560px){ .bfa-l{ grid-template-columns:auto minmax(0,1fr); grid-template-areas:'d t' 'd v' 'd a'; } .bfa-v{ text-align:left; } .bfa-a{ justify-content:flex-start; } .bfa-ir{ padding:9px 14px; } }
+
 </style>
 <script id="z26-js">
 (function(){
@@ -71054,14 +71068,22 @@ function abrirHistItem(id){
   }
   window.bfAntesHTML = function(){
     const h = hojeISO(), it = [];
-    (DB.lojas || []).filter(l => (l.fim || '') >= h).forEach(l => { const b = blackDaLoja(l); if (b && b.ref && b.v > b.ref.v) it.push({nome:l.n, prog:l.prog, v:b.v, ref:b.ref, un:'×', fim:l.fim, tipo:'Loja parceira'}); });
-    (DB.campanhas || []).filter(c => (c.fim || '') >= h && !c.historico).forEach(c => { const b = blackDaCampanha(c); if (b && b.ref && b.v > b.ref.v) it.push({nome:c.titulo || '', prog:c.para, v:b.v, ref:b.ref, un:b.un, fim:c.fim, tipo:c.tipo === 'transferencia' ? 'Transferência' : c.tipo === 'compra' ? 'Compra de pontos' : 'Campanha'}); });
+    (DB.lojas || []).filter(l => (l.fim || '') >= h).forEach(l => { const b = blackDaLoja(l); if (b && b.ref && b.v > b.ref.v) it.push({nome:l.n, prog:l.prog, v:b.v, ref:b.ref, un:'×', fim:l.fim, tipo:'Loja parceira', link:l.link || (typeof linkCertoDe === 'function' ? linkCertoDe(l.prog, l.n) : '') || '', site:true}); });
+    (DB.campanhas || []).filter(c => (c.fim || '') >= h && !c.historico).forEach(c => { const b = blackDaCampanha(c); if (b && b.ref && b.v > b.ref.v) it.push({nome:c.titulo || '', prog:c.para, v:b.v, ref:b.ref, un:b.un, fim:c.fim, tipo:c.tipo === 'transferencia' ? 'Transferência' : c.tipo === 'compra' ? 'Compra de pontos' : 'Campanha', link:c.link || '', camp:c.id}); });
     it.sort((a, b) => (b.ref.nivel === 'loja' || b.ref.nivel === 'rota') - (a.ref.nivel === 'loja' || a.ref.nivel === 'rota') || (b.v - b.ref.v) - (a.v - a.ref.v));
     const f = (v, un) => un === '%' ? nBRdec(v) + '%' : nBRdec(v) + '×';
     return `<section class="bf-bloco bfa"><div class="bf-tit">Antes da Black: já batem 2025 <span class="etq" style="margin-left:6px">${it.length}</span></div>
       ${it.length ? it.map(x => { const d = diasAte(x.fim);
-        return `<div class="bfa-l">${discoProg(x.prog)}<div><b>${esc(x.nome)}</b><small>${esc(x.tipo)} · ${esc(prog(x.prog).n)} · ${d === 0 ? 'último dia' : d === 1 ? 'fecha amanhã' : 'até ' + dataBR(x.fim).slice(0, 5)} · ${x.ref.nivel === 'loja' || x.ref.nivel === 'rota' ? `na Black 2025 pagou ${f(x.ref.v, x.un)}` : `${esc(x.ref.txt)} pagou ${f(x.ref.v, x.un)}`}</small></div>
-          <div class="bfa-v">${f(x.v, x.un)}<small>+${nBRdec(Math.round((x.v - x.ref.v) * 10) / 10)} sobre 2025</small></div></div>`; }).join('')
+        const prazo = d === 0 ? 'último dia' : d === 1 ? 'fecha amanhã' : 'até ' + dataBR(x.fim).slice(0, 5);
+        const mesma = x.ref.nivel === 'loja' || x.ref.nivel === 'rota';
+        const ref25 = mesma ? `na Black 2025: <b>${f(x.ref.v, x.un)}</b>` : `Black 2025 na ${esc(prog(x.prog).n)}: até <b>${f(x.ref.v, x.un)}</b> (${esc((x.ref.e && (x.ref.e.loja || x.ref.e.deN)) || 'outra loja')})`;
+        const url = x.link || siteProg(x.prog);
+        const acao = x.camp ? `<button type="button" class="bfa-ir" onclick="abrirRegras('${esc(x.camp)}', this)"><svg><use href="#i-info"/></svg>Ver campanha</button>`
+          : url ? `<a class="bfa-ir" href="${esc(url)}" target="_blank" rel="noopener"><svg><use href="#i-sacola"/></svg>${x.link ? `Comprar na ${esc(x.nome)}` : `Abrir a ${esc(prog(x.prog).n)}`}</a>` : '';
+        return `<div class="bfa-l">${discoProg(x.prog)}
+          <div class="bfa-t"><b>${esc(x.nome)}</b><span class="bfa-chips"><i>${esc(x.tipo)}</i><i>${esc(prog(x.prog).n)}</i><i class="${d === 0 ? 'hoje' : ''}">${prazo}</i></span><small>${ref25}</small></div>
+          <div class="bfa-v">${f(x.v, x.un)}<small>+${nBRdec(Math.round((x.v - x.ref.v) * 10) / 10)} sobre 2025</small></div>
+          ${acao ? `<div class="bfa-a">${acao}</div>` : ''}</div>`; }).join('')
         : '<p class="fraco" style="margin:0">Nada aberto hoje supera a Black 2025. Quando aparecer, entra aqui sozinho.</p>'}</section>`;
   };
   if (typeof renderBlack === 'function'){
@@ -71187,5 +71209,73 @@ function abrirHistItem(id){
 })();
 </script>
 
+<style id="drm-css">
+/* ══ JANELA DA CAMPANHA NO CELULAR (26/10/2026) ══════════════════════════════
+   Antes: capa, resumo e abas fixos e o texto rolando numa faixa estreita.
+   Agora a janela inteira rola junto; só os botões ficam presos embaixo, numa
+   linha: Fechar, link da campanha e a ação principal. */
+@media (max-width:640px){
+  #dlgRegras .dr-painel{ display:block; height:auto !important; max-height:94dvh; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  #dlgRegras .dr-painel.altura-fixa .dr-corpo, #dlgRegras .dr-corpo{ overflow:visible; max-height:none; flex:none; }
+  #dlgRegras .dr-cab{ padding:16px 14px 0; gap:8px; flex-wrap:wrap; }
+  #dlgRegras .dr-cab > .dr-rotulo{ display:none; }
+  #dlgRegras .cx-capa{ padding:10px 12px; gap:10px; border-radius:16px; }
+  #dlgRegras .cx-arte{ width:112px; height:50px; }
+  #dlgRegras .cx-ponta .disco-prog, #dlgRegras .cx-ponta .cx-ico{ width:34px !important; height:34px !important; font-size:calc(11px * var(--esc)) !important; }
+  #dlgRegras .cx-selo{ font-size:calc(10px * var(--esc)); padding:1px 6px; top:-4px; }
+  #dlgRegras .cx-tipo{ font-size:calc(9.5px * var(--esc)); letter-spacing:.1em; }
+  #dlgRegras .cx-txt h2{ font-size:calc(15.5px * var(--esc)); line-height:1.2; }
+  #dlgRegras .cx-txt small{ font-size:calc(11.5px * var(--esc)); line-height:1.35; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+  #dlgRegras .dr-resumo{ margin:10px 14px 0; padding:10px 12px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 14px; align-items:center; }
+  #dlgRegras .dr-num{ flex-direction:column; align-items:flex-start; gap:0; }
+  #dlgRegras .dr-num b{ font-size:calc(30px * var(--esc)); line-height:1; }
+  #dlgRegras .dr-num span{ font-size:calc(11.5px * var(--esc)); }
+  #dlgRegras .dr-meta{ display:grid; grid-template-columns:1fr; gap:4px; min-width:0; }
+  #dlgRegras .dr-meta div{ display:flex; flex-wrap:wrap; gap:2px 6px; align-items:baseline; }
+  #dlgRegras .dr-meta dt{ min-width:0; font-size:calc(11px * var(--esc)); }
+  #dlgRegras .dr-meta dd{ font-size:calc(13px * var(--esc)); }
+  #dlgRegras .dr-meta .dr-meta-lim{ grid-column:1 / -1; }
+  #dlgRegras .dr-resumo > .dr-meta-lim, #dlgRegras .dr-meta-lim{ grid-column:1 / -1; }
+  #dlgRegras .dr-abas{ margin:10px 14px 0; padding:3px; position:sticky; top:0; z-index:4; }
+  #dlgRegras .dr-abas [role=tab]{ flex-direction:row; gap:5px; padding:8px 4px; font-size:calc(12.5px * var(--esc)); line-height:1.15; }
+  #dlgRegras .dr-abas [role=tab] svg{ width:14px; height:14px; flex:none; }
+  #dlgRegras .dr-corpo{ padding:4px 14px 10px; }
+  #dlgRegras .rg{ padding:10px 0 6px; }
+  #dlgRegras .dr-pe{ position:sticky; bottom:0; z-index:6; display:flex; flex-wrap:nowrap; gap:8px; align-items:stretch;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); background:var(--sup-0); border-top:1px solid var(--fio); }
+  #dlgRegras .dr-pe .bt{ flex:0 0 auto; min-height:46px; }
+  #dlgRegras .dr-pe .bt.primario{ flex:1 1 auto; order:3; }
+  #dlgRegras .dr-pe .bt.sair{ order:1; padding:0 14px; }
+  #dlgRegras .dr-pe a.bt{ order:2; width:46px; padding:0; justify-content:center; font-size:0; gap:0; }
+  #dlgRegras .dr-pe a.bt svg{ width:18px; height:18px; margin:0; }
+  #dlgRegras .dr-pe .dr-voltar{ order:0; flex-basis:100%; }
+  #dlgRegras .rg-nav{ flex-wrap:wrap; overflow:visible; gap:6px; }
+  #dlgRegras .rg-nav button{ padding:7px 11px; font-size:calc(12.5px * var(--esc)); gap:6px; }
+  #dlgRegras .rg-nav button svg{ width:14px; height:14px; }
+}
+</style>
+<script id="vel-js">
+/* ══ VELOCIDADE (26/10/2026) ══════════════════════════════════════════════════
+   A tela de Lojas Parceiras pedia o custo médio de cada programa mais de 9 mil
+   vezes por abertura, e cada pedido refazia a conta de todo o Diário: a Torre
+   levava 8 a 9 segundos para abrir (bem mais no celular). Agora a conta é feita
+   uma vez e reaproveitada até o fim daquela pintura, ou até qualquer gravação.
+   O resultado é o mesmo; só não é recalculado à toa. */
+(function(){
+  if (typeof estoquePorPrograma !== 'function') return;
+  const o = estoquePorPrograma; let c = null;
+  const copia = v => { const r = {}; for (const p in v) r[p] = Object.assign({}, v[p]); return r; };
+  estoquePorPrograma = function(){
+    const L = DB.lancamentos || [], h = hojeISO();
+    if (c && c.ref === L && c.n === L.length && c.h === h) return copia(c.v);
+    const v = o.apply(this, arguments);
+    c = {ref:L, n:L.length, h, v:copia(v)};
+    queueMicrotask(() => { c = null; });
+    return v;
+  };
+  window._velLimpar = () => { c = null; };
+  if (typeof salvar === 'function'){ const s = salvar; salvar = function(){ c = null; return s.apply(this, arguments); }; }
+})();
+</script>
 </body>
 </html>
