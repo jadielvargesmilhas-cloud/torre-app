@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 09:50';
+const BUILD = '2026-10-26 10:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13450,9 +13450,9 @@ function catalogoClubes(){
     smiles:{ prog:'smiles', planos:[
       {id:'s1000',  n:'Clube 1.000',            qtd:1000,  precos:{mensal:46,  anual_parcelado:43.70,  anual_avista:41.40},  fid:6},
       {id:'s2000',  n:'Clube 2.000',            qtd:2000,  precos:{mensal:82,  anual_parcelado:77.90,  anual_avista:73.80},  fid:6},
-      {id:'s5000',  n:'Clube 5.000',            qtd:5000,  precos:{mensal:184, anual_parcelado:174.80, anual_avista:165.60}, fid:6},
+      {id:'s5000',  n:'Clube 5.000',            qtd:5000,  precos:{mensal:199, anual_parcelado:174.80, anual_avista:165.60}, fid:6},
       {id:'s7000',  n:'Clube 7.000',            qtd:7000,  precos:{mensal:255, anual_parcelado:242.25, anual_avista:229.50}, fid:6},
-      {id:'s10000', n:'Clube 10.000',           qtd:10000, precos:{mensal:340, anual_parcelado:323,    anual_avista:306},    fid:6},
+      {id:'s10000', n:'Clube 10.000',           qtd:10000, precos:{mensal:370, anual_parcelado:323,    anual_avista:306},    fid:6},
       {id:'s20000', n:'Clube 20.000 · Diamante',qtd:20000, precos:{anual_parcelado:819, anual_avista:778},                     fid:10, obs:'Somente anual: R$ 9.828,00 parcelado em 12x de R$ 819,00, ou R$ 9.336,00 à vista.'}
     ]},
     azul:{ prog:'azul', planos:[
@@ -63002,7 +63002,7 @@ function rlConferirTroca(){
   g.lembrete.status = 'resolvido'; g.lembrete.resolvidoEm = hojeISO(); g.renovaOk = g.renova;
   return true;
 }
-function rlAtivo(a){ return a && a.lembrete && a.lembrete.status === 'ativo' && a.lembrete.renova === a.renova; }
+function rlAtivo(a){ return a && a.status === 'ativa' && a.lembrete && a.lembrete.status === 'ativo' && a.lembrete.renova === a.renova; }
 function rlPromocoes(a){
   const vistas = new Set((a.lembrete && a.lembrete.vistas) || []);
   return campanhasVivas('clube').filter(c => c.para === a.prog && !vistas.has(c.id));
@@ -63060,13 +63060,15 @@ function rlPromocoes(a){
            aparece ao passar o mouse; o clique já abre a edição do clube. */
         const maior = rlPlanos(a, 1), menor = rlPlanos(a, -1);
         const texto = d < 0
-          ? `<p>O clube renovou em ${dataBR(a.renova)}. Se quiser mudar, suba ou desça de plano. Se não, mantenha.</p>`
-          : `<p>Hoje é o dia que você marcou: antes de ${dataBR(a.renova)}, veja se vale subir ou descer de plano.</p>`;
+          ? `<p>O clube renovou em ${dataBR(a.renova)}. Veja as promoções de clube ou suba ou desça de plano.</p>`
+          : `<p>Hoje é o dia que você marcou: antes de ${dataBR(a.renova)}, procure uma <b style="display:inline">promoção de clube</b> ou veja se vale subir ou descer de plano.</p>`;
         const btn = (cls, dica, path, liga) => `<button type="button" class="rl-ico ${cls}" data-dica="${dica}" aria-label="${dica}"${liga ? '' : ' aria-disabled="true"'}><svg viewBox="0 0 24 24"><path d="${path}"/></svg></button>`;
         const el = cartao('rl-card', 'Lembrete', `${nome} ${quando}`, texto,
-          btn('rl-up', maior.length ? 'Upgrade: escolher um plano maior' : 'Upgrade: já está no maior plano', 'M12 19V5M5.5 11.5L12 5l6.5 6.5', maior.length)
+          `<button type="button" class="rl-ver">Ver promoções de clube</button>`
+          + btn('rl-up', maior.length ? 'Upgrade: escolher um plano maior' : 'Upgrade: já está no maior plano', 'M12 19V5M5.5 11.5L12 5l6.5 6.5', maior.length)
           + btn('rl-down', menor.length ? 'Downgrade: escolher um plano menor' : 'Downgrade: já está no menor plano', 'M12 5v14M5.5 12.5L12 19l6.5-6.5', menor.length)
-          + btn('rl-ok', 'Manter o plano', 'M4.5 12.5l5 5L19.5 7', true), 'dia:' + a.id);
+          + `<button type="button" class="rl-ok">Resolvido</button>`, 'dia:' + a.id);
+        el.querySelector('.rl-ver').onclick = irClube;
         el.querySelector('.rl-up').onclick = () => rlTrocarPlano(a, 1);
         el.querySelector('.rl-down').onclick = () => rlTrocarPlano(a, -1);
         el.querySelector('.rl-ok').onclick = fim;
