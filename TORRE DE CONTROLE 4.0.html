@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 11:40';
+const BUILD = '2026-10-26 14:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -16125,9 +16125,12 @@ function avisos(){
   DB.assinaturas.filter(a => a.status === 'ativa').forEach(a => {
     const dias = diasAte(a.renova);
     if (dias !== null && dias <= d){
-      L.push({ grau: dias <= 3 ? 2 : 1, tipo:'clube', dias,
-        curto:`Clube ${prog(a.prog).n}`,
-        t:`Clube ${prog(a.prog).n} renova ${prazoTexto(dias)}`,
+      /* 26/10/2026: a renovação do clube aparece na tela inicial a partir de 10
+         dias (antes ficava só na central de avisos e sumia atrás de outros) e
+         vira prioridade nos 3 últimos dias. */
+      L.push({ grau: dias <= 3 ? 3 : dias <= 10 ? 2 : 1, tipo:'clube', dias, renovaClube:true,
+        curto:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)}`,
+        t:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)} renova ${prazoTexto(dias)}`,
         s:`${nomeConta(a.contaId)} · ${brl2(a.valor)} · ${MODALIDADES[a.modalidade] || a.modalidade}`, ir:['fabrica','fb-clubes'] });
     }
     if (a.fid > 0){
@@ -17776,7 +17779,11 @@ function renderMesa(){
      lista já é metade do destaque */
   const peso = a => (a.grau === 3 && a.dias !== null && a.dias !== undefined && a.dias < 0) ? 0
                   : a.grau === 3 ? 1 : a.grau === 2 ? 2 : 3;
-  const urg = av.filter(a => a.grau >= 2).sort((x, y) => peso(x) - peso(y)).slice(0, 6);
+  /* a renovação de clube nos próximos 10 dias tem lugar garantido na lista:
+     com muitos avisos do dia ela ficava fora dos seis e ninguém via */
+  const fixos = av.filter(a => a.renovaClube && a.grau >= 2);
+  const urg = av.filter(a => a.grau >= 2 && !fixos.includes(a)).sort((x, y) => peso(x) - peso(y)).slice(0, Math.max(3, 6 - fixos.length))
+    .concat(fixos).sort((x, y) => peso(x) - peso(y) || ((x.dias ?? 99) - (y.dias ?? 99)));
   const hoje = av.filter(a => a.grau === 3);
   $('#contHoje').textContent = av.filter(a => a.grau >= 2).length;
   /* faixa própria quando algo fecha hoje: é a informação que não pode passar
@@ -25924,7 +25931,7 @@ function renderClubes(){
       <div class="item-corpo">
         <div class="item-tit"><span class="termo-marca" style="background:${prog(a.prog).cor}"></span>${esc(prog(a.prog).n)} · ${esc(pl ? pl.n : a.planoId)}
           ${a.status !== 'ativa' ? '<span class="etq">cancelada</span>' : ''}
-          ${a.status === 'ativa' && a.mudanca && a.mudanca.planoId ? `<span class="etq ouro" data-dica="Mudança lida no print do clube. No dia, a Torre encerra este plano e abre o novo sozinha.">muda para ${esc(((cat && cat.planos.find(x => x.id === a.mudanca.planoId)) || {}).n || a.mudanca.planoId)} em ${dataCurta(a.mudanca.em)}</span>` : ''}
+          ${a.status === 'ativa' && a.mudanca && a.mudanca.planoId ? `<span class="etq ouro" data-dica="${a.mudanca.confirmar ? 'Alteração lida no print. No dia, a Torre pergunta se a troca foi feita e só então muda a assinatura.' : 'Mudança lida no print do clube. No dia, a Torre encerra este plano e abre o novo sozinha.'}">${esc(rotuloMudanca(a))} em ${dataCurta(a.mudanca.em)}</span>` : ''}
           ${presa ? `<span class="etq brasa" data-dica="Cancelar antes disso gera multa ou perda do bônus">carência até ${dataCurta(fimFid)}</span>` : ''}
         </div>
         <div class="item-sub">${esc(nomeConta(a.contaId))} · ${MODALIDADES[a.modalidade] || a.modalidade} · ${brl2(a.valor)}${a.cartao ? ' · ' + esc(a.cartao) : ''}</div>
@@ -54697,7 +54704,7 @@ function ccLinha(a, modo){
   const chips = [
     !ativa ? '<span class="etq">cancelada</span>' : '',
     presa ? `<span class="etq brasa" data-dica="Cancelar antes disso gera multa ou perda do bônus">carência até ${dataCurta(fimFid)}</span>` : '',
-    ativa && a.mudanca && a.mudanca.planoId ? `<span class="etq ouro" data-dica="Mudança lida no print do clube. No dia, a Torre encerra este plano e abre o novo sozinha.">muda para ${esc(((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId)} em ${dataCurta(a.mudanca.em)}</span>` : '',
+    ativa && a.mudanca && a.mudanca.planoId ? `<span class="etq ouro" data-dica="${a.mudanca.confirmar ? 'Alteração lida no print. No dia, a Torre pergunta se a troca foi feita e só então muda a assinatura.' : 'Mudança lida no print do clube. No dia, a Torre encerra este plano e abre o novo sozinha.'}">${esc(rotuloMudanca(a))} em ${dataCurta(a.mudanca.em)}</span>` : '',
     a.cancelarAntes ? `<span class="etq" data-dica="Intenção de cancelar marcada">cancelar no ${a.cancelarAntes}º mês</span>` : ''
   ].filter(Boolean).join('');
   const quem = modo === 'clube'
@@ -57864,7 +57871,7 @@ function mostrarAvisosRenovacao(){
   pilha.innerHTML = '';
   renovacoesProximas().slice(0, 3).forEach(({a, d}) => {
     const pl = typeof ccPlano === 'function' ? ccPlano(a) : null;
-    const mud = a.mudanca && a.mudanca.planoId ? ((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId : '';
+    const mud = a.mudanca && a.mudanca.planoId ? (a.mudanca.planoId === a.planoId && a.mudanca.para ? 'o ' + a.mudanca.para : ((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId) : '';
     const quando = d < 0 ? 'Renovou ontem' : d === 0 ? 'Renova hoje' : d === 1 ? 'Renova amanhã' : `Renova em ${d} dias`;
     const cor = mud ? '#6FB7FF' : d <= 1 ? '#FF8A6B' : '#F2C14E';
     const el = document.createElement('div');
@@ -63268,6 +63275,460 @@ function rlPromocoes(a){
   setInterval(conferir, 60000);
 })();
 </script>
+<style id="alt-css">
+/* ══ ALTERAÇÃO DE CLUBE PELO PRINT (26/10/2026, pedido do Jadiel) ═══════════════
+   O print do "Resumo da alteração" (Esfera, Livelo...) vira uma alteração
+   programada. No dia, um aviso de prioridade alta pergunta se a troca foi feita;
+   confirmando, a assinatura nova nasce no cartão escolhido (e entra na fatura). */
+.alt{ display:flex; flex-direction:column; gap:16px; }
+.alt-cab{ display:flex; align-items:center; gap:14px; padding:16px 18px; border-radius:18px; position:relative; overflow:hidden;
+  border:1px solid color-mix(in srgb, var(--marca) 40%, var(--fio));
+  background:linear-gradient(120deg, color-mix(in srgb, var(--marca) 20%, transparent), transparent 65%), var(--sup-1, transparent); }
+.alt-cab::after{ content:''; position:absolute; right:-50px; top:-70px; width:190px; height:190px; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--marca) 24%, transparent), transparent); pointer-events:none; }
+.alt-cab .disco-prog{ width:50px; height:50px; flex:0 0 50px; box-shadow:0 8px 22px color-mix(in srgb, var(--marca) 30%, transparent); }
+.alt-cab small{ display:block; color:var(--grafite); font-size:calc(11.5px * var(--esc)); text-transform:uppercase; letter-spacing:.08em; }
+.alt-cab b{ display:block; color:var(--giz); font:700 calc(20px * var(--esc)) var(--f-d, inherit); }
+.alt-cab span{ color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.alt-de-para{ display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:10px; align-items:stretch; }
+.alt-lado{ border:1px solid var(--fio); border-radius:16px; padding:14px 16px; display:flex; flex-direction:column; gap:4px; background:var(--sup-0, transparent); min-width:0; }
+.alt-lado.novo{ border-color:color-mix(in srgb, var(--jade) 55%, var(--fio)); background:linear-gradient(160deg, color-mix(in srgb, var(--jade) 12%, transparent), transparent 60%), var(--sup-0, transparent); }
+.alt-lado small{ color:var(--grafite); font-size:calc(11px * var(--esc)); text-transform:uppercase; letter-spacing:.07em; }
+.alt-lado b{ color:var(--giz); font:700 calc(19px * var(--esc)) var(--f-d, inherit); }
+.alt-lado em{ font-style:normal; color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.alt-seta{ display:grid; place-items:center; color:var(--jade); }
+.alt-seta svg{ width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.alt-grade{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+@media (max-width:620px){ .alt-grade{ grid-template-columns:minmax(0,1fr); } .alt-de-para{ grid-template-columns:minmax(0,1fr); } .alt-seta{ transform:rotate(90deg); } }
+.alt-passos{ display:flex; flex-direction:column; gap:8px; border:1px dashed var(--fio); border-radius:14px; padding:12px 14px; }
+.alt-passos div{ display:flex; gap:10px; align-items:flex-start; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.alt-passos i{ flex:0 0 22px; height:22px; border-radius:50%; display:grid; place-items:center; font:700 calc(11.5px * var(--esc)) var(--f-m, inherit); font-style:normal; color:var(--giz); background:color-mix(in srgb, var(--marca) 30%, transparent); }
+.alt-passos b{ color:var(--giz); }
+.rn-card .rn-acoes button.rn-print{ width:40px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+.rn-card .rn-acoes button.rn-print svg{ width:18px; height:18px; }
+.rn-card.alt-card{ --rn-cor:#FF8A6B; }
+</style>
+<script id="alt-js">
+/* Reconhece a tela "Resumo da alteração" do clube. Função pura, testável. */
+function lerAlteracaoClube(texto){
+  const t = String(texto || ''), s = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (!/(sera alterada|resumo da alteracao|nova assinatura|alteracao programada)/.test(s)) return null;
+  const out = {prog:'', planoId:'', planoLido:'', de:'', para:'', em:'', valor:0, cartaoFinal:'', bandeira:'', qtd:0};
+  const md = s.match(/alterad[ao]\s+(?:a partir de\s+|em\s+)?(\d{2})\/(\d{2})\/(\d{4})/) || s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (md) out.em = _lcData(md[1], md[2], md[3]);
+  /* "Assinatura anterior / Nova assinatura" seguidos de "Anual Mensal" */
+  const mods = [...s.matchAll(/\b(anual|mensal|trimestral|semestral)\b/g)].map(x => x[1]);
+  const ib = s.search(/assinatura anterior/);
+  if (ib >= 0){ const depois = [...s.slice(ib).matchAll(/\b(anual|mensal)\b/g)].map(x => x[1]); if (depois.length >= 2){ out.de = depois[0]; out.para = depois[1]; } }
+  const tp = s.match(/tipo de assinatura\s*:?\s*(anual|mensal)/); if (tp) out.para = tp[1];
+  if (!out.de && mods.length >= 2){ out.de = mods[0]; out.para = out.para || mods[1]; }
+  const pts = s.match(/pontos mensais\s*:?\s*(\d{1,3}(?:\.\d{3})*)/) || s.match(/(\d{1,3}(?:\.\d{3})+)\s*(?:pts|pontos)\s*(?:por mes|mensais)/);
+  if (pts) out.qtd = Number(pts[1].replace(/\./g, ''));
+  const vt = s.match(/valor total\s*:?\s*r\$\s*([\d.]+,\d{2})/) || s.match(/subtotal\s*:?\s*r\$\s*([\d.]+,\d{2})/);
+  if (vt) out.valor = _lcNum(vt[1]);
+  const ct = s.match(/(visa|master(?:card)?|elo|amex|hipercard)?[^\n\d]{0,12}(?:\*{2,}|•{2,}|final)\s*(\d{4})/);
+  if (ct){ out.cartaoFinal = ct[2]; out.bandeira = ct[1] || ''; }
+  /* plano: pelo nome no catálogo ("Plano Exclusive"); o programa sai dele se o print não disser */
+  const pl = s.match(/plano\s*:?\s*([a-z0-9+ ]{2,24}?)\s*(?:\n|quantidade|$)/);
+  if (pl) out.planoLido = pl[1].trim();
+  const progs = progsComCatalogo();
+  const porNome = progs.find(p => s.includes(_lcSem(prog(p).n).split(/\s+/)[0]));
+  const achaPlano = (p) => { const c = catalogoDe(p); if (!c || !out.planoLido) return null;
+    const alvo = _lcSem(out.planoLido).replace(/\s+/g, ' ');
+    return c.planos.find(x => _lcSem(x.n) === alvo) || c.planos.find(x => alvo.includes(_lcSem(x.n)) || _lcSem(x.n).includes(alvo)) || null; };
+  if (porNome){ out.prog = porNome; const x = achaPlano(porNome); if (x) out.planoId = x.id; }
+  else {
+    const cand = progs.map(p => ({p, x:achaPlano(p)})).filter(o => o.x && (!out.qtd || Number(o.x.qtd) === out.qtd));
+    if (cand.length === 1){ out.prog = cand[0].p; out.planoId = cand[0].x.id; }
+  }
+  return out.em || out.para ? out : null;
+}
+const ALT_MOD = { mensal:'mensal', anual:'anual_parcelado' };
+let _altAlvo = '';
+/* qual assinatura muda: a ativa do programa com esse plano, a mais perto da data */
+function altCandidatas(d){
+  return (DB.assinaturas || []).filter(a => a.status === 'ativa' && (!d.prog || a.prog === d.prog))
+    .map(a => ({a, pts:(a.planoId === d.planoId ? 0 : 50) + (a.renova && d.em ? Math.abs(impDiasAlt(a.renova, d.em)) : 30)}))
+    .sort((x, y) => x.pts - y.pts).map(x => x.a);
+}
+function impDiasAlt(a, b){ return Math.round((new Date(a + 'T12:00:00') - new Date(b + 'T12:00:00')) / 864e5); }
+function altCartaoDe(final){ const f = String(final || ''); return f ? (DB.cartoes || []).filter(c => soDigitosFinal(c.final) === f) : []; }
+
+function abrirAlteracaoClube(d){
+  const cands = altCandidatas(d);
+  const alvo = (_altAlvo && cands.find(a => a.id === _altAlvo)) || cands[0] || null;
+  _altAlvo = '';
+  const p = d.prog || (alvo && alvo.prog) || '';
+  const cat = p ? catalogoDe(p) : null;
+  const plAtual = alvo && cat ? cat.planos.find(x => x.id === alvo.planoId) : null;
+  const plNovo = cat ? (cat.planos.find(x => x.id === d.planoId) || plAtual) : null;
+  const cartoes = altCartaoDe(d.cartaoFinal);
+  const cartaoSel = cartoes[0] ? cartoes[0].id : (alvo && alvo.cartaoId) || '';
+  const modDe = alvo ? (String(alvo.modalidade || '').startsWith('anual') ? 'anual' : 'mensal') : d.de;
+  const nomeMod = m => ({mensal:'Mensal', anual:'Anual', anual_parcelado:'Anual', anual_avista:'Anual à vista'}[m] || m || '?');
+  const corpo = $('#lcCorpo'); if (!corpo) return;
+  const folha = corpo.closest('#folha') || document;
+  const tit = $('#folhaTit'); if (tit) tit.textContent = 'Alteração do clube';
+  corpo.innerHTML = `<div class="alt" style="--marca:${p ? prog(p).cor : 'var(--ouro)'}">
+    <div class="alt-cab">${p ? discoProg(p) : ''}<div><small>Alteração programada pela ${p ? esc(prog(p).n) : 'operadora'}</small><b>${d.em ? 'Muda em ' + dataBR(d.em) : 'Data não lida'}</b><span>${esc(plNovo ? 'Clube ' + plNovo.n + ' · ' + nBR(plNovo.qtd) + ' pontos por mês' : 'Plano não lido')}</span></div></div>
+    <div class="alt-de-para">
+      <div class="alt-lado"><small>Hoje</small><b>${esc(plAtual ? plAtual.n : (d.planoLido || '?'))} · ${esc(nomeMod(modDe))}</b><em>${alvo ? brl2(alvo.valor) + (String(alvo.modalidade || '').startsWith('anual') ? ' por parcela' : ' por mês') : 'sem assinatura escolhida'}</em></div>
+      <div class="alt-seta" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div>
+      <div class="alt-lado novo"><small>A partir de ${d.em ? dataBR(d.em) : '?'}</small><b>${esc(plNovo ? plNovo.n : (d.planoLido || '?'))} · ${esc(nomeMod(d.para))}</b><em>${d.valor ? brl2(d.valor) + (d.para === 'mensal' ? ' por mês' : '') : 'valor não lido'}</em></div>
+    </div>
+    <div class="alt-grade">
+      <div class="campo${alvo ? '' : ' lc-falta'}"><label>Assinatura que muda</label><select id="altAssin">${cands.map(a => `<option value="${a.id}"${alvo && a.id === alvo.id ? ' selected' : ''}>${esc(nomeCurto(nomeConta(a.contaId)))} · ${esc(prog(a.prog).n)} ${esc(((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.planoId) || {}).n || '')}</option>`).join('') || '<option value="">nenhuma assinatura ativa</option>'}</select></div>
+      <div class="campo"><label>A partir de</label><input type="date" id="altEm" value="${d.em || ''}"></div>
+      <div class="campo"><label>Cartão da cobrança${d.cartaoFinal ? ` (o print diz final ${esc(d.cartaoFinal)})` : ''}</label><select id="altCartao"><option value="">não informado</option>${(DB.cartoes || []).map(c => `<option value="${c.id}"${c.id === cartaoSel ? ' selected' : ''}>${esc(c.banco)} ${esc(c.produto || '')}${c.final ? ' · final ' + esc(c.final) : ''}</option>`).join('')}</select></div>
+      <div class="campo"><label>Valor${d.para === 'mensal' ? ' por mês' : ''} (R$)</label><input type="text" inputmode="decimal" data-moeda id="altValor" value="${moedaTxt(d.valor || 0)}"></div>
+    </div>
+    ${d.cartaoFinal && !cartoes.length ? `<div class="nota ouro"><svg><use href="#i-alerta"/></svg><div>Nenhum cartão cadastrado termina em <b>${esc(d.cartaoFinal)}</b>. Escolha o cartão acima ou cadastre em <b>Cartões</b> para a cobrança cair na fatura certa.</div></div>` : ''}
+    <div class="alt-passos">
+      <div><i>1</i><span>Agora a Torre <b>só agenda</b>: a assinatura continua como está até ${d.em ? dataBR(d.em) : 'a data'}.</span></div>
+      <div><i>2</i><span>No dia, aparece um aviso de <b>prioridade alta</b> na tela inicial perguntando se a troca foi feita.</span></div>
+      <div><i>3</i><span>Confirmando, a assinatura passa para <b>${esc(nomeMod(d.para))}</b> e a cobrança entra na <b>fatura do cartão</b> escolhido.</span></div>
+    </div>
+  </div>`;
+  const ok = $('#lcOk');
+  if (ok){
+    ok.textContent = 'Programar alteração'; ok.disabled = !alvo;
+    const reler = () => { ok.disabled = !$('#altAssin').value || !$('#altEm').value; };
+    ['altAssin', 'altEm'].forEach(id => { const e = $('#' + id); if (e){ e.onchange = reler; e.oninput = reler; } });
+    reler();
+    ok.onclick = () => {
+      const a = (DB.assinaturas || []).find(x => x.id === $('#altAssin').value); if (!a) return;
+      const cat2 = catalogoDe(a.prog);
+      const pl = (cat2 && (cat2.planos.find(x => x.id === d.planoId && d.prog === a.prog) || cat2.planos.find(x => x.id === a.planoId))) || null;
+      const mod = ALT_MOD[d.para] || a.modalidade;
+      a.mudanca = {em:$('#altEm').value, planoId:pl ? pl.id : a.planoId, modalidade:mod, valor:moedaNum($('#altValor').value) || 0,
+        cartaoId:$('#altCartao').value || a.cartaoId || '', lidaEm:hojeISO(), confirmar:true, de:modDe, para:d.para || ''};
+      salvar(); fecharFolha(); _lcEstado = null;
+      try { aplicarTudo(); } catch(_){} try { renderClubes(); } catch(_){} try { mostrarAvisosRenovacao(); } catch(_){}
+      avisar(`Alteração programada: ${esc(prog(a.prog).n)} de ${esc(nomeCurto(nomeConta(a.contaId)))} vira ${esc(nomeMod(d.para))} em ${dataBR(a.mudanca.em)}. No dia, a Torre pede a sua confirmação.`, 'ok', 7000);
+    };
+  }
+}
+/* Chegou o dia: a troca é aplicada só depois que você confirma. */
+function altAplicar(a){
+  const m = a.mudanca; if (!m) return null;
+  const cat = catalogoDe(a.prog), plN = (cat && cat.planos.find(x => x.id === m.planoId)) || null;
+  const plA = (cat && cat.planos.find(x => x.id === a.planoId)) || null;
+  const anual = String(m.modalidade || a.modalidade).startsWith('anual');
+  const nova = {id:uid(), contaId:a.contaId, prog:a.prog, planoId:plN ? plN.id : a.planoId, modalidade:m.modalidade || a.modalidade,
+    valor:Number(m.valor) || (plN ? valorCobranca(plN, m.modalidade || a.modalidade, anual ? 12 : 1) : 0) || 0, parcelas:anual ? (a.parcelas || 12) : 1,
+    inicio:m.em, renova:somaMeses(anual ? 12 : 1, m.em), fid:(plN && plN.fid) || 0, status:'ativa',
+    cartaoId:m.cartaoId || a.cartaoId || '', cartao:'', cancelarAntes:0,
+    obs:`Veio da alteração de ${dataBR(m.em)}: ${plA ? plA.n : ''} ${m.de || ''} para ${plN ? plN.n : ''} ${m.para || ''}.`.replace(/\s+/g, ' ').trim()};
+  if (nova.cartaoId){ const cr = (DB.cartoes || []).find(x => x.id === nova.cartaoId); if (cr) nova.cartao = `${cr.banco || ''} ${cr.produto || ''}`.trim(); }
+  a.status = 'cancelada'; a.fim = m.em; delete a.mudanca;
+  a.obs = ((a.obs ? a.obs + ' ' : '') + `Alterado em ${dataBR(nova.inicio)} (confirmado).`).trim();
+  DB.assinaturas.push(nova);
+  try { lancarCiclosClube(nova.id, true); } catch(_){}
+  return nova;
+}
+(function(){
+  /* 1. o print lido: se for "Resumo da alteração", abre a tela própria */
+  if (typeof renderConferirClube === 'function'){
+    const rc = renderConferirClube;
+    renderConferirClube = function(){
+      try { const d = _lcEstado && lerAlteracaoClube(_lcEstado.texto); if (d){ abrirAlteracaoClube(d); return; } } catch(e){ console.error(e); }
+      return rc.apply(this, arguments);
+    };
+  }
+  /* 2. aplicação automática no dia: a que pede confirmação fica para o aviso */
+  if (typeof aplicarMudancasClube === 'function'){
+    const am = aplicarMudancasClube;
+    aplicarMudancasClube = function(){
+      const guardadas = (DB.assinaturas || []).filter(a => a.mudanca && a.mudanca.confirmar).map(a => [a, a.mudanca]);
+      guardadas.forEach(([a]) => { delete a.mudanca; });
+      try { return am.apply(this, arguments); } finally { guardadas.forEach(([a, m]) => { a.mudanca = m; }); }
+    };
+  }
+  /* 3. avisos: mandar o print pelo próprio aviso, e o aviso fixo do dia */
+  const escolherPrint = (assinId) => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = () => { if (inp.files[0]){ _altAlvo = assinId || ''; lerPrintClube(inp.files[0]); } };
+    inp.click();
+  };
+  window.altEscolherPrint = escolherPrint;
+  const ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="M20.5 16l-5-5-7.5 8"/></svg>';
+  if (typeof mostrarAvisosRenovacao === 'function'){
+    const mr = mostrarAvisosRenovacao;
+    mostrarAvisosRenovacao = function(){
+      const r = mr.apply(this, arguments);
+      try {
+        const pilha = document.getElementById('rnPilha'); if (!pilha) return r;
+        /* ícone de print nos avisos de renovação e no lembrete, com soltar a imagem no aviso */
+        pilha.querySelectorAll('.rn-card[data-rn]').forEach(el => {
+          const id = el.dataset.rn;
+          const ac = el.querySelector('.rn-acoes'); if (!ac || ac.querySelector('.rn-print')) return;
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'rn-print';
+          b.setAttribute('aria-label', 'Mandar o print da alteração'); b.dataset.dica = 'Mandar o print da alteração: arraste a imagem para o aviso ou clique';
+          b.innerHTML = ICO; b.onclick = () => escolherPrint(id); ac.insertBefore(b, ac.firstChild);
+          el.addEventListener('dragover', e => { e.preventDefault(); });
+          el.addEventListener('drop', e => { const f = [...(e.dataTransfer.files || [])].find(x => x.type.startsWith('image/')); if (f){ e.preventDefault(); _altAlvo = id; lerPrintClube(f); } });
+        });
+        pilha.querySelectorAll('[data-alt]').forEach(x => x.remove());
+        const hoje = hojeISO();
+        (DB.assinaturas || []).filter(a => a.status === 'ativa' && a.mudanca && a.mudanca.confirmar && a.mudanca.em && a.mudanca.em <= hoje && !(a.mudanca.adiadoAte && a.mudanca.adiadoAte > hoje)).forEach(a => {
+          const m = a.mudanca, cat = catalogoDe(a.prog), pl = cat && cat.planos.find(x => x.id === m.planoId);
+          const cr = (DB.cartoes || []).find(x => x.id === m.cartaoId);
+          const el = document.createElement('div');
+          el.className = 'rn-card rl-card dp-card alt-card'; el.setAttribute('role', 'alert'); el.dataset.alt = a.id;
+          el.innerHTML = `<div class="rn-topo"><div class="rn-sino"><svg><use href="#i-sino"/></svg></div>
+            <div class="rn-txt"><div class="rn-olho">Prioridade alta</div><b>A troca do Clube ${esc(prog(a.prog).n)} de ${esc(nomeCurtoConta(a.contaId))} foi feita?</b>
+            <p>${m.em === hoje ? 'Hoje' : 'Em ' + dataBR(m.em)} a ${esc(prog(a.prog).n)} ${m.em === hoje ? 'deve trocar' : 'devia ter trocado'} o plano ${esc(pl ? pl.n : '')} para <b style="display:inline">${esc(m.para || MODALIDADES[m.modalidade] || '')}</b>, ${brl2(m.valor || 0)}${cr ? ` no ${esc(cr.banco)}${cr.final ? ' final ' + esc(cr.final) : ''}` : ''}. Confira no app e confirme.</p></div></div>
+            <div class="rn-acoes"><button type="button" class="rl-ver" data-alt-ok>Foi feita</button><button type="button" class="rl-depois" data-alt-depois>Amanhã</button><button type="button" data-alt-nao>Não foi</button></div>`;
+          const sair = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 280); };
+          el.querySelector('[data-alt-ok]').onclick = () => { const n = altAplicar(a); salvar(); sair(); try { aplicarTudo(); } catch(_){} try { renderClubes(); } catch(_){}
+            avisar(`Troca confirmada: ${esc(prog(a.prog).n)} de ${esc(nomeCurto(nomeConta(a.contaId)))} agora é ${esc((MODALIDADES[n.modalidade] || n.modalidade).toLowerCase())}${n.cartaoId ? ', cobrando ' + brl2(n.valor) + ' na fatura do ' + esc(nomeCartao(n.cartaoId)) : ''}.`, 'ok', 7000); };
+          el.querySelector('[data-alt-depois]').onclick = () => { const d = new Date(hoje + 'T12:00:00'); d.setDate(d.getDate() + 1); m.adiadoAte = isoLocal(d); salvar(); sair(); avisar('Combinado: amanhã a Torre pergunta de novo.', 'ok', 3500); };
+          el.querySelector('[data-alt-nao]').onclick = () => confirmar('A troca não aconteceu?', 'A alteração programada sai, e a assinatura continua como está. Se a operadora fizer a troca depois, mande o print de novo.', () => { delete a.mudanca; salvar(); sair(); try { renderClubes(); } catch(_){} avisar('Alteração desfeita. A assinatura segue como estava.', 'ok', 4000); }, 'Desfazer');
+          pilha.insertBefore(el, pilha.firstChild);
+          /* no dia, a pergunta substitui o aviso de renovação da mesma assinatura */
+          const rn = pilha.querySelector(`.rn-card[data-rn="${a.id}"]`); if (rn) rn.remove();
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+/* etiqueta na lista de clubes: troca só de modalidade diz "vira mensal" */
+function rotuloMudanca(a){
+  const m = a && a.mudanca; if (!m) return '';
+  const cat = catalogoDe(a.prog), pl = cat && cat.planos.find(x => x.id === m.planoId);
+  if (m.planoId === a.planoId && m.para) return `vira ${m.para}`;
+  return 'muda para ' + ((pl && pl.n) || m.planoId);
+}
+</script>
+<script id="clube-auto-js">
+/* ══ CRÉDITO DO CLUBE LANÇADO SOZINHO (26/10/2026, pedido do Jadiel) ════════════
+   Antes a Torre avisava "crédito mensal a lançar" e esperava um clique. Agora,
+   chegada a data de cada mês, ela lança sozinha o crédito do plano e, se a
+   assinatura tiver bônus de campanha, o bônus daquele mês. Cada linha fica
+   marcada como automática; quando o extrato do programa chega pela extensão, a
+   conferência casa essas linhas com o que caiu de verdade (e corrige o valor se
+   o programa creditou diferente). Roda ao abrir e a cada hora. */
+function autoLancarClubes(){
+  if (typeof DB !== 'object' || !DB || !Array.isArray(DB.assinaturas) || !Array.isArray(DB.lancamentos)) return {n:0, pts:0};
+  let n = 0, pts = 0; const quem = [];
+  const t0 = Date.now();
+  /* só os meses recentes (até 45 dias): crédito antigo que nunca foi lançado
+     pode já ter vindo pelo extrato com outra data, e aí continua pedindo
+     conferência, como antes */
+  const corte = somaDias(-45);
+  (typeof creditosPendentes === 'function' ? creditosPendentes() : []).forEach(p => {
+    if (p.faltam.some(i => { try { return dataDoCiclo(p.a, i) < corte; } catch(_){ return true; } })) return;
+    const k = lancarCiclosClube(p.a.id, true); if (!k) return;
+    n += k; pts += k * p.mensal;
+    quem.push(`${prog(p.a.prog).n} de ${nomeCurto(nomeConta(p.a.contaId))}`);
+  });
+  (DB.assinaturas || []).filter(a => a.status === 'ativa').forEach(a => { try { sincronizarBonusClube(a); } catch(_){} });
+  DB.lancamentos.filter(l => l.assinaturaId && (l.cicloClube !== undefined || l.bonusClube) && (l.criadoEm || 0) >= t0 - 5 && !l.autoClube && !l.ext)
+    .forEach(l => { l.autoClube = true; if (!/lançado sozinho/.test(l.nota || '')) l.nota = `${l.nota || ''} · lançado sozinho na data`.replace(/^ · /, ''); });
+  if (n){
+    salvar(); try { aplicarTudo(); } catch(_){}
+    try { avisar(`Clube: ${n} ${n > 1 ? 'créditos lançados' : 'crédito lançado'} sozinho na data (${nBR(pts)} pontos${quem.length ? ' · ' + esc([...new Set(quem)].join(', ')) : ''}). O extrato do programa confere depois.`, 'ok', 8000); } catch(_){}
+  }
+  return {n, pts};
+}
+(function(){
+  const rodar = () => { try { autoLancarClubes(); } catch(e){ console.error('clube automático', e); } };
+  const iniciar = () => setTimeout(rodar, 2600);
+  if (document.readyState === 'complete') iniciar(); else addEventListener('load', iniciar);
+  setInterval(rodar, 3600e3);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) rodar(); });
+})();
+</script>
+<style id="cdx-css">
+/* ══ CLUBES ENCONTRADOS NOS EXTRATOS (26/10/2026) ══ */
+.cdx{ display:flex; flex-direction:column; gap:14px; }
+.cdx-card{ border:1px solid var(--fio); border-radius:18px; padding:16px; display:grid; gap:12px; position:relative; overflow:hidden;
+  background:linear-gradient(150deg, color-mix(in srgb, var(--marca) 14%, transparent), transparent 55%), var(--sup-1, transparent); }
+.cdx-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--marca); }
+.cdx-card.fora{ opacity:.55; }
+.cdx-topo{ display:flex; align-items:center; gap:12px; }
+.cdx-topo .disco-prog{ width:40px; height:40px; flex:0 0 40px; }
+.cdx-topo > div{ flex:1; min-width:0; }
+.cdx-topo b{ display:block; color:var(--giz); font:700 calc(15.5px * var(--esc)) var(--f-d, inherit); }
+.cdx-topo small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.cdx-topo label{ display:flex; align-items:center; gap:7px; color:var(--grafite); font-size:calc(13px * var(--esc)); cursor:pointer; flex-shrink:0; }
+.cdx-meses{ display:flex; flex-wrap:wrap; gap:5px; }
+.cdx-meses span{ font:600 calc(11.5px * var(--esc)) var(--f-m, inherit); padding:3px 8px; border-radius:99px; border:1px solid var(--fio); color:var(--grafite); }
+.cdx-meses span.b{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+.cdx-grade{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
+@media (max-width:760px){ .cdx-grade{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media (max-width:520px){ .cdx-grade{ grid-template-columns:minmax(0,1fr); } }
+.cdx-nota{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.cdx-nota b{ color:var(--giz); }
+</style>
+<script id="cdx-js">
+/* Créditos de clube que vieram do extrato (Azul, Livelo, Esfera) sem assinatura
+   cadastrada: a Torre reconhece o padrão (todo mês, no mesmo dia) e propõe o
+   cadastro. O plano é o menor crédito que se repete e coincide com um plano do
+   catálogo; o resto do mês é bônus. Você confere antes de gravar. */
+function cdxModa(arr){ const c = {}; arr.forEach(v => c[v] = (c[v] || 0) + 1); return Number(Object.keys(c).sort((a, b) => c[b] - c[a] || b - a)[0]); }
+function clubesDoExtrato(){
+  const ign = (DB.cfg && DB.cfg.cdxIgnorar) || {};
+  const grupos = {};
+  (DB.lancamentos || []).filter(l => l.tipo === 'clube' && l.imp && !l.assinaturaId && !l.bonusClube && Number(l.qtd) > 0 && l.data)
+    .forEach(l => { const k = l.contaId + '|' + l.prog; (grupos[k] = grupos[k] || []).push(l); });
+  const out = [], corte45 = somaDias(-45), corte13 = somaDias(-400);
+  Object.entries(grupos).forEach(([k, ls]) => {
+    const [contaId, p] = k.split('|');
+    if (ign[k] || !(DB.contas || []).some(c => c.id === contaId)) return;
+    if ((DB.assinaturas || []).some(a => a.contaId === contaId && a.prog === p && a.status === 'ativa')) return;
+    const cat = catalogoDe(p); if (!cat || !cat.planos.length) return;
+    ls = ls.filter(l => l.data >= corte13).sort((a, b) => a.data.localeCompare(b.data));
+    const meses = [...new Set(ls.map(l => l.data.slice(0, 7)))];
+    if (meses.length < 3 || !ls.some(l => l.data >= corte45)) return;
+    const dia = cdxModa(ls.map(l => Number(l.data.slice(8, 10))));
+    const regulares = ls.filter(l => { const d = Number(l.data.slice(8, 10)); return Math.min(Math.abs(d - dia), 31 - Math.abs(d - dia)) <= 4; });
+    if (regulares.length < 3) return;
+    const moda = cdxModa(regulares.map(l => Number(l.qtd)));
+    const qtds = cat.planos.map(x => Number(x.qtd));
+    /* mês com mais de um crédito (adesão, bônus avulso) não diz qual é o plano */
+    const porMes = {}; regulares.forEach(l => { const m = l.data.slice(0, 7); porMes[m] = (porMes[m] || 0) + 1; });
+    const exatos = regulares.filter(l => porMes[l.data.slice(0, 7)] === 1).map(l => Number(l.qtd)).filter(q => qtds.includes(q) && q <= moda);
+    const baseQ = exatos.length ? Math.min(...exatos) : Math.max(...qtds.filter(q => q <= moda), 0);
+    const pl = cat.planos.find(x => Number(x.qtd) === baseQ) || null;
+    const ini = regulares[0].data;
+    let renova = somaMeses(12, ini); while (renova < hojeISO()) renova = somaMeses(12, renova);
+    out.push({k, contaId, prog:p, linhas:regulares, todas:ls, dia, moda, planoId:pl ? pl.id : '', bonus:pl ? Math.max(0, moda - Number(pl.qtd)) : 0,
+      inicio:ini, renova, certeza:exatos.length > 0});
+  });
+  return out.sort((a, b) => nomeConta(a.contaId).localeCompare(nomeConta(b.contaId), 'pt-BR'));
+}
+function abrirClubesDoExtrato(){
+  const L = clubesDoExtrato();
+  if (!L.length){ avisar('Nenhum clube sem cadastro nos extratos.', 'ok'); return; }
+  const opPl = (p, sel) => (catalogoDe(p) || {planos:[]}).planos.map(x => `<option value="${x.id}"${x.id === sel ? ' selected' : ''}>${esc(/\d/.test(x.n) ? x.n : x.n + ' · ' + nBR(x.qtd))}</option>`).join('');
+  const opMod = Object.entries(MODALIDADES).map(([k, v]) => `<option value="${k}"${k === 'anual_parcelado' ? ' selected' : ''}>${v}</option>`).join('');
+  const opCt = `<option value="">não informado</option>` + (DB.cartoes || []).map(c => `<option value="${c.id}">${esc(c.banco)} ${esc(c.produto || '')}${c.final ? ' · final ' + esc(c.final) : ''}</option>`).join('');
+  abrirFolha({ largura:'larga', titulo:`Clubes encontrados nos extratos <span class="etq" style="margin-left:8px">${L.length}</span>`,
+    corpo:`<div class="cdx"><p class="fraco" style="margin:0">Estes créditos de clube caem todo mês nos extratos, mas não há assinatura cadastrada. Confira o plano (o que se repete) e o bônus (o que passa do plano), e cadastre. Os créditos que já vieram do extrato passam a contar como os meses do clube, sem lançar nada em dobro.</p>
+      ${L.map((c, i) => { const pl = (catalogoDe(c.prog) || {planos:[]}).planos.find(x => x.id === c.planoId);
+        return `<div class="cdx-card" style="--marca:${prog(c.prog).cor}" data-cdx="${i}">
+        <div class="cdx-topo">${discoProg(c.prog)}<div><b>${esc(prog(c.prog).n)} · ${esc(nomeCurto(nomeConta(c.contaId)))}</b>
+          <small>${nBR(c.moda)} por mês, por volta do dia ${c.dia}${c.bonus && pl ? ` · ${esc(pl.n)} (${nBR(pl.qtd)}) + ${nBR(c.bonus)} de bônus` : ''}</small></div>
+          <label><input type="checkbox" class="cdx-ok" checked> Cadastrar</label></div>
+        <div class="cdx-meses">${c.linhas.map(l => `<span class="${pl && Number(l.qtd) > Number(pl.qtd) ? 'b' : ''}">${dataBR(l.data).slice(0, 5)} · ${nBR(l.qtd)}</span>`).join('')}</div>
+        <div class="cdx-grade">
+          <div class="campo"><label>Plano${c.certeza ? '' : ' (confira)'}</label><select class="cdx-plano">${opPl(c.prog, c.planoId)}</select></div>
+          <div class="campo"><label>Modalidade</label><select class="cdx-mod">${opMod}</select></div>
+          <div class="campo"><label>Início</label><input type="date" class="cdx-ini" value="${c.inicio}"></div>
+          <div class="campo"><label>Próxima renovação</label><input type="date" class="cdx-ren" value="${c.renova}"></div>
+          <div class="campo"><label>Valor pago (R$)</label><input type="text" inputmode="decimal" data-moeda class="cdx-valor" value=""></div>
+          <div class="campo"><label>Cartão que paga</label><select class="cdx-cartao">${opCt}</select></div>
+          <div class="campo"><label>Bônus por mês</label><input type="text" inputmode="numeric" class="cdx-bonus" value="${nBR(c.bonus)}"></div>
+          <div class="campo"><label>Meses de bônus</label><input type="number" min="0" max="24" class="cdx-bmeses" value="${c.bonus ? 12 : 0}"></div>
+        </div>
+        ${c.certeza ? '' : `<div class="cdx-nota">Nenhum mês veio só com o valor do plano, então o plano é um palpite. <b>Confira no app</b> qual é o plano e ajuste acima.</div>`}
+      </div>`; }).join('')}</div>`,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><div class="esticar"></div><button class="bt fantasma" id="cdxIgnorar">Não são clubes</button><button class="bt primario" id="cdxSalvar"><svg><use href="#i-ok"/></svg>Cadastrar clubes</button>` });
+  const preencher = card => {
+    const c = L[Number(card.dataset.cdx)], pl = (catalogoDe(c.prog) || {planos:[]}).planos.find(x => x.id === card.querySelector('.cdx-plano').value);
+    const mod = card.querySelector('.cdx-mod').value, v = card.querySelector('.cdx-valor');
+    if (pl && !v.dataset.mexeu){ try { v.value = moedaTxt(valorCobranca(pl, mod, mod === 'anual_parcelado' ? 12 : 1) || 0); } catch(_){} }
+    if (pl){ const b = card.querySelector('.cdx-bonus'); if (!b.dataset.mexeu) b.value = nBR(Math.max(0, c.moda - Number(pl.qtd))); }
+  };
+  document.querySelectorAll('.cdx-card').forEach(card => {
+    preencher(card);
+    card.querySelectorAll('.cdx-plano, .cdx-mod').forEach(e => e.onchange = () => preencher(card));
+    card.querySelectorAll('.cdx-valor, .cdx-bonus').forEach(e => e.oninput = () => { e.dataset.mexeu = '1'; });
+    card.querySelector('.cdx-ok').onchange = e => card.classList.toggle('fora', !e.target.checked);
+  });
+  $('#cdxIgnorar').onclick = () => {
+    const marc = [...document.querySelectorAll('.cdx-card')].filter(card => card.querySelector('.cdx-ok').checked);
+    if (!marc.length){ avisar('Marque os que não são clubes.', 'alerta'); return; }
+    DB.cfg.cdxIgnorar = DB.cfg.cdxIgnorar || {}; marc.forEach(card => { DB.cfg.cdxIgnorar[L[Number(card.dataset.cdx)].k] = hojeISO(); });
+    salvar(); fecharFolha(); avisar('Combinado: esses créditos não pedem mais cadastro de clube.', 'ok', 4000);
+  };
+  $('#cdxSalvar').onclick = () => {
+    let n = 0, ligados = 0;
+    document.querySelectorAll('.cdx-card').forEach(card => {
+      if (!card.querySelector('.cdx-ok').checked) return;
+      const c = L[Number(card.dataset.cdx)];
+      const r = cdxCadastrar(c, {planoId:card.querySelector('.cdx-plano').value, modalidade:card.querySelector('.cdx-mod').value,
+        inicio:card.querySelector('.cdx-ini').value || c.inicio, renova:card.querySelector('.cdx-ren').value || c.renova,
+        valor:moedaNum(card.querySelector('.cdx-valor').value) || 0, cartaoId:card.querySelector('.cdx-cartao').value,
+        bonus:Number(String(card.querySelector('.cdx-bonus').value).replace(/\D/g, '')) || 0, bonusMeses:Number(card.querySelector('.cdx-bmeses').value) || 0});
+      if (r){ n++; ligados += r.ligados; }
+    });
+    salvar(); fecharFolha(); try { aplicarTudo(); } catch(_){} try { renderClubes(); } catch(_){}
+    avisar(n ? `${n} ${n > 1 ? 'clubes cadastrados' : 'clube cadastrado'}. ${ligados} ${ligados === 1 ? 'crédito do extrato virou' : 'créditos do extrato viraram'} mês do clube, sem lançar nada em dobro.` : 'Nada marcado para cadastrar.', n ? 'ok' : 'alerta', 7000);
+  };
+}
+/* Cria a assinatura e liga cada crédito do extrato ao mês do clube. Esses meses
+   ficam marcados como completos: o bônus só é lançado nos meses que vierem. */
+function cdxCadastrar(c, f){
+  const cat = catalogoDe(c.prog), pl = cat && cat.planos.find(x => x.id === f.planoId); if (!pl) return null;
+  const anual = String(f.modalidade).startsWith('anual');
+  const a = {id:uid(), contaId:c.contaId, prog:c.prog, planoId:pl.id, modalidade:f.modalidade, valor:f.valor, parcelas:f.modalidade === 'anual_parcelado' ? 12 : 1,
+    inicio:f.inicio, renova:f.renova, fid:pl.fid || 0, status:'ativa', cartaoId:f.cartaoId || '', cartao:'', obs:'Cadastrado pelos créditos do extrato.', cancelarAntes:0};
+  if (a.cartaoId){ const cr = (DB.cartoes || []).find(x => x.id === a.cartaoId); if (cr) a.cartao = `${cr.banco || ''} ${cr.produto || ''}`.trim(); }
+  if (f.bonus > 0 && f.bonusMeses > 0) a.bonus = {cada:1, pontos:f.bonus, meses:f.bonusMeses};
+  DB.assinaturas.push(a);
+  const custo = (() => { try { return Math.round(valorMensalAssin(a) * 100) / 100; } catch(_){ return 0; } })();
+  const livres = c.todas.filter(l => !l.assinaturaId);
+  let ligados = 0;
+  for (let i = 0; i <= 12; i++){
+    let d; try { d = dataDoCiclo(a, i); } catch(_){ continue; }
+    if (!d || d > hojeISO()) break;
+    const l = livres.filter(x => !x.assinaturaId && Math.abs((new Date(x.data + 'T12:00:00') - new Date(d + 'T12:00:00')) / 864e5) <= 6)
+      .sort((x, y) => Math.abs(new Date(x.data) - new Date(d)) - Math.abs(new Date(y.data) - new Date(d)))[0];
+    if (!l) continue;
+    l.assinaturaId = a.id; l.cicloClube = i; l.custo = custo; if (a.cartaoId) l.cartaoId = a.cartaoId;
+    l.bonusIncluso = true;   /* o extrato é o que caiu de verdade: com bônus ou sem, este mês já está completo */
+    ligados++;
+  }
+  try { sincronizarBonusClube(a); } catch(_){}
+  return {a, ligados};
+}
+(function(){
+  /* o bônus não é lançado de novo no mês em que o extrato já trouxe plano + bônus juntos */
+  if (typeof sincronizarBonusClube === 'function'){
+    const sb = sincronizarBonusClube;
+    sincronizarBonusClube = function(a){
+      const r = sb.apply(this, arguments);
+      try {
+        const base = new Set((DB.lancamentos || []).filter(l => l.assinaturaId === a.id && l.bonusIncluso).map(l => l.id));
+        if (base.size){
+          const tirar = (DB.lancamentos || []).filter(l => l.assinaturaId === a.id && l.bonusClube && !l.ext && (DB.lancamentos || []).some(b => base.has(b.id) && b.data === l.data));
+          tirar.forEach(l => { DB.lancamentos.splice(DB.lancamentos.indexOf(l), 1); const s = DB.saldos.find(x => x.contaId === a.contaId && x.prog === a.prog); if (s) s.qtd = Math.max(0, (Number(s.qtd) || 0) - (Number(l.qtd) || 0)); });
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* aviso na tela inicial e no fim da importação do extrato */
+  if (typeof avisos === 'function'){
+    const av = avisos;
+    avisos = function(){
+      const L = av.apply(this, arguments);
+      try { const n = clubesDoExtrato().length;
+        if (n) L.push({grau:2, tipo:'clube', dias:null, curto:'Clubes sem cadastro', t:`${n} ${n > 1 ? 'clubes encontrados' : 'clube encontrado'} nos extratos sem cadastro`,
+          s:'Os créditos caem todo mês, mas a Torre não sabe o plano, o custo nem a renovação. Clique para conferir e cadastrar.', ir:['fabrica','fb-clubes'], fn:'abrirClubesDoExtrato()'}); } catch(_){}
+      return L;
+    };
+  }
+  /* a importação mora num bloco que carrega depois deste: liga no fim do carregamento */
+  const ligarImp = () => { if (typeof impImportar !== 'function' || impImportar.__cdx) return;
+    const ii = impImportar;
+    impImportar = function(){
+      const r = ii.apply(this, arguments);
+      setTimeout(() => { try { const n = clubesDoExtrato().length; if (n && !document.body.classList.contains('folha-aberta'))
+        avisar(`${n} ${n > 1 ? 'clubes encontrados' : 'clube encontrado'} no extrato sem cadastro. <button type="button" class="bt p" onclick="abrirClubesDoExtrato()">Conferir</button>`, 'info', 12000); } catch(_){} }, 900);
+      return r;
+    };
+    impImportar.__cdx = true;
+  };
+  if (document.readyState === 'complete') ligarImp(); else addEventListener('load', ligarImp);
+  setTimeout(ligarImp, 3000);
+})();
+</script>
+
+
+
 
 <style id="sub-css">
 .mr-previa.repetido.vai-subst{ opacity:1; }
@@ -69107,15 +69568,25 @@ function impAnalisar(p, contaId){
         const t = perto(livres.filter(l => l.tipo === 'transferencia' && Number(l.qtd) > 0 && Math.abs(impDias(l.data, x.data)) <= 3 && Math.abs(Number(l.qtd) - x.qtd) <= x.qtd * 0.01));
         if (t){ usados.add(t.id); x.estado = 'existe'; x.lancId = t.id; x.difMao = x.qtd - Number(t.qtd); return; }
       }
-      /* crédito do clube lançado à mão em duas linhas (10.000 do plano + 15.000 do bônus) */
-      if (x.tipo === 'clube'){
-        const dia = livres.filter(l => l.tipo === 'clube' && Math.abs(impDias(l.data, x.data)) <= 1);
-        if (dia.length > 1 && dia.reduce((s, l) => s + (Number(l.qtd) || 0), 0) === x.qtd){
-          dia.forEach(l => usados.add(l.id)); x.estado = 'existe'; x.lancId = dia[0].id; x.lancIds = dia.map(l => l.id); return;
-        }
-      }
     }
+    if (x.tipo === 'clube' && x.qtd > 0) x.tentarClube = true;
     x.estado = 'novo';
+  });
+  /* Segunda passada, depois que tudo o que bate exato já casou: crédito do clube
+     já lançado (sozinho na data, ou à mão em duas linhas, plano + bônus) em até
+     6 dias. A soma igual só ganha o vínculo; diferente, corrige a linha que a
+     Torre lançou sozinha para o valor que o programa creditou. */
+  if (contaId) itens.filter(x => x.estado === 'novo' && x.tentarClube).forEach(x => {
+    const livres = daConta.filter(l => !l.ext && !usados.has(l.id) && l.data && l.tipo === 'clube' && Number(l.qtd) > 0);
+    const perto = arr => arr.sort((a, b) => Math.abs(impDias(a.data, x.data)) - Math.abs(impDias(b.data, x.data)))[0];
+    const base = perto(livres.filter(l => !l.bonusClube && Math.abs(impDias(l.data, x.data)) <= 6));
+    if (!base) return;
+    const grupo = livres.filter(l => Math.abs(impDias(l.data, base.data)) <= 1 && (l.id === base.id || (base.assinaturaId ? l.assinaturaId === base.assinaturaId : !l.assinaturaId)));
+    const soma = grupo.reduce((s2, l) => s2 + (Number(l.qtd) || 0), 0);
+    if (soma === x.qtd && grupo.length > 1){ grupo.forEach(l => usados.add(l.id)); x.estado = 'existe'; x.lancId = base.id; x.lancIds = [base.id].concat(grupo.filter(l => l.id !== base.id).map(l => l.id)); return; }
+    if (!base.autoClube) return;
+    const outros = soma - (Number(base.qtd) || 0);
+    if (x.qtd - outros > 0){ grupo.forEach(l => usados.add(l.id)); x.estado = 'atualiza'; x.lancId = base.id; x.antes = Number(base.qtd); x.qtdLanc = x.qtd - outros; x.lancIds = grupo.filter(l => l.id !== base.id).map(l => l.id); }
   });
   /* Transferência que chegou: casa com a saída "a conferir" do banco de origem
      (Esfera, Livelo...), da mesma conta, em até 5 dias. O crédito vem maior que
@@ -69146,7 +69617,7 @@ function impAnalisar(p, contaId){
   });
   const novos = itens.filter(x => x.estado === 'novo');
   const antes = impSomaDiario(daConta);
-  const atualiza = itens.filter(x => x.estado === 'atualiza'), mudou = Object.fromEntries(atualiza.map(x => [x.lancId, x.qtd]));
+  const atualiza = itens.filter(x => x.estado === 'atualiza'), mudou = Object.fromEntries(atualiza.map(x => [x.lancId, x.qtdLanc != null ? x.qtdLanc : x.qtd]));
   const depois = impSomaDiario(daConta.map(l => mudou[l.id] !== undefined ? {...l, qtd:mudou[l.id]} : l).concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:i}))));
   const saldo = Number(p.saldo);
   const simulado = daConta.map(l => mudou[l.id] !== undefined ? {...l, qtd:mudou[l.id]} : l).concat(novos.map((x, i) => ({data:x.data, qtd:x.qtd, tipo:x.tipo, criadoEm:9e15 + i})));
@@ -69269,7 +69740,16 @@ function impImportar(p, contaId){
   r.existe.forEach(x => {
     (x.lancIds || [x.lancId]).forEach((id, i) => { const l = DB.lancamentos.find(y => y.id === id); if (l && !l.ext) l.ext = i ? x.ext + '#' + (i + 1) : x.ext; });
   });
-  r.atualiza.forEach(x => { const l = DB.lancamentos.find(y => y.id === x.lancId); if (l){ l.qtd = x.qtd; l.nota = x.nota; l.data = x.data; } });
+  r.atualiza.forEach(x => {
+    const l = DB.lancamentos.find(y => y.id === x.lancId); if (!l) return;
+    if (x.qtdLanc != null){
+      l.qtd = x.qtdLanc; if (!l.ext) l.ext = x.ext;
+      l.nota = `${String(l.nota || '').replace(/\s*·\s*lançado sozinho na data/, '')} · conferido no extrato (${nBR(x.qtd)} no mês)`;
+      (x.lancIds || []).forEach((id, i) => { const o = DB.lancamentos.find(y => y.id === id); if (o && !o.ext) o.ext = x.ext + '#' + (i + 2); });
+      return;
+    }
+    l.qtd = x.qtd; l.nota = x.nota; l.data = x.data;
+  });
   r.novos.slice().reverse().forEach((x, i) => {
     const l = { id:uid(), criadoEm:agora + i, data:x.data, contaId, prog:r.progK, tipo:x.tipo, qtd:x.qtd, custo:0,
       forma:x.organico ? 'organico' : '', cartaoId:'', parcelas:x.organico ? 0 : 1, nota:x.nota, origem:'', saiu:0,
