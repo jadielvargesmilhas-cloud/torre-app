@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 00:20';
+const BUILD = '2026-10-26 09:50';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -62935,6 +62935,12 @@ ccCartaoHTML = function(c){
 .rn-card .rn-acoes button.rl-depois{ color:#F2C14E; border-color:color-mix(in srgb, #F2C14E 50%, transparent); background:color-mix(in srgb, #F2C14E 12%, transparent); }
 .rn-card .rn-acoes{ gap:6px; }
 .rn-card .rn-acoes button{ padding:8px 10px; }
+/* lembrete do clube: três ícones, o nome aparece ao passar o mouse */
+.rn-card .rn-acoes button.rl-ico{ width:44px; height:38px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+.rn-card .rn-acoes button.rl-ico svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.rn-card .rn-acoes button.rl-up{ color:#06182C; background:#6FB7FF; border-color:transparent; }
+.rn-card .rn-acoes button.rl-down{ color:#F2C14E; border-color:color-mix(in srgb, #F2C14E 50%, transparent); background:color-mix(in srgb, #F2C14E 12%, transparent); }
+.rn-card .rn-acoes button.rl-ico[aria-disabled="true"]{ opacity:.35; cursor:not-allowed; }
 </style>
 <script id="rl-js">
 /* ══ LEMBRETE DA RENOVAÇÃO ══════════════════════════════════════════════════════
@@ -62950,6 +62956,52 @@ ccCartaoHTML = function(c){
    Guardado na própria assinatura: a.lembrete = {em, criado, status, vistas}. */
 const _rlSessao = new Set();
 const _rlDia = iso => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); };
+/* Planos acima (dir 1) ou abaixo (dir -1) do atual, pela quantidade de pontos
+   por mês: é o que define a escada, qualquer que seja o nome do plano. */
+function rlPlanos(a, dir){
+  const planos = ((typeof catalogoDe === 'function' && catalogoDe(a.prog)) || {planos:[]}).planos || [];
+  const at = planos.find(p => p.id === a.planoId); const q = Number(at && at.qtd) || 0;
+  if (!at) return [];
+  return planos.filter(p => p.id !== a.planoId && (dir > 0 ? Number(p.qtd) > q : Number(p.qtd) > 0 && Number(p.qtd) < q))
+    .sort((x, y) => dir > 0 ? x.qtd - y.qtd : y.qtd - x.qtd);
+}
+/* Abre a edição do clube só com os planos maiores (ou menores), já no degrau
+   vizinho. Salvando com outro plano, o lembrete se encerra sozinho. */
+function rlTrocarPlano(a, dir){
+  const lista = rlPlanos(a, dir); if (!lista.length) return;
+  editarAssinatura(a.id);
+  /* A folha de edição tira um retrato dos campos dois quadros depois de abrir e
+     só acende o Salvar quando algo difere dele. A troca de plano entra depois
+     do retrato: assim o plano novo já conta como mudança e o Salvar vem aceso. */
+  const aplicar = () => {
+    const sel = document.getElementById('asPlano'); if (!sel) return;
+    const ok = new Set(lista.map(p => p.id));
+    [...sel.options].forEach(o => { if (!ok.has(o.value)) o.remove(); });
+    sel.value = lista[0].id;
+    sel.dispatchEvent(new Event('input', {bubbles:true})); sel.dispatchEvent(new Event('change', {bubbles:true}));
+  };
+  requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(aplicar)));
+  const corpo = document.getElementById('folhaCorpo');
+  if (corpo){
+    const n = document.createElement('div'); n.className = 'nota'; n.style.marginBottom = '14px'; n.id = 'rlTrocaNota';
+    n.innerHTML = `<svg><use href="#i-info"/></svg><div><b style="display:inline">${dir > 0 ? 'Upgrade' : 'Downgrade'}:</b> no campo <b style="display:inline">Plano</b> estão só os planos ${dir > 0 ? 'maiores' : 'menores'} que o atual. Escolha, confira o valor pago e clique em <b style="display:inline">Salvar Atualização</b>.</div>`;
+    corpo.insertBefore(n, corpo.firstChild);
+  }
+  _rlTroca = {id:a.id, antes:a.planoId};
+}
+/* Conferido a cada salvar: a edição aberta pelo Upgrade/Downgrade gravou outro
+   plano, então o lembrete daquele clube está resolvido. */
+let _rlTroca = null;
+function rlConferirTroca(){
+  if (!_rlTroca) return false;
+  const g = (DB.assinaturas || []).find(x => x.id === _rlTroca.id);
+  if (!g){ _rlTroca = null; return false; }
+  if (g.planoId === _rlTroca.antes) return false;
+  _rlTroca = null;
+  if (!g.lembrete || g.lembrete.status !== 'ativo') return false;
+  g.lembrete.status = 'resolvido'; g.lembrete.resolvidoEm = hojeISO(); g.renovaOk = g.renova;
+  return true;
+}
 function rlAtivo(a){ return a && a.lembrete && a.lembrete.status === 'ativo' && a.lembrete.renova === a.renova; }
 function rlPromocoes(a){
   const vistas = new Set((a.lembrete && a.lembrete.vistas) || []);
@@ -63004,10 +63056,19 @@ function rlPromocoes(a){
         pilha.appendChild(el);
       }
       if (hojeISO() >= L.em){
-        const el = cartao('rl-card', 'Lembrete', `${nome} ${quando}`,
-          `<p>Hoje é o dia que você marcou: procure um <b style="display:inline">clube melhor para fazer upgrade</b> ou uma <b style="display:inline">promoção de clube</b> antes de ${dataBR(a.renova)}.</p>`,
-          `<button type="button" class="rl-ver">Ver promoções de clube</button><button type="button" class="rl-ok">Resolvido</button>`, 'dia:' + a.id);
-        el.querySelector('.rl-ver').onclick = irClube;
+        /* Três ícones: subir de plano, descer de plano, manter. O nome de cada um
+           aparece ao passar o mouse; o clique já abre a edição do clube. */
+        const maior = rlPlanos(a, 1), menor = rlPlanos(a, -1);
+        const texto = d < 0
+          ? `<p>O clube renovou em ${dataBR(a.renova)}. Se quiser mudar, suba ou desça de plano. Se não, mantenha.</p>`
+          : `<p>Hoje é o dia que você marcou: antes de ${dataBR(a.renova)}, veja se vale subir ou descer de plano.</p>`;
+        const btn = (cls, dica, path, liga) => `<button type="button" class="rl-ico ${cls}" data-dica="${dica}" aria-label="${dica}"${liga ? '' : ' aria-disabled="true"'}><svg viewBox="0 0 24 24"><path d="${path}"/></svg></button>`;
+        const el = cartao('rl-card', 'Lembrete', `${nome} ${quando}`, texto,
+          btn('rl-up', maior.length ? 'Upgrade: escolher um plano maior' : 'Upgrade: já está no maior plano', 'M12 19V5M5.5 11.5L12 5l6.5 6.5', maior.length)
+          + btn('rl-down', menor.length ? 'Downgrade: escolher um plano menor' : 'Downgrade: já está no menor plano', 'M12 5v14M5.5 12.5L12 19l6.5-6.5', menor.length)
+          + btn('rl-ok', 'Manter o plano', 'M4.5 12.5l5 5L19.5 7', true), 'dia:' + a.id);
+        el.querySelector('.rl-up').onclick = () => rlTrocarPlano(a, 1);
+        el.querySelector('.rl-down').onclick = () => rlTrocarPlano(a, -1);
         el.querySelector('.rl-ok').onclick = fim;
         pilha.appendChild(el);
       }
@@ -63033,7 +63094,7 @@ function rlPromocoes(a){
   };
   if (typeof salvar === 'function'){
     const s = salvar;
-    salvar = function(){ const r = s.apply(this, arguments); clearTimeout(_rlT); _rlT = setTimeout(conferir, 400); return r; };
+    salvar = function(){ const r = s.apply(this, arguments); if (rlConferirTroca()){ s.apply(this, arguments); try { mostrarAvisosRenovacao(); } catch(e){ console.error(e); } } clearTimeout(_rlT); _rlT = setTimeout(conferir, 400); return r; };
   }
   setInterval(conferir, 60000);
 })();
