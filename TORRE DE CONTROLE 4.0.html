@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-27 22:00';
+const BUILD = '2026-10-28 08:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17604,10 +17604,11 @@ function renderHeroiCampanhas(){
   if (slot && alvo.parentElement !== slot) slot.appendChild(alvo);
   alvo.hidden = false; alvo.classList.remove('compacto'); alvo.dataset.area = 'promocoes';
   const NOME = {transferencia:'transferência bonificada', compra:'compra de pontos', bonificada:'compra bonificada', clube:'clube'}[tipo] || tipo;
-  const valorDe = c => tipo === 'compra' ? Number(c.desconto) || null
+  /* compra: desconto e bônus viram a mesma régua, o desconto equivalente (100% de bônus = 50% off) */
+  const valorDe = c => tipo === 'compra' ? (descontoEquivalente(c) || null)
     : tipo === 'bonificada' ? Math.max(Number(c.ptsPorReal) || 0, ...(c.faixas || []).map(f => Number(f.v) || 0)) || null
     : Number(c.bonus) || null;
-  const fmt = v => v == null ? 'n/d' : tipo === 'bonificada' ? nBRdec(v) + ' pts/R$' : '+' + nBRdec(Math.round(v * 10) / 10) + '%';
+  const fmt = v => v == null ? 'n/d' : tipo === 'bonificada' ? nBRdec(v) + ' pts/R$' : tipo === 'compra' ? nBRdec(Math.round(v * 10) / 10) + '% off' : '+' + nBRdec(Math.round(v * 10) / 10) + '%';
   const fmtCurto = v => tipo === 'bonificada' ? nBRdec(v) : Math.round(v) + '%';
   const rota = c => c.tipo === 'bonificada' ? `${c.parceiro || ''} → ${prog(c.para).n}` : c.tipo === 'clube' ? `Clube ${prog(c.para).n}` : c.de ? `${prog(c.de).n} → ${prog(c.para).n}` : prog(c.para).n;
   const todas = vivas.concat(mortas);
@@ -17630,9 +17631,9 @@ function renderHeroiCampanhas(){
   const media = meses.length ? soma(meses.map(k => porMes[k])) / meses.length : null;
   const destinos = {}; todas.filter(c => !c.fim || c.fim >= somaDias(-90)).forEach(c => { if (c.para) destinos[c.para] = (destinos[c.para] || 0) + 1; });
   montarHeroi(alvo, {
-    rot: melhor ? `Melhor ${tipo === 'compra' ? 'desconto' : tipo === 'bonificada' ? 'oferta' : 'bônus'} no ar · ${NOME}` : `Campanhas de ${NOME}`,
-    valor: melhor ? fmt(melhor.v) : `0<small> no ar</small>`,
-    linha: melhor ? `<span><b>${esc(rota(melhor.c))}</b></span>${media != null ? `<span class="heroi-chip ${melhor.v >= media ? 'sobe' : 'desce'}">${melhor.v >= media ? 'acima' : 'abaixo'} da média de ${fmt(media)}</span>` : ''}`
+    rot: melhor ? `Melhor ${tipo === 'compra' || tipo === 'bonificada' ? 'oferta' : 'bônus'} no ar · ${NOME}` : `Campanhas de ${NOME}`,
+    valor: melhor ? (tipo === 'compra' && !(Number(melhor.c.desconto) > 0) && Number(melhor.c.bonus) > 0 ? `+${nBRdec(Number(melhor.c.bonus))}%<small> de bônus</small>` : fmt(melhor.v)) : `0<small> no ar</small>`,
+    linha: melhor ? `<span><b>${esc(rota(melhor.c))}</b></span>${tipo === 'compra' && !(Number(melhor.c.desconto) > 0) && Number(melhor.c.bonus) > 0 ? `<span class="heroi-chip">equivale a ${fmt(melhor.v)}</span>` : ''}${media != null ? `<span class="heroi-chip ${melhor.v >= media ? 'sobe' : 'desce'}">${melhor.v >= media ? 'acima' : 'abaixo'} da média de ${fmt(media)}</span>` : ''}`
       : `<span>${ultima ? `A última fechou em ${dataBR(ultima)}` : 'Nenhuma no ar agora'}</span>`,
     numeros:[[nBR(vivas.length), vivas.length === 1 ? 'campanha no ar' : 'campanhas no ar'],
       [prox ? (diasAte(prox.fim) === 0 ? 'hoje' : dataBR(prox.fim).slice(0, 5)) : 'n/d', prox ? `fecha primeiro · ${rota(prox)}` : 'nada fechando'],
@@ -20614,6 +20615,12 @@ const destacarNumeros = txt => esc(txt).replace(
 /* Quanto custaria o milheiro no destino se a campanha fosse usada hoje, com o
    custo médio atual da origem. Uma função só para o cartão e a janela: dois
    cálculos separados acabariam discordando em alguma casa decimal. */
+/* desconto equivalente de uma compra: paga (1 − desconto) e recebe (1 + bônus) */
+function descontoEquivalente(c){
+  const d = (Number(c && c.desconto) || 0) / 100, b = (Number(c && c.bonus) || 0) / 100;
+  if (!(d > 0) && !(b > 0)) return 0;
+  return Math.round((1 - (1 - d) / (1 + b)) * 1000) / 10;
+}
 function cpmProjetadoCampanha(c, bonusUsado){
   const b = bonusUsado != null ? bonusUsado : (Number(c.bonus) || 0);
   if (c.tipo === 'clube') return cpmClubeSeguro(c);
@@ -62194,12 +62201,13 @@ function blackChipHTML(valor, ref, un){
   const cls = d > 0 ? 'bate' : d === 0 ? 'empata' : 'abaixo';
   const f = v => un === '%' ? nBRdec(v) + '%' : nBRdec(v) + '×';
   const tit = d > 0 ? 'Já bate a Black 2025' : d === 0 ? 'Empata com a Black 2025' : 'Abaixo da Black 2025';
-  return `<span class="bk-chip ${cls}" title="${esc(`${tit}: ${ref.txt} pagou ${f(ref.v)}. Fonte: ${BLACK_FONTE}`)}"><svg><use href="#i-${d >= 0 ? 'fogo' : 'grafico'}"/></svg>${tit} <small>· ${esc(ref.nivel === 'loja' || ref.nivel === 'rota' ? 'lá' : ref.nivel === 'programa' ? 'melhor loja' : 'na compra')}: ${f(ref.v)}</small></span>`;
+  return `<span class="bk-chip ${cls}" title="${esc(`${tit}: ${ref.txt} pagou ${f(ref.v)}. Fonte: ${BLACK_FONTE}`)}"><svg><use href="#i-${d >= 0 ? 'fogo' : 'grafico'}"/></svg>${tit} <small>· ${ref.nivel === 'compra' ? (ref.e && ref.e.tipoV === 'bonus' && ref.e.bonus ? `lá: +${nBRdec(ref.e.bonus)}% de bônus` : `lá: ${f(ref.v)} off`) : `${esc(ref.nivel === 'loja' || ref.nivel === 'rota' ? 'lá' : 'melhor loja')}: ${f(ref.v)}`}</small></span>`;
 }
 function blackDaLoja(l){ const v = Number(l.promo) || Number(l.base) || 0; return l.porDolar ? null : {v, ref:blackRefLoja(l.prog, l.n)}; }
 function blackDaCampanha(c){
   if (c.tipo === 'transferencia') return {v:Number(c.bonus) || 0, ref:blackRefTransf(c.de, c.para), un:'%'};
-  if (c.tipo === 'compra'){ const desc = Number(c.desconto) > 0; return {v:desc ? Number(c.desconto) : Number(c.bonus) || 0, ref:blackRefCompra(c.para, desc ? 'desc' : 'bonus'), un:'%'}; }
+  /* a Black 2025 guarda a compra como desconto equivalente (100% de bônus = 50%): compara na mesma régua */
+  if (c.tipo === 'compra'){ const desc = Number(c.desconto) > 0; return {v:descontoEquivalente(c), ref:blackRefCompra(c.para, desc ? 'desc' : 'bonus'), un:'%'}; }
   if (c.tipo === 'bonificada'){ const top = Math.max(0, ...(c.faixas || []).map(f => Number(f.v) || 0), Number(c.mult) || 0); return {v:top, ref:blackRefLoja(c.para, c.loja || c.n || ''), un:'×'}; }
   return null;
 }
@@ -63248,6 +63256,8 @@ function rlPromocoes(a){
         avisar(`Combinado: no dia ${dataBR(dia)} a Torre lembra de procurar um clube melhor ou uma promoção. Se aparecer promoção do clube ${esc(prog(a.prog).n)} antes, ela avisa na hora.`, 'ok', 7000);
       };
       ac.insertBefore(b, ac.querySelector('[data-rn-ok]'));
+      /* com "Lembrar em", o "Depois" sobra: o X do canto continua fechando */
+      const dp = ac.querySelector('button[data-rn-fechar]'); if (dp) dp.remove();
     });
     /* lembretes marcados */
     pilha.querySelectorAll('[data-rl]').forEach(x => x.remove());
@@ -71501,17 +71511,17 @@ function abrirHistItem(id){
   const ICO_TROCA = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg>';
   window.mexBlocoHTML = function(v){
     const {c, cx, k} = v.mex, mo = c.moeda, cs = cartoes();
-    const opc = cs.length ? cs.map(x => `<option value="${esc(x.id)}"${k && x.id === k.id ? ' selected' : ''}>${esc(x.titular ? nomeCurto(x.titular) + ' · ' : '')}${esc(x.banco)} ${esc(x.produto)}${x.final ? ' ·' + esc(String(x.final).slice(-4)) : ''}</option>`).join('')
+    const opc = cs.length ? cs.map(x => `<option value="${esc(x.id)}"${k && x.id === k.id ? ' selected' : ''}>${esc(x.banco)} ${esc(x.produto)}${x.final ? ' ·' + esc(String(x.final).slice(-4)) : ''}${x.titular && !/^(titular|dependente|adicional)$/i.test(String(x.titular).trim()) ? ' · ' + esc(nomeCurto(x.titular)) : ''}</option>`).join('')
       : '<option value="">Cartão comum (IOF de 3,5%)</option>';
     const cambio = cx ? `<span class="mxe-cambio">${MOEDAS[mo].s} 1 = <b>${brl2(cx.v).replace('R$ ', 'R$ ')}</b><span>${cx.hoje ? `hoje, ${new Date(cx.em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}` : `do anúncio${cx.em ? ', ' + esc(cx.em) : ''}`}</span><button type="button" data-mex-cambio="${esc(mo)}">Atualizar</button></span>`
       : `<span class="mxe-cambio">Sem câmbio<button type="button" data-mex-cambio="${esc(mo)}">Buscar</button></span>`;
-    if (!cx) return `<div class="mxe" data-mex="${esc(c.id)}"><div class="mxe-top"><div class="mxe-pagar"><label for="mxCartao">Pagar com</label><select id="mxCartao" data-mex-cartao>${opc}</select></div>${cambio}</div><p class="mxe-nota alerta">Toque em Buscar para trazer o câmbio de hoje e ver o milheiro em reais.</p></div>`;
+    if (!cx) return `<div class="mxe" data-mex="${esc(c.id)}"><div class="mxe-top"><div class="mxe-pagar"><label for="mxCartao">Pagar com</label><select id="mxCartao" data-mex-cartao aria-label="Pagar com">${opc}</select></div>${cambio}</div><p class="mxe-nota alerta">Toque em Buscar para trazer o câmbio de hoje e ver o milheiro em reais.</p></div>`;
     const R = v.mex.R, fx = v.mex.fx;
     const z = {otimo:'var(--jade)', bom:'var(--jade)', medio:'var(--ouro)', caro:'var(--brasa)'};
     const faixas = c.faixasCompra.map(f => { const r = mexReais(f.cpm, cx.v, k), nv = veredNivelCPM(c.para, r.fim);
       return `<div class="mxe-fx-l${f === fx || f.cpm === fx.cpm ? ' melhor' : ''}" style="--zf:${z[nv] || 'var(--giz)'}"><span class="r">${f.maisDe ? 'Mais de' : 'A partir de'} <b>${nBR(f.min)}</b> · <b>+${nBRdec(f.bonus)}%</b>${f.cpm === fx.cpm ? '<em>Melhor</em>' : ''}</span><span class="m">${fmtM(f.cpm, mo)}</span><span class="v">${brl2(r.fim)}</span></div>`; }).join('');
     return `<div class="mxe" data-mex="${esc(c.id)}" style="--z:${z[v.nivel] || 'var(--ouro)'}">
-      <div class="mxe-top"><div class="mxe-pagar"><label for="mxCartao">Pagar com</label><select id="mxCartao" data-mex-cartao>${opc}</select></div>${cambio}</div>
+      <div class="mxe-top"><div class="mxe-pagar"><label for="mxCartao">Pagar com</label><select id="mxCartao" data-mex-cartao aria-label="Pagar com">${opc}</select></div>${cambio}</div>
       <div class="mxe-conta">
         <div><small>Milheiro em ${esc(MOEDAS[mo].s)}</small><b>${fmtM(fx.cpm, mo)}</b></div>
         <div><small>Em reais (${ICO_TROCA} ${brl2(cx.v)})</small><b>${brl2(R.base)}</b></div>
@@ -71601,6 +71611,30 @@ function abrirHistItem(id){
     const box = e.target.closest('[data-mex-sim]'); _simQ[box.dataset.mexSim] = Number(String(e.target.value).replace(/\D/g, '')) || 0; pintarSim(box.dataset.mexSim);
     const i = document.getElementById('mxeQtd'); if (i) i.focus();
   });
+
+  /* lista da Torre dentro de janela (<dialog>): o navegador põe a janela por
+     cima de tudo, então a lista aberta no fim da página ficava escondida atrás
+     dela e o clique parecia não fazer nada. Agora a lista abre dentro da janela. */
+  if (typeof abrirSeletorLista === 'function'){
+    const o = abrirSeletorLista;
+    abrirSeletorLista = function(sel){
+      const r = o.apply(this, arguments);
+      try {
+        const dlg = sel && sel.closest && sel.closest('dialog[open]');
+        if (dlg && _sl && _sl.sel === sel){
+          if (_sl.fundo) dlg.appendChild(_sl.fundo);
+          dlg.appendChild(_sl.painel);
+          const dr = dlg.getBoundingClientRect(), cs = getComputedStyle(dlg);
+          const desloca = cs.transform && cs.transform !== 'none';   /* com transform, "fixed" passa a contar a partir da janela */
+          if (desloca && innerWidth > 640){
+            _sl.painel.style.top = (parseFloat(_sl.painel.style.top) - dr.top) + 'px';
+            _sl.painel.style.left = (parseFloat(_sl.painel.style.left) - dr.left) + 'px';
+          }
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
   const redesenhar = id => {
     const d = document.getElementById('dlgRegras'), c = (DB.campanhas || []).find(x => x.id === id); if (!d || !c) return;
     const sec = d.querySelector('[data-rg-sec="vale"]'); if (!sec) return;
@@ -71644,6 +71678,168 @@ function abrirHistItem(id){
       if (cx){ redesenhar(id); avisar(`Câmbio de hoje: ${brl2(cx.v)} (${cx.fonte}).`); }
       else { b.disabled = false; b.textContent = 'Atualizar'; avisar('Não consegui buscar o câmbio agora. Sigo com o do anúncio.', 'alerta', 6000); }
     });
+  });
+})();
+</script>
+
+<style id="cpz-css">
+/* ══ CARTÃO DE CAMPANHA, NOVO DESENHO (27/10/2026) ═══════════════════════════
+   Uma leitura por vez, da esquerda para a direita: quem (programa), quanto
+   (bônus), quanto custa de verdade (milheiro em reais, com o veredito), e
+   até quando (prazo em anel). O histórico, os avisos e as ações aparecem ao
+   passar o mouse ou ao tocar; o cartão inteiro abre a janela da campanha. */
+article.cp.cpz{ position:relative; display:grid; gap:0; padding:0; overflow:hidden; border-radius:22px; border:1px solid var(--fio);
+  background:linear-gradient(135deg, color-mix(in srgb, var(--cz, var(--ouro)) 7%, var(--sup-1)) 0%, var(--sup-1) 46%);
+  box-shadow:0 1px 0 color-mix(in srgb, var(--giz) 4%, transparent) inset, 0 10px 30px -18px rgba(0,0,0,.45);
+  transition:transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s, border-color .22s; cursor:pointer; }
+article.cp.cpz::before{ content:''; position:absolute; inset:0 auto 0 0; width:4px; background:var(--cz, var(--ouro)); opacity:.9; }
+article.cp.cpz:hover{ transform:translateY(-2px); border-color:color-mix(in srgb, var(--cz, var(--ouro)) 40%, var(--fio)); box-shadow:0 18px 40px -20px rgba(0,0,0,.55); }
+article.cp.cpz:focus-visible{ outline:2px solid var(--ouro); outline-offset:3px; }
+.cpz-topo{ display:flex; align-items:center; gap:14px; padding:18px 20px 0 24px; min-width:0; }
+.cpz-quem{ display:flex; align-items:center; gap:12px; min-width:0; flex:1; }
+.cpz-quem .cp-rota{ display:flex; align-items:center; gap:10px; min-width:0; }
+.cpz-quem .cp-rota-txt{ min-width:0; display:grid; gap:2px; text-align:left; justify-items:start; }
+.cpz-quem .cp-rota-nome{ display:flex; align-items:center; gap:8px; font-size:calc(16px * var(--esc)); }
+.cpz-quem .cp-rota-txt > span:not(.cp-rota-nome){ font-size:calc(12.5px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:56ch; }
+.cpz-acoes{ display:flex; gap:6px; opacity:0; transform:translateX(6px); transition:opacity .18s, transform .18s; }
+article.cp.cpz:hover .cpz-acoes, article.cp.cpz:focus-within .cpz-acoes{ opacity:1; transform:none; }
+.cpz-acoes .cp-acoes{ display:flex; gap:6px; }
+.cpz-anel{ position:relative; flex:0 0 auto; width:54px; height:54px; display:grid; place-items:center; text-align:center; }
+.cpz-anel svg{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
+.cpz-anel circle{ fill:none; stroke-width:4; }
+.cpz-anel .t{ stroke:color-mix(in srgb, var(--giz) 10%, transparent); }
+.cpz-anel .p{ stroke:var(--cu, var(--ouro)); stroke-linecap:round; transition:stroke-dashoffset .6s; }
+.cpz-anel b{ position:relative; display:block; font:700 calc(15px * var(--esc))/1 var(--f-d, inherit); color:var(--cu, var(--giz)); font-variant-numeric:tabular-nums; }
+.cpz-anel small{ position:relative; display:block; font-size:calc(9.5px * var(--esc)); letter-spacing:.06em; text-transform:uppercase; color:var(--grafite); margin-top:1px; }
+.cpz-anel.urgente .p{ animation:cpzPulsa 1.6s ease-in-out infinite; }
+@keyframes cpzPulsa{ 50%{ opacity:.45; } }
+@media (prefers-reduced-motion:reduce){ .cpz-anel.urgente .p{ animation:none; } article.cp.cpz{ transition:none; } }
+.cpz-miolo{ display:grid; grid-template-columns:minmax(150px, .9fr) minmax(170px, 1fr) minmax(0, 1.6fr); gap:0; padding:14px 20px 16px 24px; align-items:stretch; }
+.cpz-col{ padding:4px 18px; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+.cpz-col + .cpz-col{ border-left:1px solid var(--fio); }
+.cpz-col:first-child{ padding-left:0; }
+.cpz-rot{ font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.cpz-num{ font:700 calc(40px * var(--esc))/1 var(--f-d, inherit); letter-spacing:-.02em; color:var(--ouro); font-variant-numeric:tabular-nums; margin-top:6px; }
+.cpz-num-sub{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); margin-top:4px; }
+.cpz-mil{ font:700 calc(26px * var(--esc))/1.05 var(--f-d, inherit); color:var(--cz, var(--giz)); font-variant-numeric:tabular-nums; margin-top:8px; }
+.cpz-nivel{ align-self:flex-start; display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:3px 10px 3px 8px; border-radius:99px;
+  font:700 calc(11px * var(--esc))/1.4 var(--f-b, inherit); letter-spacing:.04em; color:var(--cz, var(--giz)); background:color-mix(in srgb, var(--cz, var(--giz)) 14%, transparent); }
+.cpz-nivel i{ width:7px; height:7px; border-radius:50%; background:currentColor; }
+.cpz-ins .cp-veredito{ margin:6px 0 0; font-size:calc(13.5px * var(--esc)); line-height:1.45; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.cpz-ins .cp-regua{ margin-top:22px; }
+.cpz-ins .bt-detalhes, .cpz-ins [onclick^="abrirHistoricoCampanha"]{ margin-top:6px; align-self:flex-start; }
+.cpz-pe{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 20px 14px 24px; border-top:1px solid var(--fio); background:color-mix(in srgb, var(--giz) 2.5%, transparent); }
+.cpz-pe .cp-fatos{ display:contents; }
+.cpz-pe .cp-fato, .cpz-pe .bk-chip{ margin:0; }
+.cpz-pe .bk-linha{ display:contents; }
+.cpz-pe .as-selo, .cpz-pe .adc-fato{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:99px; background:color-mix(in srgb, var(--ouro) 14%, transparent) !important;
+  border:1px solid color-mix(in srgb, var(--ouro) 40%, var(--fio)); color:var(--ouro) !important; font:700 calc(12px * var(--esc))/1.2 var(--f-b, inherit) !important; box-shadow:none !important; }
+.cpz-pe .as-selo::before{ content:'★'; font-size:11px; }
+.cpz-avisos{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:99px; border:1px solid color-mix(in srgb, var(--ouro) 35%, var(--fio)); color:var(--ouro); background:transparent;
+  font:600 calc(12px * var(--esc))/1.2 var(--f-b, inherit); cursor:pointer; }
+.cpz-avisos svg{ width:14px; height:14px; }
+.cpz-ver{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:99px; border:1px solid color-mix(in srgb, var(--anil-claro, #6aa6ff) 40%, var(--fio));
+  background:transparent; color:var(--anil-claro, var(--giz)); font:600 calc(12.5px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; transition:background .18s; }
+.cpz-ver:hover{ background:color-mix(in srgb, var(--anil-claro, #6aa6ff) 12%, transparent); }
+.cpz-ver svg{ width:14px; height:14px; }
+article.cp.cpz .vd{ margin:0 20px 14px 24px; }
+article.cp.cpz .cp-criticas{ display:none !important; }
+@media (hover:none){ .cpz-acoes{ opacity:1; transform:none; } }
+@media (max-width:760px){
+  .cpz-topo{ padding:14px 14px 0 18px; gap:10px; flex-wrap:wrap; }
+  .cpz-quem{ flex-basis:calc(100% - 70px); }
+  .cpz-acoes{ order:3; flex-basis:100%; justify-content:flex-end; }
+  .cpz-miolo{ grid-template-columns:1fr 1fr; padding:12px 14px 14px 18px; row-gap:12px; }
+  .cpz-col{ padding:2px 12px; }
+  .cpz-col.cpz-ins{ grid-column:1 / -1; border-left:0; border-top:1px solid var(--fio); padding:12px 0 0; }
+  .cpz-num{ font-size:calc(34px * var(--esc)); }
+  .cpz-mil{ font-size:calc(22px * var(--esc)); }
+  .cpz-pe{ padding:10px 14px 12px 18px; }
+  .cpz-ver{ margin-left:0; flex-basis:100%; justify-content:center; padding:10px; }
+  .cpz-quem .cp-rota-txt > span:not(.cp-rota-nome){ max-width:100%; white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+}
+</style>
+<script id="cpz-js">
+(function(){
+  const COR = {otimo:'var(--jade)', bom:'var(--jade)', medio:'var(--ouro)', caro:'var(--brasa)'};
+  const NOME = {otimo:'Ótimo', bom:'Bom', medio:'Razoável', caro:'Caro'};
+  const nivelDe = (c, cpm) => {
+    try { const v = typeof cpxVale === 'function' ? cpxVale(c) : null; if (v && v.nivel) return {nivel:v.nivel, cpm:v.cpm, rot:v.rot}; } catch(e){}
+    if (cpm != null && typeof veredNivelCPM === 'function'){ const n = veredNivelCPM(c.para, cpm); if (n) return {nivel:n, cpm}; }
+    return null;
+  };
+  const anel = (c) => {
+    const dias = diasAte(c.fim); if (dias === null) return '';
+    const ini = c.inicio ? Date.parse(c.inicio + 'T00:00:00') : null, fim = Date.parse(c.fim + 'T23:59:59');
+    const tot = ini && fim > ini ? fim - ini : 7 * 864e5, resta = Math.max(0, fim - Date.now());
+    const frac = Math.max(0.04, Math.min(1, resta / tot)), C = 2 * Math.PI * 23;
+    const cls = dias < 0 ? 'fim' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'folga';
+    const cor = dias < 0 ? 'var(--grafite)' : dias <= 1 ? 'var(--brasa)' : dias <= 5 ? 'var(--ouro)' : 'var(--jade)';
+    const txt = dias < 0 ? ['—', 'fechou'] : dias === 0 ? ['hoje', 'fecha'] : dias === 1 ? ['1', 'dia'] : [String(dias), 'dias'];
+    return `<div class="cpz-anel ${cls}" style="--cu:${cor}" title="${dias < 0 ? 'Encerrada' : `Fecha em ${dataBR(c.fim)}`}" aria-label="${dias < 0 ? 'Encerrada' : dias === 0 ? 'Fecha hoje' : `Fecha em ${dias} ${dias === 1 ? 'dia' : 'dias'}, ${dataBR(c.fim)}`}">
+      <svg viewBox="0 0 54 54" aria-hidden="true"><circle class="t" cx="27" cy="27" r="23"/><circle class="p" cx="27" cy="27" r="23" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}"/></svg>
+      <span><b>${txt[0]}</b><small>${txt[1]}</small></span></div>`;
+  };
+  const ICO_SETA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  const ICO_AV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  window.cpzMontar = function(c, h){
+    const t = document.createElement('template'); t.innerHTML = h.trim();
+    const a = t.content.querySelector('article.cp'); if (!a) return h;
+    const q = s => a.querySelector(s), tira = el => el ? el.outerHTML : '';
+    const rota = q('.cp-rota'), acoes = q('.cp-acoes'), heroN = q('.cp-num'), heroR = q('.cp-num-rot');
+    const ver = q('.cp-veredito'), regua = q('.cp-regua'), det = q('.cp-ref [onclick^="abrirHistoricoCampanha"]'), vd = q('.vd');
+    const fatos = q('.cp-miolo ~ .cp-fatos') || [...a.querySelectorAll(':scope > .cp-fatos')].pop();
+    const bk = q('.bk-linha'), crit = q('.cp-criticas');
+    /* tira do pé o milheiro (vai para a coluna dele) */
+    let cpm = null; try { cpm = cpmProjetadoCampanha(c); } catch(e){}
+    const nv = nivelDe(c, cpm), cz = nv ? COR[nv.nivel] : 'var(--ouro)';
+    const mil = nv && nv.cpm > 0 ? nv.cpm : cpm;
+    if (fatos) fatos.querySelectorAll('.cp-fato').forEach(f => { if (/Milheiro projetado/.test(f.textContent)) f.remove(); });
+    const eq = c.tipo === 'compra' && !(Number(c.desconto) > 0) && Number(c.bonus) > 0 && typeof descontoEquivalente === 'function' ? `equivale a ${nBRdec(descontoEquivalente(c))}% de desconto` : '';
+    const avisos = crit ? [...crit.querySelectorAll('.regra-limite span, .regra-livre span')].map(x => x.textContent.trim()).filter(Boolean) : [];
+    const nObrig = crit ? crit.querySelectorAll('.regra-limite').length : 0;
+    const temRegras = !!(crit && crit.querySelector('.cp-regras-bt'));
+    const urg = [...a.classList].find(k => /^cp-(urgente|atencao|folga)$/.test(k)) || '';
+    return `<article class="cp cpz ${urg}" data-camp-id="${esc(c.id)}" style="--cz:${cz}" tabindex="0" role="group" aria-label="${esc(prog(c.para).n)}: ${esc((heroN || {}).textContent || '')} ${esc((heroR || {}).textContent || '')}">
+      <div class="cpz-topo">
+        <div class="cpz-quem">${tira(rota)}</div>
+        <div class="cpz-acoes">${tira(acoes)}</div>
+        ${anel(c)}
+      </div>
+      <div class="cpz-miolo">
+        <div class="cpz-col cpz-hero"><span class="cpz-rot">${c.tipo === 'compra' && Number(c.desconto) > 0 ? 'Desconto' : c.tipo === 'clube' ? 'Clube' : 'Bônus'}</span>
+          <div class="cpz-num">${heroN ? heroN.innerHTML : ''}</div><div class="cpz-num-sub">${eq || (heroR ? esc(heroR.textContent) : '')}</div></div>
+        <div class="cpz-col cpz-custo"><span class="cpz-rot">${c.moeda ? 'Milheiro em reais' : 'Milheiro'}</span>
+          ${mil != null ? `<div class="cpz-mil">${brl2(mil)}</div>${nv ? `<span class="cpz-nivel"><i></i>${NOME[nv.nivel]}</span>` : ''}` : `<div class="cpz-mil" style="color:var(--grafite)">n/d</div><span class="cpz-num-sub">abra para calcular</span>`}</div>
+        <div class="cpz-col cpz-ins"><span class="cpz-rot">Histórico</span>${tira(ver)}${tira(regua)}${tira(det)}</div>
+      </div>
+      ${tira(vd)}
+      <div class="cpz-pe">
+        ${fatos ? fatos.innerHTML : ''}${bk ? bk.innerHTML : ''}
+        ${avisos.length ? `<button type="button" class="cpz-avisos" data-cpz-regras data-dica="${esc(avisos.join(' • '))}">${ICO_AV}${nObrig ? `${nObrig} ${nObrig === 1 ? 'regra obrigatória' : 'regras obrigatórias'}` : `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}`}</button>` : ''}
+        <button type="button" class="cpz-ver" data-cpz-regras aria-haspopup="dialog">${temRegras ? 'Ver campanha' : 'Abrir'}${ICO_SETA}</button>
+      </div>
+    </article>`;
+  };
+  if (typeof cartaoCampanha === 'function'){
+    const o = cartaoCampanha;
+    cartaoCampanha = function(c){
+      const h = o.apply(this, arguments);
+      try { return c && c.id ? cpzMontar(c, h) : h; } catch(e){ console.error(e); return h; }
+    };
+  }
+  /* o cartão inteiro abre a janela; botões, links e o olho seguem com a função deles */
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('article.cp.cpz'); if (!a) return;
+    const viaBotao = e.target.closest('[data-cpz-regras]');
+    if (!viaBotao && e.target.closest('a, button, input, select, label, .cp-regua, .vd')) return;
+    if (window.getSelection && String(getSelection()).length > 2) return;
+    abrirRegras(a.dataset.campId, a);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const a = e.target.matches && e.target.matches('article.cp.cpz') ? e.target : null; if (!a) return;
+    e.preventDefault(); abrirRegras(a.dataset.campId, a);
   });
 })();
 </script>
