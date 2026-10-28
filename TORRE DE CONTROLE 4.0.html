@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-26 20:30';
+const BUILD = '2026-10-27 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -71221,27 +71221,7 @@ function abrirHistItem(id){
     window._ocPausa = Date.now() + 1500;
     setTimeout(() => abrirContasOpcao(des, ch), 0);
   });
-  /* passar o mouse: prévia com a melhor conta */
-  let dica = null, alvoAtual = null;
-  const esconder = () => { if (dica) dica.classList.remove('on'); alvoAtual = null; };
-  document.addEventListener('mouseover', e => {
-    if (!(window.matchMedia && matchMedia('(hover: hover)').matches)) return;
-    if (document.body.classList.contains('folha-aberta') || Date.now() < (window._ocPausa || 0)){ if (dica) dica.classList.remove('on'); alvoAtual = null; return; }
-    const b = e.target.closest && e.target.closest('[data-op][data-op-des]');
-    if (!b){ if (alvoAtual) esconder(); return; }
-    if (b === alvoAtual) return; alvoAtual = b;
-    const D = ocDados(b.dataset.opDes, b.dataset.op); if (!D) return;
-    const cs = cenarios(D), m = cs[0], bx = cs.find(c => c.k === 'baixa');
-    if (!dica){ dica = document.createElement('div'); dica.className = 'oc-dica'; dica.setAttribute('role', 'tooltip'); document.body.appendChild(dica); }
-    dica.innerHTML = m ? `<em>Melhor conta aqui</em><b>${esc(nomeCurto(m.r.nome))}</b>: +${nBR(m.r.pts)} pontos${bx && bx.r.id !== m.r.id ? `<br>Baixa mais o milheiro: <b>${esc(nomeCurto(bx.r.nome))}</b> (${_ctPct(bx.r)})` : bx ? `, e o milheiro cai ${_ctPct(bx.r)}` : ''}<small>Clique para comparar todas as contas.</small>`
-      : `<em>${esc(D.o.loja.n)}</em>${nBRdec(D.o.mult)} por real na ${esc(prog(D.o.prog).n)}<small>Clique para ver as contas.</small>`;
-    const r = b.getBoundingClientRect(), w = Math.min(300, innerWidth - 24);
-    dica.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
-    dica.style.top = (r.top > 150 ? r.top - 10 : r.bottom + 10) + 'px';
-    dica.style.transform = r.top > 150 ? 'translateY(-100%)' : '';
-    requestAnimationFrame(() => dica.classList.add('on'));
-  });
-  window.addEventListener('scroll', esconder, true);
+  /* 26/10: sem prévia ao passar o mouse; o clique já abre a janela completa */
 })();
 </script>
 
@@ -71313,5 +71293,360 @@ function abrirHistItem(id){
   if (typeof salvar === 'function'){ const s = salvar; salvar = function(){ c = null; return s.apply(this, arguments); }; }
 })();
 </script>
+<style id="mex-css">
+/* ══ COMPRA EM MOEDA ESTRANGEIRA (27/10/2026) ══════════════════════════════
+   Aeroplan, United, LifeMiles… vendem em C$, US$ ou €. O milheiro em reais
+   depende do câmbio do dia e do cartão: IOF (3,5% desde jul/2025) e spread. */
+.mxe{ display:grid; gap:12px; padding:16px; border-radius:18px; border:1px solid var(--fio); background:linear-gradient(160deg, color-mix(in srgb, var(--anil-claro, #6aa6ff) 8%, var(--sup-1)), var(--sup-1) 70%); }
+.mxe-top{ display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; justify-content:space-between; }
+.mxe-pagar{ display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 260px; }
+.mxe-pagar label{ font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); white-space:nowrap; }
+.mxe-pagar select{ flex:1; min-width:0; max-width:100%; padding:9px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); font:600 calc(13.5px * var(--esc))/1.2 var(--f-b, inherit); }
+.mxe-cambio{ display:inline-flex; align-items:center; gap:8px; padding:6px 6px 6px 12px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.mxe-cambio b{ color:var(--giz); font-variant-numeric:tabular-nums; }
+.mxe-cambio button{ border:0; border-radius:99px; padding:5px 10px; background:color-mix(in srgb, var(--anil-claro, #6aa6ff) 18%, transparent); color:var(--giz); font:600 calc(12px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; }
+.mxe-cambio button[disabled]{ opacity:.55; cursor:wait; }
+.mxe-conta{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:8px; align-items:stretch; }
+.mxe-conta > div{ position:relative; padding:10px 12px; border-radius:14px; background:var(--sup-0); border:1px solid var(--fio); min-width:0; }
+.mxe-conta small{ display:block; font-size:calc(11px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mxe-conta b{ display:block; margin-top:3px; font:700 calc(16px * var(--esc))/1.15 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.mxe-conta .fim{ border-color:color-mix(in srgb, var(--z, var(--ouro)) 55%, var(--fio)); background:color-mix(in srgb, var(--z, var(--ouro)) 12%, var(--sup-0)); }
+.mxe-conta .fim b{ color:var(--z, var(--ouro)); }
+.mxe-conta input{ width:64px; margin-top:3px; padding:3px 6px; border-radius:8px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font:700 calc(15px * var(--esc))/1.1 var(--f-d, inherit); font-variant-numeric:tabular-nums; }
+.mxe-conta .pct{ display:flex; align-items:baseline; gap:3px; }
+.mxe-conta .pct span{ color:var(--grafite); font-weight:600; }
+.mxe-nota{ margin:0; font-size:calc(12px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.mxe-nota b{ color:var(--giz); }
+.mxe-nota.alerta{ color:var(--ouro); }
+.mxe-fx{ display:grid; gap:6px; }
+.mxe-fx-l{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:14px; align-items:center; padding:10px 14px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.mxe-fx-l .r b{ color:var(--giz); }
+.mxe-fx-l .r em{ font-style:normal; margin-left:8px; padding:2px 8px; border-radius:99px; font:700 calc(10.5px * var(--esc))/1.4 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase; background:color-mix(in srgb, var(--jade) 18%, transparent); color:var(--jade); }
+.mxe-fx-l .m{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+.mxe-fx-l .v{ font:700 calc(15px * var(--esc))/1 var(--f-d, inherit); font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--zf, var(--giz)); }
+.mxe-fx-l.melhor{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); }
+@media (max-width:640px){
+  .mxe{ padding:12px; }
+  .mxe-conta{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .mxe-conta .fim{ grid-column:1 / -1; }
+  .mxe-pagar{ flex-direction:column; align-items:stretch; gap:6px; }
+  .mxe-fx-l{ grid-template-columns:minmax(0,1fr) auto; }
+  .mxe-fx-l .m{ grid-column:1; font-size:calc(12px * var(--esc)); }
+  .mxe-fx-l .v{ grid-row:1 / span 2; grid-column:2; }
+}
+.mxe-sim{ display:grid; gap:12px; }
+.mxe-qtd{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.mxe-qtd label{ font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); }
+.mxe-qtd input{ width:150px; padding:9px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); font:700 calc(16px * var(--esc))/1.1 var(--f-d, inherit); font-variant-numeric:tabular-nums; }
+.mxe-qtd button{ border:1px solid var(--fio); border-radius:99px; padding:7px 12px; background:var(--sup-0); color:var(--giz); font:600 calc(12.5px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; }
+.mxe-qtd button[aria-pressed="true"]{ border-color:var(--ouro); background:color-mix(in srgb, var(--ouro) 16%, var(--sup-0)); }
+@media (max-width:640px){ .mxe-qtd input{ width:100%; } }
+</style>
+<script id="mex-js">
+(function(){
+  const IOF_PADRAO = 3.5;   /* Decreto 12.499/2025: compras no exterior com cartão */
+  const MOEDAS = {CAD:{s:'C$', n:'dólar canadense'}, USD:{s:'US$', n:'dólar'}, EUR:{s:'€', n:'euro'}, GBP:{s:'£', n:'libra'}};
+  const SIMB = s => /^C\$/.test(s) ? 'CAD' : /^US\$|^U\$/.test(s) ? 'USD' : /€/.test(s) ? 'EUR' : /£/.test(s) ? 'GBP' : '';
+  const num = s => Number(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+  const numMoeda = s => { s = String(s).trim(); return /,\d{1,2}$/.test(s) ? num(s) : Number(s.replace(/,/g, '')) || 0; };
+  const limpa = s => (typeof SEM_EMOJI === 'function' ? SEM_EMOJI(s) : String(s)).replace(/[*_~]/g, '').replace(/\s+/g, ' ').trim();
+  const fmtM = (v, m) => `${(MOEDAS[m] || {}).s || m} ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+  const pctBR = v => `${Number(v).toLocaleString('pt-BR', {maximumFractionDigits:2})}%`;
+
+  /* ── 1. leitura: faixas em moeda estrangeira, cotação e limite ───────────── */
+  window.mexLer = function(bloco){
+    const L = (bloco || []).map(limpa), out = {moeda:'', faixas:[], cotacao:null, limiteCompra:0, bonusVaria:false};
+    L.forEach(l => {
+      let m;
+      if ((m = l.match(/(?:a\s+partir\s+de|acima\s+de|mais\s+de|desde)\s+([\d.]+)\s*(mil\s+)?(?:pontos|milhas)\b.*?(\d+(?:[.,]\d+)?)\s*%\s*de\s*b[oô]nus.*?\(\s*(C\$|US\$|U\$|€|£)\s*([\d.,]+)\s*(?:o\s+|por\s+)?milheiro\s*\)/i))){
+        const mo = SIMB(m[4]); if (mo){ out.moeda = out.moeda || mo;
+          out.faixas.push({min:num(m[1]) * (m[2] ? 1000 : 1), bonus:num(m[3]), cpm:numMoeda(m[5]), maisDe:/mais\s+de|acima\s+de/i.test(l)}); }
+      }
+      if ((m = l.match(/cota[çc][aã]o.*?(?:em\s+(\d{1,2}\/\d{1,2}\/\d{4}))?\s*:?\s*R\$\s*(\d+[.,]\d{1,4})/i))){
+        const mo = /canad/i.test(l) ? 'CAD' : /euro/i.test(l) ? 'EUR' : /libra/i.test(l) ? 'GBP' : /d[óo]lar/i.test(l) ? 'USD' : '';
+        out.cotacao = {v:num(m[2]), data:m[1] || '', moeda:mo};
+      }
+      if ((m = l.match(/([\d.]+)\s*(mil\s+)?(?:pontos|milhas)\s*\(\s*limite\s+m[aá]ximo\s*\)/i))) out.limiteCompra = num(m[1]) * (m[2] ? 1000 : 1);
+      if (/b[oô]nus\s+(?:pode|podem)\s+variar/i.test(l)) out.bonusVaria = true;
+    });
+    if (!out.moeda && out.cotacao) out.moeda = out.cotacao.moeda;
+    if (out.cotacao && out.cotacao.moeda && out.moeda && out.cotacao.moeda !== out.moeda) out.cotacao = null;
+    if (out.cotacao && !(out.cotacao.v > 0.3 && out.cotacao.v < 30)) out.cotacao = null;
+    out.faixas.sort((a, b) => a.min - b.min);
+    return out;
+  };
+  const CAMPOS = ['moeda', 'faixasCompra', 'cotacaoAnuncio', 'limiteCompra', 'bonusVaria'];
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments); if (!a) return a;
+      try {
+        const x = mexLer(bloco), sg = a.sugestao;
+        if (sg && sg.tipo === 'compra' && x.faixas.length && x.moeda){
+          sg.moeda = x.moeda; sg.faixasCompra = x.faixas;
+          if (x.cotacao) sg.cotacaoAnuncio = x.cotacao;
+          if (x.limiteCompra) sg.limiteCompra = x.limiteCompra;
+          if (x.bonusVaria) sg.bonusVaria = true;
+          sg.bonus = Math.max(Number(sg.bonus) || 0, ...x.faixas.map(f => f.bonus));
+        }
+      } catch(e){ console.error(e); }
+      return a;
+    };
+  }
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = o.apply(this, arguments);
+      try {
+        const sg = m && m.sugestao;
+        if (sg && sg.faixasCompra && m.campId) (DB.campanhas || []).filter(c => c.id === m.campId || c.id.startsWith(m.campId + '-')).forEach(c => {
+          CAMPOS.forEach(k => { if (sg[k] != null) c[k] = JSON.parse(JSON.stringify(sg[k])); });
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+
+  /* ── 2. câmbio: o de hoje (busca automática) ou o do anúncio ────────────── */
+  window.mexCambio = function(c){
+    const mo = c.moeda, cx = ((DB.cfg || {}).cambio || {})[mo];
+    if (cx && cx.v > 0) return {v:cx.v, fonte:cx.fonte, em:cx.em, hoje:true};
+    if (c.cotacaoAnuncio && c.cotacaoAnuncio.v > 0) return {v:c.cotacaoAnuncio.v, fonte:'anúncio', em:c.cotacaoAnuncio.data, hoje:false};
+    return null;
+  };
+  const FONTES = [
+    {n:'AwesomeAPI', url:m => `https://economia.awesomeapi.com.br/json/last/${m}-BRL`, ler:(j, m) => { const o = j && j[m + 'BRL']; return o ? Number(o.ask || o.bid) : 0; }},
+    {n:'Frankfurter (BCE)', url:m => `https://api.frankfurter.app/latest?from=${m}&to=BRL`, ler:j => Number(j && j.rates && j.rates.BRL) || 0}
+  ];
+  window.mexAtualizarCambio = async function(mo){
+    for (const f of FONTES){
+      try {
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 7000);
+        const r = await fetch(f.url(mo), {signal:ctl.signal, cache:'no-store'}); clearTimeout(t);
+        if (!r.ok) continue;
+        const v = f.ler(await r.json(), mo);
+        if (v > 0.3 && v < 30){
+          DB.cfg = DB.cfg || {}; DB.cfg.cambio = DB.cfg.cambio || {};
+          DB.cfg.cambio[mo] = {v:Math.round(v * 10000) / 10000, fonte:f.n, em:new Date().toISOString()};
+          try { salvar(); } catch(e){}
+          return DB.cfg.cambio[mo];
+        }
+      } catch(e){}
+    }
+    return null;
+  };
+  const velho = cx => !cx || !cx.em || (Date.now() - Date.parse(cx.em)) > 6 * 3600 * 1000;
+
+  /* ── 3. o cartão: IOF e spread de cada um ───────────────────────────────── */
+  const iofDe = k => k && k.exIof != null && k.exIof !== '' ? Number(k.exIof) : IOF_PADRAO;
+  const spreadDe = k => k && k.exSpread != null && k.exSpread !== '' ? Number(k.exSpread) : 0;
+  const cartoes = () => (typeof crAtivos === 'function' ? crAtivos() : (DB.cartoes || []).filter(c => c.ativo !== false));
+  window._mexEscolha = window._mexEscolha || {};
+  window.mexCartao = function(c){
+    const cs = cartoes(); if (!cs.length) return null;
+    const esc0 = cs.find(k => k.id === _mexEscolha[c.id]); if (esc0) return esc0;
+    return cs.slice().sort((a, b) => (iofDe(a) + spreadDe(a)) - (iofDe(b) + spreadDe(b)))[0];
+  };
+  window.mexReais = function(cpmMoeda, cot, k){
+    const base = cpmMoeda * cot, comIof = base * (1 + iofDe(k) / 100), fim = comIof * (1 + spreadDe(k) / 100);
+    return {base, comIof, fim, iof:iofDe(k), spread:spreadDe(k)};
+  };
+  window.mexMelhorFaixa = c => (c.faixasCompra || []).slice().sort((a, b) => a.cpm - b.cpm)[0] || null;
+  window.mexCpm = function(c){
+    if (!c || !(c.faixasCompra || []).length) return null;
+    const cx = mexCambio(c), fx = mexMelhorFaixa(c); if (!cx || !fx) return null;
+    return mexReais(fx.cpm, cx.v, mexCartao(c)).fim;
+  };
+  /* o que a Black de 2025 deu no mesmo programa */
+  const black25 = para => {
+    if (typeof BLACK_2025 === 'undefined') return null;
+    const b = BLACK_2025.filter(x => x.cat === 'cp' && x.para === para)[0]; if (!b) return null;
+    const nums = String(b.mil || '').replace(/^[^\d]*/, '').split(/[·|]/).map(s => numMoeda((s.match(/\d+[.,]\d{2}/) || [])[0] || '')).filter(v => v > 0);
+    return {bonus:Number(b.bonus || b.v) || 0, cpm:nums.length ? Math.min(...nums) : 0, moeda:/CAD|C\$/.test(b.mil) ? 'CAD' : /US\$|USD/.test(b.mil) ? 'USD' : '', pub:b.pub, fim:b.fim};
+  };
+
+  /* ── 4. Vale a pena? com o milheiro em reais ─────────────────────────────── */
+  const _vale = window.cpxVale;
+  window.cpxVale = function(c){
+    try {
+      if (c && c.tipo === 'compra' && (c.faixasCompra || []).length && c.moeda){
+        const cx = mexCambio(c), fx = mexMelhorFaixa(c), k = mexCartao(c), f = faixasDe(c.para) || {};
+        const p = prog(c.para), u = p.tipo === 'milhas' ? 'milhas' : 'pontos', mo = c.moeda;
+        if (!cx){ return {nivel:null, mex:{c, cx, k}}; }
+        const R = mexReais(fx.cpm, cx.v, k), cpm = R.fim, nivel = f.alvo ? veredNivelCPM(c.para, cpm) : null;
+        const media = (cpmPorPrograma() || {})[c.para];
+        const porque = [];
+        porque.push(`No maior bônus (<b>${nBRdec(fx.bonus)}%</b>), o milheiro custa <b>${fmtM(fx.cpm, mo)}</b>. Com ${MOEDAS[mo].n} a <b>${brl2(cx.v)}</b>, IOF de <b>${pctBR(R.iof)}</b>${R.spread ? ` e spread de <b>${pctBR(R.spread)}</b>` : ''}${k ? ` no ${esc(k.banco)} ${esc(k.produto)}` : ''}, sai a <b>${brl2(cpm)}</b> em reais.`);
+        const bk = black25(c.para);
+        let pioraBlack = false;
+        if (bk && bk.cpm > 0 && bk.moeda === mo){
+          const dd = (fx.cpm - bk.cpm) / bk.cpm; pioraBlack = dd > 0.01;
+          porque.push(`Na Black de 2025 (${dataBR(bk.pub)} a ${dataBR(bk.fim)}) a ${esc(p.n)} chegou a <b>${nBRdec(bk.bonus)}%</b>, a <b>${fmtM(bk.cpm, mo)}</b> o milheiro: ${Math.abs(dd) < 0.01 ? 'hoje está <b>igual</b>' : dd > 0 ? `hoje sai <b>${pct(dd * 100, 0)} mais caro</b>` : `hoje sai <b>${pct(-dd * 100, 0)} mais barato</b>`}.`);
+        }
+        if (f.alvo) porque.push(`Sua régua na ${esc(p.n)}: ótimo até <b>${brl2(f.otimo)}</b>, alvo <b>${brl2(f.alvo)}</b>, razoável até <b>${brl2(f.razoavel)}</b>.`);
+        if (media > 0){ const dd = (cpm - media) / media; porque.push(dd < -0.03 ? `Fica <b>${pct(-dd * 100, 0)} abaixo</b> da sua média de ${brl2(media)}.` : dd > 0.03 ? `Fica <b>${pct(dd * 100, 0)} acima</b> da sua média de ${brl2(media)}.` : `Fica igual à sua média de ${brl2(media)}.`); }
+        if (c.bonusVaria) porque.push(`O bônus <b>pode variar por conta</b>: confira o seu na tela de compra antes de pagar.`);
+        const antesBlack = bk && hojeISO() < (String(bk.pub).replace(/^2025/, '2026'));
+        let conclusao = {otimo:'Oportunidade rara: vale entrar com força.', bom:'Boa compra: entra no seu alvo.', medio:'Só se precisar agora, para uma emissão já planejada.', caro:'Caro para estoque: o milheiro em reais fica acima do que você aceita pagar.'}[nivel] || 'Sem régua para este programa: compare com o valor da emissão que você quer fazer.';
+        if (pioraBlack && antesBlack) conclusao += ` A Black de 2025 foi melhor: se não for urgente, espere a de 2026.`;
+        const pratica = [];
+        const q = 100000; pratica.push({rot:`${nBR(q)} ${u} ${p.n} nesta campanha`, v:brl(cpm * q / 1000)});
+        if (f.alvo){ const dif = (f.alvo - cpm) * q / 1000; pratica.push({rot:dif >= 0 ? 'Abaixo do seu alvo' : 'Acima do seu alvo', v:brl(Math.abs(dif)), cls:dif >= 0 ? 'bom' : 'ruim'}); }
+        if (c.limiteCompra){ const tot = c.limiteCompra * (1 + fx.bonus / 100); pratica.push({rot:`Compra máxima: ${nBR(c.limiteCompra)} + ${nBR(tot - c.limiteCompra)} de bônus`, v:brl(cpm * tot / 1000)}); }
+        return {nivel, cpm, prog:c.para, f, media, porque, conclusao, pratica, rot:'o milheiro em reais', mex:{c, cx, k, R, fx}};
+      }
+    } catch(e){ console.error(e); }
+    return _vale.apply(this, arguments);
+  };
+  const ICO_TROCA = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg>';
+  window.mexBlocoHTML = function(v){
+    const {c, cx, k} = v.mex, mo = c.moeda, cs = cartoes();
+    const opc = cs.length ? cs.map(x => `<option value="${esc(x.id)}"${k && x.id === k.id ? ' selected' : ''}>${esc(x.titular ? nomeCurto(x.titular) + ' · ' : '')}${esc(x.banco)} ${esc(x.produto)}${x.final ? ' ·' + esc(String(x.final).slice(-4)) : ''}</option>`).join('')
+      : '<option value="">Cartão comum (IOF de 3,5%)</option>';
+    const cambio = cx ? `<span class="mxe-cambio">${MOEDAS[mo].s} 1 = <b>${brl2(cx.v).replace('R$ ', 'R$ ')}</b><span>${cx.hoje ? `hoje, ${new Date(cx.em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}` : `do anúncio${cx.em ? ', ' + esc(cx.em) : ''}`}</span><button type="button" data-mex-cambio="${esc(mo)}">Atualizar</button></span>`
+      : `<span class="mxe-cambio">Sem câmbio<button type="button" data-mex-cambio="${esc(mo)}">Buscar</button></span>`;
+    if (!cx) return `<div class="mxe" data-mex="${esc(c.id)}"><div class="mxe-top"><div class="mxe-pagar"><label for="mxCartao">Pagar com</label><select id="mxCartao" data-mex-cartao>${opc}</select></div>${cambio}</div><p class="mxe-nota alerta">Toque em Buscar para trazer o câmbio de hoje e ver o milheiro em reais.</p></div>`;
+    const R = v.mex.R, fx = v.mex.fx;
+    const z = {otimo:'var(--jade)', bom:'var(--jade)', medio:'var(--ouro)', caro:'var(--brasa)'};
+    const faixas = c.faixasCompra.map(f => { const r = mexReais(f.cpm, cx.v, k), nv = veredNivelCPM(c.para, r.fim);
+      return `<div class="mxe-fx-l${f === fx || f.cpm === fx.cpm ? ' melhor' : ''}" style="--zf:${z[nv] || 'var(--giz)'}"><span class="r">${f.maisDe ? 'Mais de' : 'A partir de'} <b>${nBR(f.min)}</b> · <b>+${nBRdec(f.bonus)}%</b>${f.cpm === fx.cpm ? '<em>Melhor</em>' : ''}</span><span class="m">${fmtM(f.cpm, mo)}</span><span class="v">${brl2(r.fim)}</span></div>`; }).join('');
+    return `<div class="mxe" data-mex="${esc(c.id)}" style="--z:${z[v.nivel] || 'var(--ouro)'}">
+      <div class="mxe-top"><div class="mxe-pagar"><label for="mxCartao">Pagar com</label><select id="mxCartao" data-mex-cartao>${opc}</select></div>${cambio}</div>
+      <div class="mxe-conta">
+        <div><small>Milheiro em ${esc(MOEDAS[mo].s)}</small><b>${fmtM(fx.cpm, mo)}</b></div>
+        <div><small>Em reais (${ICO_TROCA} ${brl2(cx.v)})</small><b>${brl2(R.base)}</b></div>
+        <div><small>IOF do cartão</small><span class="pct"><input type="number" inputmode="decimal" step="0.01" min="0" max="10" value="${R.iof}" data-mex-iof aria-label="IOF do cartão em %"${k ? '' : ' disabled'}><span>%</span></span></div>
+        <div><small>Spread do banco</small><span class="pct"><input type="number" inputmode="decimal" step="0.1" min="0" max="15" value="${R.spread}" data-mex-spread aria-label="Spread do banco em %"${k ? '' : ' disabled'}><span>%</span></span></div>
+        <div class="fim"><small>Milheiro final</small><b>${brl2(R.fim)}</b></div>
+      </div>
+      <div class="mxe-fx">${faixas}</div>
+      <p class="mxe-nota">IOF de 3,5% é o padrão para compra no exterior com cartão. Se o seu cartão devolve o IOF, ponha 0. O <b>spread</b> é a margem que o banco cobra sobre o câmbio: veja numa fatura em moeda estrangeira e anote aqui uma vez, fica salvo no cartão.${cx.hoje ? '' : ' Câmbio do anúncio: toque em Atualizar para usar o de hoje.'}</p>
+    </div>`;
+  };
+  const _html = window.cpxValeHTML;
+  window.cpxValeHTML = function(v){
+    if (v && v.mex) return (v.mex.cx ? '' : '') + mexBlocoHTML(v) + (v.nivel ? _html.call(this, v) : '');
+    return _html.apply(this, arguments);
+  };
+  /* no topo da janela e nos resumos: o milheiro em reais */
+  if (typeof cpmProjetadoCampanha === 'function'){
+    const o = cpmProjetadoCampanha;
+    cpmProjetadoCampanha = function(c){ try { const v = mexCpm(c); if (v > 0) return v; } catch(e){} return o.apply(this, arguments); };
+  }
+  if (typeof vereditoAnuncio === 'function'){
+    const o = vereditoAnuncio;
+    vereditoAnuncio = function(m){
+      try {
+        const sg = m && m.sugestao;
+        if (sg && sg.tipo === 'compra' && (sg.faixasCompra || []).length && sg.moeda){
+          const v = cpxVale(Object.assign({id:'__mural'}, sg));
+          if (v && v.nivel) return {nivel:v.nivel, num:`${brl2(v.cpm)} o milheiro`, linhas:[`Com câmbio, IOF de 3,5% e o maior bônus: ${brl2(v.cpm)} o milheiro em reais.`]};
+        }
+      } catch(e){ console.error(e); }
+      return o.apply(this, arguments);
+    };
+  }
+  /* a janela: tira a aba antiga de faixas (agora em reais) e busca o câmbio */
+  const _mont = rgMontar;
+  rgMontar = function(d, c){
+    const r = _mont.apply(this, arguments);
+    try {
+      if (c && (c.faixasCompra || []).length && c.moeda){
+        const nav = d.querySelector('.rg-nav [data-rg="fx"]'), sec = d.querySelector('[data-rg-sec="fx"]');
+        if (sec){ const ativa = !sec.hidden; nav && nav.remove(); sec.remove();
+          if (ativa){ const b = d.querySelector('.rg-nav [data-rg="vale"]'); b && b.click(); } }
+      }
+    } catch(e){ console.error(e); }
+    return r;
+  };
+
+  /* simular compra em moeda estrangeira: quantidade comprada → faixa, bônus e reais */
+  window.mexSimHTML = function(c, qtd){
+    const cx = mexCambio(c), k = mexCartao(c), mo = c.moeda, u = prog(c.para).tipo === 'milhas' ? 'milhas' : 'pontos';
+    const fs = (c.faixasCompra || []).slice().sort((a, b) => a.min - b.min);
+    qtd = Math.max(0, Math.round(Number(qtd) || 0));
+    const fx = fs.filter(f => f.maisDe ? qtd > f.min : qtd >= f.min).pop() || null;
+    const precoMil = fs.length ? fs[0].cpm * (1 + fs[0].bonus / 100) : 0;       /* preço por mil comprados, sem bônus */
+    const bon = fx ? Math.round(qtd * fx.bonus / 100) : 0, tot = qtd + bon, pagaM = qtd * precoMil / 1000;
+    const R = cx ? mexReais(1, cx.v, k) : null, pagaR = R ? pagaM * R.fim : 0;
+    const chips = [...fs.map(f => f.maisDe ? f.min + 1000 : f.min), c.limiteCompra || 0].filter((v, i, s) => v > 0 && s.indexOf(v) === i);
+    const lin = (r, v, cls) => `<div class="rg-recibo-l${cls ? ' ' + cls : ''}"><span>${r}</span><b>${v}</b></div>`;
+    return `<div class="mxe-sim" data-mex-sim="${esc(c.id)}">
+      <div class="mxe-qtd"><label for="mxeQtd">${u === 'milhas' ? 'Quantas milhas' : 'Quantos pontos'} comprar</label>
+        <input id="mxeQtd" type="text" inputmode="numeric" value="${qtd ? nBR(qtd) : ''}" placeholder="0" data-mex-qtd>
+        ${chips.map(v => `<button type="button" data-mex-q="${v}" aria-pressed="${v === qtd}">${nBR(v)}${v === c.limiteCompra ? ' (máximo)' : ''}</button>`).join('')}</div>
+      ${qtd ? `<div class="rg-recibo">
+        ${lin(`Você compra`, `${nBR(qtd)} ${u}`)}
+        ${lin(fx ? `Bônus da faixa ${fx.maisDe ? 'mais de' : 'a partir de'} ${nBR(fx.min)} (${nBRdec(fx.bonus)}%)` : `Bônus (abaixo de ${nBR((fs[0] || {}).min || 0)} não tem)`, `+ ${nBR(bon)}`)}
+        ${lin('Total', `${nBR(tot)} ${u} ${esc(prog(c.para).n)}`, 'total')}
+        ${lin(`Você paga em ${esc((MOEDAS[mo] || {}).s || mo)}`, fmtM(pagaM, mo), 'custo')}
+        ${R ? lin(`Em reais, com câmbio de ${brl2(cx.v)}, IOF ${pctBR(R.iof)}${R.spread ? `, spread ${pctBR(R.spread)}` : ''}`, brl2(pagaR), 'custo') : ''}
+        ${R && tot ? lin('Milheiro', brl2(pagaR / tot * 1000), 'custo') : ''}
+        <div class="rg-recibo-nota">${k ? `No ${esc(k.banco)} ${esc(k.produto)}. Troque o cartão em "Vale a pena?".` : 'Sem cartão cadastrado: IOF de 3,5%.'} ${c.limiteCompra && qtd > c.limiteCompra ? `<b>Acima do limite de ${nBR(c.limiteCompra)} por conta.</b>` : ''}</div>
+      </div>` : '<p class="mxe-nota">Digite a quantidade ou toque numa faixa.</p>'}
+    </div>`;
+  };
+  const _simQ = {};
+  const pintarSim = id => {
+    const c = (DB.campanhas || []).find(x => x.id === id), p = document.querySelector('#dlgRegras #drp-sim'); if (!c || !p) return;
+    p.innerHTML = mexSimHTML(c, _simQ[id] != null ? _simQ[id] : ((c.faixasCompra || []).slice(-1)[0] || {}).min + 1000);
+  };
+  window.mexPintarSim = pintarSim;
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-mex-q]'); if (!b) return;
+    const box = b.closest('[data-mex-sim]'); _simQ[box.dataset.mexSim] = Number(b.dataset.mexQ); pintarSim(box.dataset.mexSim);
+  });
+  document.addEventListener('change', e => {
+    if (!(e.target.matches && e.target.matches('[data-mex-qtd]'))) return;
+    const box = e.target.closest('[data-mex-sim]'); _simQ[box.dataset.mexSim] = Number(String(e.target.value).replace(/\D/g, '')) || 0; pintarSim(box.dataset.mexSim);
+    const i = document.getElementById('mxeQtd'); if (i) i.focus();
+  });
+  const redesenhar = id => {
+    const d = document.getElementById('dlgRegras'), c = (DB.campanhas || []).find(x => x.id === id); if (!d || !c) return;
+    const sec = d.querySelector('[data-rg-sec="vale"]'); if (!sec) return;
+    sec.innerHTML = cpxValeHTML(cpxVale(c));
+    const el = d.querySelector('[data-drcpm]'); const v = mexCpm(c); if (el && v > 0) el.textContent = brl2(v);
+    pintarSim(id);
+  };
+  if (typeof abrirRegras === 'function'){
+    const o = abrirRegras;
+    abrirRegras = function(id){
+      const r = o.apply(this, arguments);
+      try {
+        const c = (DB.campanhas || []).find(x => x.id === id);
+        if (c && c.moeda && (c.faixasCompra || []).length){
+          const d = document.getElementById('dlgRegras'), v = d && d.querySelector('.rg-nav [data-rg="vale"]');
+          if (v && !rgUltima) v.click();
+          pintarSim(id);
+          if (velho(((DB.cfg || {}).cambio || {})[c.moeda])) mexAtualizarCambio(c.moeda).then(cx => { if (cx) redesenhar(id); });
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  document.addEventListener('change', e => {
+    const box = e.target.closest && e.target.closest('.mxe[data-mex]'); if (!box) return;
+    const id = box.dataset.mex, c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+    if (e.target.matches('[data-mex-cartao]')){ _mexEscolha[id] = e.target.value; redesenhar(id); return; }
+    const k = mexCartao(c); if (!k) return;
+    const v = Math.max(0, Number(String(e.target.value).replace(',', '.')) || 0);
+    if (e.target.matches('[data-mex-iof]')) k.exIof = v;
+    else if (e.target.matches('[data-mex-spread]')) k.exSpread = v;
+    else return;
+    try { salvar(); } catch(err){}
+    _mexEscolha[id] = k.id; redesenhar(id);
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-mex-cambio]'); if (!b) return;
+    const box = b.closest('.mxe[data-mex]'), id = box && box.dataset.mex;
+    b.disabled = true; b.textContent = 'Buscando…';
+    mexAtualizarCambio(b.dataset.mexCambio).then(cx => {
+      if (cx){ redesenhar(id); avisar(`Câmbio de hoje: ${brl2(cx.v)} (${cx.fonte}).`); }
+      else { b.disabled = false; b.textContent = 'Atualizar'; avisar('Não consegui buscar o câmbio agora. Sigo com o do anúncio.', 'alerta', 6000); }
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
