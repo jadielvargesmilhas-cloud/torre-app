@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-28 23:20';
+const BUILD = '2026-10-29 03:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -37987,7 +37987,7 @@ function renderResultado(){
               <span class="rv-esq"><b class="ficha-link" role="button" tabindex="0" onclick="abrirFichaReserva('${r.id}')">${esc(pe.rota)}</b><small><span class="rv-azul">venda</span> ${dataBR(String(r.criada || r.data).slice(0, 10))} · voo ${dataBR(r.data)}</small>${(() => {
                 /* companhia sem programa cadastrado (American, por exemplo) fica em texto */
                 const outra = !pe.pg ? (pe.cia || (pe.resto.split(' · ')[0] || '').replace(/^(voos?|via)\b.*$/i, '')) : '';
-                const marca = pe.pg ? discoProg(pe.pg, 'p rv-logo', pe.cia) : outra ? esc(outra) : '';
+                const ciaTxt = pe.cia || outra; const marca = (r.prog ? discoProg(r.prog, 'p rv-logo', 'Emitido pela ' + prog(r.prog).n) : pe.pg ? discoProg(pe.pg, 'p rv-logo', pe.cia) : '') + (ciaTxt && (!r.prog || !pe.pg || pe.pg !== r.prog) ? `<span class="rv-ciatxt">${esc(ciaTxt)}</span>` : '');
                 return marca || pe.loc ? `<small class="rv-cia">${marca}${marca && pe.loc ? '<span class="rv-ponto">·</span>' : ''}${pe.loc ? esc(pe.loc) : ''}</small>` : '';
               })()}</span>
               <span class="n"><b style="color:${corRes(rr)}">${brl(rr)}</b><small>de <span class="rv-azul">${brl(Number(r.cobrado) || 0)}</span></small><small>custo ${brl(c)} · ${mg == null ? 'n/d' : pct(mg, 1)}</small></span>
@@ -72224,7 +72224,7 @@ article.cp.cpz .cpz-miolo{ padding-top:16px; }
         const lista = comparacaoLojas(), mostra = cmpLojaTudo ? lista : lista.slice(0, 3);
         box.querySelectorAll('.lc2-l').forEach((row, i) => {
           const x = mostra[i]; if (!x || row.querySelector('.lcx')) return;
-          row.insertAdjacentHTML('beforeend', lcxHTML(x));
+          const alvo = row.querySelector('.lc2-n > div') || row; alvo.insertAdjacentHTML('beforeend', lcxHTML(x));
         });
       } catch(e){ console.error(e); }
       return r;
@@ -72246,7 +72246,7 @@ article.cp.cpz .cpz-miolo{ padding-top:16px; }
    No celular segue a lista de antes. Para desfazer: apagar este bloco. */
 @media (min-width:1100px){
   #ljVitrine .ljl-lista{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; border:0; background:transparent; overflow:visible; border-radius:0; }
-  #ljVitrine .ljl-l{ grid-template-columns:40px minmax(0, 1fr) 100px 114px !important; grid-template-areas:"av n a a" !important; gap:10px 12px; align-items:start;
+  #ljVitrine .ljl-l{ position:relative; grid-template-columns:40px minmax(0, 1fr) 100px 114px !important; grid-template-areas:"av n n n" !important; gap:10px 12px; align-items:start;
     padding:14px 16px 2px; border:1px solid var(--fio); border-radius:18px; background:var(--sup-0);
     transition:transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .18s, border-color .18s; }
   #ljVitrine .ljl-l + .ljl-l{ border-top:1px solid var(--fio); }
@@ -72255,7 +72255,9 @@ article.cp.cpz .cpz-miolo{ padding-top:16px; }
   #ljVitrine .ljl-l .lj-avatar{ grid-area:av; width:40px; height:40px; }
   #ljVitrine .ljl-n{ grid-area:n; gap:3px; }
   #ljVitrine .ljl-n b{ font-size:calc(15px * var(--esc)); }
-  #ljVitrine .ljl-a{ grid-area:a; }
+  #ljVitrine .ljl-a{ position:absolute; top:12px; right:14px; width:auto !important; }
+  #ljVitrine .ljl-n > b, #ljVitrine .ljl-n > small:not(.ljl-tb){ padding-right:200px; }
+  #ljVitrine .ljl-n > .ljl-tb{ white-space:nowrap; }
   #ljVitrine .ljl-l .ljl-a .bt:not(.icone){ padding-inline:10px; }
   /* faixa de baixo: programa à esquerda, números à direita */
   #ljVitrine .ljl-p, #ljVitrine .ljl-m, #ljVitrine .ljl-v{ grid-row:2; align-self:center; }
@@ -72773,6 +72775,706 @@ const ehOfertaAssinatura = l => OFERTA_ASSINATURA.test(String((l && (l.loja && l
     pop.querySelector('[data-bnt-fechar]').onclick = fechar; pop.querySelector('[data-bnt-fechar]').focus({preventScroll:true});
   }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop){ e.preventDefault(); e.stopPropagation(); fechar(); } }, true);
+})();
+</script>
+
+<style id="qcz-css">
+/* ══ "SUA LISTA" NO MAPA DAS OFERTAS: VERSÃO PREMIUM (28/10/2026) ═══════════
+   O anel diz quanto da lista já está na hora de comprar; cada item vira um
+   cartão de embarque: status, quanto volta, a loja e, para quem ainda espera,
+   a barra até o alvo. Tocar abre o item na lista, como antes. */
+.qcz-cab{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.qcz-anel{ position:relative; width:84px; height:84px; flex:0 0 auto; display:grid; place-items:center; }
+.qcz-anel svg{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
+.qcz-anel circle{ fill:none; stroke-width:7; }
+.qcz-anel .t{ stroke:color-mix(in srgb, var(--giz) 9%, transparent); }
+.qcz-anel .a{ stroke:var(--jade); stroke-linecap:round; filter:drop-shadow(0 0 4px color-mix(in srgb, var(--jade) 45%, transparent)); }
+.qcz-anel .b{ stroke:var(--anil-claro, var(--anil)); stroke-linecap:round; opacity:.85; }
+.qcz-anel span{ position:relative; text-align:center; line-height:1; }
+.qcz-anel b{ display:block; font:700 calc(22px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.qcz-anel b small{ font-size:.55em; color:var(--grafite); font-weight:600; }
+.qcz-anel em{ display:block; margin-top:3px; font-style:normal; font:700 calc(8px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--jade); }
+.qcz-tit{ flex:1; min-width:220px; }
+.qcz-tit h2{ margin:0; }
+.qcz-tit p{ margin:4px 0 0; color:var(--grafite); font-size:calc(13.5px * var(--esc)); }
+.qcz-grade{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap:12px; margin-top:16px; }
+.qcz-t{ position:relative; display:flex; flex-direction:column; gap:8px; text-align:left; padding:14px 16px 12px; border-radius:18px; cursor:pointer; color:inherit; font:inherit;
+  border:1px solid color-mix(in srgb, var(--zq) 35%, var(--fio)); background:linear-gradient(160deg, color-mix(in srgb, var(--zq) 9%, var(--sup-0)), var(--sup-0) 62%);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s, border-color .2s; overflow:hidden; }
+.qcz-t:hover{ transform:translateY(-3px); border-color:color-mix(in srgb, var(--zq) 60%, var(--fio)); box-shadow:0 16px 32px -20px rgba(0,0,0,.5); }
+.qcz-t:focus-visible{ outline:2px solid var(--zq); outline-offset:2px; }
+.qcz-st{ display:flex; align-items:center; gap:7px; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--zq); }
+.qcz-st i{ width:7px; height:7px; border-radius:50%; background:var(--zq); box-shadow:0 0 0 4px color-mix(in srgb, var(--zq) 20%, transparent); }
+.qcz-t.hora .qcz-st i{ animation:qczPulso 2s ease-in-out infinite; }
+@keyframes qczPulso{ 50%{ box-shadow:0 0 0 7px color-mix(in srgb, var(--zq) 6%, transparent); } }
+@media (prefers-reduced-motion:reduce){ .qcz-t.hora .qcz-st i{ animation:none; } .qcz-t{ transition:none; } }
+.qcz-n{ font:700 calc(15px * var(--esc))/1.25 var(--f-b, inherit); color:var(--giz); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.qcz-v{ display:flex; align-items:baseline; gap:6px; }
+.qcz-v b{ font:700 calc(26px * var(--esc))/1 var(--f-d, inherit); color:var(--zq); font-variant-numeric:tabular-nums; }
+.qcz-v span{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.qcz-loja{ display:flex; align-items:center; gap:7px; font-size:calc(12px * var(--esc)); color:var(--grafite); min-width:0; }
+.qcz-loja span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.qcz-loja .disco-prog{ width:20px !important; height:20px !important; font-size:8px !important; }
+.qcz-barra{ display:grid; gap:4px; }
+.qcz-barra i{ position:relative; display:block; height:5px; border-radius:99px; background:color-mix(in srgb, var(--giz) 9%, transparent); overflow:hidden; }
+.qcz-barra u{ position:absolute; inset:0 auto 0 0; border-radius:inherit; background:linear-gradient(90deg, var(--anil-claro, var(--anil)), var(--jade)); }
+.qcz-barra small{ font-size:calc(11px * var(--esc)); color:var(--grafite); }
+.qcz-pe{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:2px -16px -12px; padding:9px 16px; border-top:1px dashed color-mix(in srgb, var(--giz) 14%, transparent); font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.qcz-pe b{ color:var(--giz); font-variant-numeric:tabular-nums; }
+.qcz-pe svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s; }
+.qcz-t:hover .qcz-pe svg{ transform:translateX(3px); }
+.qcz-t.mais{ align-items:center; justify-content:center; --zq:var(--grafite); }
+.qcz-t.mais b{ font:700 calc(28px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); }
+</style>
+<script id="qcz-js">
+(function(){
+  const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  qcBlocoHoje = function(){
+    let av = [];
+    try { av = avaliarDesejos(); } catch(e){}
+    const hora = av.filter(x => x.atingiu), mira = av.filter(x => !x.atingiu);
+    const tot = av.length;
+    const tile = x => {
+      const m = x.melhor, chave = m ? String(m.loja.id) : '', h = x.atingiu;
+      const zq = h ? 'var(--jade)' : m ? 'var(--anil-claro, var(--anil))' : 'var(--grafite)';
+      const alvoTxt = x.d.alvoTipo === 'mult' ? nBRdec(x.alvoM || x.d.alvo) + ' por real' : pct(x.d.alvo, 0) + ' de volta';
+      const avanco = m ? Math.round(x.progresso != null ? x.progresso : 0) : 0;
+      return `<button type="button" class="qcz-t${h ? ' hora' : ''}" style="--zq:${zq}" onclick="${chave ? `abrirListaNaOferta('${esc(chave)}')` : `abrirDesejoNaLista('${x.d.id}')`}">
+        <span class="qcz-st"><i></i>${h ? 'Hora de comprar' : m ? 'Na mira' : 'Sem oferta hoje'}${h && typeof asaHTML === 'function' && m && m.pc >= 25 ? asaHTML('ouro', 'p', 'Asas de ouro: retorno excelente') : ''}</span>
+        <span class="qcz-n">${esc(x.d.n)}</span>
+        ${m ? `<span class="qcz-v"><b>${pct(m.pc, 1)}</b><span>de volta${m.mult ? ` · ${nBRdec(m.mult)} por real` : ''}</span></span>
+          <span class="qcz-loja">${discoProg(m.prog)}<span>${esc(m.loja.n)} · ${esc(prog(m.prog).n)}</span></span>` : `<span class="qcz-v"><span>Nenhuma loja da lista com oferta agora.</span></span>`}
+        ${!h && m ? `<span class="qcz-barra"><i><u style="width:${avanco}%"></u></i><small>${avanco}% do alvo (${alvoTxt})</small></span>` : ''}
+        <span class="qcz-pe"><span>${m && m.retorno ? `<b>${brl(m.retorno)}</b> de volta em ${brl(x.d.valor)}` : x.d.valor ? `Item de ${brl(x.d.valor)}` : 'Ver na lista'}</span>${SETA}</span>
+      </button>`;
+    };
+    const lista = hora.concat(mira).slice(0, 6);
+    const C = 2 * Math.PI * 34, f1 = tot ? hora.length / tot : 0, f2 = tot ? mira.filter(x => x.melhor).length / tot : 0, gap = hora.length && f2 ? 5 : 0;
+    const arco = (frac, ini, cls) => frac > 0 ? `<circle class="${cls}" cx="42" cy="42" r="34" stroke-dasharray="${Math.max(0, C * frac - gap).toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-C * ini).toFixed(1)}"/>` : '';
+    const anel = tot ? `<div class="qcz-anel" role="img" aria-label="${hora.length} de ${tot} itens na hora de comprar"><svg viewBox="0 0 84 84" aria-hidden="true"><circle class="t" cx="42" cy="42" r="34"/>${arco(f1, 0, 'a')}${arco(f2, f1, 'b')}</svg><span><b>${hora.length}<small>/${tot}</small></b><em>na hora</em></span></div>` : '';
+    return `<section class="qc-bloco">
+      <div class="qcz-cab">${anel}<div class="qcz-tit"><h2>Sua lista</h2><p>${tot
+        ? `${hora.length ? `<b class="jade">${hora.length === 1 ? 'Um item' : hora.length + ' itens'} na hora de comprar.</b> ` : ''}${mira.length ? `${mira.length === 1 ? 'Um item' : mira.length + ' itens'} esperando a promoção certa.` : ''}`
+        : 'O que você vai comprar de qualquer jeito. Diga o que é e quanto custa: a Torre responde na hora se compra agora ou espera.'}</p></div>
+        ${tot ? `<button type="button" class="bt p fantasma" onclick="irItemMenu('fabrica','fb-compras')">Abrir a lista</button>` : ''}</div>
+      ${lista.length ? `<div class="qcz-grade">${lista.map(tile).join('')}${tot > lista.length ? `<button type="button" class="qcz-t mais" onclick="irItemMenu('fabrica','fb-compras')"><b>+${tot - lista.length}</b><span class="qcz-st">na lista</span></button>` : ''}</div>` : ''}
+      ${qcCaixaHTML('qcHoje')}
+    </section>`;
+  };
+})();
+</script>
+
+<style id="cmz-css">
+/* ══ OS QUATRO CAMINHOS: CARTÕES PREMIUM (29/10/2026) ════════════════════════
+   Cada caminho ganha um orbe com o ícone, o número grande, e a melhor oferta
+   do caminho hoje (loja, programa e pontos por real). */
+.lc-caminhos{ gap:12px !important; }
+.lc-caminho.cmz{ display:flex !important; flex-direction:column; align-items:stretch !important; text-align:left !important; min-width:0; gap:12px; padding:16px 16px 0 !important; border-radius:20px !important; overflow:hidden;
+  border:1px solid color-mix(in srgb, var(--cam) 30%, var(--fio)) !important;
+  background:radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--cam) 16%, transparent), transparent 60%), linear-gradient(170deg, color-mix(in srgb, var(--cam) 6%, var(--sup-0)), var(--sup-0) 70%) !important;
+  transition:transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s, border-color .22s !important; }
+.lc-caminho.cmz::before{ display:none; }
+.lc-caminho.cmz:hover{ transform:translateY(-3px) !important; border-color:color-mix(in srgb, var(--cam) 60%, var(--fio)) !important; box-shadow:0 18px 36px -22px color-mix(in srgb, var(--cam) 55%, rgba(0,0,0,.6)); }
+.cmz-topo{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.cmz .lc-caminho-ic{ width:46px !important; height:46px !important; border-radius:50% !important; position:relative;
+  background:radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--cam) 55%, #fff), var(--cam) 70%) !important; box-shadow:0 8px 20px -8px var(--cam), inset 0 1px 0 rgba(255,255,255,.35); }
+.cmz .lc-caminho-ic svg{ width:20px !important; height:20px !important; stroke:#fff !important; }
+.cmz .lc-caminho-n{ display:flex; flex-direction:column; align-items:flex-end; line-height:1; }
+.cmz .lc-caminho-n b{ font:700 calc(34px * var(--esc))/1 var(--f-d, inherit) !important; color:var(--cam) !important; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.cmz .lc-caminho-n small{ margin-top:4px; font:700 calc(9.5px * var(--esc))/1 var(--f-b, inherit) !important; letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.cmz .lc-caminho-t b{ font-size:calc(15px * var(--esc)) !important; color:var(--giz); }
+.cmz .lc-caminho-t small{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.cmz-top{ min-width:0; max-width:100%; box-sizing:border-box; display:flex; align-items:center; gap:8px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, var(--cam) 8%, var(--sup-1)); border:1px solid color-mix(in srgb, var(--cam) 20%, var(--fio)); font-size:calc(12px * var(--esc)); color:var(--grafite); min-width:0; }
+.cmz-top .disco-prog{ width:22px !important; height:22px !important; font-size:8px !important; flex:0 0 auto; }
+.cmz-top span{ min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cmz-top b{ color:var(--giz); }
+.cmz-top em{ margin-left:auto; font-style:normal; font:700 calc(14px * var(--esc))/1 var(--f-d, inherit); color:var(--cam); white-space:nowrap; }
+.cmz-top.vazio{ justify-content:center; font-style:italic; }
+.cmz .lc-caminho-ir{ margin:0 -16px; padding:11px 16px; border-top:1px solid color-mix(in srgb, var(--cam) 15%, var(--fio)); display:flex; align-items:center; justify-content:space-between; gap:6px;
+  font:600 calc(12.5px * var(--esc))/1.2 var(--f-b, inherit) !important; color:color-mix(in srgb, var(--cam) 75%, var(--giz)) !important; }
+.cmz .lc-caminho-ir svg{ transition:transform .2s; }
+.cmz:hover .lc-caminho-ir svg{ transform:translateX(3px); }
+@media (max-width:900px){ .lc-caminhos{ grid-template-columns:repeat(2, minmax(0,1fr)) !important; } }
+@media (max-width:520px){ .cmz-top span{ font-size:calc(11px * var(--esc)); } .cmz-top .disco-prog{ display:none !important; } .cmz .lc-caminho-n b{ font-size:calc(26px * var(--esc)) !important; } .cmz .lc-caminho-ic{ width:38px !important; height:38px !important; } .cmz-top em{ font-size:calc(12px * var(--esc)); } }
+</style>
+<script id="cmz-js">
+(function(){
+  if (typeof renderCaminhosLista !== 'function') return;
+  const o = renderCaminhosLista;
+  renderCaminhosLista = function(av){
+    const r = o.apply(this, arguments);
+    try {
+      const vit = typeof ofertasVitrine === 'function' ? ofertasVitrine().filter(l => l.origem === 'bonificada' || tetoLoja(l).promo > 0) : [];
+      const melhor = k => vit.filter(l => caminhoDe(l) === k).sort((a, b) => (tetoLoja(b).promo || 0) - (tetoLoja(a).promo || 0))[0] || null;
+      document.querySelectorAll('#lcCaminhos .lc-caminho').forEach(b => {
+        const k = b.dataset.cam; b.classList.add('cmz');
+        const ic = b.querySelector('.lc-caminho-ic'), n = b.querySelector('.lc-caminho-n'), t = b.querySelector('.lc-caminho-t'), ir = b.querySelector('.lc-caminho-ir');
+        const topo = document.createElement('span'); topo.className = 'cmz-topo'; topo.append(ic, n);
+        b.prepend(topo);
+        let top = '';
+        if (k === 'desc'){ const x = (av || []).filter(y => y.oferta)[0]; top = x ? `<span class="cmz-top"><span><b>${esc(x.d.n)}</b> com desconto registrado</span></span>` : `<span class="cmz-top vazio"><span>Nenhum cupom registrado</span></span>`; }
+        else { const l = melhor(k); top = l ? `<span class="cmz-top">${discoProg(l.prog)}<span>Melhor hoje: <b>${esc(l.n)}</b></span><em>${nBRdec(tetoLoja(l).promo || 0)}×</em></span>` : `<span class="cmz-top vazio"><span>Nada no ar agora</span></span>`; }
+        t.insertAdjacentHTML('afterend', top);
+        b.append(ir);
+      });
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+
+<style id="hlb-css">
+/* ══ HISTÓRICO DAS LOJAS À VISTA NO ITEM (29/10/2026) ═══════════════════════
+   Antes só aparecia dentro de "Editar". Agora cada item da lista tem o botão. */
+.hlb-bt{ display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:99px; cursor:pointer; white-space:nowrap;
+  border:1px solid color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:color-mix(in srgb, var(--ouro) 10%, transparent); color:var(--ouro);
+  font:600 calc(12.5px * var(--esc))/1.2 var(--f-b, inherit); transition:transform .18s, background .18s; }
+.hlb-bt:hover{ transform:translateY(-1px); background:color-mix(in srgb, var(--ouro) 18%, transparent); }
+.hlb-bt svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.hlb-bt b{ font-weight:700; }
+.ds-acoes:has(.hlb-bt){ flex-wrap:wrap; align-items:center; }
+</style>
+<script id="hlb-js">
+(function(){
+  const ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>';
+  const lojasDo = d => { let x = null; try { x = avaliarDesejo(d); } catch(e){}
+    return [...new Set([...((x && x.todas) || []).map(o => o.loja && o.loja.n), ...(d.lojasSim || [])].filter(Boolean))]; };
+  window.abrirHistLojasItem = function(id){
+    const d = (DB.desejos || []).find(x => x.id === id); if (!d) return;
+    const lojas = lojasDo(d), tipo = d.alvoTipo === 'mult' ? 'mult' : 'pc';
+    const pinta = () => {
+      const c = document.getElementById('folhaCorpo'); if (!c) return;
+      c.innerHTML = lojas.length ? hlHTML(lojas, d.prog || '', tipo) : '<p class="fraco">Nenhuma loja ligada a este item ainda. Toque em Editar e marque as lojas.</p>';
+      c.querySelectorAll('[data-hlo]').forEach(b => b.onclick = () => { hlOrdem = b.dataset.hlo; pinta(); });
+      const h = c.querySelector('[data-hlh]'); if (h) h.onclick = () => { hlSoHoje = !hlSoHoje; pinta(); };
+    };
+    abrirFolha({titulo:`Histórico das lojas · ${esc(d.n)}`, largura:'larga', corpo:'', pe:'<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>', tipo:'aviso'});
+    pinta();
+  };
+  if (typeof renderDesejos === 'function'){
+    const o = renderDesejos;
+    renderDesejos = function(){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#fbDesejos .ds-item[data-id]').forEach(el => {
+          const ac = el.querySelector('.ds-acoes'); if (!ac || ac.querySelector('.hlb-bt')) return;
+          const d = (DB.desejos || []).find(x => x.id === el.dataset.id); if (!d) return;
+          const n = lojasDo(d).length; if (!n) return;
+          ac.insertAdjacentHTML('afterbegin', `<button type="button" class="hlb-bt" onclick="abrirHistLojasItem('${esc(d.id)}')" aria-label="Histórico das ${n} lojas deste item">${ICO}Histórico das <b>${n}</b> ${n === 1 ? 'loja' : 'lojas'}</button>`);
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="dck-css">
+/* ══ ITEM DA LISTA: PAINEL DE CONSULTA À DIREITA (29/10/2026) ═══════════════
+   No espaço vazio à direita do nome, dois cartões de consulta sempre à vista:
+   o histórico das lojas do item e o que as promoções já pagaram na categoria.
+   Cada um abre a sua janela, sem passar por Editar. */
+.ds-cab{ position:relative; }
+.dck{ margin-left:auto; flex:1 0 300px; max-width:520px; display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:8px; }
+.dck-b{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"i t s" "i v s"; column-gap:9px; align-items:center; text-align:left;
+  padding:7px 10px 7px 7px; border-radius:14px; cursor:pointer; color:inherit; font:inherit; min-width:0;
+  border:1px solid color-mix(in srgb, var(--zk) 35%, var(--fio)); background:linear-gradient(150deg, color-mix(in srgb, var(--zk) 12%, var(--sup-0)), var(--sup-0) 70%);
+  transition:transform .18s cubic-bezier(.2,.7,.2,1), border-color .18s, box-shadow .18s; }
+.dck-b:hover{ transform:translateY(-2px); border-color:color-mix(in srgb, var(--zk) 65%, var(--fio)); box-shadow:0 12px 24px -16px rgba(0,0,0,.5); }
+.dck-b > i{ grid-area:i; width:30px; height:30px; border-radius:10px; display:grid; place-items:center; background:radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--zk) 55%, #fff), var(--zk) 75%); color:#fff; box-shadow:0 6px 14px -6px var(--zk); }
+.dck-b > i svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.dck-b > b{ grid-area:t; font:700 calc(9.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); white-space:nowrap; }
+.dck-b > span{ grid-area:v; font:700 calc(12.5px * var(--esc))/1.25 var(--f-b, inherit); color:var(--giz); min-width:0; font-variant-numeric:tabular-nums; }
+.dck-b > span em{ font-style:normal; color:var(--zk); }
+.dck-b > svg{ grid-area:s; width:13px; height:13px; fill:none; stroke:var(--grafite); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s; }
+.dck-b:hover > svg{ transform:translateX(3px); }
+.ds-acoes .hlb-bt{ display:none; }
+@media (max-width:640px){ .dck{ margin-left:0; flex-basis:100%; max-width:none; grid-template-columns:1fr; } }
+.dck-pop{ position:fixed; z-index:10050; inset:0; margin:auto; height:fit-content; width:min(760px, calc(100vw - 24px)); max-height:min(84vh, 760px); display:flex; flex-direction:column;
+  border-radius:22px; overflow:hidden; background:var(--sup-0); border:1px solid var(--fio-forte, var(--fio)); box-shadow:0 30px 80px -20px rgba(0,0,0,.65); animation:vooFolha .46s cubic-bezier(.16,.84,.24,1) both; }
+@media (prefers-reduced-motion:reduce){ .dck-pop{ animation:none; } }
+.dck-pop-cab{ display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--fio); }
+.dck-pop-cab b{ flex:1; font-size:calc(15px * var(--esc)); color:var(--giz); }
+.dck-pop-corpo{ padding:16px 18px 18px; overflow:auto; }
+.dck-fundo{ position:fixed; inset:0; z-index:10049; background:rgba(4,8,16,.55); backdrop-filter:blur(3px); }
+</style>
+<script id="dck-js">
+(function(){
+  const I = {hist:'<svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>', regua:'<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>'};
+  const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  /* a régua da categoria também ignora oferta de assinatura (Sam's Club seja sócio) */
+  if (typeof reguaHistorico === 'function' && typeof ehOfertaAssinatura === 'function'){
+    const o = reguaHistorico;
+    reguaHistorico = function(){ const r = o.apply(this, arguments); return Array.isArray(r) ? r.filter(x => !ehOfertaAssinatura(x.n)) : r; };
+  }
+  const lojasDo = d => { let x = null; try { x = avaliarDesejo(d); } catch(e){}
+    return [...new Set([...((x && x.todas) || []).map(o => o.loja && o.loja.n), ...(d.lojasSim || [])].filter(Boolean))]; };
+  let pop = null, fundo = null;
+  const fechar = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } };
+  const abrir = (titulo, html, ligar) => {
+    fechar();
+    fundo = document.createElement('div'); fundo.className = 'dck-fundo'; fundo.onclick = fechar; document.body.appendChild(fundo);
+    pop = document.createElement('div'); pop.className = 'dck-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', titulo);
+    pop.innerHTML = `<div class="dck-pop-cab"><b>${titulo}</b><button type="button" class="bt p perigo" data-dck-fechar>Fechar</button></div><div class="dck-pop-corpo"></div>`;
+    document.body.appendChild(pop);
+    pop.querySelector('[data-dck-fechar]').onclick = fechar;
+    const corpo = pop.querySelector('.dck-pop-corpo'); corpo.innerHTML = html; if (ligar) ligar(corpo);
+    pop.querySelector('[data-dck-fechar]').focus({preventScroll:true});
+  };
+  window.abrirReguaItem = function(id){
+    const d = (DB.desejos || []).find(x => x.id === id); if (!d) return;
+    const tipo = d.alvoTipo === 'mult' ? 'mult' : 'pc';
+    abrir(`Quanto as promoções já pagaram · ${esc(d.cat)}`, reguaHTML(d.cat, d.prog || '', tipo, Number(d.alvo) || 0));
+  };
+  window.abrirHistLojasItem = function(id){
+    const d = (DB.desejos || []).find(x => x.id === id); if (!d) return;
+    const lojas = lojasDo(d), tipo = d.alvoTipo === 'mult' ? 'mult' : 'pc';
+    const pinta = c => {
+      c.innerHTML = lojas.length ? hlHTML(lojas, d.prog || '', tipo) : '<p class="fraco">Nenhuma loja ligada a este item ainda.</p>';
+      c.querySelectorAll('[data-hlo]').forEach(b => b.onclick = () => { hlOrdem = b.dataset.hlo; pinta(c); });
+      const h = c.querySelector('[data-hlh]'); if (h) h.onclick = () => { hlSoHoje = !hlSoHoje; pinta(c); };
+    };
+    abrir(`Histórico das lojas · ${esc(d.n)}`, '', pinta);
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop){ e.preventDefault(); e.stopPropagation(); fechar(); } }, true);
+  window.dckHTML = function(d){
+    const tipo = d.alvoTipo === 'mult' ? 'mult' : 'pc', fmt = v => tipo === 'mult' ? nBRdec(Math.round(v * 10) / 10) + '×' : pct(v, 1);
+    const n = lojasDo(d).length;
+    let r = null; try { const of = reguaHistorico(d.cat, d.prog || ''); r = of.length >= 3 ? reguaResumo(of, tipo) : null; } catch(e){}
+    const b1 = n ? `<button type="button" class="dck-b" style="--zk:var(--ouro)" onclick="event.stopPropagation();abrirHistLojasItem('${esc(d.id)}')"><i>${I.hist}</i><b>Histórico</b><span>${n} ${n === 1 ? 'loja' : 'lojas'}</span>${SETA}</button>` : '';
+    const b2 = r ? `<button type="button" class="dck-b" style="--zk:var(--anil-claro, var(--anil))" onclick="event.stopPropagation();abrirReguaItem('${esc(d.id)}')"><i>${I.regua}</i><b>Já pagaram</b><span>mediana <em>${fmt(r.med)}</em> · recorde ${fmt(r.recorde)}</span>${SETA}</button>` : '';
+    return b1 || b2 ? `<span class="dck">${b1}${b2}</span>` : '';
+  };
+  if (typeof renderDesejos === 'function'){
+    const o = renderDesejos;
+    renderDesejos = function(){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#fbDesejos .ds-item[data-id]').forEach(el => {
+          const cab = el.querySelector('.ds-cab'); if (!cab || cab.querySelector('.dck')) return;
+          const d = (DB.desejos || []).find(x => x.id === el.dataset.id); if (!d) return;
+          cab.insertAdjacentHTML('beforeend', dckHTML(d));
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="vlz-css">
+/* ══ "VALE A PENA?" NO MESMO PADRÃO DO ESSENCIAL (29/10/2026) ════════════════
+   O veredito e a régua ficam no alto; cada motivo vira um cartão-resumo que
+   abre a janelinha; a conclusão fica destacada embaixo. */
+.vlz-conc{ display:flex; gap:12px; align-items:center; padding:14px 16px; border-radius:16px; margin-top:12px;
+  border:1px solid color-mix(in srgb, var(--z, var(--ouro)) 45%, var(--fio)); background:linear-gradient(120deg, color-mix(in srgb, var(--z, var(--ouro)) 14%, var(--sup-1)), var(--sup-1) 70%);
+  font-size:calc(14px * var(--esc)); color:var(--giz); }
+.vlz-conc svg{ flex:0 0 auto; width:20px; height:20px; fill:none; stroke:var(--z, var(--ouro)); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.vlz-conc small{ display:block; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--z, var(--ouro)); margin-bottom:3px; }
+.cx-vale .bnt{ margin-top:0; }
+</style>
+<script id="vlz-js">
+(function(){
+  const TIT = [
+    [/custa|na sua carteira|paridade/i, 'Quanto custa a origem', 'giz'],
+    [/de b[oô]nus,|com <b>[\d.,]+%<\/b> de b[oô]nus|no maior b[oô]nus/i, 'Com o bônus', 'jade'],
+    [/Black/i, 'Contra a Black 2025', 'ouro'],
+    [/r[eé]gua/i, 'Sua régua', 'anil'],
+    [/m[eé]dia/i, 'Contra a sua média', 'anil'],
+    [/varia|confira/i, 'Atenção', 'ouro'],
+    [/destino|banco s[oó] vale/i, 'Para onde transferir', 'jade'],
+    [/lote|paga <b>/i, 'A conta do lote', 'giz'],
+    [/melhor pre[cç]o|tabela/i, 'Preço', 'giz']
+  ];
+  const tit = h => { const t = TIT.find(x => x[0].test(h)); return t ? [t[1], t[2]] : ['Detalhe', 'giz']; };
+  const _h = window.cpxValeHTML;
+  window.cpxValeHTML = function(v){
+    let r = _h.apply(this, arguments);
+    try {
+      const i = r.indexOf('<ul class="cx-porque">'); if (i < 0) return r;
+      const j = r.indexOf('</ul>', i) + 5;
+      const d = document.createElement('div'); d.innerHTML = r.slice(i, j);
+      const lis = [...d.querySelectorAll('li')]; if (lis.length < 2) return r;
+      const ult = lis[lis.length - 1], motivos = lis.slice(0, -1);
+      const usados = {};
+      const grupos = motivos.map(li => { const h = li.querySelector('span').innerHTML; let [t, tom] = tit(h); usados[t] = (usados[t] || 0) + 1; if (usados[t] > 1) t += ' ' + usados[t];
+        return `<div class="rg-sub rg-t-${tom}"><i></i>${t}</div><ul class="rg-lista rg-t-${tom}"><li>${h}</li></ul>`; }).join('');
+      const conc = `<div class="vlz-conc">${ult.querySelector('svg') ? ult.querySelector('svg').outerHTML : ''}<span><small>Conclusão</small>${ult.querySelector('span').innerHTML}</span></div>`;
+      r = r.slice(0, i) + `<div class="vlz-grupos">${grupos}</div>` + conc + r.slice(j);
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  /* os grupos viram cartões (o mesmo motor do Essencial) */
+  const aplicar = sec => {
+    const g = sec && sec.querySelector('.vlz-grupos'); if (!g || g.dataset.ok) return;
+    const subs = [...g.querySelectorAll(':scope > .rg-sub')]; if (subs.length < 2) return;
+    const tom = el => [...el.classList].find(k => /^rg-t-/.test(k)) || 'rg-t-giz';
+    const grupos = subs.map(sb => { const ul = sb.nextElementSibling; return {tit:sb.textContent.trim(), tom:tom(sb), itens:[...ul.children].map(li => li.innerHTML)}; });
+    const box = document.createElement('div'); box.className = 'bnt'; box._g = grupos;
+    const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+    box.innerHTML = grupos.map((x, n) => `<button type="button" class="bnt-t ${x.tom}" data-bnt="${n}" aria-haspopup="dialog"><span class="bnt-cab"><i></i><b>${x.tit}</b></span><p class="bnt-res">${x.itens[0]}</p><span class="bnt-mais" data-bnt-mais>Ler tudo${SETA}</span></button>`).join('');
+    g.replaceWith(box); box.dataset.ok = '1';
+    requestAnimationFrame(() => box.querySelectorAll('.bnt-t').forEach(t => { const p = t.querySelector('.bnt-res'); if (p && p.scrollHeight <= p.clientHeight + 1 && p.offsetParent) t.querySelector('[data-bnt-mais]').style.visibility = 'hidden'; }));
+  };
+  window.vlzAplicar = () => document.querySelectorAll('[data-rg-sec="vale"]').forEach(aplicar);
+  if (typeof rgMontar === 'function'){
+    const o = rgMontar;
+    rgMontar = function(){ const r = o.apply(this, arguments); try { vlzAplicar(); if (typeof rgAlturaUnica === 'function') rgAlturaUnica(); } catch(e){ console.error(e); } return r; };
+  }
+  /* o câmbio (compras em moeda) redesenha o "Vale a pena?": reaplica */
+  if (typeof abrirRegras === 'function'){
+    const o = abrirRegras;
+    abrirRegras = function(){ const r = o.apply(this, arguments);
+      try { const d = document.getElementById('dlgRegras'); if (d && !d._vlz){ d._vlz = new MutationObserver(() => { try { vlzAplicar(); } catch(e){} }); d._vlz.observe(d, {childList:true, subtree:true}); } vlzAplicar(); } catch(e){}
+      return r; };
+  }
+})();
+</script>
+
+
+<style id="lnh-css">
+/* ══ 29/10: textos da vitrine na mesma linha (pedido do Jadiel) ══════════════ */
+/* "Hora de comprar: ..." e "Na sua lista: ..." numa linha só */
+.ljl-des, .ds-hora, .lj-des, .etq-lista{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; display:block !important; }
+.ljl-des svg{ vertical-align:-2px; margin-right:5px; }
+/* selo da Black à esquerda e "Também na ..." à direita, na mesma linha */
+.ljl-n{ display:grid !important; grid-template-columns:max-content minmax(0,1fr); column-gap:10px; row-gap:3px; align-items:center; }
+.ljl-n > *{ grid-column:1 / -1; min-width:0; }
+.ljl-n > .bk-chip{ grid-column:1; justify-self:start; margin:2px 0 0 !important; }
+.ljl-n > .ljl-tb{ grid-column:2; justify-self:end; text-align:right; line-height:1.3; }
+.ljl-n > .bk-chip{ white-space:nowrap; }
+/* Mesma loja: os selos ao lado da frase "Compre pela ...", à direita (descem só se não couberem) */
+.lc2-n > div{ display:flex; flex-wrap:wrap; align-items:center; column-gap:14px; row-gap:6px; min-width:0; }
+.lc2-n > div > b{ flex-basis:100%; }
+.lc2-n > div > small{ flex:1 1 260px; min-width:0; }
+.lc2-n > div > .lcx{ margin:0 0 0 auto !important; padding:0 !important; border:0 !important; flex:0 1 auto; justify-content:flex-end; flex-wrap:wrap; }
+.lc2-l{ grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr) !important; }
+@media (max-width:760px){ .lc2-n > div > .lcx{ margin-left:0 !important; justify-content:flex-start; } }
+</style>
+
+<style id="bfa2-css">
+/* Antes da Black em duas colunas no computador (29/10/2026) */
+@media (min-width:1100px){
+  .bf-bloco.bfa{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; align-items:stretch; }
+  .bf-bloco.bfa > :not(.bfa-l){ grid-column:1 / -1; }
+  .bf-bloco.bfa > .bfa-l + .bfa-l{ margin-top:0; }
+  .bf-bloco.bfa > .bfa-l{ align-content:space-between; }
+}
+</style>
+
+<style id="bfg2-css">
+/* Black: rotas em duas colunas quando a tela é larga (29/10/2026). Cada cartão
+   continua com 2025 à esquerda e 2026 à direita; em telas menores, uma coluna. */
+@media (min-width:1600px){
+  .bf-grupo{ display:grid !important; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; align-items:stretch; }
+  .bf-grupo > :not(.bf-rota){ grid-column:1 / -1; }
+  .bf-grupo > .bf-rota{ grid-template-columns:minmax(0,1fr) 210px; }
+}
+</style>
+<style id="cpf2-css">
+/* ══ CONTROLE DE CPF EM CARTÕES (29/10/2026) ═════════════════════════════════
+   Uma pessoa por cartão; dentro, um bloco por programa com o anel das vagas
+   (livres de quantas), as milhas usadas e os botões Vagas e Quem usou. */
+.cpf2{ display:grid; gap:16px; }
+.cpf2-p{ border-radius:22px; border:1px solid var(--fio); background:linear-gradient(170deg, color-mix(in srgb, var(--anil-claro, #6aa6ff) 6%, var(--sup-0)), var(--sup-0) 55%); overflow:hidden; }
+.cpf2-cab{ display:flex; align-items:center; gap:14px; padding:16px 20px; border-bottom:1px solid var(--fio); flex-wrap:wrap; }
+.cpf2-cab .tit-av{ width:44px !important; height:44px !important; font-size:15px !important; }
+.cpf2-cab h3{ margin:0; font-size:calc(16px * var(--esc)); color:var(--giz); letter-spacing:.01em; }
+.cpf2-cab small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:2px; }
+.cpf2-tot{ margin-left:auto; display:flex; gap:18px; }
+.cpf2-tot div{ text-align:right; } .cpf2-tot b{ display:block; font:700 calc(18px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.cpf2-tot span{ font-size:calc(10px * var(--esc)); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); }
+.cpf2-tot .alerta b{ color:var(--brasa); }
+.cpf2-gr{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap:12px; padding:16px 20px 18px; }
+.cpf2-c{ position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 14px; padding:14px; border-radius:18px; border:1px solid color-mix(in srgb, var(--zc) 30%, var(--fio));
+  background:linear-gradient(150deg, color-mix(in srgb, var(--zc) 9%, var(--sup-1)), var(--sup-1) 65%); transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s; }
+.cpf2-c:hover{ transform:translateY(-2px); box-shadow:0 14px 30px -20px rgba(0,0,0,.55); }
+.cpf2-anel{ grid-row:1 / 3; position:relative; width:80px; height:80px; display:grid; place-items:center; }
+.cpf2-anel svg{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
+.cpf2-anel circle{ fill:none; stroke-width:6; }
+.cpf2-anel .t{ stroke:color-mix(in srgb, var(--giz) 9%, transparent); }
+.cpf2-anel .p{ stroke:var(--zc); stroke-linecap:round; filter:drop-shadow(0 0 4px color-mix(in srgb, var(--zc) 40%, transparent)); }
+.cpf2-anel span{ position:relative; text-align:center; line-height:1; }
+.cpf2-anel b{ display:block; font:700 calc(20px * var(--esc))/1 var(--f-d, inherit); color:var(--zc); font-variant-numeric:tabular-nums; }
+.cpf2-anel small{ display:block; margin-top:2px; font:700 calc(8px * var(--esc))/1.1 var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
+.cpf2-anel .p0{ position:absolute; right:-3px; bottom:-3px; }
+.cpf2-anel .p0 .disco-prog{ width:26px !important; height:26px !important; font-size:9px !important; box-shadow:0 0 0 2px var(--sup-0); }
+.cpf2-n{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; min-width:0; }
+.cpf2-n b{ font-size:calc(14.5px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cpf2-n em{ font-style:normal; font:700 calc(9.5px * var(--esc))/1.4 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:99px; white-space:nowrap;
+  color:var(--zc); background:color-mix(in srgb, var(--zc) 14%, transparent); }
+.cpf2-d{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 10px; font-size:calc(11.5px * var(--esc)); color:var(--grafite); align-content:start; }
+.cpf2-d b{ display:block; font:700 calc(13px * var(--esc))/1.2 var(--f-b, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.cpf2-modo{ grid-column:1 / -1; font-size:calc(11px * var(--esc)); color:var(--grafite); }
+.cpf2-ac{ grid-column:1 / -1; display:flex; gap:6px; margin-top:4px; }
+.cpf2-ac .bt{ flex:1; justify-content:center; }
+@media (max-width:640px){ .cpf2-cab{ padding:14px; } .cpf2-tot{ margin-left:0; width:100%; justify-content:space-between; } .cpf2-gr{ padding:12px 14px 14px; } }
+</style>
+<script id="cpf2-js">
+(function(){
+  if (typeof renderControleContas !== 'function') return;
+  const o = renderControleContas;
+  renderControleContas = function(){
+    const r = o.apply(this, arguments);
+    try {
+      const alvo = $('#ctrContas'); if (!alvo) return r;
+      const tb = alvo.querySelector('table.tb-dados'); if (!tb) return r;
+      const l = matrizCota(); const por = new Map();
+      l.forEach(x => { if (!por.has(x.conta.id)) por.set(x.conta.id, {c:x.conta, ls:[]}); por.get(x.conta.id).ls.push(x); });
+      const C = 2 * Math.PI * 31;
+      const bloco = x => {
+        const z = x.livres === null ? 'var(--anil-claro, #6aa6ff)' : x.livres === 0 ? 'var(--brasa)' : x.livres <= 3 ? 'var(--ouro)' : 'var(--jade)';
+        const frac = x.limite ? Math.max(0, Math.min(1, x.livres / x.limite)) : 1;
+        const st = x.livres === null ? 'sem teto' : x.livres === 0 ? 'cota fechada' : x.livres <= 3 ? 'apertada' : 'folgada';
+        const modo = x.pol.modo === 'bilhetes' ? 'por bilhete' : x.pol.modo === 'lista' ? 'lista fixa' : 'por pessoa';
+        const janela = x.pol.janela === 'civil' ? 'ano civil' : x.pol.janela === 'movel' ? '12 meses' : 'sem prazo';
+        return `<div class="cpf2-c" style="--zc:${z}">
+          <div class="cpf2-anel" role="img" aria-label="${x.livres === null ? 'sem limite de CPF' : `${x.livres} vagas livres de ${x.limite}`}"><svg viewBox="0 0 74 74" aria-hidden="true"><circle class="t" cx="37" cy="37" r="31"/><circle class="p" cx="37" cy="37" r="31" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}"/></svg>
+            <span><b>${x.livres === null ? '∞' : x.livres}</b><small>${x.livres === null ? 'sem teto' : `livres<br>de ${x.limite}`}</small></span><span class="p0">${discoProg(x.prog)}</span></div>
+          <div class="cpf2-n"><b>${esc(prog(x.prog).n)}</b><em>${st}</em></div>
+          <div class="cpf2-d"><span><b>${x.emissoes || '–'}</b>emissões</span><span><b>${x.usados}${x.limite ? ` de ${x.limite}` : ''}</b>vagas usadas</span>
+            <span><b>${x.milhas ? nBR(x.milhas) : '–'}</b>milhas usadas</span><span><b>${x.media ? nBR(Math.round(x.media)) : '–'}</b>por emissão</span></div>
+          <div class="cpf2-modo" data-dica="${esc(x.pol.nota || '')}">Conta ${modo} · ${janela}</div>
+          <div class="cpf2-ac"><button class="bt p fantasma" onclick="ajustarCota('${x.conta.id}','${x.prog}')" data-dica="Informar quantas vagas ainda restam nesta conta"><svg><use href="#i-lapis"/></svg>Vagas</button>
+            <button class="bt p fantasma" onclick="registrarEmissao('${x.conta.id}','${x.prog}')" data-dica="Anotar quem usou vaga, com nome e CPF"><svg><use href="#i-usuarios"/></svg>Quem usou</button></div>
+        </div>`;
+      };
+      const html = `<div class="cpf2">${[...por.values()].map(g => {
+        const em = soma(g.ls.map(x => x.emissoes)), mi = soma(g.ls.map(x => x.milhas)), fech = g.ls.filter(x => x.livres === 0).length;
+        return `<section class="cpf2-p"><div class="cpf2-cab">${typeof avatarDe === 'function' ? avatarDe(g.c.id, 'tit-av') : ''}<div><h3>${esc(g.c.nome)}</h3><small>${g.ls.length} ${g.ls.length === 1 ? 'programa' : 'programas'} acompanhados</small></div>
+          <div class="cpf2-tot"><div><b>${em}</b><span>emissões</span></div><div><b>${mi ? nBR(mi) : '–'}</b><span>milhas usadas</span></div>${fech ? `<div class="alerta"><b>${fech}</b><span>cota fechada</span></div>` : ''}</div></div>
+          <div class="cpf2-gr">${g.ls.map(bloco).join('')}</div></section>`; }).join('')}</div>`;
+      tb.outerHTML = html;
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+
+<style id="emz-css">
+/* ══ CONTROLE POR EMISSÃO COMO CARTÃO DE EMBARQUE (29/10/2026) ══════════════ */
+.emz{ display:grid; gap:18px; }
+.emz-mes{ display:flex; align-items:center; gap:10px; font:700 calc(11px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.emz-mes::after{ content:''; flex:1; border-top:1px dashed color-mix(in srgb, var(--giz) 14%, transparent); }
+.emz-mes span{ color:var(--giz); }
+.emz-g{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(460px, 100%), 1fr)); gap:12px; }
+.emz-b{ position:relative; display:grid; grid-template-columns:76px minmax(0,1fr); border-radius:18px; overflow:hidden; border:1px solid color-mix(in srgb, var(--ze) 28%, var(--fio));
+  background:var(--sup-0); transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s; }
+.emz-b:hover{ transform:translateY(-2px); box-shadow:0 16px 32px -22px rgba(0,0,0,.6); }
+.emz-d{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:12px 6px;
+  background:linear-gradient(170deg, color-mix(in srgb, var(--ze) 22%, var(--sup-1)), color-mix(in srgb, var(--ze) 8%, var(--sup-1))); border-right:2px dashed color-mix(in srgb, var(--giz) 14%, transparent); }
+.emz-d::before, .emz-d::after{ content:''; position:absolute; right:-9px; width:16px; height:16px; border-radius:50%; background:var(--sup-fundo, var(--papel, var(--sup-1))); border:1px solid color-mix(in srgb, var(--ze) 28%, var(--fio)); }
+.emz-d::before{ top:-9px; } .emz-d::after{ bottom:-9px; }
+.emz-d b{ font:700 calc(26px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.emz-d span{ font:700 calc(10px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); }
+.emz-c{ padding:12px 14px 12px 18px; display:grid; gap:8px; min-width:0; }
+.emz-top{ display:flex; align-items:center; gap:10px; min-width:0; }
+.emz-rota{ font:700 calc(19px * var(--esc))/1.15 var(--f-d, inherit); color:var(--giz); letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
+.emz-rota small{ font:600 calc(11.5px * var(--esc))/1 var(--f-b, inherit); letter-spacing:0; color:var(--grafite); margin-left:6px; }
+.emz-st{ flex:0 0 auto; font:700 calc(10px * var(--esc))/1.5 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; padding:2px 9px; border-radius:99px; color:var(--ze); background:color-mix(in srgb, var(--ze) 14%, transparent); border:1px solid color-mix(in srgb, var(--ze) 35%, transparent); }
+.emz-voo{ display:flex; align-items:center; gap:8px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); min-width:0; }
+.emz-voo .disco-prog{ width:22px !important; height:22px !important; font-size:8px !important; flex:0 0 auto; }
+.emz-voo span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.emz-loc{ flex:0 0 auto; margin-left:auto; font:700 calc(11.5px * var(--esc))/1 var(--f-m, monospace); letter-spacing:.12em; padding:4px 8px; border-radius:8px; border:1px dashed color-mix(in srgb, var(--giz) 25%, transparent); color:var(--giz); }
+.emz-pe{ display:flex; align-items:center; gap:14px; padding-top:8px; border-top:1px dashed color-mix(in srgb, var(--giz) 12%, transparent); font-size:calc(11.5px * var(--esc)); color:var(--grafite); flex-wrap:wrap; }
+.emz-pe b{ display:block; font:700 calc(14px * var(--esc))/1.2 var(--f-b, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.emz-pe .quem{ display:flex; align-items:center; gap:7px; min-width:0; }
+.emz-pe .quem .tit-av{ width:24px !important; height:24px !important; font-size:9px !important; }
+.emz-pe .bt{ margin-left:auto; }
+@media (max-width:520px){ .emz-b{ grid-template-columns:62px minmax(0,1fr); } .emz-rota{ font-size:calc(16px * var(--esc)); } }
+</style>
+<script id="emz-js">
+(function(){
+  if (typeof renderControleEmissoes !== 'function') return;
+  const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const MESN = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const SEL = {usada:['Voada','var(--jade)'], realizada:['Voada','var(--jade)'], emitida:['Emitida','var(--anil-claro, #6aa6ff)'], confirmada:['Confirmada','var(--anil-claro, #6aa6ff)'], prevista:['Prevista','var(--ouro)']};
+  const o = renderControleEmissoes;
+  renderControleEmissoes = function(){
+    const r = o.apply(this, arguments);
+    try {
+      const alvo = $('#emControle'); const tb = alvo && alvo.querySelector('table.tb-dados'); if (!tb) return r;
+      const FAM = {usada:['usada','realizada'], emitida:['emitida','confirmada'], prevista:['prevista','']};
+      let l = DB.reservas.filter(x => x.status !== 'cancelada' && x.data)
+        .filter(x => emAno === 'todos' || String(x.data).startsWith(emAno))
+        .filter(x => emMes === 'todos' || String(x.data).slice(5, 7) === emMes)
+        .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+      if (emStatus) l = l.filter(x => (FAM[emStatus] || [emStatus]).includes(x.status || 'prevista'));
+      const cartao = x => {
+        const c = custoEmissao(x), s = SEL[x.status || 'prevista'] || SEL.prevista;
+        const partes = String(x.desc || 'Emissão').split(/\s+·\s+/);
+        let rota = partes.shift() || 'Emissão', extra = '';
+        const m = rota.match(/^(.*?)\s*(\(.+\))\s*$/); if (m){ rota = m[1]; extra = m[2].replace(/[()]/g, ''); }
+        const loc = partes.length && /^[A-Z0-9]{5,8}$/.test(partes[partes.length - 1]) ? partes.pop() : '';
+        const conta = x.contaId ? (DB.contas.find(k => k.id === x.contaId) || {}) : null;
+        const [a, mm, d] = String(x.data).split('-');
+        return `<article class="emz-b" style="--ze:${s[1]}">
+          <div class="emz-d"><b>${d}</b><span>${MESES[+mm - 1]}</span><span>${a}</span></div>
+          <div class="emz-c">
+            <div class="emz-top"><div class="emz-rota">${esc(rota)}${extra ? `<small>${esc(extra)}</small>` : ''}</div><span class="emz-st">${s[0]}</span></div>
+            <div class="emz-voo">${x.prog ? discoProg(x.prog) : ''}<span>${esc(partes.join(' · ') || (x.prog ? prog(x.prog).n : ''))}</span>${loc ? `<span class="emz-loc" title="Localizador">${esc(loc)}</span>` : ''}</div>
+            <div class="emz-pe">
+              <span class="quem">${conta && conta.id && typeof avatarDe === 'function' ? avatarDe(conta.id, 'tit-av') : ''}<span><b>${conta && conta.nome ? esc(nomeCurto(conta.nome)) : 'sem conta'}</b>${esc((TIPOS_VIAGEM[x.tipo] || {n:x.tipo || ''}).n)}</span></span>
+              <span><b>${c.milhas ? nBR(c.milhas) : '–'}</b>milhas</span>
+              <span><b>${brl(c.total)}</b>custo real</span>
+              <button class="bt p fantasma icone" onclick="editarViagem('${x.id}')" data-dica="Editar" aria-label="Editar emissão"><svg><use href="#i-lapis"/></svg></button>
+            </div></div></article>`;
+      };
+      const meses = [];
+      l.forEach(x => { const k = String(x.data).slice(0, 7); let g = meses.find(y => y.k === k); if (!g){ g = {k, ls:[]}; meses.push(g); } g.ls.push(x); });
+      tb.outerHTML = `<div class="emz">${meses.map(g => `<div class="emz-mes"><span>${MESN[+g.k.slice(5) - 1]} de ${g.k.slice(0, 4)}</span> · ${g.ls.length} ${g.ls.length === 1 ? 'emissão' : 'emissões'}</div><div class="emz-g">${g.ls.map(cartao).join('')}</div>`).join('')}</div>`;
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+
+<style id="ltz-css">
+/* ══ VENCIMENTOS COM CRONÔMETRO REGRESSIVO (29/10/2026) ══════════════════════
+   Cada lote vira um cartão com a logo do programa e um relógio que conta para
+   trás de verdade: dias, horas, minutos e segundos até a milha vencer. */
+.ltz{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(420px, 100%), 1fr)); gap:12px; padding:14px; }
+.ltz-c{ position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:12px 16px; padding:16px; border-radius:20px; border:1px solid color-mix(in srgb, var(--zl) 30%, var(--fio));
+  background:linear-gradient(155deg, color-mix(in srgb, var(--zl) 10%, var(--sup-0)), var(--sup-0) 60%); transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s; }
+.ltz-c:hover{ transform:translateY(-2px); box-shadow:0 16px 32px -22px rgba(0,0,0,.6); }
+.ltz-logo .disco-prog{ width:52px !important; height:52px !important; font-size:15px !important; box-shadow:0 8px 18px -8px rgba(0,0,0,.4), 0 0 0 3px var(--sup-0), 0 0 0 4px color-mix(in srgb, var(--marca) 50%, transparent) !important; }
+.ltz-cab{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; min-width:0; }
+.ltz-cab b{ display:block; font-size:calc(15.5px * var(--esc)); color:var(--giz); }
+.ltz-cab small{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.ltz-st{ flex:0 0 auto; font:700 calc(10px * var(--esc))/1.5 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; padding:2px 9px; border-radius:99px; color:var(--zl); background:color-mix(in srgb, var(--zl) 14%, transparent); border:1px solid color-mix(in srgb, var(--zl) 35%, transparent); }
+.ltz-rel{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+.ltz-rel div{ text-align:center; padding:10px 4px 8px; border-radius:14px; background:color-mix(in srgb, var(--giz) 4%, var(--sup-1)); border:1px solid color-mix(in srgb, var(--zl) 18%, var(--fio)); position:relative; overflow:hidden; }
+.ltz-rel div::after{ content:''; position:absolute; left:0; right:0; top:50%; border-top:1px solid color-mix(in srgb, var(--sup-0) 70%, transparent); }
+.ltz-rel b{ display:block; font:700 calc(26px * var(--esc))/1 var(--f-m, var(--f-d, inherit)); color:var(--zl); font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+.ltz-rel span{ display:block; margin-top:5px; font:700 calc(9px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.ltz-rel.fim{ grid-template-columns:1fr; } .ltz-rel.fim b{ font-size:calc(18px * var(--esc)); }
+.ltz-pe{ grid-column:1 / -1; display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding-top:10px; border-top:1px dashed color-mix(in srgb, var(--giz) 12%, transparent); font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.ltz-pe b{ display:block; font:700 calc(14px * var(--esc))/1.2 var(--f-b, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.ltz-pe .ac{ margin-left:auto; display:flex; gap:6px; }
+.ltz-c.urg .ltz-rel b{ animation:ltzPulsa 1.6s ease-in-out infinite; }
+@keyframes ltzPulsa{ 50%{ opacity:.55; } }
+@media (prefers-reduced-motion:reduce){ .ltz-c.urg .ltz-rel b{ animation:none; } }
+@media (max-width:520px){ .ltz{ padding:10px; } .ltz-rel b{ font-size:calc(20px * var(--esc)); } }
+</style>
+<script id="ltz-js">
+(function(){
+  if (typeof renderSaldo !== 'function') return;
+  const fim = l => new Date((l.vence || '') + 'T23:59:59').getTime();
+  const partes = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 86400), Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60]; };
+  const dd = n => String(n).padStart(2, '0');
+  const relogio = l => {
+    const ms = fim(l) - Date.now(); if (!(ms > 0)) return `<div class="ltz-rel fim"><div><b>Vencido</b><span>em ${dataBR(l.vence)}</span></div></div>`;
+    const [d, h, m, s] = partes(ms);
+    return `<div class="ltz-rel" data-ltz="${esc(l.vence)}"><div><b data-u="d">${d}</b><span>${d === 1 ? 'dia' : 'dias'}</span></div><div><b data-u="h">${dd(h)}</b><span>horas</span></div><div><b data-u="m">${dd(m)}</b><span>min</span></div><div><b data-u="s">${dd(s)}</b><span>seg</span></div></div>`;
+  };
+  const o = renderSaldo;
+  renderSaldo = function(){
+    const r = o.apply(this, arguments);
+    try {
+      const alvo = $('#slLotes'); const tb = alvo && alvo.querySelector('table.tb-dados'); if (!tb) return r;
+      const ls = [...DB.lotes].sort((a, b) => (a.vence || '9999').localeCompare(b.vence || '9999'));
+      tb.outerHTML = `<div class="ltz">${ls.map(l => {
+        const d = diasAte(l.vence), prot = loteProtegido(l);
+        const [zl, st] = prot ? ['var(--jade)', 'protegido pelo clube'] : d < 0 ? ['var(--grafite)', 'vencido'] : d <= 30 ? ['var(--brasa)', 'urgente'] : d <= 90 ? ['var(--ouro)', 'atenção'] : ['var(--jade)', 'tranquilo'];
+        return `<article class="ltz-c${!prot && d >= 0 && d <= 30 ? ' urg' : ''}" style="--zl:${zl}">
+          <div class="ltz-logo">${discoProg(l.prog)}</div>
+          <div class="ltz-cab"><div><b>${esc(prog(l.prog).n)}</b><small data-dica="${esc(nomeConta(l.contaId))}">${esc(nomeCurtoConta(l.contaId))} · vence em ${dataBR(l.vence)}</small></div><span class="ltz-st">${st}</span></div>
+          ${relogio(l)}
+          <div class="ltz-pe"><span><b>${nBR(l.qtd)}</b>milhas</span><span><b>${brl(l.qtd / 1000 * faixasDe(l.prog).alvo)}</b>valem</span><span><b>${esc(l.origem || 'n/d')}</b>origem</span>
+            <span class="ac"><button class="bt p fantasma icone" onclick="editarLote('${l.id}')" data-dica="Editar" aria-label="Editar lote"><svg><use href="#i-lapis"/></svg></button><button class="bt p fantasma icone" onclick="apagar('lotes','${l.id}','o lote')" data-dica="Apagar" aria-label="Apagar lote"><svg><use href="#i-lixo"/></svg></button></span></div>
+        </article>`; }).join('')}</div>`;
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderSaldo; }); } catch(_){}
+  /* o relógio anda a cada segundo, só quando a aba está visível */
+  setInterval(() => {
+    if (document.hidden) return;
+    document.querySelectorAll('.ltz-rel[data-ltz]').forEach(el => {
+      if (!el.offsetParent) return;
+      const [d, h, m, s] = partes(new Date(el.dataset.ltz + 'T23:59:59').getTime() - Date.now());
+      const set = (u, v) => { const b = el.querySelector(`[data-u="${u}"]`); if (b && b.textContent !== v) b.textContent = v; };
+      set('d', String(d)); set('h', dd(h)); set('m', dd(m)); set('s', dd(s));
+    });
+  }, 1000);
+})();
+</script>
+
+
+<style id="rvc-css">
+/* venda: a logo é a do programa usado; a companhia aérea vem escrita ao lado (29/10/2026) */
+.rv-ciatxt{ display:inline-flex; align-items:center; margin-left:6px; padding:1px 8px; border-radius:99px; border:1px solid var(--fio); font:600 calc(11px * var(--esc))/1.5 var(--f-b, inherit); color:var(--giz); white-space:nowrap; }
+</style>
+<style id="crz-css">
+/* ══ PAINEL DE CARTÕES: O CARTÃO DE VERDADE NA TELA (29/10/2026) ════════════
+   Cada cartão vira um plástico com a cor do banco, o chip, a bandeira e o final.
+   Ao lado, a fatura do mês e um anel com quanto do limite já foi usado. */
+.crz{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap:14px; }
+.crz-c{ display:grid; grid-template-columns:200px minmax(0,1fr); gap:16px; align-items:center; padding:14px; border-radius:20px; border:1px solid var(--fio); background:var(--sup-0);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s; }
+.crz-c:hover{ transform:translateY(-2px); box-shadow:0 16px 34px -22px rgba(0,0,0,.55); }
+.crz-pl{ position:relative; aspect-ratio:1.586; border-radius:14px; padding:12px 14px; color:#fff; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between;
+  background:linear-gradient(135deg, var(--b1), var(--b2)); box-shadow:0 14px 28px -14px var(--b2), inset 0 1px 0 rgba(255,255,255,.25); }
+.crz-pl::before{ content:''; position:absolute; inset:-40% -20% auto auto; width:85%; height:120%; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.22), transparent 65%); }
+.crz-pl::after{ content:''; position:absolute; inset:0; background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.12) 50%, transparent 60%); transform:translateX(-120%); transition:transform .9s; }
+.crz-c:hover .crz-pl::after{ transform:translateX(120%); }
+@media (prefers-reduced-motion:reduce){ .crz-pl::after{ display:none; } .crz-c{ transition:none; } }
+.crz-pl-t{ position:relative; display:flex; justify-content:space-between; align-items:flex-start; gap:6px; font:700 calc(11px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.04em; }
+.crz-pl-t span{ opacity:.85; font-weight:600; text-align:right; max-width:60%; }
+.crz-chip{ position:relative; width:30px; height:22px; border-radius:5px; background:linear-gradient(135deg, #F6D67A, #B8892E); box-shadow:inset 0 0 0 1px rgba(0,0,0,.15); }
+.crz-pl-b{ position:relative; display:flex; justify-content:space-between; align-items:flex-end; font:600 calc(12px * var(--esc))/1 var(--f-m, monospace); letter-spacing:.14em; }
+.crz-pl-b b{ font:800 calc(12px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.06em; font-style:italic; }
+.crz-info{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:center; min-width:0; }
+.crz-info h4{ grid-column:1; margin:0; font-size:calc(14.5px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.crz-info small{ grid-column:1; color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.crz-fat{ grid-column:1; margin-top:6px; }
+.crz-fat span{ display:block; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); }
+.crz-fat b{ font:700 calc(24px * var(--esc))/1.1 var(--f-d, inherit); color:var(--ouro); font-variant-numeric:tabular-nums; }
+.crz-fat b.zero{ color:var(--grafite); }
+.crz-anel{ grid-column:2; grid-row:1 / 5; position:relative; width:84px; height:84px; display:grid; place-items:center; }
+.crz-anel svg{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
+.crz-anel circle{ fill:none; stroke-width:7; } .crz-anel .t{ stroke:color-mix(in srgb, var(--giz) 9%, transparent); } .crz-anel .p{ stroke:var(--zu); stroke-linecap:round; }
+.crz-anel span{ position:relative; text-align:center; line-height:1; }
+.crz-anel b{ display:block; font:700 calc(17px * var(--esc))/1 var(--f-d, inherit); color:var(--zu); font-variant-numeric:tabular-nums; }
+.crz-anel small{ display:block; margin-top:3px; font:700 calc(8px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
+.crz-lim{ grid-column:1 / -1; font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+@media (max-width:560px){ .crz-c{ grid-template-columns:1fr; } .crz-pl{ max-width:300px; } }
+</style>
+<script id="crz-js">
+(function(){
+  if (typeof renderCartoes !== 'function') return;
+  const COR = [[/ita[uú]/i, '#FF7A00', '#B84A00'], [/santander/i, '#EC0000', '#8A0000'], [/revolut/i, '#3A3F4B', '#0E1116'], [/nubank|nu\b/i, '#8A05BE', '#4B0273'],
+    [/bradesco/i, '#CC092F', '#6E0418'], [/banco do brasil|\bbb\b/i, '#F7D000', '#3A55A4'], [/caixa/i, '#0070AF', '#003B66'], [/inter\b/i, '#FF7A00', '#7A3B00'],
+    [/c6/i, '#2B2B2B', '#000000'], [/xp\b/i, '#1E1E1E', '#000000'], [/btg/i, '#0B2A5B', '#04142C'], [/sicoob|sicredi/i, '#00A091', '#00594F'], [/nordeste/i, '#B4123B', '#5E0A1F']];
+  const cor = b => { const m = COR.find(x => x[0].test(b || '')); return m ? [m[1], m[2]] : ['#4B5B7A', '#1E2638']; };
+  const o = renderCartoes;
+  renderCartoes = function(){
+    const r = o.apply(this, arguments);
+    try {
+      const alvo = $('#crProjecao'); if (!alvo || !alvo.querySelector('.crd-linha')) return r;
+      const cs = typeof crAtivos === 'function' ? crAtivos() : (DB.cartoes || []);
+      const m = mesAtual(), C = 2 * Math.PI * 35;
+      alvo.innerHTML = `<div class="crz">${cs.map(c => {
+        const t = totalFatura(c.id, m), lim = Number(c.limite) || 0, uso = lim ? clamp(t / lim * 100, 0, 100) : 0;
+        const zu = uso >= 80 ? 'var(--brasa)' : uso >= 50 ? 'var(--ouro)' : 'var(--jade)', [b1, b2] = cor(c.banco);
+        return `<article class="crz-c">
+          <div class="crz-pl" style="--b1:${b1};--b2:${b2}" aria-hidden="true">
+            <div class="crz-pl-t"><b>${esc(c.banco)}</b><span>${esc(c.produto)}</span></div>
+            <div class="crz-chip"></div>
+            <div class="crz-pl-b"><span>•••• ${esc(String(c.final || '').slice(-4))}</span><b>${esc(c.bandeira || '')}</b></div>
+          </div>
+          <div class="crz-info">
+            <h4>${esc(c.banco)} · ${esc(c.produto)}</h4>
+            <small>${esc(c.bandeira || '')} final ${esc(String(c.final || '').slice(-4))}${c.vencimento ? ` · vence dia ${c.vencimento}` : ''}</small>
+            <div class="crz-fat"><span>Fatura do mês</span><b class="${t > 0 ? '' : 'zero'}">${brl(t)}</b></div>
+            <div class="crz-anel" style="--zu:${zu}" role="img" aria-label="${lim ? `${Math.round(uso)}% do limite usado` : 'limite não informado'}"><svg viewBox="0 0 84 84" aria-hidden="true"><circle class="t" cx="42" cy="42" r="35"/><circle class="p" cx="42" cy="42" r="35" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - Math.max(uso, t > 0 ? 1.5 : 0) / 100)).toFixed(1)}"/></svg>
+              <span><b>${lim ? pct(uso, uso < 10 ? 1 : 0) : '–'}</b><small>do limite</small></span></div>
+            <div class="crz-lim">${lim ? `Limite de ${brl(lim)} · sobra ${brl(Math.max(0, lim - t))}` : 'Limite não informado'}</div>
+          </div></article>`; }).join('')}</div>`;
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderCartoes; }); } catch(_){}
 })();
 </script>
 
