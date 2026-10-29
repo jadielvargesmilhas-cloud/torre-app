@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-29 15:40';
+const BUILD = '2026-10-29 16:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -74741,9 +74741,9 @@ function altDataFutura(iso, ref){
 .ljl-n > .ljn2 > .bk-chip{ margin:0 0 0 auto !important; justify-self:auto; }
 @media (max-width:760px){ .ljl-n > .bk-chip small, #ljVitrine .ljl-n .bk-chip small{ display:none !important; } .ljl-n > .bk-chip, #ljVitrine .ljl-n .bk-chip{ max-width:100%; }
   .ljl-l:has(> .lza){ grid-template-columns:50px minmax(0, 1fr) auto !important; } .ljl-l > .cpz-anel.lza{ align-self:start; width:50px !important; height:50px !important; } }
-@media (min-width:761px) and (max-width:1099px){ .ljl-l:has(> .lza){ grid-template-columns:66px minmax(0, 1fr) 90px 100px !important; } }
-@media (min-width:1100px){ .ljl-l:has(> .lza){ grid-template-columns:66px minmax(0, 1fr) 170px 80px 96px 214px !important; }
-  #ljVitrine .ljl-l:has(> .lza){ grid-template-columns:66px minmax(0, 1fr) 100px 114px !important; } }
+@media (min-width:761px) and (max-width:1099px){ .ljl-l:has(> .lza){ grid-template-columns:max(66px, calc(var(--lza, 0px) + 6px)) minmax(0, 1fr) 90px 100px !important; } }
+@media (min-width:1100px){ .ljl-l:has(> .lza){ grid-template-columns:max(66px, calc(var(--lza, 0px) + 6px)) minmax(0, 1fr) 170px 80px 96px 214px !important; }
+  #ljVitrine .ljl-l:has(> .lza){ grid-template-columns:max(66px, calc(var(--lza, 0px) + 6px)) minmax(0, 1fr) 100px 114px !important; } }
 </style>
 <script id="lza-js">
 (function(){
@@ -74799,22 +74799,30 @@ function altDataFutura(iso, ref){
       const a = l.querySelector(':scope > .lza'), nm = l.querySelector('.ljl-n > b'), ic = l.querySelector('.ljn-ic'); if (!a || !nm || !ic || !l.offsetParent) return;
       a.style.removeProperty('width'); a.style.removeProperty('height'); a.style.removeProperty('margin-top');
       const t = nm.getBoundingClientRect().top, bi = ic.getBoundingClientRect().bottom;
-      const h = Math.round(Math.max(50, Math.min(76, bi - t)));
+      const h = Math.ceil(Math.max(50, Math.min(110, bi - t)) + 1);   /* +1: melhor 1 px abaixo do que acima */
+      l.style.setProperty('--lza', h + 'px');
       a.style.setProperty('width', h + 'px', 'important'); a.style.setProperty('height', h + 'px', 'important');
       const d = Math.round(t - a.getBoundingClientRect().top); if (Math.abs(d) > 1) a.style.marginTop = d + 'px';
     });
   };
   window.lzaMedir = medir;
+  /* mede de novo quando as fontes terminam de carregar e sempre que um cartão muda de tamanho
+     (selo que quebra linha, janela redimensionada, fonte que chega depois) */
+  let tmm = 0; const agendar = () => { clearTimeout(tmm); tmm = setTimeout(medir, 60); };
+  try { document.fonts && document.fonts.ready.then(agendar); document.fonts && document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', agendar); } catch(_){}
+  addEventListener('load', agendar);
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(agendar) : null;
+  window.lzaVigiar = () => { if (!ro) return; document.querySelectorAll('.ljl-l[data-ljl] > .ljl-n').forEach(n => { if (!n._lzaRO){ n._lzaRO = 1; ro.observe(n); } }); };
   let tmz = 0; addEventListener('resize', () => { clearTimeout(tmz); tmz = setTimeout(medir, 150); });
   window.lzaTrocar = trocar;
   if (typeof renderLojasParceiras === 'function'){
     const o = renderLojasParceiras;
-    renderLojasParceiras = function(){ const r = o.apply(this, arguments); try { trocar(); requestAnimationFrame(medir); } catch(e){ console.error(e); } return r; };
+    renderLojasParceiras = function(){ const r = o.apply(this, arguments); try { trocar(); requestAnimationFrame(medir); lzaVigiar(); } catch(e){ console.error(e); } return r; };
     try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderLojasParceiras; }); } catch(_){}
   }
   /* qualquer outro redesenho da vitrine também ganha o anel */
   let pend = false;
-  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; if (document.querySelector('.ljl-l[data-ljl] > .lj-avatar')){ trocar(); requestAnimationFrame(medir); } }); })
+  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; if (document.querySelector('.ljl-l[data-ljl] > .lj-avatar')){ trocar(); requestAnimationFrame(medir); lzaVigiar(); } }); })
     .observe(document.documentElement, {childList:true, subtree:true});
 })();
 </script>
