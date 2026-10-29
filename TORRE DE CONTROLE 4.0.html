@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-29 13:00';
+const BUILD = '2026-10-29 13:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -74320,7 +74320,19 @@ function altDataFutura(iso, ref){
 #fbDesejos .ds-cab{ flex-wrap:wrap; }
 /* "Melhores campanhas destas lojas" só em Hora de comprar; em Na mira não ajuda a decidir (29/10/2026) */
 #lcMira .hd-dest{ display:none !important; }
-#fbDesejos .ds-cab > .dck{ flex:1 0 100% !important; margin-top:6px; }
+/* nome do item na 1ª linha; na 2ª, as etiquetas (prioridade, prazo) à esquerda e os botões à direita, numa linha só (29/10/2026) */
+#fbDesejos .ds-cab{ align-items:center; row-gap:8px; }
+#fbDesejos .ds-cab > .ds-nome{ flex:1 0 100%; }
+#fbDesejos .ds-cab > .dck{ flex:0 0 auto !important; margin-left:auto !important; flex-wrap:nowrap; }
+#fbDesejos .ds-cab > .dck .dck-b{ padding:5px 9px 5px 5px !important; column-gap:7px !important; border-radius:12px !important; }
+#fbDesejos .ds-cab > .dck .dck-b > i{ width:24px !important; height:24px !important; border-radius:8px !important; }
+#fbDesejos .ds-cab > .dck .dck-b > i svg{ width:13px !important; height:13px !important; }
+#fbDesejos .ds-cab > .dck .dck-b > b{ font-size:calc(9px * var(--esc)) !important; letter-spacing:.1em !important; }
+#fbDesejos .ds-cab > .dck .dck-b > span{ font-size:calc(12px * var(--esc)) !important; }
+#fbDesejos .ds-cab > .dck .dck-b > svg{ display:none !important; }
+#fbDesejos .ds-cab > .dck .dck-b{ grid-template-columns:auto auto !important; grid-template-areas:"i t" "i v" !important; padding-right:11px !important; }
+#fbDesejos .ds-cab > .dck{ gap:6px !important; }
+#fbDesejos .ds-cab > .etq{ letter-spacing:.03em !important; padding-left:8px !important; padding-right:8px !important; }
 </style>
 <script id="dck2-js">
 (function(){
@@ -74339,6 +74351,8 @@ function altDataFutura(iso, ref){
       const cs = getComputedStyle(it), borda = it.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
       const falta = borda - d.getBoundingClientRect().right;
       if (falta > 1) d.style.marginRight = (-Math.round(falta)) + 'px';
+      /* com a margem, a linha pode se rearrumar (os botões sobem para junto das etiquetas): mede de novo */
+      const f2 = borda - d.getBoundingClientRect().right; if (Math.abs(f2) > 1) d.style.marginRight = (parseFloat(d.style.marginRight || 0) - Math.round(f2)) + 'px';
     });
   }
   window.dckEsticar = dckEsticar;
@@ -74371,7 +74385,7 @@ function altDataFutura(iso, ref){
 @media (prefers-reduced-motion:reduce){ .op-melhor{ animation:none; } .op-t{ transition:none; } }
 .op-corpo{ display:grid; grid-template-columns:minmax(0,1fr) 1px auto; align-items:center; gap:12px; }
 .op-esq{ display:grid; gap:4px; min-width:0; }
-.op-esq .op-loja{ font-size:calc(15.5px * var(--esc)) !important; color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.op-esq .op-loja{ font-size:calc(15.5px * var(--esc)) !important; color:var(--giz); white-space:normal !important; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-height:1.2; text-overflow:clip !important; }
 .op-esq .op-prog{ justify-content:flex-start; }
 .op-div{ width:1px; align-self:stretch; background:linear-gradient(180deg, transparent, color-mix(in srgb, var(--giz) 22%, transparent), transparent); }
 .op-dir{ display:grid; gap:3px; justify-items:end; text-align:right; }
@@ -74689,20 +74703,20 @@ function altDataFutura(iso, ref){
 </script>
 
 <style id="bkb-css">
-/* ══ "JÁ BATE A BLACK 2025" EM DESTAQUE (29/10/2026) ══════════════════════════
-   Pílula esmeralda cheia, letra escura forte, chama dourada e um brilho que
-   passa de tempos em tempos: é a melhor notícia que um cartão pode dar. */
-.bk-chip.bate, .lcx-f.bate{ position:relative; overflow:hidden; color:#04140C !important; font-weight:800 !important; letter-spacing:.01em;
-  border:0 !important; background:linear-gradient(135deg, #8BF5C8, #2FBF85 55%, #158556) !important;
-  box-shadow:0 0 0 1px rgba(255,255,255,.28) inset, 0 8px 20px -8px #2FBF85; animation:bkbPulso 2.6s ease-in-out infinite; }
-.bk-chip.bate{ padding:4px 11px 4px 5px !important; }
+/* ══ "JÁ BATE A BLACK 2025" EM DESTAQUE (29/10/2026, tom suavizado a pedido) ═══
+   Verde-menta claro com a letra verde forte, fio verde e a chama dourada: chama
+   a atenção sem gritar. Um brilho leve passa de tempos em tempos. */
+.bk-chip.bate, .lcx-f.bate{ position:relative; overflow:hidden; color:color-mix(in srgb, var(--jade) 80%, var(--giz)) !important; font-weight:800 !important; letter-spacing:.01em;
+  border:1px solid color-mix(in srgb, var(--jade) 50%, transparent) !important;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--jade) 20%, var(--sup-0)), color-mix(in srgb, var(--jade) 9%, var(--sup-0))) !important;
+  box-shadow:0 6px 16px -12px var(--jade); }
+.bk-chip.bate{ padding:3px 11px 3px 4px !important; }
 .bk-chip.bate svg, .lcx-f.bate svg{ width:18px !important; height:18px !important; padding:3px; box-sizing:border-box; border-radius:50%; color:#7A3B00 !important; stroke:#7A3B00 !important;
-  background:radial-gradient(circle at 35% 30%, #FFF2B8, #F2C14E 70%); box-shadow:0 2px 6px -2px rgba(0,0,0,.35); }
-.bk-chip.bate small{ color:#0B3A26 !important; opacity:1 !important; font-weight:600 !important; }
-.bk-chip.bate::after, .lcx-f.bate::after{ content:''; position:absolute; inset:0; background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform:translateX(-120%); animation:bkbLuz 3.8s ease-in-out infinite; pointer-events:none; }
-@keyframes bkbLuz{ 0%,60%{ transform:translateX(-120%); } 100%{ transform:translateX(120%); } }
-@keyframes bkbPulso{ 0%,100%{ box-shadow:0 0 0 1px rgba(255,255,255,.28) inset, 0 8px 20px -8px #2FBF85; } 50%{ box-shadow:0 0 0 1px rgba(255,255,255,.4) inset, 0 8px 26px -4px #2FBF85; } }
-@media (prefers-reduced-motion:reduce){ .bk-chip.bate, .lcx-f.bate{ animation:none; } .bk-chip.bate::after, .lcx-f.bate::after{ display:none; } }
+  background:radial-gradient(circle at 35% 30%, #FFF2B8, #F2C14E 70%); box-shadow:0 2px 5px -2px rgba(0,0,0,.3); }
+.bk-chip.bate small{ color:var(--grafite) !important; opacity:1 !important; font-weight:600 !important; }
+.bk-chip.bate::after, .lcx-f.bate::after{ content:''; position:absolute; inset:0; background:linear-gradient(110deg, transparent 35%, color-mix(in srgb, #fff 35%, transparent) 50%, transparent 65%); transform:translateX(-120%); animation:bkbLuz 5s ease-in-out infinite; pointer-events:none; }
+@keyframes bkbLuz{ 0%,70%{ transform:translateX(-120%); } 100%{ transform:translateX(120%); } }
+@media (prefers-reduced-motion:reduce){ .bk-chip.bate::after, .lcx-f.bate::after{ display:none; } }
 </style>
 </body>
 </html>
