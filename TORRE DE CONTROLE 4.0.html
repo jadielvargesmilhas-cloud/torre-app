@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-29 13:30';
+const BUILD = '2026-10-29 14:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -74718,5 +74718,56 @@ function altDataFutura(iso, ref){
 @keyframes bkbLuz{ 0%,70%{ transform:translateX(-120%); } 100%{ transform:translateX(120%); } }
 @media (prefers-reduced-motion:reduce){ .bk-chip.bate::after, .lcx-f.bate::after{ display:none; } }
 </style>
+<style id="lza-css">
+/* ══ LOJAS: O ANEL DO PRAZO NO LUGAR DA SIGLA (29/10/2026) ═══════════════════
+   A sigla colorida da loja não dizia nada. No lugar dela, o mesmo anel das
+   campanhas: FECHA HOJE, FALTA 1 DIA, FALTAM N DIAS, ou SEM PRAZO. */
+.ljl-l > .cpz-anel.lza{ width:56px !important; height:56px !important; flex:none; grid-area:av; align-self:center; }
+.ljl-l > .cpz-anel.lza .cz-l em{ font-size:calc(7.5px * var(--esc)) !important; letter-spacing:.08em; }
+.ljl-l > .cpz-anel.lza .cz-l b{ font-size:calc(17px * var(--esc)) !important; }
+.ljl-l > .cpz-anel.lza .cz-l small{ font-size:calc(7.5px * var(--esc)) !important; }
+.ljl-l > .cpz-anel.lza.hoje .cz-l b{ font-size:calc(12px * var(--esc)) !important; text-transform:uppercase; letter-spacing:.04em; }
+.ljl-l > .cpz-anel.lza.sem .cz-l b{ font-size:calc(19px * var(--esc)) !important; color:var(--grafite) !important; }
+.ljl-l > .cpz-anel.lza.sem .p{ stroke:transparent !important; }
+@media (max-width:760px){ .ljl-n > .bk-chip small, #ljVitrine .ljl-n .bk-chip small{ display:none !important; } .ljl-n > .bk-chip, #ljVitrine .ljl-n .bk-chip{ max-width:100%; }
+  .ljl-l:has(> .lza){ grid-template-columns:50px minmax(0, 1fr) auto !important; } .ljl-l > .cpz-anel.lza{ align-self:start; width:50px !important; height:50px !important; } }
+@media (min-width:761px) and (max-width:1099px){ .ljl-l:has(> .lza){ grid-template-columns:56px minmax(0, 1fr) 90px 100px !important; } }
+@media (min-width:1100px){ .ljl-l:has(> .lza){ grid-template-columns:56px minmax(0, 1fr) 170px 80px 96px 214px !important; }
+  #ljVitrine .ljl-l:has(> .lza){ grid-template-columns:56px minmax(0, 1fr) 100px 114px !important; } }
+</style>
+<script id="lza-js">
+(function(){
+  window.lzaAnel = function(fim, inicio){
+    const dias = fim ? diasAte(fim) : null;
+    if (dias === null) return `<div class="cpz-anel lza sem" style="--cu:var(--grafite)" title="Sem data para acabar" aria-label="Sem prazo"><svg viewBox="0 0 54 54" aria-hidden="true"><circle class="t" cx="27" cy="27" r="24.5"/><circle class="p" cx="27" cy="27" r="24.5"/></svg><span class="cz-l"><em>sem</em><b>∞</b><small>prazo</small></span></div>`;
+    const ini = inicio ? Date.parse(inicio + 'T00:00:00') : null, f = Date.parse(fim + 'T23:59:59');
+    const tot = ini && f > ini ? f - ini : 7 * 864e5, resta = Math.max(0, f - Date.now());
+    const frac = Math.max(0.04, Math.min(1, resta / tot)), C = 2 * Math.PI * 24.5;
+    const cls = (dias < 0 ? 'fim' : dias <= 1 ? 'urgente' : dias <= 5 ? 'atencao' : 'folga') + (dias === 0 ? ' hoje' : '');
+    const cor = dias < 0 ? 'var(--grafite)' : dias <= 1 ? 'var(--brasa)' : dias <= 5 ? 'var(--ouro)' : 'var(--jade)';
+    const txt = dias < 0 ? ['encerrou', '—', ''] : dias === 0 ? ['fecha', 'hoje', ''] : dias === 1 ? ['falta', '1', 'dia'] : ['faltam', String(dias), 'dias'];
+    return `<div class="cpz-anel lza ${cls}" style="--cu:${cor}" title="${dias < 0 ? 'Encerrada em ' + dataBR(fim) : 'Fecha em ' + dataBR(fim)}" aria-label="${dias < 0 ? 'Encerrada' : dias === 0 ? 'Fecha hoje' : `Fecha em ${dias} ${dias === 1 ? 'dia' : 'dias'}`}">
+      <svg viewBox="0 0 54 54" aria-hidden="true"><circle class="t" cx="27" cy="27" r="24.5"/><circle class="p" cx="27" cy="27" r="24.5" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}"/></svg>
+      <span class="cz-l"><em>${txt[0]}</em><b>${txt[1]}</b>${txt[2] ? `<small>${txt[2]}</small>` : ''}</span></div>`;
+  };
+  const trocar = () => {
+    document.querySelectorAll('.ljl-l[data-ljl] > .lj-avatar').forEach(av => {
+      const l = (DB.lojas || []).find(x => x.id === av.parentElement.dataset.ljl); if (!l) return;
+      av.outerHTML = lzaAnel(l.fim || '', l.inicio || l.criadoEm && String(l.criadoEm).slice(0, 10) || '');
+    });
+  };
+  window.lzaTrocar = trocar;
+  if (typeof renderLojasParceiras === 'function'){
+    const o = renderLojasParceiras;
+    renderLojasParceiras = function(){ const r = o.apply(this, arguments); try { trocar(); } catch(e){ console.error(e); } return r; };
+    try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderLojasParceiras; }); } catch(_){}
+  }
+  /* qualquer outro redesenho da vitrine também ganha o anel */
+  let pend = false;
+  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; if (document.querySelector('.ljl-l[data-ljl] > .lj-avatar')) trocar(); }); })
+    .observe(document.documentElement, {childList:true, subtree:true});
+})();
+</script>
+
 </body>
 </html>
