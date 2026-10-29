@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-29 15:00';
+const BUILD = '2026-10-29 15:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -74722,7 +74722,7 @@ function altDataFutura(iso, ref){
 /* ══ LOJAS: O ANEL DO PRAZO NO LUGAR DA SIGLA (29/10/2026) ═══════════════════
    A sigla colorida da loja não dizia nada. No lugar dela, o mesmo anel das
    campanhas: FECHA HOJE, FALTA 1 DIA, FALTAM N DIAS, ou SEM PRAZO. */
-.ljl-l > .cpz-anel.lza{ width:56px !important; height:56px !important; flex:none; grid-area:av; align-self:center; }
+.ljl-l > .cpz-anel.lza{ width:56px; height:56px; flex:none; grid-area:av; align-self:start; justify-self:start; }
 .ljl-l > .cpz-anel.lza .cz-l em{ font-size:calc(7.5px * var(--esc)) !important; letter-spacing:.08em; }
 .ljl-l > .cpz-anel.lza .cz-l b{ font-size:calc(17px * var(--esc)) !important; }
 .ljl-l > .cpz-anel.lza .cz-l small{ font-size:calc(7.5px * var(--esc)) !important; }
@@ -74731,6 +74731,9 @@ function altDataFutura(iso, ref){
 .ljl-l > .cpz-anel.lza.sem .p{ stroke:transparent !important; }
 .ljl-n > .ljn2{ grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:6px 10px; flex-wrap:wrap; min-width:0; }
 .ljl-n > .ljn2{ margin-top:8px; }
+/* quem já bate a Black ganha o fundo verde, um tom acima do "Hora de comprar" (29/10/2026) */
+.ljl-l.bate-bk, #ljVitrine .ljl-l.bate-bk{ border-color:color-mix(in srgb, var(--jade) 50%, var(--fio)) !important;
+  background:linear-gradient(160deg, color-mix(in srgb, var(--jade) 12%, var(--sup-0)), var(--sup-0) 65%) !important; }
 .ljl-n > .ljn2 > small{ margin:0 !important; display:inline-flex !important; align-items:center; gap:7px; }
 .ljn-ic{ display:inline-grid; place-items:center; flex:none; width:22px; height:22px; border-radius:7px; color:var(--ci);
   background:color-mix(in srgb, var(--ci) 15%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ci) 30%, transparent); }
@@ -74738,9 +74741,9 @@ function altDataFutura(iso, ref){
 .ljl-n > .ljn2 > .bk-chip{ margin:0 0 0 auto !important; justify-self:auto; }
 @media (max-width:760px){ .ljl-n > .bk-chip small, #ljVitrine .ljl-n .bk-chip small{ display:none !important; } .ljl-n > .bk-chip, #ljVitrine .ljl-n .bk-chip{ max-width:100%; }
   .ljl-l:has(> .lza){ grid-template-columns:50px minmax(0, 1fr) auto !important; } .ljl-l > .cpz-anel.lza{ align-self:start; width:50px !important; height:50px !important; } }
-@media (min-width:761px) and (max-width:1099px){ .ljl-l:has(> .lza){ grid-template-columns:56px minmax(0, 1fr) 90px 100px !important; } }
-@media (min-width:1100px){ .ljl-l:has(> .lza){ grid-template-columns:56px minmax(0, 1fr) 170px 80px 96px 214px !important; }
-  #ljVitrine .ljl-l:has(> .lza){ grid-template-columns:56px minmax(0, 1fr) 100px 114px !important; } }
+@media (min-width:761px) and (max-width:1099px){ .ljl-l:has(> .lza){ grid-template-columns:66px minmax(0, 1fr) 90px 100px !important; } }
+@media (min-width:1100px){ .ljl-l:has(> .lza){ grid-template-columns:66px minmax(0, 1fr) 170px 80px 96px 214px !important; }
+  #ljVitrine .ljl-l:has(> .lza){ grid-template-columns:66px minmax(0, 1fr) 100px 114px !important; } }
 </style>
 <script id="lza-js">
 (function(){
@@ -74766,6 +74769,7 @@ function altDataFutura(iso, ref){
        comparação com o outro programa já aparece no alto (29/10/2026) */
     document.querySelectorAll('.ljl-l[data-ljl] > .ljl-n').forEach(n => {
       n.querySelectorAll(':scope > .ljl-tb').forEach(x => x.remove());
+      n.parentElement.classList.toggle('bate-bk', !!n.querySelector('.bk-chip.bate'));
       if (n.querySelector(':scope > .ljn2')) return;
       const sm = n.querySelector(':scope > small'), bk = n.querySelector(':scope > .bk-chip'); if (!sm) return;
       sm.textContent = String(sm.textContent).split(' · ')[0].trim();
@@ -74789,15 +74793,28 @@ function altDataFutura(iso, ref){
     [/presente/i, '#D9464A', '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8c-2-3-6-3-5 0M12 8c2-3 6-3 5 0"/>'],
     [/viagem|turismo|hotel|a[eé]re/i, '#2E8BC0', '<path d="M21 15.5l-9-3.5V5.2a1.7 1.7 0 0 0-3.4 0V12l-6 2.3v2l6-1.6v3.5l-2 1.3v1.3l3.7-1 3.7 1v-1.3l-2-1.3V15l9 2.4z"/>']];
   window.lzaIcone = t => { const m = ICS.find(x => x[0].test(String(t || ''))); return m ? {c:m[1], d:m[2]} : {c:'#7C8798', d:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'}; };
+  /* o anel vai do topo do nome da loja até a base do ícone da categoria (29/10/2026) */
+  const medir = () => {
+    document.querySelectorAll('.ljl-l[data-ljl]').forEach(l => {
+      const a = l.querySelector(':scope > .lza'), nm = l.querySelector('.ljl-n > b'), ic = l.querySelector('.ljn-ic'); if (!a || !nm || !ic || !l.offsetParent) return;
+      a.style.removeProperty('width'); a.style.removeProperty('height'); a.style.removeProperty('margin-top');
+      const t = nm.getBoundingClientRect().top, bi = ic.getBoundingClientRect().bottom;
+      const h = Math.round(Math.max(50, Math.min(76, bi - t)));
+      a.style.setProperty('width', h + 'px', 'important'); a.style.setProperty('height', h + 'px', 'important');
+      const d = Math.round(t - a.getBoundingClientRect().top); if (Math.abs(d) > 1) a.style.marginTop = d + 'px';
+    });
+  };
+  window.lzaMedir = medir;
+  let tmz = 0; addEventListener('resize', () => { clearTimeout(tmz); tmz = setTimeout(medir, 150); });
   window.lzaTrocar = trocar;
   if (typeof renderLojasParceiras === 'function'){
     const o = renderLojasParceiras;
-    renderLojasParceiras = function(){ const r = o.apply(this, arguments); try { trocar(); } catch(e){ console.error(e); } return r; };
+    renderLojasParceiras = function(){ const r = o.apply(this, arguments); try { trocar(); requestAnimationFrame(medir); } catch(e){ console.error(e); } return r; };
     try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === o) RENDER[k] = renderLojasParceiras; }); } catch(_){}
   }
   /* qualquer outro redesenho da vitrine também ganha o anel */
   let pend = false;
-  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; if (document.querySelector('.ljl-l[data-ljl] > .lj-avatar')) trocar(); }); })
+  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; if (document.querySelector('.ljl-l[data-ljl] > .lj-avatar')){ trocar(); requestAnimationFrame(medir); } }); })
     .observe(document.documentElement, {childList:true, subtree:true});
 })();
 </script>
