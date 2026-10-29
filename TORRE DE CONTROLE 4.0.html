@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-29 03:50';
+const BUILD = '2026-10-29 13:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -13405,13 +13405,15 @@ const PARIDADES = [
   { de:'hilton', para:'virgin',     p:10/1.5, nota:'10.000 pontos Hilton viram 1.500 Virgin Points. Pouco vantajoso. Confira no site da Hilton antes de transferir.' },
   { de:'livelo', para:'accor',      p:3.5, nota:'Deságio de 3,5 : 1.' },
   { de:'esfera', para:'accor',      p:3.5, nota:'Deságio de 3,5 : 1.' },
-  { de:'smiles', para:'accor',      p:8,   nota:'8 milhas viram 1 ponto; 7 : 1 para Clube Smiles ou Diamante.' },
-  { de:'latampass', para:'accor',   p:8,   nota:'Milha aérea para ponto de hotel.' },
+  { de:'smiles', para:'accor',      p:8, clube:7, nota:'8 milhas viram 1 ponto ALL; 7 : 1 para Clube Smiles ou Diamante.' },
+  /* Era 8 : 1. A convencional é 6.000 milhas LATAM Pass por 1.000 pontos ALL (conferido em 29/10/2026, planilha do Jadiel e Pontos pra Voar de 23/10/2026). */
+  { de:'latampass', para:'accor',   p:6,   nota:'6.000 milhas LATAM Pass viram 1.000 pontos ALL.' },
   /* Era 8 : 1, mais otimista que qualquer condição real. A convencional em 2026
      é 9 : 1 para assinante do Clube Azul e 9,5 : 1 para os demais. Campanhas
      baixam para 7,5 : 1, mas só enquanto duram — isso fica na regra de cada
      campanha, não aqui. */
-  { de:'azul',   para:'accor',      p:9.5, clube:9, nota:'Milha aérea para ponto de hotel. 9 : 1 com Clube Azul, 9,5 : 1 sem; campanhas chegam a 7,5 : 1 para elegíveis. 1.000 pontos ALL valem cerca de 20 euros.' }
+  /* Corrigido em 29/10/2026 (planilha do Jadiel e Cartões e Viagens, 28/08/2026): 11.250 pontos Azul por 1.000 ALL, 9.000 com Clube Azul. */
+  { de:'azul',   para:'accor',      p:11.25, clube:9, nota:'11.250 pontos Azul viram 1.000 pontos ALL; 9.000 com Clube Azul. Campanhas chegam a 7.500 por 1.000 para elegíveis. 1.000 pontos ALL valem 20 euros.' }
 ];
 
 /* ── catálogo de clubes ───────────────────────────────────────────────────── */
@@ -14548,7 +14550,13 @@ const COTEJO = new Intl.Collator('pt-BR', {numeric:true, sensitivity:'base'});
 function ordenarSelect(el){
   if (!el || el.tagName !== 'SELECT' || el.multiple) return;
   if (el.dataset.ordem === 'natural') return;
-  if (el.querySelector('optgroup')) return;      /* grupos têm ordem própria */
+  /* "Outro", "Outra", "Outros"... é sempre a última opção da lista (29/10/2026) */
+  const ehOutro = o => /^outr[oa]s?\b/i.test((o.textContent || '').trim());
+  if (el.querySelector('optgroup')){      /* grupos têm ordem própria; só o "Outro" desce para o fim do grupo */
+    [el, ...el.querySelectorAll('optgroup')].forEach(g => { const os = [...g.children].filter(o => o.tagName === 'OPTION' && ehOutro(o));
+      if (os.length && [...g.children].slice(-os.length).some(o => !ehOutro(o))){ const v = el.value; os.forEach(o => g.appendChild(o)); el.value = v; } });
+    return;
+  }
   const ops = [...el.options];
   if (ops.length < 2) return;
 
@@ -14561,14 +14569,15 @@ function ordenarSelect(el){
 
   /* já ordenado? então não encosta no DOM: reescrever a lista a cada clique
      custa caro em campo com centena de opções, como o catálogo de cartões */
+  const cmp = (a, b) => (ehOutro(a) - ehOutro(b)) || COTEJO.compare(a.textContent, b.textContent);
   let ja = true;
   for (let i = 1; i < moveis.length; i++){
-    if (COTEJO.compare(moveis[i - 1].textContent, moveis[i].textContent) > 0){ ja = false; break; }
+    if (cmp(moveis[i - 1], moveis[i]) > 0){ ja = false; break; }
   }
   if (ja) return;
 
   const escolhido = el.value;
-  moveis.sort((a, b) => COTEJO.compare(a.textContent, b.textContent));
+  moveis.sort(cmp);
   el.replaceChildren(...fixos, ...moveis);
   el.value = escolhido;
 }
@@ -60413,11 +60422,9 @@ function opcoesItemHTML(x){
   const tiles = of.map((o, i) => {
     const on = sel && _chaveOf(sel) === _chaveOf(o);
     return `<button type="button" class="op-t${i === 0 ? ' top' : ''}${on ? ' on' : ''}" data-op-des="${esc(d.id)}" data-op="${esc(_chaveOf(o))}" aria-pressed="${!!on}">
-      <span class="op-n">${i + 1}ª opção${i === 0 ? ' <em>melhor</em>' : ''}</span>
-      <b class="op-loja">${esc(o.loja.n)}</b>
-      <span class="op-prog">${discoProg(o.prog, 'p')}${esc(prog(o.prog).n)}</span>
-      <span class="op-v">${brl(o.retorno)}</span>
-      <span class="op-p">${nBR(Math.floor(valor * o.mult))} pontos</span>
+      <span class="op-cab"><span class="op-n">${of.length === 1 ? 'Opção única' : `${i + 1}ª opção`}</span>${i === 0 && of.length > 1 ? '<span class="op-melhor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg>Melhor</span>' : ''}</span>
+      <span class="op-corpo"><span class="op-esq"><b class="op-loja">${esc(o.loja.n)}</b><span class="op-prog">${discoProg(o.prog, 'p')}${esc(prog(o.prog).n)}</span></span><i class="op-div" aria-hidden="true"></i>
+        <span class="op-dir"><span class="op-v">${brl(o.retorno)}</span><span class="op-p">${nBR(Math.floor(valor * o.mult))} pontos</span></span></span>
       ${marca && _chaveOf(marca) === _chaveOf(o) ? '<span class="op-marca">loja da marca</span>' : ''}
     </button>`;
   }).join('');
@@ -63368,6 +63375,8 @@ function lerAlteracaoClube(texto){
   const out = {prog:'', planoId:'', planoLido:'', de:'', para:'', em:'', valor:0, cartaoFinal:'', bandeira:'', qtd:0};
   const md = s.match(/alterad[ao]\s+(?:a partir de\s+|em\s+)?(\d{2})\/(\d{2})\/(\d{4})/) || s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
   if (md) out.em = _lcData(md[1], md[2], md[3]);
+  /* alteração programada é sempre para frente: se o print trouxer um ano já passado (30/10/2025 lido em 28/10/2026), vale a próxima vez que esse dia chega */
+  if (out.em && typeof altDataFutura === 'function') out.em = altDataFutura(out.em, hojeISO());
   /* "Assinatura anterior / Nova assinatura" seguidos de "Anual Mensal" */
   const mods = [...s.matchAll(/\b(anual|mensal|trimestral|semestral)\b/g)].map(x => x[1]);
   const ib = s.search(/assinatura anterior/);
@@ -63452,7 +63461,7 @@ function abrirAlteracaoClube(d){
       const cat2 = catalogoDe(a.prog);
       const pl = (cat2 && (cat2.planos.find(x => x.id === d.planoId && d.prog === a.prog) || cat2.planos.find(x => x.id === a.planoId))) || null;
       const mod = ALT_MOD[d.para] || a.modalidade;
-      a.mudanca = {em:$('#altEm').value, planoId:pl ? pl.id : a.planoId, modalidade:mod, valor:moedaNum($('#altValor').value) || 0,
+      a.mudanca = {em:altDataFutura($('#altEm').value, hojeISO()), planoId:pl ? pl.id : a.planoId, modalidade:mod, valor:moedaNum($('#altValor').value) || 0,
         cartaoId:$('#altCartao').value || a.cartaoId || '', lidaEm:hojeISO(), confirmar:true, de:modDe, para:d.para || ''};
       salvar(); fecharFolha(); _lcEstado = null;
       try { aplicarTudo(); } catch(_){} try { renderClubes(); } catch(_){} try { mostrarAvisosRenovacao(); } catch(_){}
@@ -70374,7 +70383,7 @@ function impInformarValores(){
       if ((m = l.match(/^\+\s*(\d+(?:[.,]\d+)?)\s*%\s*(?:\(total\s*\d+(?:[.,]\d+)?\s*%\))?.*?(?:de\s+(\d+)\s+a\s+\d+|h[aá]\s+mais\s+de\s+(\d+)|acima\s+de\s+(\d+)|a\s+partir\s+de\s+(\d+))\s*mes/i)))
         out.tempo.push({meses:Number(m[2] || m[3] || m[4] || m[5]), extra:num(m[1])});
       if ((m = l.match(/limite\s+de\s+b[oô]nus\s+cumulativo.*?([\d.]+)\s*(mil\s+)?pontos/i))) out.limiteClube = num(m[1]) * (m[2] ? 1000 : 1);
-      if ((m = l.match(/^\+\s*([\d.]+)\s*(pontos|milhas)\s+adicionais\s+para\s+(.+?)\.?$/i))) out.extraNovo = {qtd:num(m[1]), quem:m[3]};
+      if ((m = l.match(/^\+\s*([\d.]+)\s*(pontos|milhas)\s+adicionais\s+para\s+(.+?)\.?$/i))) out.extraNovo = {qtd:num(m[1]), quem:m[3], un:m[2].toLowerCase()};
       if ((m = l.match(/^(.{4,70}?):\s*(\d+(?:[.,]\d+)?)\s*%\s*(?:de\s*)?b[oô]nus/i))){
         const tot = l.match(/total\s*(\d+(?:[.,]\d+)?)\s*%/i);
         if (/todos|demais/i.test(m[1])) out.semClube = num(m[2]);
@@ -70679,7 +70688,7 @@ function impInformarValores(){
     if (!novo) return _rgMontar.apply(this, arguments);
     const pn = d.querySelector('#drp-regras'); if (!pn) return;
     const s = rgSeparar(rgLinhas(c).flatMap(l => l.split(/(?<=[!?])\s+(?=[A-ZÀ-Ú0-9])/)).map(l => l.trim()).filter(l => !cpxEstrutural(c, l)));
-    if (c.extraNovo) s.ess.escopo.unshift(`+${nBR(c.extraNovo.qtd)} pontos a mais para ${c.extraNovo.quem.replace(/\.$/, '')}.`);
+    if (c.extraNovo) s.ess.escopo.unshift(`+${nBR(c.extraNovo.qtd)} ${c.extraNovo.un || 'pontos'} a mais para ${c.extraNovo.quem.replace(/\.$/, '')}.`);
     const essN = s.ess.escopo.length + s.ess.obrig.length + s.ess.lim.length + s.ess.pag.length + s.ess.prazo.length;
     const nao = (c.excluirNomes || []).length ? `<div class="cx-nao"><svg><use href="#i-alerta"/></svg><div><b class="tit">Não participam</b><div class="cx-chips">${
       c.excluirNomes.map(nm => { const k = achaProgNome(nm); return k ? `<span class="cx-chip">${discoProg(k)}${esc(prog(k).n)}</span>` : `<span class="cx-chip so-nome">${esc(nm)}</span>`; }).join('')}</div></div></div>` : '';
@@ -70983,7 +70992,7 @@ function hdDecisao(o, d){
   if (rec && hoje >= rec - 1e-9 && (!bk || bk.nivel !== 'loja' || hoje >= bk.v)) return {k:'agora', z:'var(--jade)', t:'Compre agora', p:`<b>${f(hoje)}</b> na ${esc(prog(o.prog).n)} é o recorde da ${esc(o.loja.n)}${bk && bk.nivel === 'loja' ? `, e bate a Black 2025 (${f(bk.v)})` : ''}.`};
   if (bk && bk.nivel === 'loja' && bk.v > hoje && dias > 0 && dias <= 45) return {k:'esperar', z:'var(--ouro)', t:'Vale esperar a Black', p:`${bk.nivel === 'loja' ? `Na Black 2025 a <b>${esc(o.loja.n)}</b> pagou <b>${f(bk.v)}</b> na ${esc(prog(o.prog).n)}` : `Na Black 2025, a melhor loja da ${esc(prog(o.prog).n)} (${esc(bk.e.loja)}) pagou <b>${f(bk.v)}</b>`}${bk.e && bk.e.pub ? ` (${dataBR(bk.e.pub).slice(0, 5)})` : ''}, contra <b>${f(hoje)}</b> hoje. Faltam <b>${dias} dias</b> para a Black.${(d && d.urgente) ? '' : ' Se não tiver pressa, espere.'}`};
   if (media && hoje >= media) return {k:'ok', z:'var(--jade)', t:'Bom momento', p:`<b>${f(hoje)}</b> fica acima da média da ${esc(o.loja.n)} (${f(media)}). O recorde foi <b>${f(rec)}</b>.`};
-  if (!of.length || of.length < 2) return {k:'so', z:'var(--anil-claro)', t:'Pouco histórico', p:`A Torre ainda tem pouca campanha registrada da ${esc(o.loja.n)} na ${esc(prog(o.prog).n)} para comparar. Cada promoção cadastrada melhora essa conta.`};
+  if (!of.length || of.length < 2) return {k:'so', z:'var(--anil-claro)', t:'Pouco histórico', p:`A Torre ainda tem pouca campanha registrada da ${esc(o.loja.n)} na ${esc(prog(o.prog).n)} para comparar.<br>Cada promoção cadastrada melhora essa conta.`};
   return {k:'so', z:'var(--ouro)', t:'Só se precisar agora', p:`<b>${f(hoje)}</b> está abaixo da média da ${esc(o.loja.n)} (${f(media)}); o recorde foi <b>${f(rec)}</b>.`};
 }
 function abrirHistItem(id){
@@ -70995,8 +71004,8 @@ function abrirHistItem(id){
     const cls = bk.v > hoje ? 'melhor' : 'pior';
     return `<div class="hd-bk ${cls}"><b>${nBRdec(bk.v)}×</b><span>Black 2025: ${bk.nivel === 'loja' ? `a <b>${esc(o.loja.n)}</b> pagou` : `a melhor loja da ${esc(prog(o.prog).n)} (<b>${esc(bk.e.loja)}</b>) pagou`} ${nBRdec(bk.v)} por real${bk.e && bk.e.pub ? `, em ${dataBR(bk.e.pub).slice(0, 5)}` : ''}. ${bk.v > hoje ? `Hoje paga <b>${nBRdec(bk.v - hoje)} a menos</b>.` : bk.v === hoje ? 'Hoje paga <b>o mesmo</b>.' : `Hoje paga <b>${nBRdec(hoje - bk.v)} a mais</b>.`}</span></div>`; };
   abrirFolha({titulo:`Histórico e Black · ${esc(d.n || 'item')}`, largura:'larga',
-    corpo:`<div class="hd-dec" style="--z:${dec.z}"><span class="ico"><svg viewBox="0 0 24 24">${ICD[dec.k]}</svg></span><div><small>1ª opção · ${esc(ops[0].loja.n)} na ${esc(prog(ops[0].prog).n)}</small><b class="t">${dec.t}</b><p>${dec.p}</p></div></div>
-      ${ops.map((o, i) => `<div class="hd-op"><div class="hd-op-t">${i + 1}ª opção · ${discoProg(o.prog, 'p')}${esc(o.loja.n)} · ${esc(prog(o.prog).n)} · hoje ${nBRdec(o.mult)}×</div>
+    corpo:`<div class="hd-dec" style="--z:${dec.z}"><span class="ico"><svg viewBox="0 0 24 24">${ICD[dec.k]}</svg></span><div><small>${ops.length === 1 ? 'Opção única' : '1ª opção'} · ${esc(ops[0].loja.n)} na ${esc(prog(ops[0].prog).n)}</small><b class="t">${dec.t}</b><p>${dec.p}</p></div></div>
+      ${ops.map((o, i) => `<div class="hd-op"><div class="hd-op-t">${ops.length === 1 ? 'Opção única' : (i + 1) + 'ª opção'} · ${discoProg(o.prog, 'p')}${esc(o.loja.n)} · ${esc(prog(o.prog).n)} · hoje ${nBRdec(o.mult)}×</div>
         ${hlHTML([o.loja.n], o.prog, 'mult', true)}${bkLinha(o)}</div>`).join('')}`,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
 }
@@ -72199,14 +72208,14 @@ article.cp.cpz .cpz-miolo{ padding-top:16px; }
     const diasBlack = t && hoje < t.bf ? Math.round((Date.parse(t.bf) - Date.parse(hoje)) / 864e5) : null;
     let ver = null;
     if (rec && vHoje > rec.mult) ver = {z:'var(--jade)', t:'Maior do ano', i:'ok'};
-    else if (bk && vHoje >= bk.v) ver = {z:'var(--jade)', t:'Já bate a Black 2025', i:'ok'};
+    else if (bk && vHoje >= bk.v) ver = {z:'var(--jade)', t:'Já bate a Black 2025', i:'fogo', cls:' bate'};
     else if (bk && diasBlack != null && diasBlack <= 45) ver = {z:'var(--ouro)', t:'A Black 2025 pagou mais', i:'fogo'};
     else if (rec && vHoje < rec.mult) ver = {z:'var(--ouro)', t:`${Math.round((1 - vHoje / rec.mult) * 100)}% abaixo do recorde`, i:'trofeu'};
     return {rec, bk, diasBlack, ver, vHoje};
   };
   window.lcxHTML = function(x){
     const f = lcxInfo(x), out = [], k = esc(x.n);
-    if (f.ver) out.push(`<button type="button" class="lcx-f v" style="--z:${f.ver.z}" data-lcx="${k}">${I[f.ver.i]}${f.ver.t}</button>`);
+    if (f.ver) out.push(`<button type="button" class="lcx-f v${f.ver.cls || ''}" style="--z:${f.ver.z}" data-lcx="${k}">${I[f.ver.i]}${f.ver.t}</button>`);
     if (f.rec) out.push(`<button type="button" class="lcx-f" style="--z:var(--ouro)" data-lcx="${k}" data-dica="Maior oferta desta loja nos últimos 12 meses">${I.trofeu}Recorde <b>${nBRdec(f.rec.mult)}×</b> ${esc(prog(f.rec.prog).n)} · ${esc(mesAnoCurto(f.rec.dia))}</button>`);
     if (f.bk) out.push(`<button type="button" class="lcx-f" style="--z:var(--brasa)" data-lcx="${k}" data-dica="O que esta loja pagou na Black Friday 2025">${I.fogo}Black 2025 <b>${nBRdec(f.bk.v)}×</b> ${esc(prog(f.bk.prog).n)}</button>`);
     if (!f.rec && !f.bk) out.push(`<button type="button" class="lcx-f" data-lcx="${k}">${I.seta}Ver histórico</button>`);
@@ -72503,7 +72512,7 @@ const ehOfertaAssinatura = l => OFERTA_ASSINATURA.test(String((l && (l.loja && l
       + `<i class="h" style="height:${Math.max(8, hoje / teto * 100)}%" title="Hoje: ${nBRdec(hoje)}×"></i>`;
     const m = MED[i] || MED[2];
     return `<button type="button" class="hdz-c" data-hdz="${i}" style="--zc:${dec.z};--m1:${m[0]};--m2:${m[1]}" aria-haspopup="dialog">
-      <span class="hdz-rank"><i>${m[2]}</i>${i + 1}ª opção</span>
+      <span class="hdz-rank"><i>${_ops && _ops.ops.length === 1 ? '★' : m[2]}</i>${_ops && _ops.ops.length === 1 ? 'Opção única' : (i + 1) + 'ª opção'}</span>
       <span class="hdz-quem">${discoProg(o.prog)}<span><b>${esc(o.loja.n)}</b><small>${esc(prog(o.prog).n)}</small></span></span>
       <span class="hdz-hoje"><b>${nBRdec(hoje)}×</b><span>hoje${o.pc ? ` · devolve ${pct(o.pc, 1)}` : ''}</span></span>
       <span class="hdz-spark" aria-hidden="true">${barras}</span>
@@ -72518,7 +72527,7 @@ const ehOfertaAssinatura = l => OFERTA_ASSINATURA.test(String((l && (l.loja && l
     const dec = hdDecisao(ops[0], d);
     _ops = {ops, d};
     abrirFolha({titulo:`Histórico e Black · ${esc(d.n || 'item')}`, largura:'larga',
-      corpo:`<div class="hd-dec" style="--z:${dec.z}"><span class="ico"><svg viewBox="0 0 24 24">${(typeof ICD !== 'undefined' ? ICD : {})[dec.k] || '<path d="M5 12.5l4.5 4.5L19 7.5"/>'}</svg></span><div><small>1ª opção · ${esc(ops[0].loja.n)} na ${esc(prog(ops[0].prog).n)}</small><b class="t">${dec.t}</b><p>${dec.p}</p></div></div>
+      corpo:`<div class="hd-dec" style="--z:${dec.z}"><span class="ico"><svg viewBox="0 0 24 24">${(typeof ICD !== 'undefined' ? ICD : {})[dec.k] || '<path d="M5 12.5l4.5 4.5L19 7.5"/>'}</svg></span><div><small>${ops.length === 1 ? 'Opção única' : '1ª opção'} · ${esc(ops[0].loja.n)} na ${esc(prog(ops[0].prog).n)}</small><b class="t">${dec.t}</b><p>${dec.p}</p></div></div>
         <div class="hdz">${ops.map((o, i) => cartao(o, i, d)).join('')}</div>
         <p class="hdz-dica">Toque numa opção para ver o histórico completo e a comparação com a Black.</p>`,
       pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
@@ -72975,7 +72984,9 @@ const ehOfertaAssinatura = l => OFERTA_ASSINATURA.test(String((l && (l.loja && l
    o histórico das lojas do item e o que as promoções já pagaram na categoria.
    Cada um abre a sua janela, sem passar por Editar. */
 .ds-cab{ position:relative; }
-.dck{ margin-left:auto; flex:1 0 300px; max-width:520px; display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:8px; }
+.dck{ margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.dck-b{ flex:0 0 auto; width:auto; }
+.dck-b > span{ white-space:nowrap; }
 .dck-b{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"i t s" "i v s"; column-gap:9px; align-items:center; text-align:left;
   padding:7px 10px 7px 7px; border-radius:14px; cursor:pointer; color:inherit; font:inherit; min-width:0;
   border:1px solid color-mix(in srgb, var(--zk) 35%, var(--fio)); background:linear-gradient(150deg, color-mix(in srgb, var(--zk) 12%, var(--sup-0)), var(--sup-0) 70%);
@@ -72989,7 +73000,7 @@ const ehOfertaAssinatura = l => OFERTA_ASSINATURA.test(String((l && (l.loja && l
 .dck-b > svg{ grid-area:s; width:13px; height:13px; fill:none; stroke:var(--grafite); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s; }
 .dck-b:hover > svg{ transform:translateX(3px); }
 .ds-acoes .hlb-bt{ display:none; }
-@media (max-width:640px){ .dck{ margin-left:0; flex-basis:100%; max-width:none; grid-template-columns:1fr; } }
+@media (max-width:640px){ .dck{ flex-basis:100%; } }
 .dck-pop{ position:fixed; z-index:10050; inset:0; margin:auto; height:fit-content; width:min(760px, calc(100vw - 24px)); max-height:min(84vh, 760px); display:flex; flex-direction:column;
   border-radius:22px; overflow:hidden; background:var(--sup-0); border:1px solid var(--fio-forte, var(--fio)); box-shadow:0 30px 80px -20px rgba(0,0,0,.65); animation:vooFolha .46s cubic-bezier(.16,.84,.24,1) both; }
 @media (prefers-reduced-motion:reduce){ .dck-pop{ animation:none; } }
@@ -73478,5 +73489,1220 @@ const ehOfertaAssinatura = l => OFERTA_ASSINATURA.test(String((l && (l.loja && l
 })();
 </script>
 
+
+<script id="altd-js">
+/* 29/10/2026: data da troca de clube sempre no futuro (o print da Esfera mostrou 30/10/2025 para uma troca de 30/10/2026) */
+function altDataFutura(iso, ref){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return iso;
+  let [y, m, d] = iso.split('-').map(Number), r = ref || hojeISO();
+  const f = yy => `${yy}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  while (f(y) < r) y++;
+  return f(y);
+}
+(function(){
+  /* corrige trocas já gravadas com o ano errado: a data fica a próxima a partir do dia em que o print foi lido */
+  const corrigir = () => { let mudou = false;
+    (DB.assinaturas || []).forEach(a => { const m = a.mudanca; if (!m || !m.em || !m.lidaEm) return; const n = altDataFutura(m.em, m.lidaEm); if (n !== m.em){ m.em = n; mudou = true; } });
+    if (mudou){ try { salvar(); } catch(_){} try { mostrarAvisosRenovacao(); } catch(_){} } };
+  if (document.readyState === 'complete') setTimeout(corrigir, 200); else addEventListener('load', () => setTimeout(corrigir, 200));
+  window.altCorrigirDatas = corrigir;
+})();
+</script>
+<style id="pgx-css">
+/* ══ NA HORA DE PAGAR: QUAL CARTÃO (29/10/2026) ══════════════════════════════
+   Ao lado de todo campo "Cartão que paga", duas listas: os que dão mais pontos
+   (do maior para o menor) e os de maior prazo até o vencimento. Tocar escolhe. */
+.pgx{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-top:8px; }
+.pgx-col{ border-radius:16px; border:1px solid color-mix(in srgb, var(--zp) 30%, var(--fio)); background:linear-gradient(160deg, color-mix(in srgb, var(--zp) 9%, var(--sup-1)), var(--sup-1) 60%); padding:10px; min-width:0; }
+.pgx-t{ display:flex; align-items:center; gap:8px; margin:0 2px 8px; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--zp); }
+.pgx-t svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.pgx-l{ display:grid; gap:5px; }
+.pgx-i{ display:grid; grid-template-columns:22px 34px minmax(0,1fr) auto; gap:8px; align-items:center; padding:7px 9px; border-radius:11px; border:1px solid transparent; background:var(--sup-0);
+  cursor:pointer; text-align:left; color:inherit; font:inherit; transition:border-color .15s, transform .15s; }
+.pgx-i:hover{ border-color:color-mix(in srgb, var(--zp) 45%, var(--fio)); transform:translateX(2px); }
+.pgx-i.on{ border-color:var(--zp); box-shadow:0 0 0 1px var(--zp) inset; }
+.pgx-i > em{ font-style:normal; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font:700 calc(11px * var(--esc))/1 var(--f-b, inherit); color:var(--sup-0); background:color-mix(in srgb, var(--zp) 85%, transparent); }
+.pgx-i:not(:first-child) > em{ background:color-mix(in srgb, var(--giz) 18%, transparent); color:var(--giz); }
+.pgx-pl{ width:34px; height:22px; border-radius:4px; background:linear-gradient(135deg, var(--b1), var(--b2)); position:relative; box-shadow:0 3px 8px -4px rgba(0,0,0,.5); }
+.pgx-pl::before{ content:''; position:absolute; left:4px; top:7px; width:8px; height:6px; border-radius:1.5px; background:linear-gradient(135deg, #F6D67A, #B8892E); }
+.pgx-n{ min-width:0; } .pgx-n b{ display:block; font-size:calc(12.5px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pgx-n small{ display:block; font-size:calc(11px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pgx-v{ text-align:right; font:700 calc(14px * var(--esc))/1 var(--f-d, inherit); color:var(--zp); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.pgx-v small{ display:block; margin-top:2px; font:600 calc(9.5px * var(--esc))/1 var(--f-b, inherit); color:var(--grafite); }
+@media (max-width:640px){ .pgx{ grid-template-columns:1fr; } }
+</style>
+<script id="pgx-js">
+(function(){
+  const CAMPOS = ['lcCartao', 'asCartao', 'pgCartao', 'rvCartao', 'viCartao', 'rsCartao', 'altCartao', 'trCartao'];
+  const COR = [[/ita[uú]/i, '#FF7A00', '#B84A00'], [/santander/i, '#EC0000', '#8A0000'], [/revolut/i, '#3A3F4B', '#0E1116'], [/nubank|\bnu\b/i, '#8A05BE', '#4B0273'],
+    [/bradesco/i, '#CC092F', '#6E0418'], [/banco do brasil|\bbb\b/i, '#F7D000', '#3A55A4'], [/caixa/i, '#0070AF', '#003B66'], [/inter\b/i, '#FF7A00', '#7A3B00'], [/c6/i, '#2B2B2B', '#000'], [/nordeste/i, '#B4123B', '#5E0A1F']];
+  const cor = b => { const m = COR.find(x => x[0].test(b || '')); return m ? [m[1], m[2]] : ['#4B5B7A', '#1E2638']; };
+  const ICO = {pts:'<svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg>', prazo:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>'};
+  /* quando vence uma compra feita no dia "dia" */
+  window.pgxVencimento = function(c, dia){
+    const f = Number(c.fechamento) || 0, v = Number(c.vencimento) || 0; if (!f || !v) return null;
+    const d = new Date(dia + 'T12:00:00'); let y = d.getFullYear(), m = d.getMonth();
+    if (d.getDate() >= f){ m++; }            /* comprou no fechamento ou depois: vai para a fatura seguinte */
+    const fech = new Date(y, m, Math.min(f, 28), 12);
+    let due = new Date(fech.getFullYear(), fech.getMonth() + (v > f ? 0 : 1), v, 12);
+    return {data:due.toISOString().slice(0, 10), dias:Math.round((due - d) / 864e5)};
+  };
+  const ptsReal = c => (Number(String(c.ptsMin || '').replace(',', '.')) || 0);
+  const nome = c => `${c.banco} ${c.produto}`.replace(/\s+/g, ' ').trim();
+  const titular = c => c.titular && !/^(titular|dependente|adicional)$/i.test(String(c.titular).trim()) ? nomeCurto(c.titular) : '';
+  const dataDo = sel => { const f = sel.closest('.folha, form, .folha-corpo, #folhaCorpo') || document; const d = f.querySelector('input[type=date]'); return (d && d.value) || hojeISO(); };
+  const pintar = sel => {
+    const ids = [...sel.options].map(o => o.value).filter(Boolean);
+    const cs = (DB.cartoes || []).filter(c => ids.includes(c.id)); if (cs.length < 2) return;
+    const dia = dataDo(sel);
+    const item = (c, i, v, sub) => { const [b1, b2] = cor(c.banco);
+      return `<button type="button" class="pgx-i${sel.value === c.id ? ' on' : ''}" data-pgx="${esc(c.id)}"><em>${i + 1}</em><span class="pgx-pl" style="--b1:${b1};--b2:${b2}"></span>
+        <span class="pgx-n"><b>${esc(nome(c))}</b><small>${titular(c) ? esc(titular(c)) + ' · ' : ''}final ${esc(String(c.final || '').slice(-4))}</small></span><span class="pgx-v">${v}<small>${sub}</small></span></button>`; };
+    const porPts = cs.slice().sort((a, b) => ptsReal(b) - ptsReal(a));
+    const porPrazo = cs.map(c => ({c, v:pgxVencimento(c, dia)})).sort((a, b) => (b.v ? b.v.dias : -1) - (a.v ? a.v.dias : -1));
+    let box = sel._pgx;
+    if (!box){ box = document.createElement('div'); box.className = 'pgx'; sel._pgx = box; (sel.closest('.campo') || sel).after(box);
+      box.addEventListener('click', e => { const b = e.target.closest('[data-pgx]'); if (!b) return; sel.value = b.dataset.pgx; sel.dispatchEvent(new Event('input', {bubbles:true})); sel.dispatchEvent(new Event('change', {bubbles:true})); pintar(sel); }); }
+    box.innerHTML = `<div class="pgx-col" style="--zp:var(--ouro)"><div class="pgx-t">${ICO.pts}Mais pontos</div><div class="pgx-l">${porPts.map((c, i) => item(c, i, ptsReal(c) ? String(ptsReal(c)).replace('.', ',') : '–', 'pts por dólar')).join('')}</div></div>
+      <div class="pgx-col" style="--zp:var(--jade)"><div class="pgx-t">${ICO.prazo}Maior prazo para pagar</div><div class="pgx-l">${porPrazo.map((x, i) => item(x.c, i, x.v ? x.v.dias + ' dias' : '–', x.v ? 'vence ' + dataBR(x.v.data).slice(0, 5) : 'sem datas')).join('')}</div></div>`;
+  };
+  window.pgxPintar = pintar;
+  const varrer = raiz => CAMPOS.forEach(id => { const s = (raiz || document).querySelector('#' + id); if (s && s.tagName === 'SELECT' && !s.dataset.pgx){ s.dataset.pgx = '1'; pintar(s);
+    s.addEventListener('change', () => pintar(s)); const f = s.closest('#folhaCorpo') || document; f.querySelectorAll('input[type=date]').forEach(d => d.addEventListener('change', () => pintar(s))); } });
+  const corpo = document.getElementById('folhaCorpo');
+  if (corpo) new MutationObserver(() => varrer(corpo)).observe(corpo, {childList:true, subtree:true});
+  new MutationObserver(m => { if (m.some(x => x.addedNodes.length)) varrer(document); }).observe(document.body, {childList:true});
+})();
+</script>
+
+<style id="par-css">
+/* ══ CAMPANHA DE VÁRIOS BANCOS: QUEM PARTICIPA (29/10/2026) ═════════════════ */
+.par{ display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border-radius:16px; margin-bottom:12px;
+  border:1px solid color-mix(in srgb, var(--jade) 38%, var(--fio)); background:linear-gradient(120deg, color-mix(in srgb, var(--jade) 10%, var(--sup-1)), var(--sup-1) 70%); }
+.par > svg{ flex:0 0 auto; width:18px; height:18px; margin-top:2px; fill:none; stroke:var(--jade); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.par b.tit{ display:block; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--jade); margin-bottom:8px; }
+.par-ch{ display:flex; flex-wrap:wrap; gap:6px; }
+.par-ch span{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 4px; border-radius:99px; background:var(--sup-0); border:1px solid var(--fio); font-size:calc(12px * var(--esc)); color:var(--giz); }
+.par-ch span.so{ padding-left:10px; color:var(--grafite); }
+.par-ch span.voce{ border-color:color-mix(in srgb, var(--ouro) 55%, var(--fio)); background:color-mix(in srgb, var(--ouro) 10%, var(--sup-0)); }
+.par-ch span.voce em{ font-style:normal; font:700 calc(9px * var(--esc))/1.4 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase; color:var(--ouro); }
+.par-ch .disco-prog{ width:22px !important; height:22px !important; font-size:8px !important; }
+.par-n{ margin:8px 0 0; font-size:calc(12px * var(--esc)); color:var(--grafite); }
+</style>
+<script id="par-js">
+(function(){
+  const sa = s => (typeof semAcento === 'function' ? semAcento(String(s)) : String(s)).toLowerCase();
+  const ALIAS = [[/\bita[uú]\b/, 'itau'], [/\bc6\b|atomos/, 'atomos'], [/revolut|revpoints/, 'revpoints'], [/banrisul|banriclube/, 'banriclube'], [/\besfera\b|santander/, 'esfera'],
+    [/\blivelo\b|bradesco|banco do brasil/, 'livelo'], [/\bcaixa\b|\buau\b/, 'uau'], [/\binter\b/, 'interloop']];
+  const mapa = n => { const s = sa(n); const a = ALIAS.find(x => x[0].test(s)); return a ? a[1] : ''; };
+  const temSaldo = k => (DB.saldos || []).filter(x => x.prog === k).reduce((t, x) => t + (Number(x.qtd) || 0), 0);
+  window.parLer = function(bloco){
+    const raw = (bloco || []).map(x => (typeof SEM_EMOJI === 'function' ? SEM_EMOJI(x) : x).replace(/[*_~]/g, '').trim());
+    const out = {nomes:[], limite:0, extra:null};
+    const i = raw.findIndex(l => /particip\w*\s+(?:os\s+|as\s+)?(?:parceiros|bancos|programas)?\s*:/i.test(l) || /(?:parceiros|bancos|programas)\s+participantes\s*:/i.test(l));
+    if (i >= 0){
+      const corta = s => s.split(/\s*[,;]\s*|\s+e\s+/).map(x => x.replace(/^[-•·>\s]+/, '').replace(/\.$/, '').replace(/\s+/g, ' ').trim()).filter(x => x && x.length < 40);
+      const na = raw[i].replace(/^.*?:\s*/, '').trim();
+      if (na){
+        /* lista na mesma linha (pode continuar na linha de baixo) */
+        let lista = na;
+        for (let j = i + 1; j < raw.length && raw[j] && !/[:!]$/.test(lista) && !/^(caso|clientes|grave|limite|bonifica|leia|cadastre|transfira|\d)/i.test(raw[j]); j++) lista += ' ' + raw[j];
+        out.nomes = corta(lista);
+      } else {
+        /* um banco por linha, depois do título (pula a linha em branco logo abaixo) */
+        let j = i + 1; while (j < raw.length && !raw[j]) j++;
+        for (; j < raw.length && raw[j] && !/:\s*$/.test(raw[j]) && !/^(link|regras|leia|caso|limite|bonifica|cadastre|transfira|http|v[aá]lid)/i.test(raw[j]); j++) out.nomes.push(...corta(raw[j]));
+      }
+    }
+    raw.forEach(l => {
+      let m;
+      if ((m = l.match(/limite\s+de\s+bonifica\S*\s*:?\s*([\d.,]+)\s*(k|mil)?/i))) out.limite = Number(m[1].replace(/\./g, '').replace(',', '.')) * (m[2] ? 1000 : 1);
+      if (!out.extra && (m = l.match(/([\d.,]+)\s*(k|mil)?\s*(milhas|pontos)\s+(?:extras?|b\S*nus)\s+(?:se\s+for|na|pela)\s+(?:a\s+)?(?:sua\s+)?primeira/i))) out.extra = {qtd:Number(m[1].replace(/\./g, '').replace(',', '.')) * (m[2] ? 1000 : 1), quem:'quem transfere pela primeira vez', un:m[3].toLowerCase()};
+      if ((m = l.match(/primeira\s+vez\s+ganhar\S*\s+([\d.,]+)\s*(k|mil)?\s*(milhas|pontos)(?:\s+b[oô]nus)?/i))) out.extra = {qtd:Number(m[1].replace(/\./g, '').replace(',', '.')) * (m[2] ? 1000 : 1), quem:'quem transfere pela primeira vez', un:m[3].toLowerCase()};
+    });
+    return out;
+  };
+  if (typeof lerUmAnuncio === 'function'){
+    const o = lerUmAnuncio;
+    lerUmAnuncio = function(bloco){
+      const a = o.apply(this, arguments); if (!a) return a;
+      try {
+        const x = parLer(bloco), sg = a.sugestao;
+        if (sg && sg.tipo === 'transferencia'){
+          if (x.limite && !sg.limite) sg.limite = x.limite;
+          if (x.extra && !sg.extraNovo) sg.extraNovo = x.extra;
+          if (x.nomes.length >= 2){
+            const ok = [], fora = [];
+            x.nomes.forEach(n => { const k = mapa(n); if (k && PARIDADES.some(p => p.de === k && p.para === sg.para) && !ok.includes(k)) ok.push(k); else if (!k || !ok.includes(k)) fora.push(n); });
+            sg.participNomes = x.nomes; sg.participFora = fora;
+            if (ok.length){
+              ok.sort((p, q) => temSaldo(q) - temSaldo(p));    /* a origem principal é a que você mais tem */
+              sg.de = ok[0]; sg.deMais = ok.slice(1); if (!sg.deMais.length) delete sg.deMais;
+            }
+          }
+        }
+      } catch(e){ console.error(e); }
+      return a;
+    };
+  }
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = o.apply(this, arguments);
+      try { const sg = m && m.sugestao;
+        if (sg && sg.participNomes && m.campId) (DB.campanhas || []).filter(c => c.id === m.campId || c.id.startsWith(m.campId + '-')).forEach(c => {
+          c.participNomes = sg.participNomes.slice(); c.participFora = (sg.participFora || []).slice();
+          if (sg.limite && !c.limite) c.limite = sg.limite; if (sg.extraNovo && !c.extraNovo) c.extraNovo = sg.extraNovo; });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  const ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M19 10v8M9 10v8M15 10v8M3 20h18"/></svg>';
+  window.parHTML = function(c){
+    if (!c || !(c.participNomes || []).length) return '';
+    const vistos = new Set();
+    const ch = c.participNomes.map(n => { const k = mapa(n);
+      if (k && PARIDADES.some(p => p.de === k && p.para === c.para) && !vistos.has(k)){ vistos.add(k); return `<span class="${temSaldo(k) > 0 ? 'voce' : ''}" title="${esc(n)}">${discoProg(k)}${esc(prog(k).n)}${temSaldo(k) > 0 ? '<em>você tem</em>' : ''}</span>`; }
+      return `<span class="so">${esc(n)}</span>`; }).join('');
+    const nao = ['esfera', 'livelo'].filter(k => PARIDADES.some(p => p.de === k && p.para === c.para) && !vistos.has(k));
+    return `<div class="par">${ICO}<div><b class="tit">Participam (${c.participNomes.length})</b><div class="par-ch">${ch}</div>
+      ${nao.length ? `<p class="par-n"><b>${nao.map(k => prog(k).n).join(' e ')}</b> não ${nao.length > 1 ? 'estão' : 'está'} na lista: transferir de lá não ganha este bônus.</p>` : ''}</div></div>`;
+  };
+  if (typeof rgMontar === 'function'){
+    const o = rgMontar;
+    rgMontar = function(d, c){
+      const r = o.apply(this, arguments);
+      try { const sec = d.querySelector('[data-rg-sec="ess"]'); if (sec && c && c.participNomes && !sec.querySelector('.par, .pz')) sec.insertAdjacentHTML('afterbegin', parHTML(c)); } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="mb-css">
+/* ══ MÚLTIPLOS BANCOS: UMA CAMPANHA SÓ (29/10/2026) ══════════════════════════ */
+.mb-disco{ display:inline-grid; place-items:center; width:var(--t, 36px); height:var(--t, 36px); border-radius:50%; flex:0 0 auto; color:#fff;
+  background:conic-gradient(from 200deg, #EC0000, #FF7A00, #2B2B2B, #00A091, #3A55A4, #EC0000); box-shadow:0 0 0 3px var(--sup-0), 0 6px 14px -6px rgba(0,0,0,.5); position:relative; }
+.mb-disco::before{ content:''; position:absolute; inset:4px; border-radius:50%; background:color-mix(in srgb, var(--sup-0) 88%, #000); }
+.mb-disco svg{ position:relative; width:52%; height:52%; fill:none; stroke:var(--giz); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.mb-disco b{ position:absolute; right:-4px; bottom:-4px; min-width:18px; height:18px; padding:0 4px; border-radius:99px; background:var(--ouro); color:var(--sup-0); font:800 10px/18px var(--f-b, inherit); text-align:center; box-shadow:0 0 0 2px var(--sup-0); }
+</style>
+<script id="mb-js">
+(function(){
+  const ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M19 10v8M9 10v8M15 10v8M3 20h18"/></svg>';
+  window.mbDisco = (n, t) => `<span class="mb-disco" style="--t:${t || 36}px" title="Múltiplos bancos" aria-label="Múltiplos bancos">${ICO}${n ? `<b>${n}</b>` : ''}</span>`;
+  const NOME = 'Múltiplos bancos';
+  /* prévia do mural */
+  if (typeof rotuloSugestao === 'function'){
+    const o = rotuloSugestao;
+    rotuloSugestao = function(sg){
+      if (sg && sg.tipo === 'transferencia' && (sg.participNomes || []).length >= 2)
+        return `vira campanha: ${NOME} (${sg.participNomes.length}) → ${prog(sg.para).n}, ${nBRdec(sg.bonus)}%${sg.limite ? `, limite de ${nBR(sg.limite)} de bônus` : ''}`;
+      return o.apply(this, arguments);
+    };
+  }
+  /* gravar: uma campanha só, sem uma cópia por banco */
+  if (typeof muralParaCampanha === 'function'){
+    const o = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = o.apply(this, arguments);
+      try { const sg = m && m.sugestao;
+        if (sg && sg.tipo === 'transferencia' && (sg.participNomes || []).length >= 2 && m.campId){
+          const main = (DB.campanhas || []).find(c => c.id === m.campId);
+          DB.campanhas = (DB.campanhas || []).filter(c => !c.id.startsWith(m.campId + '-'));
+          if (main){ main.multiBancos = true; main.deLista = [sg.de].concat(sg.deMais || []).filter(Boolean); }
+          try { salvar(); } catch(_){}
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  const ehMulti = c => c && c.multiBancos;
+  /* cartão da campanha */
+  if (typeof cpzMontar === 'function'){
+    const o = cpzMontar;
+    cpzMontar = function(c, h){
+      let r = o.apply(this, arguments);
+      try { if (ehMulti(c)){
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const pa = a.querySelector('.cpz-voo .pt.a'); if (pa) pa.innerHTML = mbDisco((c.participNomes || []).length, 40);
+        const nm = a.querySelector('.cp-rota-nome b'); if (nm) nm.textContent = `${NOME} para ${prog(c.para).n}`;
+        a.style.setProperty('--c1', '#FF7A00');
+        r = a.outerHTML; } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* capa da janela */
+  if (typeof cpxCapa === 'function'){
+    const o = window.cpxCapa;
+    window.cpxCapa = function(c){
+      let r = o.apply(this, arguments);
+      try { if (ehMulti(c)){
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const pa = a.querySelector('.cx-ponta.a'); if (pa) pa.innerHTML = mbDisco((c.participNomes || []).length, 50);
+        const h = a.querySelector('#drTit'); if (h) h.textContent = `${NOME} para ${prog(c.para).n}`;
+        r = a.outerHTML; } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* no "Vale a pena?", a conta usa o banco que você mais tem; dizer isso */
+  if (typeof cpxVale === 'function'){
+    const o = window.cpxVale;
+    window.cpxVale = function(c){
+      const v = o.apply(this, arguments);
+      try { if (v && ehMulti(c) && Array.isArray(v.porque) && v.porque.length) v.porque[0] = `Conta feita com o <b>${esc(prog(c.de).n)}</b>, o banco participante em que você tem mais pontos. ` + v.porque[0]; } catch(e){}
+      return v;
+    };
+  }
+})();
+</script>
+
+<style id="bkl-css">
+/* logos dos bancos participantes (29/10/2026) */
+.bkl{ display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; flex:0 0 auto; overflow:hidden;
+  background:linear-gradient(140deg, var(--k1), var(--k2)); color:var(--k3, #fff); font:800 9px/1 var(--f-b, inherit); letter-spacing:.02em; box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
+.bkl img{ width:100%; height:100%; object-fit:cover; }
+.par-ch span{ padding-left:4px !important; }
+</style>
+<script id="bkl-js">
+(function(){
+  /* cor e sigla de cada banco; com logo enviada em Ajustes › Marcas dos programas, a imagem entra no lugar */
+  const BK = [
+    [/ita[uú]/i, 'itau', 'it', '#EC7000', '#B85600', '#fff'], [/credicard/i, '', 'CC', '#0B2D5B', '#04172F'], [/sicred/i, '', 'SI', '#3FA535', '#1F6E1A'],
+    [/\bc6\b/i, 'atomos', 'C6', '#2B2B2B', '#000'], [/btg/i, '', 'BTG', '#0B2A5B', '#04142C'], [/revolut/i, 'revpoints', 'R', '#3A3F4B', '#0E1116'],
+    [/banrisul/i, 'banriclube', 'B', '#0067B1', '#003F6E'], [/sicoob|coopera/i, '', 'SC', '#00A091', '#00594F'], [/banestes/i, '', 'BE', '#0055A4', '#00305E'],
+    [/nordeste|\bbnb\b/i, '', 'BN', '#B4123B', '#5E0A1F'], [/mercantil/i, '', 'M', '#E30613', '#8E040C'], [/banpar[aá]/i, '', 'BP', '#00579C', '#002F55'],
+    [/industrial|\bbib\b/i, '', 'BIB', '#1D3E75', '#0B1F40'], [/sisprime/i, '', 'SP', '#7B1E3B', '#45101F'], [/picpay/i, '', 'PP', '#21C25E', '#12813C'],
+    [/santander/i, 'esfera', 'S', '#EC0000', '#8A0000'], [/bradesco/i, 'livelo', 'B', '#CC092F', '#6E0418'], [/caixa/i, 'uau', 'CX', '#0070AF', '#003B66'],
+    [/inter\b/i, '', 'IN', '#FF7A00', '#7A3B00'], [/nubank|\bnu\b/i, '', 'NU', '#8A05BE', '#4B0273'], [/banco do brasil|\bbb\b/i, '', 'BB', '#F7D000', '#C9A800', '#1F3A8A']];
+  window.bancoLogo = function(nome){
+    const m = BK.find(x => x[0].test(nome || ''));
+    const img = m && m[1] && (DB.logos || {})[m[1]];
+    if (img) return `<span class="bkl" title="${esc(nome)}"><img src="${esc(img)}" alt=""></span>`;
+    const [k1, k2, k3] = m ? [m[3], m[4], m[5]] : ['#4B5B7A', '#1E2638'];
+    const sig = m ? m[2] : String(nome || '?').replace(/^banco\s+/i, '').replace(/[^A-Za-zÀ-ÿ ]/g, '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    return `<span class="bkl" style="--k1:${k1};--k2:${k2}${k3 ? ';--k3:' + k3 : ''}" title="${esc(nome)}" aria-hidden="true">${esc(sig)}</span>`;
+  };
+  if (typeof parHTML === 'function'){
+    const o = window.parHTML;
+    window.parHTML = function(c){
+      let r = o.apply(this, arguments);
+      try {
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild; if (!a) return r;
+        a.querySelectorAll('.par-ch > span').forEach((sp, i) => {
+          const nome = (c.participNomes || [])[i] || sp.getAttribute('title') || sp.textContent;
+          const d = sp.querySelector('.disco-prog');
+          if (d) d.outerHTML = bancoLogo(nome);
+          else { sp.classList.remove('so'); sp.insertAdjacentHTML('afterbegin', bancoLogo(nome)); }
+        });
+        r = a.outerHTML;
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="par2-css">
+/* ══ QUEM PARTICIPA: PAINEL PREMIUM (29/10/2026) ═════════════════════════════
+   Uma faixa com as logos empilhadas e os números; abaixo, os bancos em três
+   níveis: onde você tem pontos (destaque), os que a Torre acompanha e os demais. */
+.pz{ border-radius:20px; margin-bottom:14px; overflow:hidden; border:1px solid color-mix(in srgb, var(--jade) 35%, var(--fio));
+  background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--jade) 14%, transparent), transparent 55%), var(--sup-1); }
+.pz-cab{ display:flex; align-items:center; gap:16px; padding:14px 16px; flex-wrap:wrap; }
+.pz-pilha{ display:flex; align-items:center; }
+.pz-pilha .bkl{ width:34px; height:34px; font-size:11px; margin-left:-4px; box-shadow:0 0 0 3px var(--sup-1), 0 6px 14px -8px rgba(0,0,0,.6); }
+.pz-pilha .bkl:first-child{ margin-left:0; }
+.pz-pilha .mais{ margin-left:-4px; width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--sup-0); color:var(--giz); font:700 11px/1 var(--f-b, inherit); box-shadow:0 0 0 3px var(--sup-1); border:1px solid var(--fio); }
+.pz-tit{ flex:1; min-width:200px; }
+.pz-tit small{ display:block; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--jade); }
+.pz-tit b{ display:block; margin-top:3px; font:700 calc(18px * var(--esc))/1.2 var(--f-d, inherit); color:var(--giz); }
+.pz-num{ display:flex; gap:14px; }
+.pz-num div{ text-align:center; } .pz-num b{ display:block; font:700 calc(20px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.pz-num span{ font:700 calc(9px * var(--esc))/1.3 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); }
+.pz-num .ouro b{ color:var(--ouro); } .pz-num .jade b{ color:var(--jade); }
+.pz-corpo{ padding:0 16px 14px; display:grid; gap:12px; }
+.pz-g small{ display:block; margin-bottom:7px; font:700 calc(9.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.pz-tiles{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; }
+.pz-t{ display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:13px; background:var(--sup-0); border:1px solid var(--fio); min-width:0; }
+.pz-t .bkl{ width:28px; height:28px; font-size:10px; }
+.pz-t span{ min-width:0; } .pz-t b{ display:block; font-size:calc(12.5px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pz-t i{ display:block; font-style:normal; font-size:calc(10.5px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pz-t.voce{ border-color:color-mix(in srgb, var(--ouro) 60%, var(--fio)); background:linear-gradient(140deg, color-mix(in srgb, var(--ouro) 14%, var(--sup-0)), var(--sup-0) 70%); box-shadow:0 10px 22px -16px color-mix(in srgb, var(--ouro) 70%, #000); }
+.pz-t.voce i{ color:var(--ouro); font-weight:700; }
+.pz-t.torre{ border-color:color-mix(in srgb, var(--jade) 40%, var(--fio)); }
+.pz-outros .pz-tiles{ grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); }
+.pz-outros .pz-t{ padding:6px 8px; } .pz-outros .pz-t .bkl{ width:22px; height:22px; font-size:8px; } .pz-outros .pz-t b{ font-weight:600; color:var(--grafite); }
+.pz-fora{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; border:1px dashed color-mix(in srgb, var(--brasa) 50%, var(--fio)); background:color-mix(in srgb, var(--brasa) 7%, transparent); font-size:calc(12.5px * var(--esc)); color:var(--giz); }
+.pz-fora .disco-prog{ width:24px !important; height:24px !important; font-size:8px !important; filter:grayscale(.5); opacity:1; }
+.pz-fora b{ color:var(--brasa); }
+.pz-det{ border-top:1px dashed color-mix(in srgb, var(--giz) 12%, transparent); }
+.pz-det > summary{ list-style:none; cursor:pointer; padding:10px 16px; font:600 calc(12.5px * var(--esc))/1.2 var(--f-b, inherit); color:var(--anil-claro, var(--giz)); display:flex; align-items:center; gap:6px; }
+.pz-det > summary::-webkit-details-marker{ display:none; }
+.pz-det > summary::after{ content:'›'; transition:transform .2s; } .pz-det[open] > summary::after{ transform:rotate(90deg); }
+@media (max-width:640px){ .pz-num{ width:100%; justify-content:space-between; } .pz-tiles{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+</style>
+<script id="par2-js">
+(function(){
+  if (typeof parHTML !== 'function') return;
+  const sa = s => (typeof semAcento === 'function' ? semAcento(String(s)) : String(s)).toLowerCase();
+  const ALIAS = [[/\bita[uú]\b/, 'itau'], [/\bc6\b|atomos/, 'atomos'], [/revolut|revpoints/, 'revpoints'], [/banrisul|banriclube/, 'banriclube'], [/\besfera\b|santander/, 'esfera'], [/\blivelo\b|bradesco/, 'livelo'], [/\bcaixa\b|\buau\b/, 'uau']];
+  const mapa = n => { const a = ALIAS.find(x => x[0].test(sa(n))); return a ? a[1] : ''; };
+  const saldo = k => (DB.saldos || []).filter(x => x.prog === k).reduce((t, x) => t + (Number(x.qtd) || 0), 0);
+  window.parHTML = function(c){
+    if (!c || !(c.participNomes || []).length) return '';
+    const vistos = new Set(), voce = [], torre = [], outros = [];
+    c.participNomes.forEach(n => { const k = mapa(n), ok = k && PARIDADES.some(p => p.de === k && p.para === c.para);
+      if (ok && !vistos.has(k)){ vistos.add(k); (saldo(k) > 0 ? voce : torre).push({n, k}); } else outros.push({n}); });
+    const tile = (x, cls, sub) => `<div class="pz-t ${cls}" title="${esc(x.n)}">${bancoLogo(x.n)}<span><b>${esc(x.n)}</b>${sub ? `<i>${sub}</i>` : ''}</span></div>`;
+    const todos = voce.concat(torre, outros), pil = todos.slice(0, 6);
+    const nao = ['esfera', 'livelo'].filter(k => PARIDADES.some(p => p.de === k && p.para === c.para) && !vistos.has(k));
+    return `<div class="pz">
+      <div class="pz-cab"><div class="pz-pilha">${pil.map(x => bancoLogo(x.n)).join('')}${todos.length > pil.length ? `<span class="mais">+${todos.length - pil.length}</span>` : ''}</div>
+        <div class="pz-tit"><small>Quem participa</small><b>${c.participNomes.length} bancos transferem com bônus</b></div>
+        <div class="pz-num"><div class="ouro"><b>${voce.length}</b><span>você tem</span></div><div class="jade"><b>${voce.length + torre.length}</b><span>na Torre</span></div><div><b>${c.participNomes.length}</b><span>no total</span></div></div></div>
+      <div class="pz-corpo">
+        ${voce.length ? `<div class="pz-g"><small>Onde você tem pontos</small><div class="pz-tiles">${voce.map(x => tile(x, 'voce', `${nBR(saldo(x.k))} pontos`)).join('')}</div></div>` : ''}
+        ${torre.length ? `<div class="pz-g"><small>Acompanhados pela Torre</small><div class="pz-tiles">${torre.map(x => tile(x, 'torre', esc(prog(x.k).n))).join('')}</div></div>` : ''}
+        ${nao.length ? `<div class="pz-fora">${nao.map(k => discoProg(k)).join('')}<span><b>${nao.map(k => prog(k).n).join(' e ')}</b> não ${nao.length > 1 ? 'participam' : 'participa'}: transferir de lá não ganha este bônus.</span></div>` : ''}
+      </div>
+      ${outros.length ? `<details class="pz-det"><summary>Outros ${outros.length} bancos participantes</summary><div class="pz-corpo pz-outros"><div class="pz-tiles">${outros.map(x => tile(x, '', '')).join('')}</div></div></details>` : ''}
+    </div>`;
+  };
+})();
+</script>
+
+<script id="mb2-js">
+/* Múltiplos bancos: o título da janela vale em qualquer tela (celular incluso). */
+(function(){
+  if (typeof abrirRegras !== 'function') return;
+  const o = abrirRegras;
+  abrirRegras = function(id){
+    const r = o.apply(this, arguments);
+    try { const c = (DB.campanhas || []).find(x => x.id === id);
+      if (c && c.multiBancos){ document.querySelectorAll('#drTit').forEach(h => { h.textContent = `Múltiplos bancos para ${prog(c.para).n}`; }); } } catch(e){}
+    return r;
+  };
+})();
+</script>
+<style id="vex-css">
+/* lotes criados sozinhos a partir do extrato da extensão (29/10/2026) */
+.vex-tag{ display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:1px 7px; border-radius:99px; font:700 calc(9.5px * var(--esc))/1.5 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--jade); border:1px solid color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 9%, transparent); vertical-align:middle; }
+.vex-sem{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+.vex-sem > div{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:14px; border:1px dashed color-mix(in srgb, var(--ouro) 55%, var(--fio)); background:color-mix(in srgb, var(--ouro) 7%, transparent); font-size:calc(12.5px * var(--esc)); color:var(--giz); }
+.vex-sem b{ color:var(--ouro); }
+</style>
+<script id="vex-js">
+/* ══ VENCIMENTOS QUE CHEGAM PELA EXTENSÃO ════════════════════════════════════
+   Todo extrato enviado pela extensão pode trazer o que vai vencer:
+     aExpirar: { qtd, data }          (o próximo lote que o programa mostra)
+     lotes:    [{ qtd, vence }, ...]  (quando o programa mostra a lista toda)
+   A Torre transforma isso em lotes de validade sozinha, marcados como "do
+   extrato". Vale para qualquer programa: o que a extensão passar a ler amanhã
+   já entra pela mesma regra. Lote anotado à mão nunca é apagado nem alterado.
+   Quando o programa mostra a quantidade e não a data, a Torre guarda o número
+   e mostra em Vencimentos, sem inventar data. */
+(function(){
+  if (typeof impImportar !== 'function') return;
+  const dois = n => String(n).padStart(2, '0');
+  const isoDe = d => `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
+  /* "31/12/2026", "2026-12-31", "no próximo dia 1º", "em 1º de dezembro de 2026" */
+  window.vexData = function(txt, base){
+    const t = String(txt || '').trim(); if (!t) return '';
+    let m = t.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${dois(m[2])}-${dois(m[1])}`;
+    const MES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    m = t.toLowerCase().match(/(\d{1,2})\s*[º°o]?\s+de\s+([a-zç]+)(?:\s+de\s+(\d{4}))?/);
+    if (m && MES.indexOf(m[2]) >= 0){
+      const b = new Date(base || Date.now()); let a = m[3] ? Number(m[3]) : b.getFullYear();
+      let d = new Date(a, MES.indexOf(m[2]), Number(m[1]), 12);
+      if (!m[3] && d < new Date(b.getFullYear(), b.getMonth(), b.getDate())) d = new Date(a + 1, MES.indexOf(m[2]), Number(m[1]), 12);
+      return isoDe(d);
+    }
+    m = t.toLowerCase().match(/dia\s+(\d{1,2})/);
+    if (m){ const b = new Date(base || Date.now()), dia = Number(m[1]);
+      let d = new Date(b.getFullYear(), b.getMonth(), dia, 12);
+      if (b.getDate() >= dia) d = new Date(b.getFullYear(), b.getMonth() + 1, dia, 12);
+      return isoDe(d); }
+    return '';
+  };
+  /* o que o pacote diz que vai vencer: null = o pacote não falou nada */
+  window.vexDoPacote = function(p){
+    if (!p) return null;
+    const base = p.capturadoEm || Date.now();
+    if (Array.isArray(p.lotes)) return p.lotes.map(x => ({ qtd:Math.round(Number(x.qtd) || 0), vence:vexData(x.vence || x.data, base) })).filter(x => x.qtd > 0);
+    if (p.aExpirar && typeof p.aExpirar === 'object'){
+      const q = Math.round(Number(p.aExpirar.qtd) || 0);
+      return q > 0 ? [{ qtd:q, vence:vexData(p.aExpirar.data, base) }] : [];
+    }
+    return null;
+  };
+  const progDe = p => { try { const r = impAnalisar(p, ''); return r && r.progK || p.prog; } catch(_){ return p.prog; } };
+  window.vexAplicar = function(p, contaId){
+    const L = vexDoPacote(p); if (L === null || !contaId) return { novos:0, semData:0 };
+    const pk = progDe(p), hoje = hojeISO(), com = L.filter(x => x.vence), sem = L.filter(x => !x.vence);
+    DB.cfg.vexSemData = DB.cfg.vexSemData || {};
+    const ch = contaId + '|' + pk;
+    if (sem.length) DB.cfg.vexSemData[ch] = { qtd:sem.reduce((t, x) => t + x.qtd, 0), em:hoje, prog:pk, contaId };
+    else delete DB.cfg.vexSemData[ch];
+    if (sem.length && !com.length) return { novos:0, semData:sem.length };   /* só quantidade: não mexe nos lotes com data */
+    /* o extrato é o retrato de agora: os lotes automáticos antigos deste titular e programa saem
+       (os que vencem depois do último que o programa mostrou ficam, porque a tela pode mostrar só o próximo) */
+    const ultimo = com.reduce((m, x) => x.vence > m ? x.vence : m, '');
+    DB.lotes = DB.lotes.filter(l => !(l.auto === 'ext' && l.contaId === contaId && l.prog === pk && (!com.length || l.vence <= ultimo)));
+    let novos = 0;
+    com.forEach(x => {
+      const mao = DB.lotes.find(l => !l.auto && l.contaId === contaId && l.prog === pk && l.vence === x.vence);
+      if (mao){ mao.conferidoExt = hoje; return; }
+      DB.lotes.push({ id:uid(), contaId, prog:pk, qtd:x.qtd, entrada:hoje, vence:x.vence, origem:'Extrato do programa', auto:'ext', lidoEm:hoje });
+      novos++;
+    });
+    return { novos, semData:sem.length };
+  };
+  /* na janela de importação, uma linha dizendo o que vai virar lote */
+  const oP = impPintar;
+  impPintar = function(p, contaId){
+    const r = oP.apply(this, arguments);
+    try {
+      const L = vexDoPacote(p), alvo = document.querySelector('.imp-notas'); if (L === null || !alvo) return r;
+      const n = prog(progDe(p)).n;
+      const txt = !L.length ? `${esc(n)} não mostra pontos a vencer: os lotes automáticos deste titular serão limpos.`
+        : L.map(x => x.vence ? `<b>${nBR(x.qtd)}</b> vencem em <b>${dataBR(x.vence)}</b>` : `<b>${nBR(x.qtd)}</b> a vencer (o programa não informa a data)`).join(' · ') + '. Vira lote de validade sozinho.';
+      alvo.insertAdjacentHTML('beforeend', `<div class="nota" data-vex><svg><use href="#i-relogio"/></svg><div>Vencimento: ${txt}</div></div>`);
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  const oI = impImportar;
+  impImportar = function(p, contaId){
+    let v = null; try { v = vexAplicar(p, contaId); } catch(e){ console.error(e); }
+    const r = oI.apply(this, arguments);
+    try { if (v && v.novos) setTimeout(() => avisar(`${v.novos === 1 ? '1 lote de validade criado' : v.novos + ' lotes de validade criados'} com o vencimento do extrato.`, 'ok', 5000), 900); } catch(_){}
+    return r;
+  };
+  /* Vencimentos: etiqueta "do extrato" e o que veio sem data */
+  const oR = renderSaldo;
+  renderSaldo = function(){
+    const r = oR.apply(this, arguments);
+    try {
+      const alvo = $('#slLotes'); if (!alvo) return r;
+      alvo.querySelectorAll('.ltz-c').forEach(a => {
+        const bt = a.querySelector('[onclick^="editarLote"]'); const id = bt && (bt.getAttribute('onclick').match(/'([^']+)'/) || [])[1];
+        const l = id && DB.lotes.find(x => x.id === id);
+        if (l && l.auto === 'ext' && !a.querySelector('.vex-tag')){ const b = a.querySelector('.ltz-cab b'); if (b) b.insertAdjacentHTML('afterend', `<span class="vex-tag" data-dica="Criado sozinho com o extrato de ${dataBR(l.lidoEm || l.entrada)}">do extrato</span>`); }
+      });
+      const sd = Object.values(DB.cfg.vexSemData || {}).filter(x => x.qtd > 0 && DB.contas.some(c => c.id === x.contaId));
+      const ja = alvo.querySelector('.vex-sem'); if (ja) ja.remove();
+      if (sd.length){
+        const box = alvo.querySelector('.ltz') || alvo.firstElementChild;
+        const html = `<div class="vex-sem">${sd.map(x => `<div>${discoProg(x.prog)}<span><b>${nBR(x.qtd)}</b> ${esc(prog(x.prog).n)} de ${esc(nomeCurtoConta(x.contaId))} a vencer · o programa não informa a data (extrato de ${dataBR(x.em)})</span></div>`).join('')}</div>`;
+        if (box) box.insertAdjacentHTML('beforebegin', html); else alvo.insertAdjacentHTML('beforeend', html);
+      }
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  try { if (typeof RENDER === 'object') Object.keys(RENDER).forEach(k => { if (RENDER[k] === oR) RENDER[k] = renderSaldo; }); } catch(_){}
+})();
+</script>
+
+<style id="rnm-css">
+/* aviso de clube com troca marcada: o valor que vale é o do plano novo (29/10/2026) */
+.rn-card .rn-antes{ color:rgba(220,229,243,.55); white-space:nowrap; }
+.rn-card .rn-txt p b{ white-space:nowrap; }
+.rn-txt b.rn-tit.quebra{ flex-wrap:wrap; row-gap:5px; overflow:visible; }
+.rn-card .rn-dias b.rn-valor.novo{ color:#7CE0B4; }
+</style>
+<script id="rnm-js">
+(function(){
+  if (typeof mostrarAvisosRenovacao !== 'function') return;
+  const nomePl = (a, id) => (((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === id)) || {}).n || '';
+  const per = mod => String(mod || '').startsWith('mensal') ? '/mês' : String(mod || '').startsWith('anual') ? '/ano' : '';
+  const mr = mostrarAvisosRenovacao;
+  mostrarAvisosRenovacao = function(){
+    const r = mr.apply(this, arguments);
+    try {
+      document.querySelectorAll('#rnPilha .rn-card[data-rn]').forEach(el => {
+        const a = (DB.assinaturas || []).find(x => x.id === el.dataset.rn); let m = a && a.mudanca;
+        if (!m || el.dataset.rnm) return; el.dataset.rnm = '1';
+        const quando = m.em || a.renova, d = diasAte(quando);
+        const plN = ((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === m.planoId)) || null;
+        let novo = Number(m.valor) || 0; if (!novo && plN && typeof valorCobranca === 'function'){ try { novo = Number(valorCobranca(plN, m.modalidade || a.modalidade, a.parcelas)) || 0; } catch(_){} }
+        const pl = nomePl(a, m.planoId) || nomePl(a, a.planoId);
+        if (!m.modalidade) m = Object.assign({}, m, {modalidade:a.modalidade});
+        const mod = typeof nomeMod === 'function' && m.para ? nomeMod(m.para) : (m.para || '');
+        const p = el.querySelector('.rn-txt p');
+        if (p) p.innerHTML = `Já está marcada a troca para <b style="display:inline">${esc([pl, mod].filter(Boolean).join(' '))}</b>${novo ? ` por <b style="display:inline">${brl2(novo)}${per(m.modalidade)}</b>` : ''}.<br>Confira no site do programa se a mudança foi feita antes de ${dataBR(quando)}.`;
+        const q = el.querySelector('.rn-quando'); if (q && d !== null) q.textContent = d < 0 ? 'Trocou ontem' : d === 0 ? 'Troca hoje' : d === 1 ? 'Troca amanhã' : `Troca em ${d} dias`;
+        const box = el.querySelector('.rn-dias');
+        if (box && d !== null){
+          const ant = Number(a.valor) || 0;
+          box.innerHTML = `<strong>${d < 0 ? '!' : d}</strong><span>${d < 0 ? 'passou da data' : d === 1 ? 'dia para a <b class="rn-dest">TROCA</b>' : 'dias para a <b class="rn-dest">TROCA</b>'}${novo ? ` · <b class="rn-dest rn-valor novo">${brl2(novo)}${per(m.modalidade)}</b>` : ''}</span>`;
+        }
+      });
+      /* nome e etiqueta numa linha; se nem com a letra menor couber, a etiqueta desce inteira em vez de ser cortada */
+      document.querySelectorAll('#rnPilha .rn-tit').forEach(t => { t.classList.remove('quebra'); if (t.scrollWidth > t.clientWidth + 1) t.classList.add('quebra'); });
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+
+<style id="mbf-css">
+/* ══ BANCOS PARTICIPANTES À VISTA (29/10/2026) ═══════════════════════════════
+   No cartão e na capa da campanha de vários bancos, uma faixa com as logos
+   empilhadas, quantos são e onde você tem pontos. Um clique abre a lista
+   completa numa janela, sem alongar a página. */
+.cp-rota-txt{ min-width:0; }
+.mbf{ display:inline-flex; align-items:center; gap:10px; max-width:100%; min-width:0; overflow:hidden; margin-top:6px; padding:5px 12px 5px 6px; border-radius:99px; cursor:pointer; text-align:left;
+  border:1px solid color-mix(in srgb, var(--jade) 38%, var(--fio)); background:linear-gradient(100deg, color-mix(in srgb, var(--jade) 11%, var(--sup-0)), var(--sup-0) 75%);
+  color:var(--giz); font:600 calc(12px * var(--esc))/1.2 var(--f-b, inherit); transition:transform .18s, box-shadow .18s, border-color .18s; }
+.mbf:hover{ transform:translateY(-1px); border-color:var(--jade); box-shadow:0 10px 22px -16px color-mix(in srgb, var(--jade) 80%, #000); }
+.mbf:focus-visible{ outline:2px solid var(--jade); outline-offset:2px; }
+.mbf-pilha{ display:flex; align-items:center; flex:none; }
+.mbf-pilha .bkl{ width:24px; height:24px; font-size:8px; letter-spacing:0; margin-left:-3px; box-shadow:0 0 0 2px var(--sup-0); }
+.mbf-pilha .bkl:first-child{ margin-left:0; }
+.bkl, .mbf .bkl, .pz .bkl{ color:var(--k3, #fff) !important; font-weight:800 !important; }
+.mbf-pilha .bkl{ box-shadow:0 0 0 2px var(--sup-0), inset 0 0 0 1px rgba(255,255,255,.16); }
+.mbf-pilha i{ margin-left:-3px; width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font:700 8.5px/1 var(--f-b, inherit); font-style:normal; color:var(--giz); background:var(--sup-1); border:1px solid var(--fio); box-shadow:0 0 0 2px var(--sup-0); }
+.mbf-txt{ min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mbf-txt b{ color:var(--giz); } .mbf-txt em{ font-style:normal; color:var(--ouro); font-weight:700; }
+.mbf > svg{ flex:none; width:13px; height:13px; fill:none; stroke:var(--jade); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s; }
+.mbf:hover > svg{ transform:translateX(3px); }
+.mbf-pop .pz{ margin:0; }
+@media (max-width:640px){ .mbf-txt .mbf-voce{ display:none; } .mbf{ gap:8px; padding-right:10px; } .mbf-txt{ font-size:calc(11.5px * var(--esc)); } }
+</style>
+<script id="mbf-js">
+(function(){
+  const sa = s => (typeof semAcento === 'function' ? semAcento(String(s)) : String(s)).toLowerCase();
+  const ALIAS = [[/\bita[uú]\b/, 'itau'], [/\bc6\b|atomos/, 'atomos'], [/revolut|revpoints/, 'revpoints'], [/banrisul|banriclube/, 'banriclube'], [/\besfera\b|santander/, 'esfera'], [/\blivelo\b|bradesco/, 'livelo'], [/\bcaixa\b|\buau\b/, 'uau']];
+  const mapa = n => { const a = ALIAS.find(x => x[0].test(sa(n))); return a ? a[1] : ''; };
+  const saldo = k => (DB.saldos || []).filter(x => x.prog === k).reduce((t, x) => t + (Number(x.qtd) || 0), 0);
+  const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  window.mbfHTML = function(c){
+    const ns = (c && c.participNomes) || []; if (ns.length < 2) return '';
+    const voce = ns.filter(n => { const k = mapa(n); return k && saldo(k) > 0; });
+    const ord = voce.concat(ns.filter(n => !voce.includes(n))), pil = ord.slice(0, 5);
+    return `<button type="button" class="mbf" data-mbf="${esc(c.id)}" aria-label="Ver os ${ns.length} bancos participantes">
+      <span class="mbf-pilha">${pil.map(n => bancoLogo(n)).join('')}${ns.length > pil.length ? `<i>+${ns.length - pil.length}</i>` : ''}</span>
+      <span class="mbf-txt"><b>${ns.length} bancos participantes</b>${voce.length ? `<span class="mbf-voce"> · você tem <em>${esc(voce.join(', '))}</em></span>` : ''}</span>${SETA}</button>`;
+  };
+  let pop = null, fundo = null;
+  const fechar = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } };
+  window.abrirBancosCampanha = function(id){
+    const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+    fechar();
+    fundo = document.createElement('div'); fundo.className = 'dck-fundo'; fundo.onclick = fechar; document.body.appendChild(fundo);
+    pop = document.createElement('div'); pop.className = 'dck-pop mbf-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Bancos participantes');
+    pop.innerHTML = `<div class="dck-pop-cab"><b>Bancos participantes · ${nBRdec(c.bonus)}% para ${esc(prog(c.para).n)}</b><button type="button" class="bt p perigo" data-mbf-fechar>Fechar</button></div><div class="dck-pop-corpo">${parHTML(c)}</div>`;
+    const dlg = document.querySelector('dialog[open]'); (dlg || document.body).appendChild(fundo); (dlg || document.body).appendChild(pop);
+    const det = pop.querySelector('.pz-det'); if (det) det.open = true;
+    pop.querySelector('[data-mbf-fechar]').onclick = fechar;
+    pop.querySelector('[data-mbf-fechar]').focus({preventScroll:true});
+  };
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest && ev.target.closest('[data-mbf]'); if (!b) return;
+    ev.preventDefault(); ev.stopPropagation(); abrirBancosCampanha(b.dataset.mbf);
+  }, true);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && pop){ ev.stopPropagation(); fechar(); } }, true);
+  /* no cartão: a faixa entra no lugar da frase do anúncio (que só repetia o título) */
+  if (typeof cpzMontar === 'function'){
+    const o = cpzMontar;
+    cpzMontar = function(c){
+      let r = o.apply(this, arguments);
+      try { if (c && c.multiBancos && (c.participNomes || []).length >= 2){
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const tx = a.querySelector('.cp-rota-txt'); const sub = tx && [...tx.children].filter(x => x.tagName === 'SPAN' && !x.className).pop();
+        if (sub) sub.outerHTML = mbfHTML(c); else if (tx) tx.insertAdjacentHTML('beforeend', mbfHTML(c));
+        r = a.outerHTML; } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  /* na capa da janela: a mesma faixa embaixo do título */
+  if (typeof cpxCapa === 'function'){
+    const o = window.cpxCapa;
+    window.cpxCapa = function(c){
+      let r = o.apply(this, arguments);
+      try { if (c && c.multiBancos && (c.participNomes || []).length >= 2){
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const h = a.querySelector('#drTit'); if (h && !a.querySelector('.mbf')) h.insertAdjacentHTML('afterend', mbfHTML(c));
+        r = a.outerHTML; } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="htz-css">
+/* ══ ONDE USAR: HOTÉIS POR CIDADE E POR MARCA (29/10/2026) ══════════════════
+   Em vez de uma lista de nomes compridos, o resumo de cara (quantos hotéis,
+   em quantas cidades, de quais marcas), abas por marca e um cartão por cidade,
+   cada hotel com o selo colorido da marca e o bairro. */
+.htz{ display:grid; gap:10px; }
+.htz-topo{ display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap; padding:11px 14px; border-radius:18px; border:1px solid var(--fio);
+  background:radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--anil, #3B6FD8) 14%, transparent), transparent 60%), var(--sup-1); }
+.htz-rot{ flex-basis:auto; margin-right:6px; display:flex; align-items:center; gap:6px; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--anil-claro, var(--jade)); }
+.htz-rot svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.htz-num{ display:flex; gap:18px; }
+.htz-num div{ display:grid; } .htz-num b{ font:700 calc(20px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.htz-num span{ margin-top:4px; font:700 calc(9.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); }
+.htz-abas{ display:flex; flex-wrap:wrap; gap:6px; margin-left:auto; }
+.htz-aba{ display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 5px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz);
+  font:600 calc(12px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; transition:border-color .15s, background .15s, transform .15s; }
+.htz-aba:hover{ transform:translateY(-1px); border-color:var(--hz, var(--jade)); }
+.htz-aba[aria-pressed="true"]{ background:color-mix(in srgb, var(--hz, var(--jade)) 16%, var(--sup-0)); border-color:var(--hz, var(--jade)); }
+.htz-aba em{ font-style:normal; font-weight:700; color:var(--grafite); font-variant-numeric:tabular-nums; }
+.htz-aba.todas{ padding-left:11px; }
+.htz-selo{ display:inline-grid; place-items:center; flex:none; width:22px; height:22px; border-radius:8px; color:#fff; font:800 9px/1 var(--f-b, inherit); letter-spacing:.02em;
+  background:linear-gradient(140deg, var(--h1), var(--h2)); box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 6px 14px -10px var(--h2); }
+.htz-aba .htz-selo{ width:22px; height:22px; border-radius:99px; font-size:8px; }
+.htz-cids{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(160px, 100%), 1fr)); gap:8px; }
+.htz-cid{ display:flex; flex-direction:column; gap:5px; padding:9px 11px; border-radius:16px; border:1px solid var(--fio); background:var(--sup-0); animation:htzIn .35s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes htzIn{ from{ opacity:0; transform:translateY(6px); } }
+@media (prefers-reduced-motion:reduce){ .htz-cid{ animation:none; } }
+.htz-cid h5{ display:flex; align-items:center; gap:7px; margin:0; font:700 calc(13.5px * var(--esc))/1.2 var(--f-b, inherit); color:var(--giz); }
+.htz-cid h5 svg{ width:14px; height:14px; fill:none; stroke:var(--brasa, #E4405F); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.htz-cid h5 small{ margin-left:auto; font:700 calc(10px * var(--esc))/1 var(--f-b, inherit); color:var(--grafite); }
+.htz-h{ display:flex; align-items:center; gap:9px; padding:3px 7px; border-radius:11px; background:var(--sup-1); border:1px solid transparent; min-width:0; transition:border-color .15s; }
+.htz-h:hover{ border-color:var(--h1); }
+.htz-h > span:not(.htz-selo){ min-width:0; display:flex; align-items:baseline; gap:6px; }
+.htz-h b{ font-size:calc(12.5px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.htz-h i::before{ content:'·'; margin-right:6px; color:var(--grafite); }
+.htz-h i{ font-style:normal; font-size:calc(11px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.htz-h[hidden], .htz-cid[hidden]{ display:none; }
+@media (max-width:640px){ .htz-abas{ margin-left:0; } .htz-num{ width:100%; justify-content:space-between; } }
+</style>
+<script id="htz-js">
+(function(){
+  if (typeof rgMontar !== 'function') return;
+  const sa = s => (typeof semAcento === 'function' ? semAcento(String(s)) : String(s).normalize('NFD').replace(/[̀-ͯ]/g, '')).toLowerCase();
+  /* marca, selo, cores (ordem: o nome mais específico primeiro) */
+  const MARCAS = [
+    ['Waldorf Astoria', /waldorf/, 'WA', '#1C1C1C', '#000'], ['Conrad', /conrad/, 'CO', '#3A3A3A', '#111'], ['Curio', /curio/, 'CU', '#5B2A86', '#2E1446'],
+    ['Hilton Garden Inn', /garden inn/, 'GI', '#2E9E5B', '#17603A'], ['Hampton', /hampton/, 'HX', '#1E73BE', '#0E4475'], ['DoubleTree', /double\s?tree/, 'DT', '#0F6C8C', '#073D50'],
+    ['Embassy Suites', /embassy/, 'ES', '#B5121B', '#6E0A10'], ['Tru', /\btru by/, 'TR', '#E35205', '#8A3203'], ['Homewood', /homewood/, 'HW', '#7A9A01', '#465900'], ['Home2', /home2/, 'H2', '#00A3AD', '#005F65'],
+    ['ibis Styles', /ibis styles/, 'iS', '#E2007A', '#86004A'], ['ibis budget', /ibis budget/, 'ib', '#00A3E0', '#005E82'], ['ibis', /\bibis\b/, 'ib', '#C8102E', '#7A0A1C'],
+    ['Novotel', /novotel/, 'NO', '#1D4F91', '#0E2A52'], ['Grand Mercure', /grand mercure/, 'GM', '#6D4C2F', '#3B2918'], ['Mercure', /mercure/, 'ME', '#8A1538', '#4C0B1F'], ['Pullman', /pullman/, 'PU', '#1A1A1A', '#000'],
+    ['Sofitel', /sofitel/, 'SO', '#0A2240', '#04101F'], ['Fairmont', /fairmont/, 'FA', '#7D6B4D', '#463B29'],
+    ['JW Marriott', /\bjw\b/, 'JW', '#2B2B2B', '#000'], ['Courtyard', /courtyard/, 'CY', '#00A6A6', '#005E5E'], ['Four Points', /four points/, 'FP', '#7A1E3A', '#40101F'], ['Sheraton', /sheraton/, 'SH', '#00395D', '#001E33'],
+    ['Renaissance', /renaissance/, 'RE', '#6B1F2A', '#3A1017'], ['Fairfield', /fairfield/, 'FF', '#2D6E3E', '#163821'], ['Westin', /westin/, 'WE', '#3D3D3D', '#141414'], ['Marriott', /marriott/, 'MA', '#B8202C', '#6A1219'],
+    ['Holiday Inn Express', /holiday inn express/, 'HE', '#0A7B3E', '#054422'], ['Holiday Inn', /holiday inn/, 'HI', '#0B8A3E', '#054B22'], ['Crowne Plaza', /crowne/, 'CP', '#6C2A6A', '#3A163A'], ['InterContinental', /intercontinental/, 'IC', '#8C7140', '#4D3E22'],
+    ['Grand Hyatt', /grand hyatt/, 'GH', '#5E1F2B', '#321017'], ['Hyatt', /hyatt/, 'HY', '#2B2B2B', '#000'],
+    ['Hilton', /hilton/, 'H', '#104C97', '#082A55']];
+  /* cidade pelo nome; bairros e aeroportos conhecidos levam à cidade certa */
+  const BAIRRO = [[/copacabana|barra(?! do)|ipanema|leblon|botafogo|galeao|santos dumont/, 'Rio de Janeiro'], [/morumbi|itaim|paulista|faria lima|jardins|vila olimpia|berrini|congonhas|pinheiros|moema/, 'São Paulo'], [/guarulhos/, 'Guarulhos'], [/confins/, 'Belo Horizonte']];
+  const CIDADES = ['São José do Rio Preto','Rio de Janeiro','São Paulo','Belo Horizonte','Porto Alegre','Santo André','São Bernardo do Campo','Foz do Iguaçu','Ribeirão Preto','João Pessoa','Campo Grande','Porto Seguro','São Luís','Florianópolis','Itajaí','Guarulhos','Curitiba','Salvador','Recife','Fortaleza','Brasília','Manaus','Belém','Natal','Maceió','Campinas','Goiânia','Vitória','Gramado','Barueri','Joinville','Blumenau','Londrina','Aracaju','Teresina','Cuiabá','Uberlândia','Sorocaba','Santos','Niterói','Búzios','Lisboa','Porto','Madri','Paris','Londres','Nova York','Miami','Orlando','Cancún','Buenos Aires','Santiago'];
+  const marcaDe = n => MARCAS.find(m => m[1].test(sa(n))) || null;
+  const cidadeDe = n => { const s = sa(n); const c = CIDADES.find(x => s.includes(sa(x))); if (c) return c; const b = BAIRRO.find(x => x[0].test(s)); return b ? b[1] : ''; };
+  const resto = (n, m, cid) => {
+    let t = String(n);
+    if (m) t = t.replace(new RegExp('(hampton|double\\s?tree|hilton garden inn|embassy suites|tru|homewood suites|home2 suites)?\\s*by\\s+hilton', 'i'), '').replace(new RegExp(m[1].source, 'i'), '');
+    if (/hilton/i.test(m && m[0] || '')) t = t.replace(/^\s*hilton\b/i, '');
+    if (cid) t = t.replace(new RegExp(cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '');
+    t = t.replace(/\b(airport)\b/i, 'Aeroporto').replace(/\s{2,}/g, ' ').replace(/^[\s,–-]+|[\s,–-]+$/g, '').trim();
+    return t;
+  };
+  const PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  const selo = m => `<span class="htz-selo" style="--h1:${m[3]};--h2:${m[4]}" aria-hidden="true">${m[2]}</span>`;
+  window.htzHTML = function(nomes, rot){
+    const hs = nomes.map(n => { const m = marcaDe(n), c = cidadeDe(n); return {n, m, c:c || 'Outros lugares', r:resto(n, m, c)}; });
+    const cids = [], marcas = [];
+    hs.forEach(h => { if (!cids.includes(h.c)) cids.push(h.c); if (!marcas.find(x => x[0] === h.m[0])) marcas.push(h.m); });
+    cids.sort((a, b) => hs.filter(h => h.c === b).length - hs.filter(h => h.c === a).length || (a === 'Outros lugares') - (b === 'Outros lugares'));
+    const nCid = cids.filter(c => c !== 'Outros lugares').length;
+    return `<div class="htz">
+      <div class="htz-topo">${rot ? `<div class="htz-rot">${PIN}${esc(rot)}</div>` : ''}<div class="htz-num"><div><b>${hs.length}</b><span>${hs.length === 1 ? 'hotel' : 'hotéis'}</span></div><div><b>${nCid}</b><span>${nCid === 1 ? 'cidade' : 'cidades'}</span></div><div><b>${marcas.length}</b><span>${marcas.length === 1 ? 'marca' : 'marcas'}</span></div></div>
+        ${marcas.length > 1 ? `<div class="htz-abas" role="group" aria-label="Filtrar por marca"><button type="button" class="htz-aba todas" data-htz="" aria-pressed="true">Todas <em>${hs.length}</em></button>${marcas.map(m => `<button type="button" class="htz-aba" data-htz="${esc(m[0])}" style="--hz:${m[3]}" aria-pressed="false">${selo(m)}${esc(m[0])} <em>${hs.filter(h => h.m[0] === m[0]).length}</em></button>`).join('')}</div>` : ''}</div>
+      <div class="htz-cids">${cids.map((c, i) => { const da = hs.filter(h => h.c === c); return `<section class="htz-cid" data-htz-cid style="animation-delay:${Math.min(i, 8) * 40}ms"><h5>${PIN}${esc(c)}<small>${da.length}</small></h5>
+        ${da.map(h => `<div class="htz-h" data-htz-m="${esc(h.m[0])}" title="${esc(h.n)}" style="--h1:${h.m[3]}">${selo(h.m)}<span><b>${esc(h.m[0])}</b>${h.r ? `<i>${esc(h.r)}</i>` : ''}</span></div>`).join('')}</section>`; }).join('')}</div>
+    </div>`;
+  };
+  const ligar = box => {
+    box.querySelectorAll('[data-htz]').forEach(b => b.onclick = ev => {
+      ev.stopPropagation(); const k = b.dataset.htz;
+      box.querySelectorAll('[data-htz]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      box.querySelectorAll('.htz-h').forEach(h => { h.hidden = !!k && h.dataset.htzM !== k; });
+      box.querySelectorAll('[data-htz-cid]').forEach(s => { s.hidden = ![...s.querySelectorAll('.htz-h')].some(h => !h.hidden); });
+    });
+  };
+  /* quando a lista de "Onde usar" é de hotéis (a maioria com marca conhecida), troca pelo painel */
+  const o = rgMontar;
+  rgMontar = function(d){
+    const r = o.apply(this, arguments);
+    try {
+      d.querySelectorAll('.rg-locais').forEach(box => {
+        if (box.dataset.htz) return;
+        const nomes = [...box.querySelectorAll('.rg-local span')].map(s => s.textContent.trim()).filter(Boolean);
+        if (nomes.length < 2 || nomes.filter(n => marcaDe(n)).length < nomes.length * 0.6) return;
+        const tit = box.previousElementSibling && box.previousElementSibling.classList.contains('rg-sec-tit') ? box.previousElementSibling : null;
+        const rot = tit ? tit.textContent.trim() : ''; if (tit) tit.remove();
+        box.dataset.htz = '1'; box.classList.remove('rg-locais'); box.innerHTML = htzHTML(nomes.filter(n => marcaDe(n)), rot); ligar(box);
+      });
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+
+<style id="tl1-css">
+/* ══ CABEÇALHO DA CAMPANHA EM DUAS LINHAS LIMPAS (29/10/2026) ════════════════
+   1ª linha: "Compra bonificada | Hilton Honors" (o tipo, um fio fino, o programa).
+   2ª linha: o título do anúncio inteiro, numa linha só. */
+.tl1{ display:flex; align-items:center; flex-wrap:wrap; column-gap:10px; row-gap:2px; min-width:0; }
+.tl1 .tl1-tipo, .cpz-quem .tl1 .cpz-tipo{ font:500 calc(15px * var(--esc))/1.25 var(--f-b, inherit) !important; letter-spacing:0 !important; text-transform:none !important; color:var(--grafite) !important; white-space:nowrap; }
+.tl1-sep{ width:1px; height:1.05em; background:color-mix(in srgb, var(--giz) 28%, transparent); flex:none; }
+.cpz-quem .tl1 .cp-rota-nome{ font-size:calc(16px * var(--esc)); }
+.cpz-quem .tl1 .cp-rota-nome b{ white-space:nowrap; }
+#dlgRegras .tl1 h2, .cx-txt .tl1 h2{ margin:0; }
+.cx-txt .tl1 .tl1-tipo{ font-size:calc(17px * var(--esc)) !important; }
+.cx-txt small.tl1-sub, .cpz-quem .cp-rota-txt > span.tl1-sub{ display:block; max-width:none !important; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; -webkit-line-clamp:unset !important; }
+@media (hover:hover) and (min-width:900px){
+  article.cp.cpz .cpz-topo{ position:relative; }
+  article.cp.cpz .cpz-acoes{ position:absolute; top:14px; right:108px; z-index:2; padding:3px; border-radius:12px; background:color-mix(in srgb, var(--sup-0) 88%, transparent); backdrop-filter:blur(4px); }
+}
+@media (max-width:640px){ .cpz-quem .tl1{ flex-wrap:nowrap; column-gap:8px; } .cpz-quem .tl1 .cpz-tipo{ font-size:calc(12.5px * var(--esc)) !important; } .cpz-quem .tl1 .cp-rota-nome{ font-size:calc(15px * var(--esc)); flex-wrap:nowrap !important; min-width:0; }
+  .cx-txt .tl1{ flex-direction:column; align-items:flex-start; } .cx-txt .tl1 .tl1-sep{ display:none; } .cx-txt .tl1 .tl1-tipo{ font-size:calc(12px * var(--esc)) !important; }
+  .cx-txt small.tl1-sub, .cpz-quem .cp-rota-txt > span.tl1-sub{ white-space:normal !important; display:-webkit-box !important; -webkit-box-orient:vertical; -webkit-line-clamp:2 !important; } }
+</style>
+<script id="tl1-js">
+(function(){
+  const TIPO = c => c.tipo === 'transferencia' ? 'Transferência bonificada' : c.tipo === 'compra' ? (Number(c.desconto) > 0 ? 'Compra com desconto' : /turbo/i.test(c.titulo || '') ? 'Turbo' : 'Compra bonificada') : c.tipo === 'bonificada' ? 'Compra bonificada' : c.tipo === 'clube' ? 'Clube de assinatura' : '';
+  const limpa = t => String(t || '').replace(/[*_~]/g, '').replace(/[!.\s]+$/, '').replace(/\s+/g, ' ').trim();
+  if (typeof cpzMontar === 'function'){
+    const o = cpzMontar;
+    cpzMontar = function(c){
+      let r = o.apply(this, arguments);
+      try {
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const tx = a && a.querySelector('.cpz-quem .cp-rota-txt'), tp = tx && tx.querySelector(':scope > .cpz-tipo'), nm = tx && tx.querySelector(':scope > .cp-rota-nome');
+        if (tp && nm && !tx.querySelector('.tl1')){
+          const l = document.createElement('div'); l.className = 'tl1';
+          tp.textContent = TIPO(c) || tp.textContent;
+          tx.insertBefore(l, tp); l.appendChild(tp); l.insertAdjacentHTML('beforeend', '<i class="tl1-sep" aria-hidden="true"></i>'); l.appendChild(nm);
+          const sub = [...tx.children].find(x => x.tagName === 'SPAN' && !x.className);
+          if (sub){ sub.className = 'tl1-sub'; sub.textContent = limpa(sub.textContent); sub.title = sub.textContent; }
+          r = a.outerHTML;
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  if (typeof cpxCapa === 'function'){
+    const o = window.cpxCapa;
+    window.cpxCapa = function(c){
+      let r = o.apply(this, arguments);
+      try {
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const tx = a && a.querySelector('.cx-txt'), tp = tx && tx.querySelector('.cx-tipo'), h = tx && tx.querySelector('h2');
+        if (tp && h && !tx.querySelector('.tl1')){
+          const l = document.createElement('div'); l.className = 'tl1';
+          tp.textContent = TIPO(c) || tp.textContent; tp.classList.add('tl1-tipo');
+          const depois = h.nextElementSibling && h.nextElementSibling.classList.contains('mbf') ? h.nextElementSibling : null;
+          tx.insertBefore(l, tp); l.appendChild(tp); l.insertAdjacentHTML('beforeend', '<i class="tl1-sep" aria-hidden="true"></i>'); l.appendChild(h);
+          if (depois) l.after(depois);
+          const tit = limpa(c.titulo);
+          if (tit && !tx.querySelector('small') && !depois && sa(tit) !== sa(h.textContent)) l.insertAdjacentHTML('afterend', `<small class="tl1-sub" title="${esc(tit)}">${esc(tit)}</small>`);
+          r = a.outerHTML;
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  function sa(s){ return (typeof semAcento === 'function' ? semAcento(String(s)) : String(s)).toLowerCase().trim(); }
+})();
+</script>
+
+<style id="dck2-css">
+/* botões de consulta (Histórico, Já pagaram): sempre do tamanho do texto, o grupo encostado à direita (29/10/2026) */
+.dck{ margin-left:auto !important; display:flex !important; flex-wrap:wrap; justify-content:flex-end !important; align-items:center; gap:8px; width:auto !important; max-width:100%; }
+.dck .dck-b{ flex:0 0 auto !important; width:max-content !important; min-width:0 !important; max-width:100%; grid-template-columns:auto auto auto !important; justify-self:end; }
+@media (max-width:640px){ .dck{ flex-basis:100%; } }
+/* numa linha própria, que vai até a borda direita do cartão (embaixo dos ícones) */
+#fbDesejos .ds-cab{ flex-wrap:wrap; }
+/* "Melhores campanhas destas lojas" só em Hora de comprar; em Na mira não ajuda a decidir (29/10/2026) */
+#lcMira .hd-dest{ display:none !important; }
+#fbDesejos .ds-cab > .dck{ flex:1 0 100% !important; margin-top:6px; }
+</style>
+<script id="dck2-js">
+(function(){
+  if (typeof renderDesejos !== 'function') return;
+  const o = renderDesejos;
+  renderDesejos = function(){
+    const r = o.apply(this, arguments);
+    try { requestAnimationFrame(dckEsticar); } catch(e){ console.error(e); }
+    return r;
+  };
+  /* o cabeçalho termina antes dos ícones; a linha dos botões vai até a borda direita do cartão */
+  function dckEsticar(){
+    document.querySelectorAll('#fbDesejos .ds-cab > .dck').forEach(d => {
+      d.style.marginRight = '0px';
+      const it = d.closest('.ds-item'); if (!it || !d.offsetParent) return;
+      const cs = getComputedStyle(it), borda = it.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+      const falta = borda - d.getBoundingClientRect().right;
+      if (falta > 1) d.style.marginRight = (-Math.round(falta)) + 'px';
+    });
+  }
+  window.dckEsticar = dckEsticar;
+  let tm = 0; addEventListener('resize', () => { clearTimeout(tm); tm = setTimeout(dckEsticar, 150); });
+})();
+</script>
+<style id="pec-css">
+/* ══ RODAPÉ DAS JANELAS: BOTÕES SEMPRE CENTRALIZADOS (29/10/2026, regra para todo o sistema) ══ */
+#folhaPe, .folha-pe, dialog .dr-pe, .dr-pe{ justify-content:center !important; }
+#folhaPe > .esticar, .folha-pe > .esticar, .dr-pe > .esticar, .dr-pe .esticar{ display:none !important; }
+#folhaPe > *, .folha-pe > *, .dr-pe > *{ margin-left:0 !important; margin-right:0 !important; }
+.dr-pe > div:not([class]):empty{ display:none !important; }
+</style>
+<style id="op2-css">
+/* ══ OPÇÕES DE LOJA: DUAS COLUNAS COM FIO NO MEIO E SELO "MELHOR" (29/10/2026) ══
+   À esquerda, a loja e o programa; à direita, quanto volta e quantos pontos.
+   No alto, a posição e, na primeira, o selo dourado-esmeralda de "Melhor". */
+.op-t{ align-items:stretch !important; text-align:left !important; gap:9px !important; padding:11px 14px 12px !important; border-radius:16px !important; position:relative; overflow:hidden;
+  transition:transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .18s, border-color .18s; }
+.op-t:hover{ transform:translateY(-2px); box-shadow:0 14px 28px -20px rgba(0,0,0,.55); }
+.op-t.top{ border-color:color-mix(in srgb, var(--jade) 70%, var(--fio)) !important;
+  background:radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--jade) 16%, transparent), transparent 60%), var(--sup-1) !important;
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--jade) 35%, transparent), 0 16px 32px -22px color-mix(in srgb, var(--jade) 80%, #000); }
+.op-cab{ display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:22px; }
+.op-n{ font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit) !important; letter-spacing:.12em !important; color:var(--grafite) !important; }
+.op-melhor{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px 4px 8px; border-radius:99px; font:800 calc(10.5px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:#062B1C;
+  background:linear-gradient(135deg, #7CF0BE, #2FBF85 55%, #1A8F60); box-shadow:0 0 0 1px rgba(255,255,255,.25) inset, 0 6px 16px -6px #2FBF85; animation:opBrilho 3.2s ease-in-out infinite; }
+.op-melhor svg{ width:12px; height:12px; fill:#FFE27A; stroke:#8A5A00; stroke-width:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+@keyframes opBrilho{ 0%,100%{ box-shadow:0 0 0 1px rgba(255,255,255,.25) inset, 0 6px 16px -6px #2FBF85; } 50%{ box-shadow:0 0 0 1px rgba(255,255,255,.35) inset, 0 6px 22px -4px #2FBF85; } }
+@media (prefers-reduced-motion:reduce){ .op-melhor{ animation:none; } .op-t{ transition:none; } }
+.op-corpo{ display:grid; grid-template-columns:minmax(0,1fr) 1px auto; align-items:center; gap:12px; }
+.op-esq{ display:grid; gap:4px; min-width:0; }
+.op-esq .op-loja{ font-size:calc(15.5px * var(--esc)) !important; color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.op-esq .op-prog{ justify-content:flex-start; }
+.op-div{ width:1px; align-self:stretch; background:linear-gradient(180deg, transparent, color-mix(in srgb, var(--giz) 22%, transparent), transparent); }
+.op-dir{ display:grid; gap:3px; justify-items:end; text-align:right; }
+.op-dir .op-v{ margin:0 !important; font:700 calc(19px * var(--esc))/1.05 var(--f-d, inherit) !important; letter-spacing:-.01em; }
+.op-dir .op-p{ font-size:calc(11.5px * var(--esc)) !important; }
+.op-t .op-marca{ align-self:flex-start; }
+@container op (max-width:360px){
+  .op-t{ padding:9px 10px 10px !important; } .op-corpo{ grid-template-columns:1fr; gap:6px; } .op-div{ width:auto; height:1px; background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--giz) 22%, transparent), transparent); }
+  .op-dir{ justify-items:start; text-align:left; } .op-melhor{ padding:3px 8px 3px 6px; font-size:calc(9.5px * var(--esc)); letter-spacing:.06em; }
+  .op-cab{ flex-wrap:wrap; row-gap:5px; } .op-n{ white-space:nowrap; letter-spacing:.08em !important; } }
+</style>
+<style id="prr-css">
+/* ══ PRORROGAÇÃO (29/10/2026) ═══════════════════════════════════════════════
+   Anúncio "PRORROGADO" não vira outro cartão: estende o que já existe e ganha
+   o selo com a data antiga riscada e a nova. Oportunidade encerrada ganha o
+   botão "Prorrogar" para trocar a data à mão. */
+.prr{ display:inline-flex; align-items:center; gap:8px; padding:4px 11px 4px 5px; border-radius:99px; white-space:nowrap;
+  border:1px solid color-mix(in srgb, var(--anil-claro, #6FB7FF) 55%, var(--fio)); background:linear-gradient(100deg, color-mix(in srgb, var(--anil-claro, #6FB7FF) 16%, var(--sup-0)), var(--sup-0) 80%);
+  font:600 calc(12px * var(--esc))/1.2 var(--f-b, inherit); color:var(--giz); }
+.prr > i{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; flex:none; color:#fff;
+  background:radial-gradient(circle at 30% 25%, #9FD0FF, #3B7BE0 75%); box-shadow:0 4px 10px -4px #3B7BE0; }
+.prr > i svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+.prr b{ font-weight:800; letter-spacing:.1em; text-transform:uppercase; font-size:calc(10px * var(--esc)); color:var(--anil-claro, #6FB7FF); }
+.prr s{ color:var(--grafite); text-decoration-thickness:1.5px; }
+.prr em{ font-style:normal; font-weight:700; color:var(--giz); }
+.prr-campo{ display:grid; gap:12px; }
+.prr-linha{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); font-size:calc(13px * var(--esc)); color:var(--giz); }
+.prr-linha s{ color:var(--grafite); }
+.prr-atalhos{ display:flex; flex-wrap:wrap; gap:6px; }
+.prr-atalhos button{ padding:6px 12px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); font:600 calc(12px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; }
+.prr-atalhos button:hover{ border-color:var(--anil); }
+</style>
+<script id="prr-js">
+(function(){
+  if (typeof gravarAnuncios !== 'function') return;
+  const sa = s => (typeof semAcento === 'function' ? semAcento(String(s || '')) : String(s || '')).toLowerCase();
+  const RX = /\bprorrogad[oa]s?\b/i;
+  const base = t => sa(String(t || '').replace(/^\s*\*?\s*prorrogad[oa]s?\s*[:!.\-–]*\s*\*?\s*/i, '')).replace(/[^a-z0-9]+/g, ' ').trim();
+  const ehProrrogado = a => RX.test(a.titulo || '') || (a.condicoes || []).some(l => /prorrogad[oa]\s+at[eé]/i.test(l));
+  const ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg>';
+  window.prrHTML = function(p){ if (!p || !p.ate) return '';
+    return `<span class="prr" title="Prorrogada${p.em ? ' em ' + dataBR(p.em) : ''}"><i>${ICO}</i><b>Prorrogada</b>${p.de ? `<s>${dataBR(p.de)}</s>→` : 'até'} <em>${dataBR(p.ate)}</em></span>`; };
+  /* aplica a nova data no anúncio e na campanha que veio dele */
+  window.prrAplicar = function(m, ate){
+    if (!m || !ate) return false;
+    const de = (m.prorrogada && m.prorrogada.de) || m.fim || '';
+    m.fim = ate; m.prorrogada = {de, ate, em:hojeISO()};
+    (DB.campanhas || []).filter(c => c.id === m.campId || (m.campId && c.id.startsWith(m.campId + '-'))).forEach(c => { c.prorrogada = {de:(c.prorrogada && c.prorrogada.de) || c.fim || de, ate, em:hojeISO()}; c.fim = ate; });
+    return true;
+  };
+  const acharOriginal = a => {
+    const b = base(a.titulo), cup = sa(a.cupom || ''), lk = String(a.link || '').split('?')[0];
+    const cands = (DB.mural || []).filter(m => base(m.titulo) === b || (cup && sa(m.cupom || '') === cup && lk && String(m.link || '').split('?')[0] === lk));
+    return cands.sort((x, y) => String(y.fim || '').localeCompare(String(x.fim || '')))[0] || null;
+  };
+  const o = gravarAnuncios;
+  gravarAnuncios = function(){
+    const caixas = [...document.querySelectorAll('#mrPrevias .mr-inclui input')].filter(x => x.checked);
+    const feitos = [], novosPr = [];
+    try {
+      caixas.forEach(x => {
+        const a = (typeof anunciosLidos !== 'undefined' ? anunciosLidos : [])[Number(x.dataset.i)]; if (!a || !ehProrrogado(a)) return;
+        const m0 = acharOriginal(a);
+        a.titulo = String(a.titulo || '').replace(/^\s*\*?\s*prorrogad[oa]s?\s*[:!.\-–]*\s*\*?\s*/i, '').trim();
+        if (m0 && a.fim){
+          if (!(m0.fim && a.fim <= m0.fim)) { const de = (m0.prorrogada && m0.prorrogada.de) || m0.fim; prrAplicar(m0, a.fim); feitos.push({t:m0.titulo, de, ate:a.fim}); }
+          else feitos.push({t:m0.titulo, ja:true});
+          m0.lida = false; x.checked = false;
+        } else novosPr.push({t:a.titulo, ate:a.fim});
+      });
+    } catch(e){ console.error(e); }
+    const resta = [...document.querySelectorAll('#mrPrevias .mr-inclui input')].some(x => x.checked);
+    let r;
+    if (resta) r = o.apply(this, arguments);
+    else if (feitos.length){ salvar(); fecharFolha(); try { renderMural(); } catch(_){} try { if (typeof renderMesa === 'function') renderMesa(); } catch(_){} try { aplicarTudo(); } catch(_){} }
+    try {
+      novosPr.forEach(n => { const m = (DB.mural || []).filter(x => x.titulo === n.t && x.fim === n.ate).pop(); if (m && !m.prorrogada){ m.prorrogada = {de:'', ate:n.ate, em:hojeISO()}; } });
+      if (novosPr.length || feitos.length){ salvar(); try { renderMural(); } catch(_){} }
+      const f = feitos.filter(x => !x.ja);
+      if (f.length) setTimeout(() => avisar(f.length === 1 ? `Oportunidade prorrogada: agora vai até ${dataBR(f[0].ate)} (era ${dataBR(f[0].de)}). Nada foi gravado em dobro.` : `${f.length} oportunidades prorrogadas. Nada foi gravado em dobro.`, 'ok', 8000), 300);
+      else if (feitos.length) setTimeout(() => avisar('Essa prorrogação já estava aplicada. Nada foi gravado em dobro.', 'alerta', 6000), 300);
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  /* botão Prorrogar e selo no mural */
+  window.prorrogarMural = function(id){
+    const m = (DB.mural || []).find(x => x.id === id); if (!m) return;
+    const sug = n => { const d = new Date(Math.max(Date.parse((m.fim || hojeISO()) + 'T12:00:00'), Date.parse(hojeISO() + 'T12:00:00'))); d.setDate(d.getDate() + n); return isoLocal(d); };
+    abrirFolha({titulo:'Prorrogar oportunidade',
+      corpo:`<div class="prr-campo"><div class="prr-linha">${ICO.replace('<svg', '<svg style="width:18px;height:18px;flex:none;fill:none;stroke:var(--anil-claro);stroke-width:2.2"')}<div><b>${esc(m.titulo)}</b><br>Válida até <s>${m.fim ? dataBR(m.fim) : 'sem prazo'}</s></div></div>
+        <div class="campo"><label>Nova data</label><input type="date" id="prrData" value="${sug(3)}"></div>
+        <div class="prr-atalhos">${[[1, '+1 dia'], [3, '+3 dias'], [7, '+7 dias'], [15, '+15 dias']].map(([n, t]) => `<button type="button" data-prr="${sug(n)}">${t}</button>`).join('')}</div></div>`,
+      pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="prrOk">${ICO.replace('<svg', '<svg style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.4"')}Prorrogar</button>`});
+    document.querySelectorAll('[data-prr]').forEach(b => b.onclick = () => { $('#prrData').value = b.dataset.prr; });
+    $('#prrOk').onclick = () => {
+      const v = $('#prrData').value; if (!v) return avisar('Escolha a nova data.', 'alerta');
+      if (m.fim && v <= m.fim) return avisar('A nova data precisa ser depois de ' + dataBR(m.fim) + '.', 'alerta');
+      const de = (m.prorrogada && m.prorrogada.de) || m.fim; prrAplicar(m, v); salvar(); fecharFolha();
+      try { renderMural(); } catch(_){} try { aplicarTudo(); } catch(_){}
+      avisar(`Prorrogada até ${dataBR(v)}${de ? ` (era ${dataBR(de)})` : ''}.`, 'ok', 6000);
+    };
+  };
+  const rm = renderMural;
+  renderMural = function(){
+    const r = rm.apply(this, arguments);
+    try {
+      document.querySelectorAll('#mrLista .mural-cartao').forEach(el => {
+        const lp = el.querySelector('.mural-topo [onclick^="editarMural("]'); if (!lp) return;
+        const id = (lp.getAttribute('onclick').match(/editarMural\('([^']+)'/) || [])[1]; const m = id && (DB.mural || []).find(x => x.id === id); if (!m) return;
+        if (m.prorrogada && !el.querySelector('.prr')){ const pz = el.querySelector('.mural-prazo'); if (pz) pz.insertAdjacentHTML('afterbegin', prrHTML(m.prorrogada)); }
+        if (el.classList.contains('morta') && !el.querySelector('[data-prr-bt]')) lp.insertAdjacentHTML('beforebegin', `<button class="bt p" data-prr-bt onclick="prorrogarMural('${id}')" data-dica="A promoção foi prorrogada? Troque a data aqui">${ICO.replace('<svg', '<svg style="fill:none;stroke:currentColor;stroke-width:2.2"')}Prorrogar</button>`);
+      });
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  /* cartão da campanha: o selo ao lado do título */
+  if (typeof cpzMontar === 'function'){
+    const oc = cpzMontar;
+    cpzMontar = function(c){
+      let r = oc.apply(this, arguments);
+      try { if (c && c.prorrogada && c.prorrogada.ate){ const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const nm = a.querySelector('.cp-rota-nome'); if (nm && !a.querySelector('.prr')){ nm.insertAdjacentHTML('beforeend', prrHTML(c.prorrogada)); r = a.outerHTML; } } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="accz-css">
+/* ══ ALL ACCOR: A BOLSA DO HOTEL (29/10/2026) ═══════════════════════════════
+   O valor de face do ALL (2.000 pontos = 40 euros) convertido pelo euro de
+   agora, e cada programa correndo contra ele: quanto custa chegar aos 2.000
+   pelo seu milheiro, com o bônus que está no ar hoje em cada um. Embaixo,
+   o que os seus saldos já viram em hotel e a calculadora da estadia, que
+   escolhe sozinha o caminho mais barato. */
+.accz{ display:grid; gap:12px; margin-bottom:14px; }
+.accz-heroi{ position:relative; overflow:hidden; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:16px; padding:16px 18px; border-radius:20px;
+  border:1px solid color-mix(in srgb, #D4A24C 45%, var(--fio));
+  background:radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, #D4A24C 22%, transparent), transparent 60%), radial-gradient(70% 120% at 100% 100%, color-mix(in srgb, #3B7BE0 16%, transparent), transparent 60%), var(--sup-1); }
+.accz-heroi::after{ content:''; position:absolute; inset:0; background:linear-gradient(115deg, transparent 35%, rgba(255,255,255,.07) 50%, transparent 65%); transform:translateX(-100%); animation:acczLuz 6s ease-in-out infinite; pointer-events:none; }
+@keyframes acczLuz{ 0%,70%{ transform:translateX(-100%); } 100%{ transform:translateX(100%); } }
+.accz-moeda{ width:58px; height:58px; border-radius:50%; display:grid; place-items:center; font:800 13px/1 var(--f-d, inherit); color:#3A2A08; letter-spacing:.02em;
+  background:conic-gradient(from 200deg, #F7E3A6, #D4A24C, #8C6420, #F2D27C, #D4A24C); box-shadow:inset 0 0 0 3px rgba(255,255,255,.35), inset 0 -4px 10px rgba(0,0,0,.25), 0 10px 24px -12px #8C6420; }
+.accz-eq small{ display:block; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:#D4A24C; }
+.accz-eq b{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 10px; margin-top:4px; font:700 calc(15px * var(--esc))/1.15 var(--f-b, inherit); color:var(--giz); }
+.accz-eq b em{ font-style:normal; font:700 calc(26px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.accz-eq b i{ font-style:normal; color:var(--grafite); font-weight:500; }
+.accz-cx{ text-align:right; display:grid; gap:4px; justify-items:end; }
+.accz-cx span{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); font:600 calc(11.5px * var(--esc))/1 var(--f-b, inherit); color:var(--giz); white-space:nowrap; }
+.accz-cx span i{ width:7px; height:7px; border-radius:50%; background:var(--jade); box-shadow:0 0 0 0 var(--jade); animation:acczPulso 1.8s infinite; }
+.accz-cx span.velho i{ background:var(--ouro); animation:none; }
+@keyframes acczPulso{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--jade) 60%, transparent); } 100%{ box-shadow:0 0 0 8px transparent; } }
+.accz-cx small{ font-size:calc(10.5px * var(--esc)); color:var(--grafite); }
+.accz-abas{ display:flex; gap:6px; padding:4px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); }
+.accz-abas button{ flex:1; padding:9px 10px; border:0; border-radius:10px; background:none; color:var(--grafite); font:600 calc(12.5px * var(--esc))/1.2 var(--f-b, inherit); cursor:pointer; transition:background .18s, color .18s; }
+.accz-abas button[aria-selected="true"]{ color:#3A2A08; background:linear-gradient(135deg, #F7E3A6, #D4A24C); box-shadow:0 6px 16px -10px #8C6420; }
+.accz-abas button:not([aria-selected="true"]):hover{ color:var(--giz); background:var(--sup-0); }
+.accz-painel[hidden]{ display:none; }
+.accz-painel{ animation:acczEntra .3s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes acczEntra{ from{ opacity:0; transform:translateY(4px); } }
+.accz-sec{ padding:14px 16px; border-radius:18px; border:1px solid var(--fio); background:var(--sup-1); }
+.accz-sec > h5{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 12px; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.accz-sec > h5 span{ text-transform:none; letter-spacing:0; font-weight:500; font-size:calc(11.5px * var(--esc)); }
+.accz-pista{ display:grid; gap:8px; }
+.accz-l{ display:grid; grid-template-columns:minmax(150px, 1.1fr) minmax(120px, 2fr) auto; align-items:center; gap:14px; padding:9px 10px; border-radius:14px; border:1px solid transparent; transition:border-color .18s, background .18s; }
+.accz-l:hover{ border-color:var(--fio); background:var(--sup-0); }
+.accz-l.campanha{ border-color:color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:linear-gradient(100deg, color-mix(in srgb, var(--ouro) 10%, var(--sup-0)), var(--sup-0) 70%); }
+.accz-quem{ display:flex; align-items:center; gap:10px; min-width:0; }
+.accz-quem > span{ min-width:0; display:grid; gap:2px; }
+.accz-quem b{ font-size:calc(13.5px * var(--esc)); color:var(--giz); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+.accz-quem small{ font-size:calc(11px * var(--esc)); color:var(--grafite); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.accz-bon{ display:inline-flex; padding:1px 7px; border-radius:99px; font:800 calc(10px * var(--esc))/1.5 var(--f-b, inherit); color:#3A2A08; background:linear-gradient(135deg, #F7E3A6, #D4A24C); }
+.accz-trilho{ position:relative; height:12px; border-radius:99px; background:color-mix(in srgb, var(--giz) 7%, transparent); }
+.accz-trilho > i{ position:absolute; left:0; top:0; bottom:0; border-radius:99px; width:var(--w); background:linear-gradient(90deg, color-mix(in srgb, var(--z) 55%, transparent), var(--z)); transform-origin:left; animation:acczBarra .9s cubic-bezier(.2,.7,.2,1) both; animation-delay:var(--d, 0ms); }
+@keyframes acczBarra{ from{ transform:scaleX(0); } }
+.accz-trilho > u{ position:absolute; top:-5px; bottom:-5px; left:var(--f); width:2px; border-radius:2px; background:#D4A24C; box-shadow:0 0 0 3px color-mix(in srgb, #D4A24C 22%, transparent); text-decoration:none; }
+.accz-trilho > u::after{ content:'40 €'; position:absolute; top:-15px; left:50%; transform:translateX(-50%); font:700 9px/1 var(--f-b, inherit); color:#D4A24C; white-space:nowrap; }
+.accz-l + .accz-l .accz-trilho > u::after{ display:none; }
+@media (prefers-reduced-motion:reduce){ .accz-trilho > i, .accz-heroi::after, .accz-cx span i{ animation:none; } }
+.accz-v{ text-align:right; display:grid; gap:3px; justify-items:end; min-width:122px; }
+.accz-v b{ font:700 calc(15px * var(--esc))/1 var(--f-d, inherit); color:var(--giz); font-variant-numeric:tabular-nums; }
+.accz-v span{ display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:99px; font:700 calc(10.5px * var(--esc))/1.4 var(--f-b, inherit); white-space:nowrap; }
+.accz-v span.eco{ color:var(--jade); background:color-mix(in srgb, var(--jade) 13%, transparent); }
+.accz-v span.nao{ color:var(--brasa); background:color-mix(in srgb, var(--brasa) 13%, transparent); }
+.accz-leg{ margin-top:10px; font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.accz-saldos{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(210px, 100%), 1fr)); gap:8px; }
+.accz-s{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-0); min-width:0; }
+.accz-s span{ display:grid; gap:2px; min-width:0; } .accz-s b{ font-size:calc(13px * var(--esc)); color:var(--giz); } .accz-s small{ font-size:calc(11px * var(--esc)); color:var(--grafite); }
+.accz-s em{ font-style:normal; color:#D4A24C; font-weight:700; }
+.accz-calc{ display:grid; grid-template-columns:minmax(0, 220px) minmax(0,1fr); gap:14px; align-items:stretch; }
+.accz-calc label{ display:block; font:700 calc(10px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); margin-bottom:6px; }
+.accz-calc input{ width:100%; box-sizing:border-box; padding:11px 12px; border-radius:12px; border:1px solid var(--fio-forte, var(--fio)); background:var(--sup-0); color:var(--giz); font:700 calc(17px * var(--esc))/1 var(--f-d, inherit); font-variant-numeric:tabular-nums; }
+.accz-calc input:focus{ outline:2px solid #D4A24C; outline-offset:1px; }
+.accz-res{ display:grid; gap:8px; padding:12px 14px; border-radius:14px; border:1px dashed color-mix(in srgb, #D4A24C 50%, var(--fio)); background:color-mix(in srgb, #D4A24C 6%, transparent); font-size:calc(13px * var(--esc)); color:var(--giz); }
+.accz-res b{ color:var(--giz); } .accz-res em{ font-style:normal; color:#D4A24C; font-weight:700; }
+.accz-res .linha{ display:block; line-height:1.6; }
+.accz-res .linha .disco-prog{ display:inline-grid !important; vertical-align:middle; width:22px !important; height:22px !important; font-size:8px !important; margin:0 3px; }
+@media (max-width:640px){
+  .accz-heroi{ grid-template-columns:auto minmax(0,1fr); } .accz-cx{ grid-column:1 / -1; justify-items:start; text-align:left; }
+  .accz-l{ grid-template-columns:minmax(0,1fr) auto; row-gap:8px; } .accz-trilho{ grid-column:1 / -1; grid-row:2; }
+  .accz-calc{ grid-template-columns:1fr; } .accz-v{ min-width:0; }
+  .accz-eq b{ font-size:calc(13px * var(--esc)); gap:4px 8px; } .accz-eq b em{ font-size:calc(19px * var(--esc)); } .accz-moeda{ width:46px; height:46px; font-size:11px; }
+  .accz-trilho > u::after{ display:none; } .accz-quem b{ white-space:normal; flex-wrap:wrap; } .accz-abas button{ font-size:calc(11.5px * var(--esc)); padding:8px 6px; } }
+</style>
+<script id="accz-js">
+(function(){
+  const VALOR_EUR = 0.02;     /* 1 ponto ALL = 2 centavos de euro (2.000 = 40 €) */
+  const unid = p => prog(p).tipo === 'milhas' ? 'milhas' : 'pontos';
+  const ALVO = 2000;
+  const temClube = p => (DB.assinaturas || []).some(a => a.prog === p && a.status === 'ativa');
+  const saldoDe = p => (DB.saldos || []).filter(x => x.prog === p).reduce((t, x) => t + (Number(x.qtd) || 0), 0);
+  const eur = () => { const cx = ((DB.cfg || {}).cambio || {}).EUR; return cx && cx.v > 0 ? cx : null; };
+  const velho = cx => !cx || !cx.em || (Date.now() - Date.parse(cx.em)) > 6 * 3600 * 1000;
+  window.acczValorPonto = () => { const cx = eur(); return cx ? VALOR_EUR * cx.v : 0; };
+  /* bônus no ar hoje para cada origem: o da campanha aberta e as outras campanhas para o ALL que estejam valendo */
+  const bonusHoje = (p, c) => {
+    const hoje = hojeISO(); let melhor = null;
+    (DB.campanhas || []).filter(x => x.tipo === 'transferencia' && x.para === 'accor' && (!x.fim || x.fim >= hoje) && (!x.inicio || x.inicio <= hoje))
+      .forEach(x => { const origens = [x.de].concat(x.deLista || []); if (!origens.includes(p)) return;
+        const b = Number(x.bonusSemClube != null ? x.bonusSemClube : x.bonus) || 0; if (!melhor || b > melhor.b) melhor = {b, c:x}; });
+    if (c && [c.de].concat(c.deLista || []).includes(p)){ const b = Number(c.bonusSemClube != null ? c.bonusSemClube : c.bonus) || 0; if (!melhor || b >= melhor.b) melhor = {b, c}; }
+    return melhor;
+  };
+  const milheiro = p => { const m = (typeof cpmPorPrograma === 'function' ? cpmPorPrograma() : {})[p]; if (m > 0) return {v:m, fonte:'seu custo'}; const f = typeof faixasDe === 'function' ? faixasDe(p) : null; return f && f.alvo > 0 ? {v:f.alvo, fonte:'alvo de compra'} : null; };
+  window.acczLinhas = function(c){
+    const vp = acczValorPonto(), face = vp * ALVO;
+    return PARIDADES.filter(x => x.para === 'accor').map(x => {
+      const cl = temClube(x.de) && x.clube, par = cl ? x.clube : x.p, bh = bonusHoje(x.de, c), b = bh ? bh.b : 0;
+      const precisa = Math.ceil(ALVO * par / (1 + b / 100)), m = milheiro(x.de), custo = m ? precisa * m.v / 1000 : null;
+      const eco = custo != null && face > 0 ? (face - custo) / face * 100 : null;
+      return {p:x.de, par, cl:!!cl, semClube:x.clube && !cl ? x.clube : null, b, campanha:!!(bh && c && bh.c === c), precisa, m, custo, eco, face};
+    }).sort((a, b) => (a.custo == null) - (b.custo == null) || (a.custo || 0) - (b.custo || 0));
+  };
+  window.acczHTML = function(c){
+    const cx = eur(), vp = acczValorPonto(), face = vp * ALVO, ls = acczLinhas(c);
+    const teto = Math.max(face, ...ls.map(l => l.custo || 0)) * 1.08 || 1;
+    const melhor = ls.find(l => l.custo != null);
+    const heroi = `<div class="accz-heroi"><div class="accz-moeda">ALL</div>
+      <div class="accz-eq"><small>A bolsa do hotel</small><b><em>${nBR(ALVO)}</em> pontos ALL <i>=</i> <em>40 €</em> <i>=</i> <em>${face > 0 ? brl2(face) : 'R$ ?'}</em></b></div>
+      <div class="accz-cx">${cx ? `<span class="${velho(cx) ? 'velho' : ''}"><i></i>Euro hoje ${brl2(cx.v).replace('R$', 'R$ ').replace(/\s+/g, ' ')}</span><small>${esc(cx.fonte || '')}${cx.em ? ` · ${new Date(cx.em).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}` : ''}</small>`
+        : `<span class="velho"><i></i>Buscando o euro de hoje…</span>`}</div></div>`;
+    const pista = `<div class="accz-sec"><h5>Quanto custa chegar aos ${nBR(ALVO)} pontos ALL<span>pelo seu milheiro, com o bônus que está no ar hoje</span></h5><div class="accz-pista">${ls.map((l, i) => {
+      const z = l.eco == null ? 'var(--grafite)' : l.eco >= 0 ? 'var(--jade)' : 'var(--brasa)';
+      const medalha = l === melhor && l.eco > 0 && typeof asaHTML === 'function' ? asaHTML('ouro', 'p', 'O caminho mais barato hoje') : '';
+      return `<div class="accz-l${l.campanha ? ' campanha' : ''}" style="--z:${z}">
+        <div class="accz-quem">${discoProg(l.p)}<span><b>${esc(prog(l.p).n)}${medalha}${l.b ? `<i class="accz-bon">+${nBRdec(l.b)}%</i>` : ''}</b><small>${nBR(l.precisa)} ${unid(l.p)}${l.cl ? ' · paridade do Clube' : l.semClube ? ` · ${nBR(Math.ceil(ALVO * l.semClube / (1 + l.b / 100)))} com Clube` : ''}</small></span></div>
+        <div class="accz-trilho" style="--f:${face / teto * 100}%">${l.custo != null ? `<i style="--w:${Math.min(100, l.custo / teto * 100)}%;--d:${i * 70}ms"></i>` : ''}<u title="Valor de face: 40 € = ${brl2(face)}"></u></div>
+        <div class="accz-v">${l.custo != null ? `<b>${brl2(l.custo)}</b>${l.eco >= 0 ? `<span class="eco">${pct(l.eco, 1)} de economia</span>` : `<span class="nao">Não vale a pena</span>`}` : `<b>—</b><span class="nao" style="background:none;color:var(--grafite)">sem milheiro</span>`}</div></div>`; }).join('')}</div>
+      <div class="accz-leg">A linha dourada é o valor de face dos ${nBR(ALVO)} pontos (40 €). Barra antes dela: você paga menos do que vale. Conta: ${nBR(ALVO)} × paridade ÷ (1 + bônus) × seu milheiro.</div></div>`;
+    const sal = ls.filter(l => saldoDe(l.p) > 0).map(l => { const pts = Math.floor(saldoDe(l.p) / l.par * (1 + l.b / 100)); return {l, pts, rs:pts * vp}; });
+    const saldos = sal.length ? `<div class="accz-sec"><h5>O que os seus saldos viram em hotel<span>se transferir tudo hoje</span></h5><div class="accz-saldos">${sal.map(s => `<div class="accz-s">${discoProg(s.l.p)}<span><b>${nBR(saldoDe(s.l.p))} ${esc(prog(s.l.p).n)}</b><small>viram <em>${nBR(s.pts)} ALL</em> · ${vp > 0 ? brl2(s.rs) + ' em hotel' : ''}</small></span></div>`).join('')}</div></div>` : '';
+    const calc = `<div class="accz-sec"><h5>Calculadora da estadia<span>quanto custa a hospedagem e por onde chegar lá</span></h5>
+      <div class="accz-calc"><div><label for="acczPreco">Preço da estadia (R$)</label><input id="acczPreco" type="text" inputmode="decimal" data-moeda placeholder="2.720,00" value="${esc(window._acczPreco || '')}"></div><div class="accz-res" id="acczRes">${acczResultado(c, window._acczPreco)}</div></div></div>`;
+    const abas = [['pista', 'Comparar programas'], saldos ? ['saldos', 'Seus saldos em hotel'] : null, ['calc', 'Calculadora da estadia']].filter(Boolean);
+    const at = abas.some(x => x[0] === window._acczAba) ? window._acczAba : 'pista';
+    const corpo = {pista, saldos, calc};
+    return `<div class="accz" data-accz="${esc(c.id)}">${heroi}
+      <div class="accz-abas" role="tablist">${abas.map(([k, t]) => `<button type="button" role="tab" data-accz-aba="${k}" aria-selected="${k === at}">${t}</button>`).join('')}</div>
+      ${abas.map(([k]) => `<div class="accz-painel" data-accz-p="${k}"${k === at ? '' : ' hidden'}>${corpo[k]}</div>`).join('')}</div>`;
+  };
+  window.acczResultado = function(c, txt){
+    const preco = typeof moedaNum === 'function' ? moedaNum(txt || '') : Number(String(txt || '').replace(/\./g, '').replace(',', '.')) || 0;
+    const vp = acczValorPonto();
+    if (!(preco > 0)) return '<span>Digite o preço da estadia para ver quantos pontos ALL ela pede e o caminho mais barato.</span>';
+    if (!(vp > 0)) return '<span>Sem o euro de hoje ainda: tente de novo em instantes.</span>';
+    const pts = Math.ceil(preco / vp), ls = acczLinhas(c).filter(l => l.m);
+    const op = ls.map(l => ({l, pts:Math.ceil(pts * l.par / (1 + l.b / 100)), custo:Math.ceil(pts * l.par / (1 + l.b / 100)) * l.m.v / 1000})).sort((a, b) => a.custo - b.custo);
+    const top = op[0], seu = op.find(o => saldoDe(o.l.p) >= o.pts && o !== top);
+    return `<div class="linha">A estadia pede <em>${nBR(pts)} pontos ALL</em> (cada ponto vale 2 centavos de euro, ${brl2(vp).replace(/\s/g, ' ')} hoje).</div>
+      ${top ? `<div class="linha">Caminho mais barato: ${discoProg(top.l.p)} transferir <b>${nBR(top.pts)} ${esc(prog(top.l.p).n)}</b>${top.l.b ? ` com <b>${nBRdec(top.l.b)}%</b> de bônus` : ''}, que custam <b>${brl2(top.custo)}</b> pelo seu milheiro: <em>${top.custo < preco ? 'economia de ' + brl2(preco - top.custo) : 'sai mais caro que pagar em dinheiro'}</em>.</div>` : ''}
+      ${seu ? `<div class="linha">Com o saldo que você já tem: ${discoProg(seu.l.p)} <b>${nBR(seu.pts)} ${esc(prog(seu.l.p).n)}</b> cobrem a estadia.</div>` : ''}`;
+  };
+  /* pinta na aba "Simular transferência" das campanhas para o ALL e mantém lá quando o simulador redesenha */
+  const pintar = c => {
+    const p = document.querySelector('#dlgRegras #drp-sim'); if (!p || !c) return;
+    if (!p.querySelector('.accz')) p.insertAdjacentHTML('afterbegin', acczHTML(c));
+    if (!p._accz){ p._accz = new MutationObserver(() => { if (!p.querySelector('.accz')) { const cc = (DB.campanhas || []).find(x => x.id === p.dataset.acczId); if (cc) p.insertAdjacentHTML('afterbegin', acczHTML(cc)); } }); p._accz.observe(p, {childList:true}); }
+    p.dataset.acczId = c.id;
+  };
+  const repintar = () => { const box = document.querySelector('#dlgRegras .accz'); if (!box) return; const c = (DB.campanhas || []).find(x => x.id === box.dataset.accz); if (c) box.outerHTML = acczHTML(c); };
+  if (typeof abrirRegras === 'function'){
+    const o = abrirRegras;
+    abrirRegras = function(id){
+      const r = o.apply(this, arguments);
+      try { const c = (DB.campanhas || []).find(x => x.id === id);
+        if (c && c.tipo === 'transferencia' && c.para === 'accor'){
+          pintar(c);
+          const cx = eur(); if (velho(cx) && typeof mexAtualizarCambio === 'function') mexAtualizarCambio('EUR').then(v => { if (v) repintar(); });
+        } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-accz-aba]'); if (!b) return;
+    e.preventDefault(); e.stopPropagation(); window._acczAba = b.dataset.acczAba; const box = b.closest('.accz');
+    box.querySelectorAll('[data-accz-aba]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    box.querySelectorAll('[data-accz-p]').forEach(x => { x.hidden = x.dataset.acczP !== b.dataset.acczAba; });
+    if (b.dataset.acczAba === 'calc'){ const i = document.getElementById('acczPreco'); if (i) i.focus({preventScroll:true}); }
+  }, true);
+  document.addEventListener('input', e => {
+    if (!(e.target && e.target.id === 'acczPreco')) return;
+    window._acczPreco = e.target.value; const box = e.target.closest('.accz'), c = box && (DB.campanhas || []).find(x => x.id === box.dataset.accz);
+    const res = document.getElementById('acczRes'); if (res && c) res.innerHTML = acczResultado(c, e.target.value);
+  });
+  /* "Vale a pena?" do ALL: o ponto vale 2 centavos de euro pelo euro de hoje (antes, euro fixo a R$ 6,25) */
+  if (typeof cpxValeHotel === 'function'){
+    const ov = window.cpxValeHotel;
+    window.cpxValeHotel = function(c){
+      try { if (c && c.para === 'accor'){ const vp = acczValorPonto();
+        if (vp > 0){ const cx = eur(); c = Object.assign({}, c, {valorPonto:{rs:vp, txt:`1.000 pontos = 20 euros (R$ ${(vp * 1000).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} com o euro de hoje, ${(cx.v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:4})})`}}); } } } catch(e){}
+      return ov.call(this, c);
+    };
+  }
+})();
+</script>
+
+<style id="bkb-css">
+/* ══ "JÁ BATE A BLACK 2025" EM DESTAQUE (29/10/2026) ══════════════════════════
+   Pílula esmeralda cheia, letra escura forte, chama dourada e um brilho que
+   passa de tempos em tempos: é a melhor notícia que um cartão pode dar. */
+.bk-chip.bate, .lcx-f.bate{ position:relative; overflow:hidden; color:#04140C !important; font-weight:800 !important; letter-spacing:.01em;
+  border:0 !important; background:linear-gradient(135deg, #8BF5C8, #2FBF85 55%, #158556) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.28) inset, 0 8px 20px -8px #2FBF85; animation:bkbPulso 2.6s ease-in-out infinite; }
+.bk-chip.bate{ padding:4px 11px 4px 5px !important; }
+.bk-chip.bate svg, .lcx-f.bate svg{ width:18px !important; height:18px !important; padding:3px; box-sizing:border-box; border-radius:50%; color:#7A3B00 !important; stroke:#7A3B00 !important;
+  background:radial-gradient(circle at 35% 30%, #FFF2B8, #F2C14E 70%); box-shadow:0 2px 6px -2px rgba(0,0,0,.35); }
+.bk-chip.bate small{ color:#0B3A26 !important; opacity:1 !important; font-weight:600 !important; }
+.bk-chip.bate::after, .lcx-f.bate::after{ content:''; position:absolute; inset:0; background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform:translateX(-120%); animation:bkbLuz 3.8s ease-in-out infinite; pointer-events:none; }
+@keyframes bkbLuz{ 0%,60%{ transform:translateX(-120%); } 100%{ transform:translateX(120%); } }
+@keyframes bkbPulso{ 0%,100%{ box-shadow:0 0 0 1px rgba(255,255,255,.28) inset, 0 8px 20px -8px #2FBF85; } 50%{ box-shadow:0 0 0 1px rgba(255,255,255,.4) inset, 0 8px 26px -4px #2FBF85; } }
+@media (prefers-reduced-motion:reduce){ .bk-chip.bate, .lcx-f.bate{ animation:none; } .bk-chip.bate::after, .lcx-f.bate::after{ display:none; } }
+</style>
 </body>
 </html>
