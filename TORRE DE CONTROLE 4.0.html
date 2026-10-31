@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-29 16:00';
+const BUILD = '2026-10-31 18:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -14348,6 +14348,8 @@ function diasAte(iso){
   if (isNaN(b)) return null;
   return Math.round((b - a) / 86400000);
 }
+/* data de renovação no passado: "renovava ontem", "renovava há 3 dias" (o clube podia ter renovado ou não) (31/10/2026) */
+function renovaTexto(dias){ if (dias === null || dias === undefined) return 'renova'; return dias < 0 ? (dias === -1 ? 'renovava ontem' : `renovava há ${-dias} dias`) : 'renova ' + prazoTexto(dias); }
 function prazoTexto(d){
   if (d === null) return '';
   if (d === 0) return 'hoje';
@@ -16139,7 +16141,7 @@ function avisos(){
          vira prioridade nos 3 últimos dias. */
       L.push({ grau: dias <= 3 ? 3 : dias <= 10 ? 2 : 1, tipo:'clube', dias, renovaClube:true,
         curto:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)}`,
-        t:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)} renova ${prazoTexto(dias)}`,
+        t:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)} ${renovaTexto(dias)}`,
         s:`${nomeConta(a.contaId)} · ${brl2(a.valor)} · ${MODALIDADES[a.modalidade] || a.modalidade}`, ir:['fabrica','fb-clubes'] });
     }
     if (a.fid > 0){
@@ -19907,7 +19909,7 @@ function lerUmAnuncio(bloco){
     const pr = [...texto.matchAll(/(\d{1,2})\s*(?:pontos?|milhas?)\s*por\s*real/gi)].map(x => +x[1]).concat([...texto.matchAll(/at[eé]\s*(\d{1,2})\s*x\s*1\b/gi)].map(x => +x[1]));
     if (pr.length) destaque = `até ${Math.max(...pr)} pontos por real`;
   }
-  const cat = /cashback/.test(baixo) ? 'cashback'
+  let cat = /cashback/.test(baixo) ? 'cashback'
     : /compra\s+de\s+(pontos|milhas)|comprar\s+(pontos|milhas)|compre\s+pontos/.test(baixo) && !/(pontos|milhas)\s*por\s*real/.test(baixo) ? 'pontos'
     : /(milhas|pontos)\s*por\s*real|acumule|cr[eé]ditos?\s+uber|magalu|shopping|loja parceira/.test(baixo) ? 'compras'
     /* desconto para gastar os pontos (hotel, carro, pacote, emissão), quase
@@ -19961,12 +19963,17 @@ function lerUmAnuncio(bloco){
     const sg = bonificadaDoAnuncio(titulo, texto);
     if (sg) sugestao = sg;
   }
+  /* anúncio que abre com ⚠️ caía em "Alertas importantes"; se é compra bonificada (pontos por real numa loja), é compra (31/10/2026) */
+  if (!sugestao && cat !== 'pontos' && /\bpor\s+real\b/i.test(SEM_EMOJI(titulo + '\n' + texto))){
+    const sg = bonificadaDoAnuncio(titulo, texto);
+    if (sg){ sugestao = sg; cat = 'compras'; }
+  }
   /* o link principal é a página da oferta, não o PDF do regulamento */
   const link = links.find(u => !/\.pdf(\?|$)/i.test(u) && !/regulament/i.test(u)) || links[0] || '';
   return {titulo, fim, links, link, magos, destaque, cat, condicoes, sugestao, cupom:cupomDoTexto(texto)};
 }
 
-const CAT_PARCEIRO = [[/netshoes|centauro|nike|adidas|decathlon|fila|new balance|track&field/i, 'esporte'], [/magalu|magazine|casas bahia|ponto|fast ?shop|americanas|kabum|samsung|apple/i, 'eletrônicos'],
+const CAT_PARCEIRO = [[/porto servi|servi[cç]os? (para|de) casa|conserto|reparo|chaveiro|desentup/i, 'casa'], [/netshoes|centauro|nike|adidas|decathlon|fila|new balance|track&field/i, 'esporte'], [/magalu|magazine|casas bahia|ponto|fast ?shop|americanas|kabum|samsung|apple/i, 'eletrônicos'],
   [/renner|riachuelo|c&a|zara|dafiti|hering|insider|osklen|dudalina/i, 'moda'], [/sephora|boticário|natura|época|beleza/i, 'beleza'], [/drogasil|raia|pague menos|pacheco|farm/i, 'farmácia'],
   [/booking|hoteis|decolar|samsonite|latam|azul viagens/i, 'viagem'], [/carrefour|pão de açúcar|ifood|rappi|zé delivery/i, 'alimentação'], [/camicado|tok|stok|lego|leroy|mobly/i, 'casa']];
 function bonificadaDoAnuncio(titulo, texto){
@@ -19978,6 +19985,8 @@ function bonificadaDoAnuncio(titulo, texto){
     quem = quem ? quem[0].toUpperCase() + quem.slice(1) : (clube === false ? 'Demais clientes' : 'Todos os clientes');
     if (!degs.some(d => d.v === v && d.rot === quem)) degs.push({rot:quem, v, ...(clube !== undefined ? {clube} : {})}); });
   const xm = String(titulo + ' ' + texto).match(/at[eé]\s*(\d{1,2})\s*x\s*1\b/i);
+  /* o número pode vir só no título: "8 pontos LIVELO por real gasto na PORTO SERVIÇO" (31/10/2026) */
+  if (!degs.length){ const mt = SEM_EMOJI(titulo || '').match(/(\d{1,2}(?:[.,]\d)?)\s*(?:pontos?|milhas?)\b[^\n\d]{0,25}?\bpor\s+real/i); if (mt) degs.push({rot:'Todos os clientes', v:Number(mt[1].replace(',', '.'))}); }
   if (!degs.length && xm) degs.push({rot:'Todos os clientes', v:Number(xm[1])});
   if (!degs.length) return null;
   const para = veredProgNoTexto(titulo + '\n' + texto); if (!para) return null;
@@ -19985,6 +19994,8 @@ function bonificadaDoAnuncio(titulo, texto){
   [prog(para).n, curto(prog(para).n)].forEach(n => { parc = parc.replace(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), ' '); });
   parc = parc.replace(/\b(com|e|na|no|em|at[eé]|ganhe|acumule|pontos?|milhas?|por|real|gasto|\d+(x\d+)?)\b/gi, ' ').replace(/[&+,]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!parc) return null;
+  /* nome todo em maiúsculas vira nome próprio: "PORTO SERVIÇO" → "Porto Serviço" */
+  if (parc === parc.toUpperCase() && /[A-ZÀ-Ú]{3}/.test(parc)) parc = parc.toLowerCase().replace(/(^|\s)(\S)/g, (x, a, b) => a + b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos)\b/g, w => w.toLowerCase());
   const cat = (CAT_PARCEIRO.find(([r]) => r.test(parc)) || [0, 'geral'])[1];
   degs.sort((a, b) => b.v - a.v);
   return {tipo:'bonificada', para, parceiro:parc, cat, ptsPorReal:degs[0].v, faixas:degs};
@@ -20645,7 +20656,8 @@ function cpmProjetadoCampanha(c, bonusUsado){
     /* A mesma conta do simulador, com ou sem carrinho: cartão, resumo e
        simulador nunca discordam. */
     const r = contaCarrinho(c, 100000, usarSaldoPadrao(c));
-    return r.total > 0 ? r.comBonus(b).cpm : null;
+    /* custo zero (pontos juntados) é custo de verdade: milheiro R$ 0,00, não "n/d" */
+    return r.base > 0 && (r.total > 0 || !r.estimado) ? r.comBonus(b).cpm : null;
   }
   return null;
 }
@@ -20860,10 +20872,17 @@ function contaCarrinho(c, qtd, usarSaldo){
   const par = paridadeCT(c.de, c.para);
   const saldo = saldoPorPrograma()[c.de] || 0;
   const comCarrinho = Number(c.carrinho) > 0;
-  const cpmMeu = cpmPorPrograma()[c.de];
-  /* Sem custo lançado, vale a estimativa de reposição da Torre — a mesma que
-     o resto do sistema usa —, e o balcão só em último caso. */
-  const cpmProprio = cpmMeu || (custoMarginal(c.de) || {}).cpm || avulsoDe(c.de) || 0;
+  /* Regra do Jadiel (31/10/2026): transferência sempre pelo custo que a pessoa teve
+     para produzir aqueles pontos. Juntou sem pagar? O custo é zero, não uma estimativa.
+     A estimativa de reposição só entra quando não há ponto nenhum na origem, e aí a
+     tela avisa que é estimativa. */
+  const est0 = (estoquePorPrograma() || {})[c.de];
+  const temEstoque = !!(est0 && est0.qtd > 0);
+  const temPontos = temEstoque || saldo > 0;
+  const cpmLido = cpmPorPrograma()[c.de];
+  const cpmMeu = temEstoque ? (Number(cpmLido) || 0) : (saldo > 0 ? 0 : null);
+  const cpmProprio = cpmMeu != null ? cpmMeu : ((custoMarginal(c.de) || {}).cpm || avulsoDe(c.de) || 0);
+  const estimado = cpmMeu == null;
   let proprios, noCarrinho, minimo = 0, faltaMinimo = false;
   if (comCarrinho){
     minimo = Math.ceil(qtd * 0.01);
@@ -20885,7 +20904,7 @@ function contaCarrinho(c, qtd, usarSaldo){
     return {bonus, chega: base + bonus, cpm: total / ((base + bonus) / 1000)};
   };
   return {par, saldo, minimo, proprios, faltaMinimo, faltaSaldo: !comCarrinho && saldo < qtd, comCarrinho,
-          noCarrinho, cpmProprio, cpmMeu, custoProprio, custoCarrinho, total, base, comBonus, cpmOrigem: total / (qtd / 1000)};
+          noCarrinho, cpmProprio, cpmMeu, estimado, temPontos, custoProprio, custoCarrinho, total, base, comBonus, cpmOrigem: total / (qtd / 1000)};
 }
 
 /* O último carrinho informado para a mesma origem, em outra campanha: serve de
@@ -20911,9 +20930,10 @@ function simCabecalho(c, st){
   const ref = !(Number(c.carrinho) > 0) ? ultimoCarrinhoDaOrigem(c) : null;
   const meta = q
     ? `<span class="${q.velho ? 'brasa' : ''}">${esc(q.txt)}</span>`
-    : ref ? `sem preço nesta campanha. Último para ${esc(prog(c.de).n)}: <button type="button" class="dr-sim-volta"
-        onclick="usarCarrinhoReferencia('${c.id}', ${Number(ref.carrinho)})">${brl2(ref.carrinho)}</button>
-        <span class="fraco">(${ref.carrinhoEm ? dataBR(isoLocalMin(ref.carrinhoEm).slice(0, 10)).slice(0, 5) : 'campanha para ' + esc(prog(ref.para).n)})</span>`
+    : ref ? `sem preço nesta campanha <span class="crr"><button type="button" class="crr-i" aria-label="Ver o último preço de carrinho" aria-expanded="false"
+        onclick="event.stopPropagation(); const o=this.parentElement.classList.toggle('on'); this.setAttribute('aria-expanded', o)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>
+        <span class="crr-pop" role="dialog">Último carrinho para ${esc(prog(c.de).n)}: <b>${brl2(ref.carrinho)}</b> <span class="fraco">(${ref.carrinhoEm ? 'em ' + dataBR(isoLocalMin(ref.carrinhoEm).slice(0, 10)).slice(0, 5) : 'campanha para ' + esc(prog(ref.para).n)})</span>
+        <button type="button" class="bt p" onclick="usarCarrinhoReferencia('${c.id}', ${Number(ref.carrinho)})">Usar este preço</button></span></span>`
     : 'digite o preço que o carrinho mostra agora';
   return `<div class="dr-sim-cab">
       <label class="dr-sim-preco">Carrinho
@@ -21003,7 +21023,7 @@ function simuladorCarrinho(c, st, soCorpo){
         <span>Seus pontos ${nomeDe}</span>
         <b>${nBR(r.proprios)}</b>
         <em>${brl2(r.custoProprio)}</em>
-        <small>a ${brl2(r.cpmProprio)}/mil, ${r.cpmMeu ? 'seu custo médio' : 'custo estimado'}</small>
+        <small>${r.estimado ? `a ${brl2(r.cpmProprio)}/mil, custo estimado: você não tem pontos ${esc(prog(c.de).n)}` : r.cpmMeu > 0 ? `a ${brl2(r.cpmProprio)}/mil, o custo que você teve` : 'pontos juntados sem custo: custo zero'}</small>
       </div>
       ${r.comCarrinho ? `<div class="dr-sim-op" aria-hidden="true">+</div>
       <div class="dr-sim-bloco">
@@ -25951,7 +25971,7 @@ function renderClubes(){
           ${presa ? `<span class="etq brasa" data-dica="Cancelar antes disso gera multa ou perda do bônus">carência até ${dataCurta(fimFid)}</span>` : ''}
         </div>
         <div class="item-sub">${esc(nomeConta(a.contaId))} · ${MODALIDADES[a.modalidade] || a.modalidade} · ${brl2(a.valor)}${a.cartao ? ' · ' + esc(a.cartao) : ''}</div>
-        <div class="item-sub">${pl ? nBR(pl.qtd) + ' pontos por mês' : ''}${a.status === 'ativa' && dias !== null ? ' · renova ' + prazoTexto(dias) + ' (' + dataBR(a.renova) + ')' : ''}</div>
+        <div class="item-sub">${pl ? nBR(pl.qtd) + ' pontos por mês' : ''}${a.status === 'ativa' && dias !== null ? ' · ' + renovaTexto(dias) + ' (' + dataBR(a.renova) + ')' : ''}</div>
         ${typeof temBonusAssin === 'function' && temBonusAssin(a) ? (() => { const bb = bonusDaAssin(a); return `<div class="item-sub" style="color:var(--jade)">+ bônus ${esc(textoBonusAssin(bb))}</div>`; })() : ''}
         ${a.obs ? `<div class="item-sub" style="margin-top:4px">${esc(a.obs)}</div>` : ''}
       </div>
@@ -26956,7 +26976,7 @@ function renderCompras(){
         return `<tr><td class="c fraco">${dataBR(c.data)}</td><td>${esc(nomeLojaCompra(c))}${c.status === 'pendente' ? ' <span class="etq lilas">a receber</span>' : ''}</td>
           <td class="c"><span class="etq"><span class="termo-marca" style="background:${prog(c.prog).cor}"></span>${esc(prog(c.prog).n)}</span></td>
           <td class="n">${brl(c.valor)}</td><td class="n">${c.mult}×</td>
-          <td class="n" style="color:var(--jade)">${nBR(c.pts)}</td>
+          <td class="n" style="color:var(--jade)">${Number(c.ptsPrevistos) > Number(c.pts) ? `<s class="cp-prev" title="Deveriam ter caído ${nBR(c.ptsPrevistos)}">${nBR(c.ptsPrevistos)}</s>` : ''}${nBR(c.pts)}${typeof rcsSeloHTML === 'function' ? rcsSeloHTML(c) : ''}</td>
           <td><div class="acoes-cel"><button class="bt p fantasma icone" onclick="apagar('compras','${c.id}','a compra')" data-dica="Apagar"><svg><use href="#i-lixo"/></svg></button></div></td></tr>`;
       }).join('')}</tbody></table>`;
 }
@@ -45478,7 +45498,7 @@ function creditarCompra(id){
     <p class="fraco" style="margin:0 0 12px">${esc(c.item || nomeLojaCompra(c))}: confira no extrato do ${esc(prog(c.prog).n)} quantos pontos entraram.</p>
     <div class="grade lc-grade">
       <div class="campo"><label>Pontos que entraram</label><input type="text" inputmode="numeric" data-milhar id="crPts" value="${qtdTxt(c.pts)}"></div>
-      <div class="campo"><label>Data do crédito</label><input type="date" id="crData" value="${hojeISO()}"></div>
+      <div class="campo"><label>Data em que caiu no extrato</label><input type="date" id="crData" value="${hojeISO()}"></div>
       <div class="campo"><label>Conta</label><select id="crConta">${(DB.contas || []).map(k => `<option value="${k.id}"${k.id === c.contaId ? ' selected' : ''}>${esc(nomeCurto(k.nome))}</option>`).join('')}</select></div>
     </div>`,
     pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="crOk"><svg><use href="#i-ok"/></svg>Confirmar e somar ao saldo</button>`});
@@ -54739,7 +54759,7 @@ function ccLinha(a, modo){
       ${chips ? `<div class="cc-chips">${chips}</div>` : ''}</div>
     <div class="cc-mil"><div class="cc-mil-num"><b style="color:var(--${z || 'grafite'})">${cpm == null ? 'n/d' : brl2(cpm)}</b>${semB ? `<s>${brl2(semB)}</s>` : ''}<small>o milheiro</small></div>
       ${cpm == null ? '' : `<div class="cc-regua" style="--a:${pos(f.alvo)};--r:${pos(f.razoavel)};--p:${pos(cpm)}" data-dica="Verde até ${brl2(f.alvo)}, amarelo até ${brl2(f.razoavel)}"><i></i></div>`}</div>
-    <div class="cc-ren">${ccAnel(a)}<div><b>${!ativa ? 'encerrada' : dias === null ? 'sem data' : 'renova ' + prazoTexto(dias)}</b><small>${a.renova ? dataBR(a.renova) : ''}</small></div></div>
+    <div class="cc-ren">${ccAnel(a)}<div><b>${!ativa ? 'encerrada' : dias === null ? 'sem data' : renovaTexto(dias)}</b><small>${a.renova ? dataBR(a.renova) : ''}</small></div></div>
     <div class="cc-acoes">
       <button class="bt p fantasma icone" onclick="abrirBonusClube('${a.id}')" data-dica="Bônus da campanha"><svg><use href="#i-faisca"/></svg></button>
       <button class="bt p fantasma icone" onclick="editarAssinatura('${a.id}')" data-dica="Editar"><svg><use href="#i-lapis"/></svg></button>
@@ -57894,7 +57914,7 @@ function mostrarAvisosRenovacao(){
   renovacoesProximas().slice(0, 3).forEach(({a, d}) => {
     const pl = typeof ccPlano === 'function' ? ccPlano(a) : null;
     const mud = a.mudanca && a.mudanca.planoId ? (a.mudanca.planoId === a.planoId && a.mudanca.para ? 'o ' + a.mudanca.para : ((catalogoDe(a.prog) || {planos:[]}).planos.find(x => x.id === a.mudanca.planoId) || {}).n || a.mudanca.planoId) : '';
-    const quando = d < 0 ? 'Renovou ontem' : d === 0 ? 'Renova hoje' : d === 1 ? 'Renova amanhã' : `Renova em ${d} dias`;
+    const quando = d < 0 ? 'Renovava ontem' : d === 0 ? 'Renova hoje' : d === 1 ? 'Renova amanhã' : `Renova em ${d} dias`;
     const cor = mud ? '#6FB7FF' : d <= 1 ? '#FF8A6B' : '#F2C14E';
     const el = document.createElement('div');
     el.className = 'rn-card'; el.style.setProperty('--rn-cor', cor); el.setAttribute('role', 'alert'); el.dataset.rn = a.id;
@@ -63276,7 +63296,7 @@ function rlPromocoes(a){
     pilha.querySelectorAll('[data-rl]').forEach(x => x.remove());
     (DB.assinaturas || []).filter(rlAtivo).forEach(a => {
       const L = a.lembrete, nome = esc(nomeDe(a)), d = diasAte(a.renova);
-      const quando = d < 0 ? 'já renovou' : d === 0 ? 'renova hoje' : d === 1 ? 'renova amanhã' : `renova em ${d} dias`;
+      const quando = d < 0 ? renovaTexto(d) : d === 0 ? 'renova hoje' : d === 1 ? 'renova amanhã' : `renova em ${d} dias`;
       const fim = () => { L.status = 'resolvido'; L.resolvidoEm = hojeISO(); a.renovaOk = a.renova; salvar(); mostrarAvisosRenovacao(); avisar('Lembrete resolvido.', 'ok', 3000); };
       const irClube = () => { try { irItemMenu('fabrica', 'fb-campanhas', 'clube'); } catch(_){} };
       const promos = rlPromocoes(a);
@@ -74032,7 +74052,7 @@ function altDataFutura(iso, ref){
         const mod = typeof nomeMod === 'function' && m.para ? nomeMod(m.para) : (m.para || '');
         const p = el.querySelector('.rn-txt p');
         if (p) p.innerHTML = `Já está marcada a troca para <b style="display:inline">${esc([pl, mod].filter(Boolean).join(' '))}</b>${novo ? ` por <b style="display:inline">${brl2(novo)}${per(m.modalidade)}</b>` : ''}.<br>Confira no site do programa se a mudança foi feita antes de ${dataBR(quando)}.`;
-        const q = el.querySelector('.rn-quando'); if (q && d !== null) q.textContent = d < 0 ? 'Trocou ontem' : d === 0 ? 'Troca hoje' : d === 1 ? 'Troca amanhã' : `Troca em ${d} dias`;
+        const q = el.querySelector('.rn-quando'); if (q && d !== null) q.textContent = d < 0 ? 'Trocava ontem' : d === 0 ? 'Troca hoje' : d === 1 ? 'Troca amanhã' : `Troca em ${d} dias`;
         const box = el.querySelector('.rn-dias');
         if (box && d !== null){
           const ant = Number(a.valor) || 0;
@@ -74762,7 +74782,8 @@ function altDataFutura(iso, ref){
   };
   const trocar = () => {
     document.querySelectorAll('.ljl-l[data-ljl] > .lj-avatar').forEach(av => {
-      const l = (DB.lojas || []).find(x => x.id === av.parentElement.dataset.ljl); if (!l) return;
+      const k = av.parentElement.dataset.ljl;
+      const l = (DB.lojas || []).find(x => x.id === k) || (/^bf:/.test(k) ? (DB.campanhas || []).find(x => x.id === k.slice(3)) : null); if (!l) return;
       av.outerHTML = lzaAnel(l.fim || '', l.inicio || l.criadoEm && String(l.criadoEm).slice(0, 10) || '');
     });
     /* 2ª linha do cartão: só a categoria à esquerda e o selo da Black à direita; o prazo já está no anel e a
@@ -74827,5 +74848,396 @@ function altDataFutura(iso, ref){
 })();
 </script>
 
+<style id="rs2-css">
+/* Resumo do dia: com quatro números, dois por linha (2 + 2); com três, os três na mesma linha (31/10/2026) */
+.rs-nums:has(> :nth-child(4)){ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
+.rs-nums:not(:has(> :nth-child(4))){ grid-template-columns:repeat(3, minmax(0, 1fr)) !important; }
+</style>
+<style id="bfc-css">
+.bfc-cup{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:11px 14px; margin-bottom:12px; border-radius:14px;
+  border:1px dashed color-mix(in srgb, var(--ouro) 60%, var(--fio)); background:color-mix(in srgb, var(--ouro) 8%, transparent); font-size:calc(13px * var(--esc)); color:var(--giz); }
+.bfc-cup b{ color:var(--ouro); }
+</style>
+<script id="bfc-js">
+/* ══ COMPRA BONIFICADA: CUPOM NA CAMPANHA E ANÚNCIOS ANTIGOS EM LOJAS PARCEIRAS (31/10/2026) ══
+   O cupom do anúncio ("Use o cupom LIVELO") passa para a campanha e entra nas
+   regras como obrigatório. E os anúncios de "N pontos por real" que abriam com
+   ⚠️ e tinham caído em "Alertas importantes" são lidos de novo ao abrir a Torre
+   e entram em Lojas parceiras, sem gravar nada em dobro. */
+(function(){
+  if (typeof muralParaLojas !== 'function') return;
+  const o = muralParaLojas;
+  muralParaLojas = function(m){
+    const r = o.apply(this, arguments);
+    try { const c = m && m.campId && (DB.campanhas || []).find(x => x.id === m.campId);
+      const cup = m && (m.cupom || (typeof cupomDoMural === 'function' ? cupomDoMural(m) : ''));
+      if (c && cup && !c.cupom){ c.cupom = cup; const l = `Obrigatório usar o cupom ${cup} para ganhar os pontos.`; if (!String(c.regra || '').includes(cup)) c.regra = (l + '\n' + (c.regra || '')).trim(); }
+    } catch(e){ console.error(e); }
+    return r;
+  };
+  /* na janela da campanha: o cupom no alto do Essencial, para copiar com um toque */
+  if (typeof rgMontar === 'function'){
+    const om = rgMontar;
+    rgMontar = function(d, c){
+      const r = om.apply(this, arguments);
+      try { if (c && c.cupom){ const sec = d.querySelector('[data-rg-sec="ess"]') || d.querySelector('#drp-regras');
+        if (sec && !sec.querySelector('.bfc-cup')) sec.insertAdjacentHTML('afterbegin', `<div class="bfc-cup">${chipCupom(c.cupom)}<span><b>Obrigatório usar este cupom</b> no site ou app do programa. Sem ele, os pontos não entram.</span></div>`); } } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  setTimeout(() => {
+    try { if (typeof DB === 'undefined' || !DB) return; let n = 0; const hoje = hojeISO();
+      (DB.mural || []).forEach(m => {
+        if (m.campId || m.sugestao || (m.fim && m.fim < hoje) || !/\bpor\s+real\b/i.test(SEM_EMOJI((m.titulo || '') + '\n' + (m.texto || '')))) return;
+        const sg = bonificadaDoAnuncio(m.titulo || '', m.texto || ''); if (!sg) return;
+        m.sugestao = sg; m.cat = 'compras'; if (muralParaLojas(m)) n++;
+      });
+      (DB.campanhas || []).filter(c => c.tipo === 'bonificada' && !c.cupom && c.origem === 'mural').forEach(c => { const m = (DB.mural || []).find(x => x.campId === c.id); if (m) muralParaLojas(m); });
+      if (n){ salvar(); try { renderLojasParceiras(); } catch(_){} try { renderMural(); } catch(_){} avisar(n === 1 ? '1 anúncio de pontos por real que estava em Alertas entrou em Lojas parceiras.' : `${n} anúncios de pontos por real que estavam em Alertas entraram em Lojas parceiras.`, 'ok', 7000); }
+    } catch(e){ console.error(e); }
+  }, 1200);
+})();
+</script>
+<style id="crr-css">
+/* carrinho sem preço: o último preço fica atrás do "i", não na tela (31/10/2026) */
+.crr{ position:relative; display:inline-flex; vertical-align:middle; margin-left:4px; }
+.crr-i{ display:inline-grid; place-items:center; width:22px; height:22px; padding:0; border-radius:50%; border:1px solid var(--fio); background:var(--sup-0); color:var(--anil-claro, var(--anil)); cursor:pointer; }
+.crr-i:hover, .crr.on .crr-i{ border-color:var(--anil); background:color-mix(in srgb, var(--anil) 12%, var(--sup-0)); }
+.crr-i svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+.crr-pop{ display:none; position:absolute; z-index:30; top:calc(100% + 8px); left:-10px; width:max-content; max-width:min(320px, 80vw); padding:12px 14px; border-radius:14px;
+  border:1px solid var(--fio-forte, var(--fio)); background:var(--sup-0); box-shadow:0 18px 40px -18px rgba(0,0,0,.55); font-size:calc(12.5px * var(--esc)); line-height:1.5; color:var(--giz); white-space:normal; }
+.crr.on .crr-pop{ display:block; animation:crrIn .18s ease-out both; }
+.crr-pop .bt{ display:flex; margin-top:9px; }
+@media (max-width:640px){ .crr-pop{ position:fixed; left:16px; right:16px; top:auto; width:auto; max-width:none; margin-top:30px; } }
+@keyframes crrIn{ from{ opacity:0; transform:translateY(-4px); } }
+</style>
+<style id="pe2-css">
+/* celular: sem o botão do link, o "Fechar" esticava e espremia o "Transferir Agora" para fora da tela (31/10/2026) */
+@media (max-width:640px){
+  .dr-pe > .sair, .dr-pe > .bt.fantasma.sair{ flex:0 0 auto !important; width:auto !important; max-width:none !important; }
+  .dr-pe > .bt.primario{ flex:1 1 auto !important; min-width:0 !important; }
+}
+</style>
+<style id="mest-css">
+.cpz-est{ display:flex; align-items:center; gap:5px; margin-top:6px; font-size:calc(11px * var(--esc)); color:var(--grafite); line-height:1.3; }
+.cpz-est i{ display:inline-grid; place-items:center; width:15px; height:15px; border-radius:50%; flex:none; font:700 9px/1 var(--f-b, inherit); font-style:normal; color:var(--ouro); border:1px solid color-mix(in srgb, var(--ouro) 55%, transparent); }
+</style>
+<script id="mest-js">
+/* ══ DE ONDE VEM O MILHEIRO DO CARTÃO (31/10/2026) ═══════════════════════════
+   O milheiro de uma transferência é o custo dos SEUS pontos na origem, dividido
+   pela paridade e pelo bônus. Quando você não tem pontos na origem (ou não lançou
+   o custo deles), a Torre usa a estimativa de reposição, e agora diz isso no
+   cartão, embaixo do valor, em vez de deixar parecer que é o seu custo. */
+(function(){
+  if (typeof cpzMontar !== 'function') return;
+  const o = cpzMontar;
+  cpzMontar = function(c){
+    let r = o.apply(this, arguments);
+    try { if (c && c.tipo === 'transferencia' && c.de){
+      const r0 = contaCarrinho(c, 100000, false);
+      if (r0.estimado || !(r0.cpmMeu > 0)){
+        const sal = r0.temPontos ? 1 : 0;
+        const est = (custoMarginal(c.de) || {}).cpm || avulsoDe(c.de) || 0, n = prog(c.de).n;
+        const txt = sal > 0 ? `custo zero: seus pontos ${esc(n)} não tiveram custo lançado` : `estimado: você não tem pontos ${esc(n)}`;
+        const dica = sal > 0 ? `A transferência usa o custo que você teve para produzir os pontos ${n}. Sem custo lançado (pontos juntados), o custo é zero.`
+          : `Você não tem pontos ${n}. Só para comparar, a conta usa a estimativa de reposição da Torre${est ? ` (R$ ${est.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} o milheiro ${n})` : ''}, dividida pela paridade e pelo bônus.`;
+        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+        const box = a.querySelector('.cpz-custo'); if (box && !box.querySelector('.cpz-est')){ box.insertAdjacentHTML('beforeend', `<span class="cpz-est" data-dica="${esc(dica)}" title="${esc(dica)}"><i>i</i>${txt}</span>`); r = a.outerHTML; }
+      } } } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
+<style id="cpv-css">
+/* compra que caiu a menos: o previsto riscado em cinza, discreto, em cima do que caiu (31/10/2026) */
+.cp-prev{ display:block; font-size:.82em; line-height:1.1; color:var(--grafite); opacity:.8; text-decoration-thickness:1.5px; text-decoration-color:var(--grafite); }
+</style>
+<style id="bzl-css">
+/* Bússola ROTA: só o título; as faixas por programa abrem numa janela (31/10/2026) */
+.bz-legenda .bz-leg-i, .bz-legenda details.bz-leg-reg{ display:none !important; }
+#bzLegenda[hidden]{ display:flex !important; }   /* aparece na Lista e nos Cartões */
+.bzl-bt{ display:inline-flex; align-items:center; gap:6px; margin-left:auto; padding:6px 12px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); color:var(--anil-claro, var(--anil)); font:600 calc(12.5px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; }
+.bzl-bt:hover{ border-color:var(--anil); }
+.bzl-bt svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.bzl-pop table{ width:100%; border-collapse:separate; border-spacing:0; font-size:calc(13px * var(--esc)); }
+.bzl-pop th{ text-align:left; padding:8px 10px; font:700 calc(10.5px * var(--esc))/1.2 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); border-bottom:1px solid var(--fio); }
+.bzl-pop td{ padding:10px; border-bottom:1px solid var(--fio); color:var(--giz); font-variant-numeric:tabular-nums; }
+.bzl-pop td:first-child{ white-space:nowrap; }
+.bzl-pop td:first-child b{ display:block; margin-top:4px; font-size:calc(12px * var(--esc)); }
+.bzl-pop small{ display:block; margin-top:12px; color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.5; }
+</style>
+<script id="bzl-js">
+(function(){
+  if (typeof bzLegendaHTML !== 'function') return;
+  const ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>';
+  bzLegendaHTML = function(){ return `<button type="button" class="bzl-bt" data-bzl>${ICO}Faixas por programa</button>`; };
+  let pop = null, fundo = null;
+  const fechar = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } };
+  window.abrirFaixasBussola = function(){
+    fechar();
+    const R = [['milhas', 'Milhas', 'azul'], ['livelo', 'Livelo', 'livelo'], ['esfera', 'Esfera e outros', 'esfera']];
+    const F = {}; R.forEach(([k, , p]) => { F[k] = faixasBussola(p); });
+    fundo = document.createElement('div'); fundo.className = 'dck-fundo'; fundo.onclick = fechar; document.body.appendChild(fundo);
+    pop = document.createElement('div'); pop.className = 'dck-pop bzl-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Faixas por programa');
+    pop.innerHTML = `<div class="dck-pop-cab"><b>Bússola ROTA · faixas por programa</b><button type="button" class="bt p perigo" data-bzl-fechar>Fechar</button></div>
+      <div class="dck-pop-corpo"><table><thead><tr><th>Bússola</th>${R.map(([, t]) => `<th>${t}</th>`).join('')}</tr></thead>
+      <tbody>${BUSSOLA_NOMES.map((n, i) => `<tr><td>${bussolaHTML(F.livelo[i], {rotulo:false, compacto:true})}<b>${esc(n)}</b></td>${R.map(([k]) => `<td>${esc(String(F[k][i].faixa || '').replace(/^de /, ''))}</td>`).join('')}</tr>`).join('')}</tbody></table>
+      <small>Pontos por real (milhas por real nas aéreas). Pontos ainda podem virar mais milhas numa transferência bonificada; por isso a régua deles é menor.</small></div>`;
+    document.body.appendChild(pop);
+    pop.querySelector('[data-bzl-fechar]').onclick = fechar; pop.querySelector('[data-bzl-fechar]').focus({preventScroll:true});
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-bzl]'); if (!b) return; e.preventDefault(); e.stopPropagation(); abrirFaixasBussola(); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop){ e.stopPropagation(); fechar(); } }, true);
+  /* legenda já desenhada antes deste trecho: troca o miolo */
+  const troca = () => { const d = document.getElementById('bzLegenda'); if (d && !d.querySelector('[data-bzl]')){ const t = d.querySelector('.bz-leg-t'); d.innerHTML = ''; if (t) d.appendChild(t); d.insertAdjacentHTML('beforeend', bzLegendaHTML()); } };
+  setTimeout(troca, 400); new MutationObserver(() => { if (document.getElementById('bzLegenda') && !document.querySelector('#bzLegenda [data-bzl]')) troca(); }).observe(document.documentElement, {childList:true, subtree:true});
+})();
+</script>
+
+<style id="rcs-css">
+.rcs-selo{ all:unset; display:inline-grid; place-items:center; width:18px; height:18px; margin-left:6px; vertical-align:-3px; border-radius:50%; cursor:pointer; color:var(--jade); background:color-mix(in srgb, var(--jade) 14%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--jade) 38%, transparent); transition:transform .15s, background .15s; }
+.rcs-selo:hover, .rcs-selo:focus-visible{ transform:scale(1.12); background:color-mix(in srgb, var(--jade) 24%, transparent); }
+.rcs-selo svg{ width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.rcs-selo.parcial{ color:var(--ouro); background:color-mix(in srgb, var(--ouro) 14%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ouro) 38%, transparent); }
+.rcs-pop{ width:min(520px, calc(100vw - 24px)); }
+.rcs-tot{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:14px 16px; border-radius:14px; background:color-mix(in srgb, var(--jade) 8%, var(--sup-1, transparent)); border:1px solid color-mix(in srgb, var(--jade) 26%, transparent); margin-bottom:16px; }
+.rcs-tot b{ font:700 calc(22px * var(--esc))/1 var(--f-m, inherit); color:var(--jade); }
+.rcs-tot span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.rcs-linha{ list-style:none; margin:0; padding:0; position:relative; }
+.rcs-linha::before{ content:''; position:absolute; left:7px; top:8px; bottom:8px; width:2px; background:var(--fio); border-radius:2px; }
+.rcs-linha li{ position:relative; display:grid; grid-template-columns:16px minmax(0, 1fr) auto; gap:12px; align-items:start; padding:8px 0; }
+.rcs-linha li > i{ width:16px; height:16px; margin-top:2px; border-radius:50%; background:var(--sup-0); box-shadow:inset 0 0 0 2px var(--grafite); position:relative; z-index:1; }
+.rcs-linha li.ok > i{ box-shadow:inset 0 0 0 2px var(--jade); background:color-mix(in srgb, var(--jade) 30%, var(--sup-0)); }
+.rcs-linha li.al > i{ box-shadow:inset 0 0 0 2px var(--ouro); }
+.rcs-linha li.rc > i{ box-shadow:inset 0 0 0 2px var(--brasa); }
+.rcs-linha li b{ display:block; color:var(--giz); font-size:calc(13.5px * var(--esc)); }
+.rcs-linha li small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.45; margin-top:2px; }
+.rcs-linha li em{ font-style:normal; font-family:var(--f-m, inherit); color:var(--grafite); font-size:calc(12.5px * var(--esc)); white-space:nowrap; }
+.rcs-linha li.ok em{ color:var(--jade); }
+.rcs-pe{ display:flex; justify-content:center; gap:8px; padding:12px 18px; border-top:1px solid var(--fio); }
+.rcs-rec{ margin:0 0 14px; padding:14px 16px; border-radius:14px; border:1px solid color-mix(in srgb, var(--jade) 32%, transparent); background:color-mix(in srgb, var(--jade) 7%, transparent); }
+.rcs-rec > b{ display:block; color:var(--giz); margin-bottom:4px; }
+.rcs-rec > p{ margin:0 0 10px; color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.rcs-rec .rcs-form{ display:none; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-top:10px; }
+.rcs-rec.aberto .rcs-form{ display:grid; }
+.rcs-rec.aberto [data-rcs-abrir]{ display:none; }
+.rcs-rec .rcs-form .bt{ grid-column:1 / -1; justify-self:center; }
+@media (max-width:520px){ .rcs-rec .rcs-form{ grid-template-columns:1fr; } }
+</style>
+<script id="rcs-js">
+/* Reivindicação até o fim (31/10/2026, pedido do Jadiel). Quando os pontos que
+   faltaram caem depois da reivindicação: lança a diferença na data em que caiu
+   no extrato, a compra volta ao total previsto, o riscado some e fica um selo
+   discreto ao lado dos pontos. O selo abre a linha do tempo com as datas. */
+(function(){
+  const ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6"/></svg>';
+  const somaRec = c => (c.recuperacoes || []).reduce((t, r) => t + (Number(r.pts) || 0), 0);
+  const temHist = c => !!((c.recuperacoes && c.recuperacoes.length) || (c.reclamacao && c.reclamacao.status === 'resolvida'));
+  window.rcsSeloHTML = function(c){
+    if (!c || !temHist(c)) return '';
+    const parcial = Number(c.ptsPrevistos) > Number(c.pts);
+    const r = c.reclamacao || {};
+    const dica = parcial ? `Parte recuperada por reivindicação. Ainda faltam ${nBR(Number(c.ptsPrevistos) - Number(c.pts))}` : `Total com reivindicação${r.data ? ' aberta em ' + dataBR(r.data) : ''}. Clique para ver as datas`;
+    return `<button type="button" class="rcs-selo${parcial ? ' parcial' : ''}" data-rcs="${esc(c.id)}" title="${esc(dica)}" aria-label="${esc(dica)}">${ICO}</button>`;
+  };
+  let pop = null, fundo = null;
+  const fechar = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } };
+  const ONDE = id => { const o = (typeof RCL_ONDE !== 'undefined' ? RCL_ONDE : []).find(x => x[0] === id); return o ? o[1] : ''; };
+  window.abrirHistoricoReivindicacao = function(id){
+    const c = (DB.compras || []).find(x => x.id === id); if (!c) return;
+    fechar();
+    const r = c.reclamacao || {}, recs = (c.recuperacoes || []).slice().sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    const P = prog(c.prog).n, prev = Number(c.ptsPrevistos) || Number(c.pts) || 0;
+    const primeiro = Math.max(0, (Number(c.pts) || 0) - somaRec(c));
+    const ev = [];
+    if (c.data) ev.push({d:c.data, k:'', t:'Compra feita', s:`${esc(nomeLojaCompra(c))} · ${brl(c.valor)}${Number(c.mult) ? ' · ' + nBRdec(c.mult) + ' por real' : ''}`, v:`${nBR(prev)} previstos`});
+    if (c.creditadoEm && !(r.tipo === 'nada' && !recs.length && r.status === 'resolvida' && String(c.creditadoEm) >= String(r.data || ''))) ev.push({d:c.creditadoEm, k:primeiro < prev ? 'al' : 'ok', t:primeiro < prev ? 'Caiu menos que o previsto' : 'Caiu na conta', s:primeiro < prev ? `Faltaram ${nBR(prev - primeiro)} pontos` : '', v:'+' + nBR(primeiro)});
+    if (r.data) ev.push({d:r.data, k:'rc', t:'Reivindicação aberta', s:[ONDE(r.onde) === 'App ou site do programa' ? 'App ou site do ' + esc(P) : esc(ONDE(r.onde)), r.protocolo ? 'protocolo <b style="display:inline">' + esc(r.protocolo) + '</b>' : '', r.obs ? esc(r.obs) : ''].filter(Boolean).join(' · '), v:''});
+    recs.forEach(x => ev.push({d:x.data, k:'ok', t:'Pontos recuperados', s:'Caíram no extrato depois da reivindicação', v:'+' + nBR(x.pts)}));
+    if (r.tipo === 'nada' && !recs.length && r.status === 'resolvida' && c.creditadoEm && String(c.creditadoEm) >= String(r.data || '')) ev.push({d:c.creditadoEm, k:'ok', t:'Pontos recuperados', s:'Caíram no extrato depois da reivindicação', v:'+' + nBR(c.pts)});
+    ev.sort((a, b) => String(a.d).localeCompare(String(b.d)));
+    const fim = r.resolvidaEm || (recs.length ? recs[recs.length - 1].data : '');
+    const dias = r.data && fim ? Math.round((new Date(fim + 'T12:00:00') - new Date(r.data + 'T12:00:00')) / 864e5) : null;
+    const parcial = prev > Number(c.pts);
+    fundo = document.createElement('div'); fundo.className = 'dck-fundo'; fundo.onclick = fechar; document.body.appendChild(fundo);
+    pop = document.createElement('div'); pop.className = 'dck-pop rcs-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Histórico da reivindicação');
+    pop.innerHTML = `<div class="dck-pop-cab"><b>${esc(c.item || nomeLojaCompra(c))} · reivindicação</b></div>
+      <div class="dck-pop-corpo">
+        <div class="rcs-tot"><b>${nBR(c.pts)}</b><span>pontos ${esc(P)}${parcial ? ` de ${nBR(prev)} previstos · faltam ${nBR(prev - Number(c.pts))}` : ' · total previsto, com reivindicação'}${dias != null && !parcial ? ` · resolvida em ${dias} ${dias === 1 ? 'dia' : 'dias'}` : ''}</span></div>
+        <ol class="rcs-linha">${ev.map(e => `<li class="${e.k}"><i></i><span><b>${e.t}</b>${e.s ? `<small>${e.s}</small>` : ''}<small>${dataBR(e.d)}</small></span><em>${e.v}</em></li>`).join('')}</ol>
+      </div>
+      <div class="rcs-pe"><button type="button" class="bt perigo" data-rcs-fechar>Fechar</button>${parcial || (r.status === 'aberta') ? `<button type="button" class="bt primario" data-rcs-rcl><svg><use href="#i-escudo"/></svg>Abrir a reivindicação</button>` : ''}</div>`;
+    document.body.appendChild(pop);
+    pop.querySelector('[data-rcs-fechar]').onclick = fechar;
+    const br = pop.querySelector('[data-rcs-rcl]'); if (br) br.onclick = () => { fechar(); abrirReivindicacao(c.id); };
+    pop.querySelector('[data-rcs-fechar]').focus({preventScroll:true});
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-rcs]'); if (!b) return; e.preventDefault(); e.stopPropagation(); abrirHistoricoReivindicacao(b.dataset.rcs); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop){ e.stopPropagation(); fechar(); } }, true);
+
+  /* lança os pontos recuperados, na data em que caíram */
+  window.registrarRecuperacao = function(id, pts, data){
+    const c = (DB.compras || []).find(x => x.id === id); if (!c || !(pts > 0)) return false;
+    const lanc = {id:uid(), criadoEm:Date.now(), data:data || hojeISO(), contaId:c.contaId || (DB.contas[0] || {}).id, prog:c.prog, tipo:'organico', qtd:pts, custo:0,
+      nota:`pontos recuperados por reivindicação · ${c.item ? c.item + ' · ' : ''}${nomeLojaCompra(c)}`};
+    if (typeof conferirAntesDeSalvar === 'function' && !conferirAntesDeSalvar('lancamentos', lanc, 'um lançamento')) return false;
+    DB.lancamentos.push(lanc);
+    if (typeof acertarSaldoDe === 'function' && lanc.contaId) try{ acertarSaldoDe(lanc.contaId, c.prog); }catch(e){}
+    if (c.ptsPrevistos == null) c.ptsPrevistos = c.pts;
+    c.pts = (Number(c.pts) || 0) + pts;
+    c.recuperacoes = (c.recuperacoes || []).concat([{pts, data:lanc.data, lancId:lanc.id, em:Date.now()}]);
+    c.reclamacao = c.reclamacao || {tipo:'menos', data:lanc.data, status:'aberta', criadaEm:Date.now()};
+    if (!(Number(c.ptsPrevistos) > Number(c.pts))){ c.reclamacao.status = 'resolvida'; c.reclamacao.resolvidaEm = lanc.data; }
+    salvar();
+    try{ renderCompras(); }catch(e){} try{ renderLancamentos(); }catch(e){} try{ renderFita(); }catch(e){} try{ renderSaldoSeAberto(); }catch(e){} try{ if (typeof renderMesa === 'function') renderMesa(); }catch(e){}
+    return true;
+  };
+
+  /* na janela da reivindicação: "Os pontos que faltavam caíram" */
+  if (typeof abrirReivindicacao === 'function'){
+    const o = abrirReivindicacao;
+    abrirReivindicacao = function(id){
+      const res = o.apply(this, arguments);
+      const c = (DB.compras || []).find(x => x.id === id);
+      const dl = document.getElementById('dlgRecl');
+      if (!c || !dl || c.status !== 'creditado' || !(Number(c.ptsPrevistos) > Number(c.pts))) return res;
+      const falta = Number(c.ptsPrevistos) - Number(c.pts);
+      const corpo = dl.querySelector('.dr-corpo'); if (!corpo || corpo.querySelector('.rcs-rec')) return res;
+      corpo.insertAdjacentHTML('afterbegin', `<div class="rcs-rec">
+        <b>Recuperou os pontos?</b><p>Quando os ${nBR(falta)} que faltaram caírem no extrato, registre aqui. A compra volta para ${nBR(c.ptsPrevistos)} e fica guardado que foi com reivindicação.</p>
+        <button type="button" class="bt p primario" data-rcs-abrir><svg><use href="#i-ok"/></svg>Os pontos que faltavam caíram</button>
+        <div class="rcs-form">
+          <div class="campo"><label>Pontos que caíram</label><input type="text" inputmode="numeric" data-milhar id="rcsPts" value="${qtdTxt(falta)}"></div>
+          <div class="campo"><label>Data em que caiu no extrato</label><input type="date" id="rcsData" value="${hojeISO()}"></div>
+          <button type="button" class="bt primario" id="rcsOk"><svg><use href="#i-ok"/></svg>Confirmar e somar ao saldo</button>
+        </div></div>`);
+      const cx = corpo.querySelector('.rcs-rec');
+      cx.querySelector('[data-rcs-abrir]').onclick = () => { cx.classList.add('aberto'); const i = cx.querySelector('#rcsPts'); if (i) i.focus(); };
+      try{ if (typeof ligarCampoContagem === 'function') ligarCampoContagem('#rcsPts'); }catch(e){}
+      try{ if (typeof prepararCamposData === 'function') prepararCamposData(cx); }catch(e){}
+      cx.querySelector('#rcsOk').onclick = () => {
+        const pts = qtdNum(cx.querySelector('#rcsPts').value);
+        if (!(pts > 0)) return typeof erroNoCampo === 'function' ? erroNoCampo(cx.querySelector('#rcsPts'), 'Informe os pontos que caíram.') : null;
+        const data = cx.querySelector('#rcsData').value || hojeISO();
+        if (data > hojeISO()) return typeof erroNoCampo === 'function' ? erroNoCampo(cx.querySelector('#rcsData'), 'A data não pode ser no futuro.') : null;
+        if (!registrarRecuperacao(c.id, pts, data)) return;
+        dl.close(); try{ travarFundo(false); }catch(e){} try{ renderReceber(); }catch(e){}
+        const ok = !(Number(c.ptsPrevistos) > Number(c.pts));
+        avisar(ok ? `${nBR(pts)} pontos recuperados em ${dataBR(data)}. A compra voltou para ${nBR(c.pts)}.` : `${nBR(pts)} pontos recuperados. Ainda faltam ${nBR(Number(c.ptsPrevistos) - Number(c.pts))}.`, ok ? 'ok' : 'alerta', 6000);
+      };
+      return res;
+    };
+  }
+
+  /* desfazer o crédito também tira os pontos recuperados */
+  if (typeof desfazerCredito === 'function'){
+    const od = desfazerCredito;
+    desfazerCredito = function(id){
+      const c = (DB.compras || []).find(x => x.id === id);
+      if (c && c.status === 'creditado' && c.recuperacoes && c.recuperacoes.length){
+        c.recuperacoes.forEach(x => {
+          const i = (DB.lancamentos || []).findIndex(l => l.id === x.lancId);
+          if (i >= 0){ const l = DB.lancamentos.splice(i, 1)[0]; if (typeof acertarSaldoDe === 'function') try{ acertarSaldoDe(l.contaId, l.prog); }catch(e){} }
+        });
+        c.pts = Math.max(0, (Number(c.pts) || 0) - somaRec(c));
+        delete c.recuperacoes;
+      }
+      return od.apply(this, arguments);
+    };
+  }
+})();
+</script>
+
+<style id="bze-css">
+.bze-pe{ display:flex; justify-content:center; flex-wrap:wrap; gap:8px; padding:12px 18px; border-top:1px solid var(--fio); }
+.bzl-pop input.bze-n{ width:64px; padding:6px 8px; border-radius:9px; border:1px solid var(--fio-forte, var(--fio)); background:var(--sup-1, transparent); color:var(--giz); font:600 calc(13px * var(--esc))/1 var(--f-m, inherit); text-align:center; }
+.bzl-pop input.bze-n:focus{ outline:none; border-color:var(--anil); box-shadow:0 0 0 3px color-mix(in srgb, var(--anil) 22%, transparent); }
+.bzl-pop input.bze-n.erro{ border-color:var(--brasa); box-shadow:0 0 0 3px color-mix(in srgb, var(--brasa) 22%, transparent); }
+.bzl-pop .bze-cel{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.bzl-pop .bze-msg{ display:block; margin-top:10px; min-height:1.2em; color:var(--brasa); font-size:calc(12.5px * var(--esc)); }
+.bzl-pop .bze-tag{ display:inline-block; margin-left:8px; padding:2px 8px; border-radius:99px; font:700 calc(10px * var(--esc))/1.4 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase; color:var(--ouro); background:color-mix(in srgb, var(--ouro) 14%, transparent); vertical-align:2px; }
+</style>
+<script id="bze-js">
+/* Ajustar as faixas da Bússola (31/10/2026, pedido do Jadiel). As réguas ficam
+   em DB.cfg.bussolaReguas; o padrão continua no código para "Restaurar". */
+(function(){
+  if (typeof faixasBussola !== 'function' || typeof BUSSOLA_REGUAS !== 'object') return;
+  const PADRAO = JSON.parse(JSON.stringify(BUSSOLA_REGUAS));
+  const valida = a => Array.isArray(a) && a.length === 4 && a.every((v, i) => Number.isInteger(v) && v > 0 && (!i || v > a[i - 1]));
+  const aplicar = () => {
+    const cfg = (typeof DB === 'object' && DB && DB.cfg && DB.cfg.bussolaReguas) || {};
+    Object.keys(PADRAO).forEach(k => { const v = valida(cfg[k]) ? cfg[k] : PADRAO[k]; BUSSOLA_REGUAS[k].splice(0, 4, ...v); });
+  };
+  const of = faixasBussola;
+  faixasBussola = function(){ aplicar(); return of.apply(this, arguments); };
+  window.bussolaReguasPadrao = () => JSON.parse(JSON.stringify(PADRAO));
+  const ajustada = () => Object.keys(PADRAO).some(k => BUSSOLA_REGUAS[k].join() !== PADRAO[k].join());
+  const R = [['milhas', 'Milhas'], ['livelo', 'Livelo'], ['esfera', 'Esfera e outros']];
+  const rerender = () => { try{ if (typeof vistaAtual !== 'undefined' && RENDER[vistaAtual]) RENDER[vistaAtual](); }catch(e){} };
+  if (typeof abrirFaixasBussola === 'function'){
+    const oa = abrirFaixasBussola;
+    abrirFaixasBussola = function(){
+      aplicar();
+      const r = oa.apply(this, arguments);
+      const pop = document.querySelector('.bzl-pop'); if (!pop) return r;
+      const cab = pop.querySelector('.dck-pop-cab');
+      const btF = cab.querySelector('[data-bzl-fechar]');
+      if (ajustada()) cab.querySelector('b').insertAdjacentHTML('beforeend', '<span class="bze-tag">ajustada</span>');
+      /* Fechar vai para o rodapé centralizado, junto do Ajustar */
+      const pe = document.createElement('div'); pe.className = 'bze-pe';
+      pe.appendChild(btF); btF.classList.remove('p');
+      pe.insertAdjacentHTML('beforeend', '<button type="button" class="bt primario" data-bze-editar><svg><use href="#i-lapis"/></svg>Ajustar faixas</button>');
+      pop.appendChild(pe);
+      pe.querySelector('[data-bze-editar]').onclick = () => editar(pop, pe);
+      return r;
+    };
+  }
+  function editar(pop, pe){
+    const tb = pop.querySelector('tbody'); if (!tb) return;
+    const rows = [...tb.querySelectorAll('tr')];
+    const un = k => k === 'milhas' ? 'milhas' : 'pontos';
+    rows.forEach((tr, i) => {
+      const tds = [...tr.querySelectorAll('td')].slice(1);
+      tds.forEach((td, j) => {
+        const k = R[j][0], a = BUSSOLA_REGUAS[k];
+        td.innerHTML = i < 4
+          ? `<span class="bze-cel">${i ? `<span data-bze-de="${k}${i}">${a[i - 1] + 1} a</span>` : 'até'}<input class="bze-n" type="text" inputmode="numeric" data-k="${k}" data-i="${i}" value="${a[i]}" aria-label="${esc(BUSSOLA_NOMES[i])}, ${R[j][1]}: limite"> ${un(k)}</span>`
+          : `<span data-bze-de="${k}4">${a[3] + 1} ou mais ${un(k)}</span>`;
+      });
+    });
+    const small = pop.querySelector('.dck-pop-corpo small');
+    small.insertAdjacentHTML('beforebegin', '<span class="bze-msg" role="status"></span>');
+    const msg = pop.querySelector('.bze-msg');
+    const ler = () => { const o = {}; R.forEach(([k]) => { o[k] = [0, 1, 2, 3].map(i => parseInt(pop.querySelector(`input[data-k="${k}"][data-i="${i}"]`).value, 10)); }); return o; };
+    const conferir = () => {
+      const o = ler(); let ok = true;
+      R.forEach(([k]) => {
+        const a = o[k];
+        a.forEach((v, i) => { const inp = pop.querySelector(`input[data-k="${k}"][data-i="${i}"]`); const bad = !(Number.isInteger(v) && v > 0 && (!i || v > a[i - 1])); inp.classList.toggle('erro', bad); if (bad) ok = false; });
+        for (let i = 1; i <= 4; i++){ const s = pop.querySelector(`[data-bze-de="${k}${i}"]`); if (s && Number.isInteger(a[i - 1])) s.textContent = i < 4 ? `${a[i - 1] + 1} a` : `${a[3] + 1} ou mais ${un(k)}`; }
+      });
+      msg.textContent = ok ? '' : 'Cada faixa precisa terminar num número inteiro maior que o da faixa de cima.';
+      pe.querySelector('[data-bze-salvar]').disabled = !ok;
+      return ok ? o : null;
+    };
+    pe.innerHTML = '';
+    pe.insertAdjacentHTML('beforeend', `<button type="button" class="bt perigo" data-bze-cancelar>Cancelar</button>
+      <button type="button" class="bt fantasma" data-bze-padrao><svg><use href="#i-atualizar"/></svg>Restaurar padrão</button>
+      <button type="button" class="bt primario" data-bze-salvar><svg><use href="#i-ok"/></svg>Salvar faixas</button>`);
+    pop.querySelectorAll('input.bze-n').forEach(i => i.addEventListener('input', () => { i.value = i.value.replace(/\D/g, '').slice(0, 3); conferir(); }));
+    pe.querySelector('[data-bze-cancelar]').onclick = () => abrirFaixasBussola();
+    pe.querySelector('[data-bze-padrao]').onclick = () => { R.forEach(([k]) => PADRAO[k].forEach((v, i) => { pop.querySelector(`input[data-k="${k}"][data-i="${i}"]`).value = v; })); conferir(); };
+    pe.querySelector('[data-bze-salvar]').onclick = () => {
+      const o = conferir(); if (!o) return;
+      DB.cfg = DB.cfg || {};
+      const igual = Object.keys(PADRAO).every(k => o[k].join() === PADRAO[k].join());
+      if (igual) delete DB.cfg.bussolaReguas; else DB.cfg.bussolaReguas = o;
+      salvar(); aplicar(); rerender(); abrirFaixasBussola();
+      avisar(igual ? 'Faixas da Bússola de volta ao padrão.' : 'Faixas da Bússola salvas. As ofertas já foram reclassificadas.', 'ok', 4500);
+    };
+    const f = pop.querySelector('input.bze-n'); if (f) f.focus();
+  }
+})();
+</script>
 </body>
 </html>
