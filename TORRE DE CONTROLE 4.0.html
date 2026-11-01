@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-31 21:20';
+const BUILD = '2026-11-01 06:55';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -75702,6 +75702,8 @@ function limparNomeLojaAnuncio(nome){
 <style id="mpl-css">
 .mpl-bt{ white-space:nowrap; }
 .mpl-bt svg{ width:14px; height:14px; }
+.mpl-bonus .mpl-bn-t{ display:none; }
+@media (max-width:760px){ .bt.icone.mpl-bonus{ width:auto; padding:0 12px; } .mpl-bonus svg{ display:none; } .mpl-bonus .mpl-bn-t{ display:inline; } }
 .cc-chips .etq.mpl-chip{ cursor:pointer; }
 .mpl-pop{ width:min(620px, calc(100vw - 24px)); }
 .mpl-hoje{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:var(--sup-1); border:1px solid var(--fio); color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-bottom:14px; }
@@ -75827,16 +75829,387 @@ function abrirMudarPlano(id){
   (pop.querySelector('.mpl-pl.on') || pop.querySelector('[data-mpl-fechar]')).focus({preventScroll:true});
 }
 (function(){
+  /* Detalhes da assinatura: "Mudar plano" no rodapé (01/11/2026) */
+  if (typeof abrirFichaAssinatura === 'function'){
+    const of = abrirFichaAssinatura;
+    abrirFichaAssinatura = function(id){
+      const r = of.apply(this, arguments);
+      const a = (DB.assinaturas || []).find(x => x.id === id);
+      const ed = [...document.querySelectorAll('#folhaPe button')].find(b => /editarAssinatura\(/.test(b.getAttribute('onclick') || ''));
+      if (a && a.status === 'ativa' && ed && !document.querySelector('#folhaPe .mpl-bt')){
+        ed.insertAdjacentHTML('beforebegin', `<button class="bt mpl-bt" onclick="fecharFolha();setTimeout(()=>abrirMudarPlano('${a.id}'),60)"><svg><use href="#i-troca"/></svg>Mudar plano</button>`);
+      }
+      return r;
+    };
+  }
+})();
+(function(){
   if (typeof ccLinha !== 'function') return;
   const ol = ccLinha;
   ccLinha = function(a){
     let h = ol.apply(this, arguments);
     if (!a || a.status !== 'ativa') return h;
+    h = h.replace(`<button class="bt p fantasma icone" onclick="abrirBonusClube('${a.id}')" data-dica="Bônus da campanha"><svg><use href="#i-faisca"/></svg></button>`,
+      `<button class="bt p fantasma icone mpl-bonus" onclick="abrirBonusClube('${a.id}')" data-dica="Bônus da campanha" aria-label="Bônus da campanha"><svg><use href="#i-faisca"/></svg><span class="mpl-bn-t">Bônus</span></button>`);
     h = h.replace('<div class="cc-acoes">', `<div class="cc-acoes"><button class="bt p fantasma mpl-bt" onclick="abrirMudarPlano('${a.id}')" data-dica="Upgrade ou downgrade do plano"><svg><use href="#i-troca"/></svg>Mudar plano</button>`);
     if (a.mudanca && a.mudanca.planoId) h = h.replace('<span class="etq ouro" data-dica="', `<span class="etq ouro mpl-chip" role="button" tabindex="0" onclick="abrirMudarPlano('${a.id}')" data-dica="Clique para ver ou mudar. `);
     return h;
   };
 })();
 </script>
+<style id="prv-css">
+.prv{ margin-top:14px; border:1px solid var(--linha, rgba(255,255,255,.12)); border-radius:14px; padding:12px; background:color-mix(in oklab, var(--lilas, #8b7cf6) 5%, transparent); }
+.prv-cab{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.prv-cab svg{ width:18px; height:18px; color:var(--lilas, #8b7cf6); flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.prv-cab b{ font-size:14px; }
+.prv-cab small{ color:var(--fraco, #8a94a6); font-size:12px; }
+.prv-cab .prv-n{ margin-left:auto; min-width:22px; height:22px; padding:0 7px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--lilas, #8b7cf6); color:#fff; }
+.prv-cab .prv-n[hidden]{ display:none; }
+.prv-zona{ display:flex; align-items:center; gap:12px; padding:14px; border:1.5px dashed color-mix(in oklab, var(--lilas, #8b7cf6) 55%, transparent); border-radius:12px; cursor:pointer; transition:background .15s, border-color .15s; }
+.prv-zona:hover, .prv-zona:focus-visible, .prv-zona.sobre{ background:color-mix(in oklab, var(--lilas, #8b7cf6) 12%, transparent); border-color:var(--lilas, #8b7cf6); outline:none; }
+.prv-zona > svg{ width:30px; height:30px; flex:none; color:var(--lilas, #8b7cf6); fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.prv-zona span{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.prv-zona b{ font-size:14px; }
+.prv-zona small{ font-size:12px; color:var(--fraco, #8a94a6); }
+.prv-zona.lendo{ opacity:.6; pointer-events:none; }
+.prv-link{ display:flex; gap:8px; margin-top:8px; }
+.prv-link input{ flex:1; min-width:0; }
+.prv-link .bt{ flex:none; }
+.prv-grade{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.prv-grade:empty{ display:none; }
+.prv-it{ position:relative; width:84px; }
+.prv-ver{ display:block; width:84px; height:84px; padding:0; border-radius:10px; overflow:hidden; border:1px solid var(--linha, rgba(255,255,255,.14)); background:color-mix(in oklab, var(--lilas, #8b7cf6) 10%, #0000); cursor:pointer; position:relative; color:inherit; }
+.prv-ver img{ width:100%; height:100%; object-fit:cover; display:block; }
+.prv-ver .prv-ic{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; font-weight:600; }
+.prv-ver .prv-ic svg{ width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.prv-ver .prv-play{ position:absolute; left:50%; top:50%; width:30px; height:30px; margin:-15px 0 0 -15px; border-radius:50%; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; }
+.prv-ver .prv-play svg{ width:14px; height:14px; fill:#fff; stroke:none; }
+.prv-it small{ display:block; margin-top:3px; font-size:11px; color:var(--fraco, #8a94a6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prv-tira{ position:absolute; top:-6px; right:-6px; height:22px; min-width:22px; padding:0 6px; border-radius:11px; border:none; background:#c8364b; color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+.prv-tira svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; }
+.prv-ausente{ opacity:.65; }
+.prv-limpar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--fraco, #8a94a6); }
+.prv-limpar .bt{ margin-left:auto; }
+.prv-pop .dck-pop-corpo{ display:flex; align-items:center; justify-content:center; padding:12px; }
+.prv-pop img, .prv-pop video{ max-width:100%; max-height:68vh; border-radius:10px; display:block; }
+.prv-pop-pe{ display:flex; justify-content:center; gap:10px; padding:12px; flex-wrap:wrap; border-top:1px solid var(--linha, rgba(255,255,255,.1)); }
+.prv-bt-n{ display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:var(--lilas, #8b7cf6); color:#fff; font-size:10.5px; font-weight:700; margin-left:2px; }
+.bt.prv-bt svg{ fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width:760px){ #lcReceber .lc-rec .acoes-cel{ flex-wrap:wrap; justify-content:flex-start; row-gap:6px; } #lcReceber .lc-rec .acoes-cel > *{ flex:none; } .prv-it, .prv-ver{ width:76px; } .prv-ver{ height:76px; } .prv-link{ flex-wrap:wrap; } .prv-link .bt{ width:100%; justify-content:center; } }
+</style>
+<script id="prv-js">
+/* Provas da compra (01/11/2026, pedido do Jadiel). Prints, vídeos e links
+   guardados junto da compra, da transferência ou da compra de pontos: na hora
+   de registrar, é só arrastar, clicar ou colar. Os arquivos ficam neste
+   aparelho (IndexedDB, fora do armazenamento principal, que é pequeno); a lista
+   e os links ficam nos dados da Torre. Na reivindicação, as provas da compra
+   aparecem no passo "Junte as provas". */
+(function(){
+  const CLIPE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.6-8.6a3.4 3.4 0 014.8 4.8l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9"/></svg>';
+  const NUVEM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0l-4 4m4-4l4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>';
+  const FILME = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/></svg>';
+  const ELO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1.2 1.2"/><path d="M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1.2-1.2"/></svg>';
+  const X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
+  const MAX_VIDEO = 150 * 1024 * 1024;
+
+  /* ── arquivos: IndexedDB ── */
+  let _db = null;
+  const idb = () => _db || (_db = new Promise((ok, err) => {
+    const r = indexedDB.open('torre-provas', 1);
+    r.onupgradeneeded = () => { const s = r.result.createObjectStore('arq', {keyPath:'id'}); s.createIndex('em', 'em'); };
+    r.onsuccess = () => ok(r.result); r.onerror = () => err(r.error);
+  }));
+  const tx = async (modo, fn) => { const d = await idb(); return new Promise((ok, err) => { const t = d.transaction('arq', modo); const s = t.objectStore('arq'); const r = fn(s); t.oncomplete = () => ok(r && r.result); t.onerror = () => err(t.error); }); };
+  const arqPor = id => tx('readonly', s => s.get(id));
+  const arqGrava = rec => tx('readwrite', s => s.put(rec));
+  const arqApaga = id => tx('readwrite', s => s.delete(id));
+  window.prvArq = arqPor;
+
+  /* ── lista: nos dados da Torre ── */
+  const lista = dono => ((DB.provas = DB.provas || {})[dono] = DB.provas[dono] || []);
+  const contar = dono => ((DB.provas || {})[dono] || []).length;
+  window.prvLista = dono => ((DB.provas || {})[dono] || []).slice();
+  window.prvContar = contar;
+  const TMP = {};
+
+  const kb = n => n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  const plataforma = u => /youtu\.?be/i.test(u) ? 'YouTube' : /drive\.google|docs\.google/i.test(u) ? 'Google Drive' : /photos\.(google|app)|goo\.gl\/photos/i.test(u) ? 'Google Fotos' : /instagram/i.test(u) ? 'Instagram' : /tiktok/i.test(u) ? 'TikTok' : /dropbox/i.test(u) ? 'Dropbox' : /onedrive|1drv|sharepoint/i.test(u) ? 'OneDrive' : 'Link';
+
+  const carregaImg = blob => new Promise((ok, err) => { const u = URL.createObjectURL(blob); const i = new Image(); i.onload = () => { ok(i); setTimeout(() => URL.revokeObjectURL(u), 1000); }; i.onerror = () => { URL.revokeObjectURL(u); err(new Error('img')); }; i.src = u; });
+  const desenha = (src, w, h, maxW, maxH, q, tipo) => {
+    const k = Math.min(1, maxW / w, maxH / h); const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+    const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(src, 0, 0, cv.width, cv.height);
+    return cv;
+  };
+  const miniDe = (src, w, h) => { const s = Math.min(w, h), cv = document.createElement('canvas'); cv.width = cv.height = 168; cv.getContext('2d').drawImage(src, (w - s) / 2, (h - s) / 2, s, s, 0, 0, 168, 168); return cv.toDataURL('image/jpeg', .72); };
+  const paraBlob = (cv, q) => new Promise(ok => cv.toBlob(ok, 'image/jpeg', q));
+  /* print: reduzido para continuar legível sem pesar (até 1400 de largura) */
+  async function prepararImagem(f){
+    const img = await carregaImg(f);
+    const cv = desenha(img, img.naturalWidth, img.naturalHeight, 1400, 3600);
+    const blob = await paraBlob(cv, .84);
+    return {blob:blob && blob.size < f.size ? blob : f, mini:miniDe(img, img.naturalWidth, img.naturalHeight), mime:blob && blob.size < f.size ? 'image/jpeg' : f.type};
+  }
+  /* vídeo: guarda como está; tenta tirar a capa do primeiro segundo */
+  function capaVideo(f){
+    return new Promise(ok => {
+      const v = document.createElement('video'), u = URL.createObjectURL(f); let feito = false;
+      const fim = m => { if (feito) return; feito = true; URL.revokeObjectURL(u); ok(m || ''); };
+      v.muted = true; v.preload = 'auto'; v.playsInline = true;
+      v.onloadeddata = () => { try{ v.currentTime = Math.min(1, (v.duration || 2) / 2); }catch(e){ fim(''); } };
+      v.onseeked = () => { try{ fim(miniDe(v, v.videoWidth, v.videoHeight)); }catch(e){ fim(''); } };
+      v.onerror = () => fim('');
+      setTimeout(() => fim(''), 4000);
+      v.src = u;
+    });
+  }
+
+  async function adicionarArquivos(box, files){
+    files = [...files].filter(Boolean);
+    const zona = box.querySelector('.prv-zona'); zona.classList.add('lendo');
+    let n = 0;
+    for (const f of files){
+      const ehImg = /^image\//.test(f.type), ehVid = /^video\//.test(f.type);
+      if (!ehImg && !ehVid){ avisar(`"${f.name}" não é print nem vídeo.`, 'alerta'); continue; }
+      if (ehVid && f.size > MAX_VIDEO){ avisar(`O vídeo "${f.name}" passa de 150 MB. Suba no Google Drive ou YouTube e cole o link.`, 'alerta', 6000); continue; }
+      try{
+        const p = ehImg ? await prepararImagem(f) : {blob:f, mini:await capaVideo(f), mime:f.type};
+        const id = uid(), nome = f.name && !/^image\.(png|jpe?g)$/i.test(f.name) ? f.name : (ehImg ? 'Print colado' : 'Vídeo');
+        await arqGrava({id, blob:p.blob, mime:p.mime, mini:p.mini, nome, em:Date.now(), tam:p.blob.size});
+        guardarItem(box, {id, t:ehImg ? 'img' : 'vid', n:nome, kb:Math.round(p.blob.size / 1024), em:hojeISO()});
+        n++;
+      }catch(e){ avisar(`Não consegui guardar "${f.name || 'o arquivo'}". ${e && /quota/i.test(String(e)) ? 'O espaço do navegador acabou.' : ''}`, 'alerta', 6000); }
+    }
+    zona.classList.remove('lendo');
+    if (n) avisar(n === 1 ? 'Prova guardada.' : `${n} provas guardadas.`, 'ok');
+  }
+  function guardarItem(box, it){
+    const dono = box.dataset.prv;
+    if (dono.indexOf('tmp:') === 0) (TMP[dono] = TMP[dono] || []).push(it);
+    else { lista(dono).push(it); salvar(); atualizarFora(); }
+    desenharGrade(box);
+  }
+  const itensDe = dono => dono.indexOf('tmp:') === 0 ? (TMP[dono] || []) : ((DB.provas || {})[dono] || []);
+
+  async function desenharGrade(box){
+    const dono = box.dataset.prv, its = itensDe(dono), g = box.querySelector('.prv-grade');
+    const n = box.querySelector('.prv-n'); n.textContent = its.length; n.hidden = !its.length;
+    g.innerHTML = its.map(it => `<div class="prv-it" data-id="${esc(it.id)}">
+      <button type="button" class="prv-ver" data-prv-ver="${esc(it.id)}" aria-label="Ver ${esc(it.n)}" title="${esc(it.n)}">
+        <span class="prv-ic">${it.t === 'link' ? ELO + esc(plataforma(it.url)) : it.t === 'vid' ? FILME + 'Vídeo' : CLIPE + 'Print'}</span></button>
+      <button type="button" class="prv-tira" data-prv-tira="${esc(it.id)}" aria-label="Apagar esta prova" title="Apagar esta prova">${X}</button>
+      <small>${esc(it.t === 'link' ? plataforma(it.url) : it.kb ? kb(it.kb * 1024) : '')}</small></div>`).join('');
+    for (const it of its){
+      if (it.t === 'link') continue;
+      const el = g.querySelector(`[data-prv-ver="${CSS.escape(it.id)}"]`); if (!el) continue;
+      let rec = null; try{ rec = await arqPor(it.id); }catch(e){}
+      if (!el.isConnected) return;
+      if (!rec){ el.closest('.prv-it').classList.add('prv-ausente'); el.title = 'Guardado em outro aparelho'; el.querySelector('.prv-ic').lastChild.textContent = 'outro aparelho'; continue; }
+      if (rec.mini) el.innerHTML = `<img src="${rec.mini}" alt="">${it.t === 'vid' ? `<span class="prv-play">${PLAY}</span>` : ''}`;
+    }
+  }
+
+  function removerItem(box, id){
+    const dono = box.dataset.prv;
+    if (dono.indexOf('tmp:') === 0) TMP[dono] = (TMP[dono] || []).filter(x => x.id !== id);
+    else { const l = lista(dono); const i = l.findIndex(x => x.id === id); if (i >= 0) l.splice(i, 1); if (!l.length) delete DB.provas[dono]; salvar(); atualizarFora(); }
+    arqApaga(id).catch(() => {});
+    desenharGrade(box);
+  }
+
+  /* ── ver em tamanho grande ── */
+  let pop = null, fundo = null, urlAberta = '';
+  const fecharVer = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } if (urlAberta){ URL.revokeObjectURL(urlAberta); urlAberta = ''; } };
+  async function ver(box, id){
+    const it = itensDe(box.dataset.prv).find(x => x.id === id); if (!it) return;
+    if (it.t === 'link'){ window.open(it.url, '_blank', 'noopener'); return; }
+    let rec = null; try{ rec = await arqPor(id); }catch(e){}
+    if (!rec){ avisar('Esta prova foi guardada em outro aparelho. Abra a Torre nele para ver.', 'alerta', 5000); return; }
+    fecharVer();
+    const pai = box.closest('dialog[open]') || document.body;
+    urlAberta = URL.createObjectURL(rec.blob);
+    fundo = document.createElement('div'); fundo.className = 'dck-fundo'; fundo.onclick = fecharVer; pai.appendChild(fundo);
+    pop = document.createElement('div'); pop.className = 'dck-pop prv-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Prova');
+    pop.innerHTML = `<div class="dck-pop-cab"><b>${esc(it.n)}</b></div>
+      <div class="dck-pop-corpo">${it.t === 'vid' ? `<video src="${urlAberta}" controls playsinline></video>` : `<img src="${urlAberta}" alt="${esc(it.n)}">`}</div>
+      <div class="prv-pop-pe"><button type="button" class="bt perigo" data-prv-fechar>Fechar</button><a class="bt fantasma" href="${urlAberta}" download="${esc(it.n.replace(/[\\/:*?"<>|]/g, ''))}${it.t === 'img' && !/\.\w{3,4}$/.test(it.n) ? '.jpg' : ''}"><svg><use href="#i-baixar"/></svg>Baixar</a></div>`;
+    pai.appendChild(pop);
+    pop.querySelector('[data-prv-fechar]').onclick = fecharVer;
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop){ e.stopPropagation(); e.preventDefault(); fecharVer(); } }, true);
+
+  /* ── a caixa ── */
+  function caixaHTML(dono, extra){
+    const toque = typeof TOQUE_GROSSO !== 'undefined' && TOQUE_GROSSO.matches;
+    return `<div class="prv" data-prv="${esc(dono)}">
+      <div class="prv-cab">${CLIPE}<div><b>Provas</b> <small>prints, vídeos ou links</small></div><span class="prv-n" hidden>0</span></div>
+      <label class="prv-zona" tabindex="0">${NUVEM}<span><b>${toque ? 'Toque para anexar prints ou vídeos' : 'Arraste prints ou vídeos aqui'}</b><small>${toque ? 'da galeria ou da câmera' : 'ou clique para escolher · Ctrl+V cola um print'}</small></span>
+        <input type="file" accept="image/*,video/*" multiple hidden></label>
+      <div class="prv-link"><input type="url" inputmode="url" placeholder="Ou cole o link do vídeo (YouTube, Google Drive…)" aria-label="Link do vídeo"><button type="button" class="bt p fantasma" data-prv-link>${ELO}Adicionar link</button></div>
+      <div class="prv-grade"></div>${extra || ''}
+    </div>`;
+  }
+  function ligar(box){
+    const zona = box.querySelector('.prv-zona'), inp = zona.querySelector('input[type=file]');
+    inp.onchange = () => { if (inp.files.length) adicionarArquivos(box, inp.files); inp.value = ''; };
+    zona.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); inp.click(); } });
+    ['dragenter', 'dragover'].forEach(t => zona.addEventListener(t, e => { e.preventDefault(); zona.classList.add('sobre'); }));
+    ['dragleave', 'dragend'].forEach(t => zona.addEventListener(t, () => zona.classList.remove('sobre')));
+    zona.addEventListener('drop', e => { e.preventDefault(); zona.classList.remove('sobre'); const fs = e.dataTransfer && e.dataTransfer.files; if (fs && fs.length) adicionarArquivos(box, fs); });
+    const li = box.querySelector('.prv-link input');
+    const addLink = () => {
+      const u = (String(li.value).match(/https?:\/\/\S+/) || [''])[0].replace(/[.,;)]+$/, '');
+      if (!u){ if (typeof erroNoCampo === 'function') erroNoCampo(li, 'Cole um link que comece com http.'); else avisar('Cole um link que comece com http.', 'alerta'); return; }
+      if (itensDe(box.dataset.prv).some(x => x.url === u)){ avisar('Esse link já está nas provas.', 'alerta'); return; }
+      guardarItem(box, {id:uid(), t:'link', n:plataforma(u), url:u, em:hojeISO()}); li.value = ''; avisar('Link guardado nas provas.', 'ok');
+    };
+    box.querySelector('[data-prv-link]').onclick = addLink;
+    li.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addLink(); } });
+    box.addEventListener('click', e => {
+      const v = e.target.closest('[data-prv-ver]'); if (v){ e.preventDefault(); ver(box, v.dataset.prvVer); return; }
+      const t = e.target.closest('[data-prv-tira]');
+      if (t){ e.preventDefault();
+        if (!t.classList.contains('certeza')){ t.classList.add('certeza'); t.textContent = 'Apagar?'; setTimeout(() => { if (t.isConnected && t.classList.contains('certeza')){ t.classList.remove('certeza'); t.innerHTML = X; } }, 3500); return; }
+        removerItem(box, t.dataset.prvTira); return; }
+      const lp = e.target.closest('[data-prv-limpar]');
+      if (lp){ e.preventDefault();
+        if (!lp.classList.contains('certeza')){ lp.classList.add('certeza'); lp.innerHTML = 'Toque de novo para apagar'; return; }
+        itensDe(box.dataset.prv).slice().forEach(x => arqApaga(x.id).catch(() => {})); delete DB.provas[box.dataset.prv]; salvar(); atualizarFora();
+        const w = lp.closest('.prv-limpar'); if (w) w.remove(); desenharGrade(box); avisar('Provas apagadas.', 'ok'); }
+    });
+    desenharGrade(box);
+  }
+  window.prvCaixa = function(alvo, dono, onde, extra){
+    if (!alvo || alvo.querySelector('.prv')) return null;
+    const t = document.createElement('template'); t.innerHTML = caixaHTML(dono, extra).trim();
+    const box = t.content.firstElementChild;
+    if (onde === 'beforebegin') alvo.parentNode.insertBefore(box, alvo); else alvo.appendChild(box);
+    ligar(box); return box;
+  };
+
+  /* Ctrl+V com uma caixa de provas aberta: o print vai para as provas */
+  document.addEventListener('paste', e => {
+    const boxes = [...document.querySelectorAll('.prv')].filter(b => b.offsetParent !== null || b.getClientRects().length);
+    if (!boxes.length) return;
+    const fs = [...((e.clipboardData && e.clipboardData.files) || [])].filter(f => /^(image|video)\//.test(f.type));
+    if (!fs.length) return;
+    const box = boxes[boxes.length - 1];
+    e.preventDefault(); e.stopImmediatePropagation();
+    adicionarArquivos(box, fs);
+  }, true);
+
+  /* ── nova compra ou novo lançamento: as provas esperam o primeiro salvar ── */
+  let espera = null; /* {tmp, col, antes, filtro, chave} */
+  function adotar(){
+    if (!espera) return;
+    const its = TMP[espera.tmp] || [];
+    const novo = (DB[espera.col] || []).find(x => x && x.id && !espera.antes.has(x.id) && espera.filtro(x));
+    if (!novo) return;
+    const e = espera; espera = null;
+    if (its.length){ const l = lista(e.chave + novo.id); its.forEach(x => l.push(x)); delete TMP[e.tmp]; salvar(); }
+    setTimeout(atualizarFora, 0);
+  }
+  if (typeof salvar === 'function'){
+    const oS = salvar;
+    salvar = function(){ const r = oS.apply(this, arguments); if (espera) try{ adotar(); }catch(e){} return r; };
+  }
+  function esperar(col, chave, filtro){
+    const tmp = 'tmp:' + uid();
+    espera = {tmp, col, chave, antes:new Set((DB[col] || []).map(x => x && x.id)), filtro:filtro || (() => true)};
+    return tmp;
+  }
+
+  /* compras de produto */
+  const oF = formCompraPendente;
+  formCompraPendente = function(args){
+    const r = oF.apply(this, arguments);
+    const c0 = args && args.compra, corpo = document.getElementById('folhaCorpo');
+    if (corpo && !corpo.querySelector('.prv')) prvCaixa(corpo, c0 ? 'compra:' + c0.id : esperar('compras', 'compra:'), 'beforeend', c0 ? limparHTML(c0) : '');
+    return r;
+  };
+  /* lançamentos: compra de pontos, transferências, emissões */
+  if (typeof editarLancamento === 'function'){
+    const oL = editarLancamento;
+    editarLancamento = function(id){
+      const r = oL.apply(this, arguments);
+      const corpo = document.getElementById('folhaCorpo');
+      if (corpo && !corpo.querySelector('.prv') && document.getElementById('btSalvarLanc')){
+        let dono;
+        if (id){ const l = (DB.lancamentos || []).find(x => x.id === id); dono = 'lanc:' + (l && l.saidaDe ? l.saidaDe : id); }
+        else dono = esperar('lancamentos', 'lanc:', x => !x.saidaDe);
+        const pe = corpo.querySelector('.lc-rodape');
+        if (pe) prvCaixa(pe, dono, 'beforebegin'); else prvCaixa(corpo, dono);
+      }
+      return r;
+    };
+  }
+  /* pontos já caíram e nada em aberto: as provas podem sair */
+  function limparHTML(c){
+    const resolvida = c.status === 'creditado' && !(c.reclamacao && c.reclamacao.status === 'aberta') && !(Number(c.ptsPrevistos) > Number(c.pts));
+    return resolvida && contar('compra:' + c.id) ? `<div class="prv-limpar"><span>Os pontos já caíram e não há reivindicação aberta. As provas podem ser apagadas para liberar espaço.</span><button type="button" class="bt p vermelho-solido" data-prv-limpar>Apagar as provas</button></div>` : '';
+  }
+  window.prvLimparHTML = limparHTML;
+
+  /* reivindicação: no passo "Junte as provas" */
+  if (typeof abrirReivindicacao === 'function'){
+    const oR = abrirReivindicacao;
+    abrirReivindicacao = function(id){
+      const r = oR.apply(this, arguments);
+      const dl = document.getElementById('dlgRecl'); if (!dl) return r;
+      const li = [...dl.querySelectorAll('.rcl-passos > li')].find(x => /Junte as provas/.test(x.textContent));
+      const alvo = li ? li.querySelector(':scope > span') : dl.querySelector('.dr-corpo');
+      if (alvo && !dl.querySelector('.prv')) prvCaixa(alvo, 'compra:' + id);
+      return r;
+    };
+  }
+
+  /* ── fora dos formulários: o clipe mostra que a compra tem prova ── */
+  window.abrirProvas = function(dono, titulo){
+    fecharVer();
+    abrirFolha({titulo:titulo || 'Provas', corpo:'', pe:'<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>'});
+    const corpo = document.getElementById('folhaCorpo');
+    const c = dono.indexOf('compra:') === 0 ? (DB.compras || []).find(x => x.id === dono.slice(7)) : null;
+    const box = prvCaixa(corpo, dono, 'beforeend', c ? limparHTML(c) : '');
+    if (box) box.style.marginTop = '0';
+  };
+  const botao = (dono, n, titulo) => `<button type="button" class="bt p fantasma${n ? '' : ' icone'} prv-bt" data-prv-abrir="${esc(dono)}" data-prv-tit="${esc(titulo)}" data-dica="${n ? `${n} ${n === 1 ? 'prova guardada' : 'provas guardadas'}` : 'Anexar prints ou vídeos'}" aria-label="Provas">${CLIPE}${n ? `<span class="prv-bt-n">${n}</span>` : ''}</button>`;
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-prv-abrir]'); if (!b) return; e.preventDefault(); e.stopPropagation(); abrirProvas(b.dataset.prvAbrir, b.dataset.prvTit); }, true);
+  function atualizarFora(){
+    document.querySelectorAll('#lcReceber .lc-rec').forEach(el => {
+      const ed = el.querySelector('[onclick^="editarCompraPendente"]'); if (!ed) return;
+      const id = (ed.getAttribute('onclick').match(/'([^']+)'/) || [])[1]; if (!id) return;
+      const c = (DB.compras || []).find(x => x.id === id);
+      const velho = el.querySelector('.prv-bt'); if (velho) velho.remove();
+      ed.insertAdjacentHTML('beforebegin', botao('compra:' + id, contar('compra:' + id), 'Provas · ' + (c ? (c.item || nomeLojaCompra(c)) : 'compra')));
+    });
+    document.querySelectorAll('[onclick^="editarLancamento(\'"]').forEach(ed => {
+      const id = (ed.getAttribute('onclick').match(/'([^']+)'/) || [])[1]; if (!id) return;
+      const l = (DB.lancamentos || []).find(x => x.id === id); const dono = 'lanc:' + (l && l.saidaDe ? l.saidaDe : id);
+      const pai = ed.parentElement, velho = pai.querySelector('.prv-bt'); if (velho) velho.remove();
+      const n = contar(dono); if (!n) return;
+      ed.insertAdjacentHTML('beforebegin', botao(dono, n, 'Provas · ' + (l ? (prog(l.prog).n + ' · ' + dataBR(l.data)) : 'lançamento')));
+    });
+  }
+  window.prvAtualizarFora = atualizarFora;
+  ['renderReceber', 'renderLancamentos'].forEach(nm => {
+    if (typeof window[nm] !== 'function') return;
+    const o = window[nm];
+    window[nm] = function(){ const r = o.apply(this, arguments); try{ atualizarFora(); }catch(e){} return r; };
+  });
+
+  /* faxina: arquivos que nunca chegaram a uma compra salva (mais de 1 dia) */
+  setTimeout(async () => {
+    try{
+      const usados = new Set(); Object.values(DB.provas || {}).forEach(l => (l || []).forEach(x => usados.add(x.id)));
+      const d = await idb(); const t = d.transaction('arq', 'readwrite'), s = t.objectStore('arq');
+      s.openCursor().onsuccess = ev => { const cur = ev.target.result; if (!cur) return; const v = cur.value; if (!usados.has(v.id) && Date.now() - (v.em || 0) > 864e5) cur.delete(); cur.continue(); };
+    }catch(e){}
+  }, 5000);
+  try{ atualizarFora(); }catch(e){}
+})();
+</script>
+
 </body>
 </html>
