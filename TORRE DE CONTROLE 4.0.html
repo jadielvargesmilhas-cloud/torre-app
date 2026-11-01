@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-10-31 18:00';
+const BUILD = '2026-10-31 20:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -74921,6 +74921,18 @@ function altDataFutura(iso, ref){
 <style id="mest-css">
 .cpz-est{ display:flex; align-items:center; gap:5px; margin-top:6px; font-size:calc(11px * var(--esc)); color:var(--grafite); line-height:1.3; }
 .cpz-est i{ display:inline-grid; place-items:center; width:15px; height:15px; border-radius:50%; flex:none; font:700 9px/1 var(--f-b, inherit); font-style:normal; color:var(--ouro); border:1px solid color-mix(in srgb, var(--ouro) 55%, transparent); }
+.cpz-mil{ display:flex; align-items:center; gap:8px; }
+.cpz-ib{ all:unset; position:relative; flex:none; display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; cursor:pointer; font:700 11px/1 var(--f-b, inherit); color:var(--anil); border:1.5px solid color-mix(in srgb, var(--anil) 60%, transparent); }
+.cpz-ib.est{ color:var(--ouro); border-color:color-mix(in srgb, var(--ouro) 60%, transparent); }
+.cpz-ib.zero{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 60%, transparent); }
+.cpz-ib:focus-visible{ box-shadow:0 0 0 3px color-mix(in srgb, var(--anil) 30%, transparent); }
+.cpz-ib-pop{ display:none; position:absolute; z-index:30; top:calc(100% + 8px); right:-10px; width:min(260px, 70vw); padding:10px 12px; border-radius:12px; background:var(--sup-2); border:1px solid var(--fio-forte, var(--fio)); box-shadow:0 14px 34px -10px rgba(0,0,0,.6); color:var(--giz); font:500 calc(12px * var(--esc))/1.45 var(--f-b, inherit); text-align:left; white-space:normal; letter-spacing:0; }
+.cpz-ib.aberto .cpz-ib-pop{ display:block; }
+@media (hover:hover){ .cpz-ib:hover .cpz-ib-pop{ display:block; } }
+.cpz-sal{ display:flex; align-items:center; gap:6px; margin-top:8px; font-size:calc(11.5px * var(--esc)); color:var(--grafite); line-height:1.3; }
+.cpz-sal b{ color:var(--giz); font-weight:700; }
+.cpz-sal svg{ width:14px; height:14px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; color:var(--jade); }
+.cpz-sal.sem-saldo svg{ color:var(--grafite); }
 </style>
 <script id="mest-js">
 /* ══ DE ONDE VEM O MILHEIRO DO CARTÃO (31/10/2026) ═══════════════════════════
@@ -74934,16 +74946,21 @@ function altDataFutura(iso, ref){
   cpzMontar = function(c){
     let r = o.apply(this, arguments);
     try { if (c && c.tipo === 'transferencia' && c.de){
-      const r0 = contaCarrinho(c, 100000, false);
-      if (r0.estimado || !(r0.cpmMeu > 0)){
-        const sal = r0.temPontos ? 1 : 0;
-        const est = (custoMarginal(c.de) || {}).cpm || avulsoDe(c.de) || 0, n = prog(c.de).n;
-        const txt = sal > 0 ? `custo zero: seus pontos ${esc(n)} não tiveram custo lançado` : `estimado: você não tem pontos ${esc(n)}`;
-        const dica = sal > 0 ? `A transferência usa o custo que você teve para produzir os pontos ${n}. Sem custo lançado (pontos juntados), o custo é zero.`
-          : `Você não tem pontos ${n}. Só para comparar, a conta usa a estimativa de reposição da Torre${est ? ` (R$ ${est.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} o milheiro ${n})` : ''}, dividida pela paridade e pelo bônus.`;
-        const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
-        const box = a.querySelector('.cpz-custo'); if (box && !box.querySelector('.cpz-est')){ box.insertAdjacentHTML('beforeend', `<span class="cpz-est" data-dica="${esc(dica)}" title="${esc(dica)}"><i>i</i>${txt}</span>`); r = a.outerHTML; }
-      } } } catch(e){ console.error(e); }
+      const r0 = contaCarrinho(c, 100000, false), n = prog(c.de).n;
+      const fmt = v => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      const est = (custoMarginal(c.de) || {}).cpm || avulsoDe(c.de) || 0;
+      const saldo = Math.max(Number((saldoPorPrograma() || {})[c.de]) || 0, Number(((estoquePorPrograma() || {})[c.de] || {}).qtd) || 0);
+      const dica = r0.cpmMeu > 0 ? `Baseado no seu custo: ${fmt(r0.cpmMeu)} o milheiro, a média do que você pagou pelos seus pontos ${n} (compras, clubes e transferências lançadas). Dividido pela paridade e pelo bônus.`
+        : r0.temPontos ? `Custo zero: seus pontos ${n} foram juntados sem custo lançado. Por isso o milheiro desta transferência é zero.`
+        : `Valor estimado: você não tem pontos ${n}. Só para comparar, a Torre usou a reposição${est ? ` de ${fmt(est)} o milheiro ${n}` : ''}, dividida pela paridade e pelo bônus.`;
+      const t = document.createElement('template'); t.innerHTML = r.trim(); const a = t.content.firstElementChild;
+      const box = a.querySelector('.cpz-custo'), mil = box && box.querySelector('.cpz-mil');
+      if (box && mil && !box.querySelector('.cpz-ib')){
+        mil.insertAdjacentHTML('beforeend', `<button type="button" class="cpz-ib${r0.cpmMeu > 0 ? '' : r0.temPontos ? ' zero' : ' est'}" data-dica="${esc(dica)}" aria-label="${esc(dica)}" onclick="event.stopPropagation();this.classList.toggle('aberto')">i<span class="cpz-ib-pop" role="tooltip">${esc(dica)}</span></button>`);
+        box.insertAdjacentHTML('beforeend', `<span class="cpz-sal${saldo > 0 ? '' : ' sem-saldo'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h12v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.2"/></svg><span>${saldo > 0 ? `Saldo: <b>${nBR(saldo)}</b> pontos ${esc(n)}` : 'Sem saldo · 0 pontos'}</span></span>`);
+        r = a.outerHTML;
+      }
+    } } catch(e){ console.error(e); }
     return r;
   };
 })();
@@ -75237,6 +75254,585 @@ function altDataFutura(iso, ref){
     };
     const f = pop.querySelector('input.bze-n'); if (f) f.focus();
   }
+})();
+</script>
+
+<style id="ent-css">
+.ent-box{ margin-top:14px; padding:14px 16px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1, transparent); }
+.ent-box.on{ border-color:color-mix(in srgb, var(--ouro) 40%, var(--fio)); background:color-mix(in srgb, var(--ouro) 6%, var(--sup-1, transparent)); }
+.ent-tg{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+.ent-tg input{ position:absolute; opacity:0; width:1px; height:1px; }
+.ent-sw{ flex:none; width:38px; height:22px; border-radius:99px; background:var(--fio-forte, var(--fio)); position:relative; transition:background .2s; }
+.ent-sw::after{ content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:transform .2s; }
+.ent-tg input:checked + .ent-sw{ background:var(--ouro); }
+.ent-tg input:checked + .ent-sw::after{ transform:translateX(16px); }
+.ent-tg input:focus-visible + .ent-sw{ box-shadow:0 0 0 3px color-mix(in srgb, var(--ouro) 30%, transparent); }
+.ent-tg b{ display:block; color:var(--giz); font-size:calc(13.5px * var(--esc)); }
+.ent-tg small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:2px; }
+.ent-regra{ margin:10px 0 0; padding:8px 12px; border-left:3px solid var(--ouro); border-radius:0 8px 8px 0; background:color-mix(in srgb, var(--ouro) 8%, transparent); color:var(--giz); font-size:calc(12.5px * var(--esc)); line-height:1.45; }
+.ent-regra i{ font-style:normal; font-weight:700; color:var(--ouro); margin-right:6px; }
+.ent-campos{ display:none; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-top:12px; }
+.ent-box.on .ent-campos{ display:grid; }
+.ent-nota{ grid-column:1 / -1; margin:0; color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.45; }
+@media (max-width:520px){ .ent-campos{ grid-template-columns:1fr; } }
+.lc-rec.ent-aguarda{ border-color:color-mix(in srgb, var(--ouro) 40%, var(--fio)); }
+.lc-rec.ent-vencida{ border-color:color-mix(in srgb, var(--brasa) 55%, var(--fio)); box-shadow:0 0 0 1px color-mix(in srgb, var(--brasa) 25%, transparent) inset; }
+.ent-chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:99px; font:700 calc(10.5px * var(--esc))/1.5 var(--f-b, inherit); letter-spacing:.05em; text-transform:uppercase; color:var(--ouro); background:color-mix(in srgb, var(--ouro) 14%, transparent); margin-right:6px; vertical-align:1px; }
+.ent-vencida .ent-chip{ color:#fff; background:var(--brasa); }
+.ent-vencida .ent-chip i{ width:6px; height:6px; border-radius:50%; background:#fff; animation:entPulsa 1.4s ease-in-out infinite; }
+@keyframes entPulsa{ 50%{ opacity:.3; } }
+@media (prefers-reduced-motion:reduce){ .ent-vencida .ent-chip i{ animation:none; } }
+.bt.ent-bt svg{ width:15px; height:15px; }
+@media (max-width:760px){ .lc-rec.ent-aguarda .acoes-cel{ flex-wrap:wrap; row-gap:8px; } }
+</style>
+<script id="ent-js">
+/* Prazo que conta a partir da ENTREGA (31/10/2026, pedido do Jadiel). Muita
+   campanha diz "pontos em até 30 dias após a entrega". Aí a previsão depende do
+   dia em que o produto chegou, e não do dia da compra. A Torre detecta isso na
+   regra, pede a data de entrega prometida pela loja e, quando essa data vence sem
+   o produto confirmado, avisa em prioridade alta: "já recebeu? em que dia?". */
+const ENT_RX = /(?:ap[óo]s|a\s+partir\s+d[aeo]|depois\s+d[aeo]|contad[oa]s?\s+(?:a\s+partir\s+)?d[aeo])\s+(?:a\s+|o\s+)?(?:data\s+d[ae]\s+|confirma[çc][ãa]o\s+d[ae]\s+)?(?:entrega|recebimento)|ap[óo]s\s+(?:o\s+)?(?:produto|pedido|item)\s+(?:ser\s+|ter\s+sido\s+)?(?:entregue|recebido)/i;
+function entregaNaRegra(txt){
+  const t = String(Array.isArray(txt) ? txt.join('\n') : txt || '');
+  if (!ENT_RX.test(t)) return null;
+  const frases = t.split(/(?<=[.;!?])\s+|\n+/).map(x => x.replace(/^[\s•·\-–]+/, '').trim()).filter(Boolean);
+  return frases.find(f => ENT_RX.test(f)) || t.trim().slice(0, 200);
+}
+const entAguarda = c => !!(c && c.status === 'pendente' && c.entrega && c.entrega.conta && !c.entrega.recebidoEm);
+function confirmarEntrega(id){
+  const c = (DB.compras || []).find(x => x.id === id); if (!c) return;
+  const e = c.entrega || {conta:true};
+  const prazo = Number(e.prazoDias) || Math.max(1, Math.round((new Date(c.previsto + 'T12:00:00') - new Date((e.prometida || c.data) + 'T12:00:00')) / 864e5)) || 30;
+  abrirFolha({titulo:'Recebi o produto', corpo:`
+    <p class="fraco" style="margin:0 0 12px">${esc(c.item || nomeLojaCompra(c))} · ${esc(nomeLojaCompra(c))}. Nesta campanha os ${nBR(c.pts)} pontos ${esc(prog(c.prog).n)} caem em até ${prazo} dias depois da entrega.</p>
+    <div class="grade lc-grade">
+      <div class="campo"><label>Data em que recebi o produto</label><input type="date" id="entData" value="${hojeISO()}"></div>
+      <div class="campo"><label>Pontos previstos até</label><input type="text" id="entPrev" readonly></div>
+    </div>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="entOk"><svg><use href="#i-ok"/></svg>Confirmar a entrega</button>`});
+  if (typeof prepararCamposData === 'function') prepararCamposData($('#folhaCorpo'));
+  const prev = () => { const d = $('#entData').value; $('#entPrev').value = d ? dataBR(somaDiasISO(d, prazo)) : ''; };
+  $('#entData').addEventListener('input', prev); $('#entData').addEventListener('change', prev); prev();
+  $('#entOk').onclick = () => {
+    const d = $('#entData').value;
+    if (!d) return erroNoCampo($('#entData'), 'Informe a data em que o produto chegou.');
+    if (d > hojeISO()) return erroNoCampo($('#entData'), 'A data não pode ser no futuro.');
+    if (c.data && d < c.data) return erroNoCampo($('#entData'), 'A entrega não pode ser antes da compra.');
+    c.entrega = Object.assign({}, e, {conta:true, recebidoEm:d, prazoDias:prazo});
+    c.previsto = somaDiasISO(d, prazo);
+    salvar(); fecharFolha();
+    try{ renderCompras(); }catch(x){} try{ renderReceber(); }catch(x){} try{ renderSaldoSeAberto(); }catch(x){} try{ renderFita(); }catch(x){}
+    avisar(`Entrega confirmada em ${dataBR(d)}. Os pontos caem até ${dataBR(c.previsto)}.`, 'ok', 5000);
+  };
+}
+(function(){
+  /* ── formulário da compra: chave "o prazo conta a partir da entrega" ── */
+  if (typeof formCompraPendente === 'function'){
+    const of = formCompraPendente;
+    formCompraPendente = function(args){
+      const r = of.apply(this, arguments);
+      const c0 = (args && args.compra) || {}, cands = (args && args.cands) || [];
+      const grade = document.querySelector('#folhaCorpo .lc-grade'); if (!grade || document.querySelector('#folhaCorpo .ent-box')) return r;
+      let regraAtual = () => { const o = c0.id && typeof _campDaCompra === 'function' ? _campDaCompra(c0) : null; return o ? o.regra : (cands[0] ? cands[0].regraTxt : ''); };
+      const e0 = c0.entrega || null;
+      grade.insertAdjacentHTML('afterend', `<div class="ent-box">
+        <label class="ent-tg"><input type="checkbox" id="entConta"><span class="ent-sw"></span><span><b>O prazo dos pontos conta a partir da entrega do produto</b><small>A previsão passa a contar do dia em que o produto chegar, e não do dia da compra.</small></span></label>
+        <div class="ent-regra" id="entRegra" hidden></div>
+        <div class="ent-campos">
+          <div class="campo"><label>Entrega prometida pela loja</label><input type="date" id="entProm" value="${esc((e0 && e0.prometida) || '')}"></div>
+          <div class="campo"><label>Recebi o produto em <span class="fraco">se já chegou</span></label><input type="date" id="entReceb" value="${esc((e0 && e0.recebidoEm) || '')}"></div>
+          <p class="ent-nota">Se a data prometida passar sem você confirmar a entrega, a Torre avisa em prioridade alta para perguntar se o produto chegou e em que dia.</p>
+        </div></div>`);
+      const box = document.querySelector('#folhaCorpo .ent-box'), ck = box.querySelector('#entConta');
+      if (typeof prepararCamposData === 'function') try{ prepararCamposData(box); }catch(x){}
+      if (e0 && e0.prazoDias && $('#lcPrazo')) $('#lcPrazo').value = e0.prazoDias;
+      const mostrarRegra = () => {
+        const f = entregaNaRegra(regraAtual()), rg = box.querySelector('#entRegra');
+        rg.hidden = !f; if (f) rg.innerHTML = `<i>Regra da campanha</i>${esc(f)}`;
+        return !!f;
+      };
+      const ajustar = () => {
+        box.classList.toggle('on', ck.checked);
+        if (!ck.checked) return;
+        const base = box.querySelector('#entReceb').value || box.querySelector('#entProm').value;
+        if (!base) return;
+        const pv = $('#lcPrev'); pv.value = somaDiasISO(base, Number($('#lcPrazo').value) || 30);
+        pv.dispatchEvent(new Event('change'));
+      };
+      ck.checked = e0 ? !!e0.conta : mostrarRegra(); mostrarRegra(); ajustar();
+      ck.addEventListener('change', () => { if (!ck.checked) $('#lcData').dispatchEvent(new Event('change')); ajustar(); if (ck.checked && !box.querySelector('#entProm').value && !box.querySelector('#entReceb').value) box.querySelector('#entProm').focus(); });
+      ['#entProm', '#entReceb'].forEach(s => { const i = box.querySelector(s); i.addEventListener('change', ajustar); i.addEventListener('input', ajustar); });
+      ['#lcData', '#lcPrazo'].forEach(s => { const i = $(s); if (i){ i.addEventListener('change', ajustar); i.addEventListener('input', ajustar); } });
+      document.querySelectorAll('#folhaCorpo .lc-op').forEach(b => b.addEventListener('click', () => {
+        const o = cands[+b.dataset.i]; regraAtual = () => o ? o.regraTxt : '';
+        const tinha = !!entregaNaRegra(o && o.regraTxt); if (!e0) ck.checked = tinha; mostrarRegra(); ajustar();
+      }));
+      const bt = $('#lcSalvar'), sv = bt.onclick;
+      bt.onclick = function(){
+        const prom = box.querySelector('#entProm').value, rec = box.querySelector('#entReceb').value;
+        if (ck.checked){
+          if (!prom && !rec) return erroNoCampo(box.querySelector('#entProm'), 'Informe até quando a loja prometeu entregar.');
+          if (rec && rec > hojeISO()) return erroNoCampo(box.querySelector('#entReceb'), 'A data não pode ser no futuro.');
+          const dc = $('#lcData').value;
+          if (rec && dc && rec < dc) return erroNoCampo(box.querySelector('#entReceb'), 'A entrega não pode ser antes da compra.');
+          if (prom && dc && prom < dc) return erroNoCampo(box.querySelector('#entProm'), 'A entrega não pode ser antes da compra.');
+          ajustar();
+        }
+        const antes = new Set((DB.compras || []).map(x => x.id));
+        const out = sv.apply(this, arguments);
+        const alvo = c0.id ? (DB.compras || []).find(x => x.id === c0.id) : (DB.compras || []).find(x => !antes.has(x.id));
+        if (alvo){
+          if (ck.checked) alvo.entrega = {conta:true, prometida:prom || '', recebidoEm:rec || '', prazoDias:Number($('#lcPrazo') && $('#lcPrazo').value) || Number((c0.entrega || {}).prazoDias) || 30};
+          else delete alvo.entrega;
+          salvar(); try{ renderReceber(); }catch(x){}
+        }
+        return out;
+      };
+      return r;
+    };
+  }
+
+  /* ── Pontos a receber: cartão mostra "aguardando entrega" e o botão ── */
+  if (typeof renderReceber === 'function'){
+    const orr = renderReceber;
+    renderReceber = function(){
+      const res = orr.apply(this, arguments);
+      const cx = document.getElementById('lcReceber'); if (!cx) return res;
+      cx.querySelectorAll('.lc-rec').forEach(el => {
+        const bt = el.querySelector('[onclick^="creditarCompra"]'); if (!bt) return;
+        const id = (bt.getAttribute('onclick').match(/'([^']+)'/) || [])[1];
+        const c = (DB.compras || []).find(x => x.id === id); if (!c || !c.entrega || !c.entrega.conta) return;
+        const s = el.querySelector('.lc-rec-s');
+        if (!entAguarda(c)){
+          if (s && c.entrega.recebidoEm && !s.querySelector('.ent-ok')) s.insertAdjacentHTML('beforeend', `<span class="ent-ok"> · produto recebido em ${dataBR(c.entrega.recebidoEm)}</span>`);
+          return;
+        }
+        const d = c.entrega.prometida ? diasAte(c.entrega.prometida) : null, venc = d != null && d < 0, hoje = d === 0;
+        el.classList.remove('atrasado'); el.classList.add('ent-aguarda'); if (venc) el.classList.add('ent-vencida');
+        if (s) s.innerHTML = venc
+          ? `<span class="ent-chip"><i></i>entrega vencida</span><b class="brasa">A loja prometeu entregar até ${dataBR(c.entrega.prometida)}. Já recebeu o produto?</b> Os pontos só contam a partir da entrega.`
+          : `<span class="ent-chip">aguardando entrega</span>${hoje ? 'A loja prometeu entregar <b>hoje</b>.' : c.entrega.prometida ? `A loja prometeu entregar até <b>${dataBR(c.entrega.prometida)}</b>.` : 'Sem data de entrega anotada.'} Os pontos caem em até ${Number(c.entrega.prazoDias) || 30} dias depois que o produto chegar.`;
+        const N = Number(c.entrega.prazoDias) || 30;
+        const tr = el.querySelector('.rcz-trilho > span:last-child'); if (tr) tr.innerHTML = `cai <b>+${N} dias</b> da entrega`;
+        const an = el.querySelector('.rcz'), lb = an && an.querySelector('.rcz-l');
+        if (an && lb){
+          an.classList.remove('atras', 'hoje'); an.classList.toggle('atras', venc); an.style.setProperty('--cu', venc ? 'var(--brasa)' : 'var(--ouro)');
+          lb.innerHTML = d == null ? '<em>entrega</em><b>—</b><small>sem data</small>' : venc ? `<em>entrega</em><b>${-d}</b><small>${-d === 1 ? 'dia' : 'dias'}</small>` : hoje ? '<em>entrega</em><b>hoje</b>' : `<em>entrega</em><b>${d}</b><small>${d === 1 ? 'dia' : 'dias'}</small>`;
+          an.setAttribute('aria-label', d == null ? 'Entrega sem data' : venc ? `Entrega atrasada ${-d} dias` : hoje ? 'Entrega prometida para hoje' : `Faltam ${d} dias para a entrega prometida`);
+        }
+        bt.classList.remove('primario'); bt.classList.add('fantasma');
+        if (!el.querySelector('.ent-bt')) bt.insertAdjacentHTML('beforebegin', `<button type="button" class="bt p primario ent-bt" onclick="confirmarEntrega('${id}')"><svg><use href="#i-caixa"/></svg>Recebi o produto</button>`);
+        el.querySelectorAll('.rcl-st').forEach(x => x.remove());
+      });
+      return res;
+    };
+  }
+
+  /* ── Central de avisos: entrega vencida é prioridade alta ── */
+  if (typeof avisos === 'function'){
+    const oa = avisos;
+    avisos = function(){
+      let L = oa.apply(this, arguments) || [];
+      const esp = (DB.compras || []).filter(entAguarda);
+      if (!esp.length) return L;
+      /* enquanto o produto não chega, "pontos atrasados" não é verdade: sai */
+      const pref = esp.map(c => `${c.item ? c.item + ' · ' : ''}${nomeLojaCompra(c)} · previsão ${dataBR(c.previsto)}`);
+      L = L.filter(a => !(a.tipo === 'credito' && pref.some(p => String(a.s || '').startsWith(p))));
+      esp.forEach(c => {
+        const d = c.entrega.prometida ? diasAte(c.entrega.prometida) : null;
+        if (d == null || d > 0) return;
+        const nome = c.item || nomeLojaCompra(c);
+        const a = {grau:d < 0 ? 3 : 2, tipo:'entrega', dias:d, ref:'entrega:' + c.id + ':' + (d < 0 ? 'v' : 'h'), curto:'entrega de ' + nome,
+          t:d < 0 ? `Já recebeu ${nome}? A entrega prometida venceu` : `${nome}: a loja prometeu entregar hoje`,
+          s:`${nomeLojaCompra(c)} · prometida até ${dataBR(c.entrega.prometida)}\nOs ${nBR(c.pts)} pontos ${prog(c.prog).n} só contam a partir da entrega. Toque para confirmar a data em que recebeu.`,
+          si:'#i-caixa', ir:['fabrica', 'fb-compras'], fn:`confirmarEntrega('${c.id}')`};
+        if (typeof avisoEscondido === 'function' && typeof chaveAviso === 'function' && avisoEscondido(chaveAviso(a))) return;
+        L.unshift(a);
+      });
+      return L;
+    };
+  }
+})();
+</script>
+
+<style id="lct-css">
+.lct-filtro{ display:flex; gap:6px; overflow-x:auto; padding:2px 2px 8px; margin:0 0 6px; scrollbar-width:thin; }
+@media (min-width:700px){ .lct-filtro{ flex-wrap:wrap; overflow:visible; } }
+.lct-f{ all:unset; flex:none; display:inline-flex; align-items:center; gap:6px; padding:5px 10px 5px 6px; border-radius:99px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); font:600 calc(12px * var(--esc))/1 var(--f-b, inherit); cursor:pointer; white-space:nowrap; transition:border-color .15s, background .15s; }
+.lct-f:hover{ border-color:var(--ci, var(--anil)); }
+.lct-f:focus-visible{ box-shadow:0 0 0 3px color-mix(in srgb, var(--anil) 30%, transparent); }
+.lct-f.on{ border-color:var(--ci, var(--anil)); background:color-mix(in srgb, var(--ci, var(--anil)) 16%, var(--sup-0)); }
+.lct-f small{ font:600 calc(11px * var(--esc))/1 var(--f-m, inherit); color:var(--grafite); }
+.lct-f.todas{ padding-left:10px; }
+.lct-ic{ flex:none; display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; color:var(--ci); background:color-mix(in srgb, var(--ci) 16%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ci) 34%, transparent); }
+.lct-ic svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.lct-f .lct-ic{ width:20px; height:20px; } .lct-f .lct-ic svg{ width:11px; height:11px; }
+button.lct-ic.lct-bt{ all:unset; flex:none; display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%; cursor:pointer; color:var(--ci); background:color-mix(in srgb, var(--ci) 15%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ci) 34%, transparent); transition:transform .15s; }
+button.lct-bt:hover, button.lct-bt:focus-visible{ transform:scale(1.1); box-shadow:inset 0 0 0 1.5px var(--ci); }
+button.lct-bt svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+button.lct-bt.sem{ border:1px dashed var(--grafite); box-shadow:none; background:transparent; color:var(--grafite); }
+button.lct-bt.meu::after{ content:''; position:absolute; transform:translate(10px, -10px); width:7px; height:7px; border-radius:50%; background:var(--ouro); box-shadow:0 0 0 2px var(--sup-1); }
+.li-l.lct-fora{ display:none; }
+.lct-pop{ width:min(460px, calc(100vw - 24px)); }
+.lct-grade{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+.lct-op{ all:unset; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:12px; border:1px solid var(--fio); color:var(--giz); font-size:calc(13px * var(--esc)); cursor:pointer; }
+.lct-op:hover, .lct-op:focus-visible{ border-color:var(--ci); }
+.lct-op.on{ border-color:var(--ci); background:color-mix(in srgb, var(--ci) 14%, transparent); font-weight:700; }
+.lct-op small{ display:block; font-size:calc(11px * var(--esc)); color:var(--grafite); font-weight:500; }
+.lct-nota{ margin:0 0 12px; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.45; }
+.lct-pe{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; padding:12px 18px; border-top:1px solid var(--fio); }
+@media (max-width:420px){ .lct-grade{ grid-template-columns:1fr; } }
+</style>
+<script id="lct-js">
+/* Categoria de cada loja na janela "Lojas onde procurar" (31/10/2026, pedido do
+   Jadiel): ícone ao lado do nome, filtro por categoria em cima e
+   reclassificação com um clique no ícone. A escolha do usuário fica em
+   DB.cfg.catLojas e vale para a Torre inteira (cartões, filtros, anúncios).
+   Lojas que a Torre ainda não conhecia: classificadas pelo que vendem, só
+   marcas conhecidas; quem a Torre não sabe fica "Sem categoria" para o usuário
+   escolher (melhor do que chutar). */
+const CAT_LOJAS = [
+  ['geral', 'Lojas de tudo', 'marketplaces e departamentos'],
+  ['eletrônicos', 'Eletrônicos', 'celular, informática, eletro'],
+  ['casa', 'Casa', 'móveis, decoração, construção'],
+  ['moda', 'Moda', 'roupas, calçados, relógios, óculos'],
+  ['beleza', 'Beleza', 'perfumes, maquiagem, cabelo'],
+  ['farmácia', 'Farmácia e saúde', 'drogarias, vacinas'],
+  ['esporte', 'Esporte', 'artigos esportivos, suplementos'],
+  ['pet', 'Pet', 'ração, acessórios, plano pet'],
+  ['alimentação', 'Alimentação', 'mercado, bebidas, delivery'],
+  ['viagem', 'Viagem', 'hotel, carro, seguro viagem'],
+  ['lazer', 'Lazer', 'parques, ingressos'],
+  ['presentes', 'Presentes', 'flores, brinquedos, cestas'],
+  ['serviços', 'Serviços', 'seguros, telefonia, assinaturas']
+];
+/* marcas conferidas pelo que vendem (31/10/2026); só entra o que é certo */
+const CAT_LOJA_EXTRA = [
+  [/mondaine|technos|\beuro\b|fossil|michael kors|dumont|\bcondor\b|mormaii|guess|insider|colcci|puket|\blupo\b|\bhope\b(?!\s*resort)|youcom|animale|shoulder|levi.?s|polo wear|malwee|pernambucanas|constance|usaflex|piccadilly|ramarim|beira ?rio|vizzano|moleca|kipling|chilli beans|oakley|ray-?ban|sumerville|\btng\b|lojas torra|lojas pompeia|ellus|richards|lez a lez|cant[aã]o|melissa|carmen steffens|jorge bischoff|luz da lua|capodarte|santa lolla|via marte|ferracini|west coast|kenner|reebok/i, 'moda'],
+  [/portallar|decor colors|\boppa\b|casa ?& ?video|casa e video|ferreira costa|\bcassol\b|dicico|tramontina|copafer|obramax|evolux|suvinil|\bdeca\b|\bdocol\b/i, 'casa'],
+  [/\belbo\b|forever liss|\btruss\b|o\.?u\.?i\.? paris|dr\.? ?jones|amo ?beleza|berenice|\bvult\b|ruby rose|payot|nivea|l.?or[eé]al|kiehl|clinique|lanc[oô]me|the body shop|dermage|simple organic|sallve|principia|wepink|mahogany|phebo|jequiti|hinode|oceane|bioderma|la roche|vichy|cerave|k[eé]rastase|wella|salon line|haskell|lola cosm|inoar/i, 'beleza'],
+  [/farm[aá]cias? app|onofre|drogaria s[aã]o paulo|venancio|nissei|extrafarma|\bbeep\b/i, 'farmácia'],
+  [/z[eé] delivery|\bifood\b|\brappi\b|\bdaki\b|james delivery|lindt|3 cora[cç][oõ]es|tr[eê]s cora[cç][oõ]es|bauducco|coffee ?\+\+/i, 'alimentação'],
+  [/pura ?vida|black skull|essential nutrition|dux nutrition|\bumbro\b|\bpenalty\b|\bkappa\b|\btopper\b|\bwilson\b|caloi/i, 'esporte'],
+  [/zee\.?dog|dog ?hero/i, 'pet'],
+  [/hot[eé]is\.?com|trivago|all accor|\baccor\b|\bibis\b|hilton|marriott|wyndham|blue tree|\bavis\b|\bfoco aluguel|\bthule\b|sestini|\bcoris\b|hero seguro|liga vit[oó]ria|travel ace|vital card|gta seguro|\bhurb\b|hope resort/i, 'viagem'],
+  [/beach park|beto carrero|hot beach|rio quente|hopi hari|wet.?n.?wild|cinemark|kinoplex|ticketmaster|\buhuu\b/i, 'lazer'],
+  [/imaginarium|ri happy|pb ?kids|toymania|cestas? michelli|nova flor|mattel|hasbro/i, 'presentes'],
+  [/sulam[eé]rica|tokio marine|porto seguro|\bmapfre\b|bradesco seguros|allianz|hdi seguros|azul seguros|\byouse\b|\bclaro\b|\bvivo\b|\btim\b|\bsky\b|sem parar|\bveloe\b|conectcar|\btaggy\b|netflix|spotify|deezer|globoplay|paramount|\bserasa\b|\b5asec\b|getninjas|parafuzo|\buber\b|cabify/i, 'serviços'],
+  [/multilaser|philco|mondial|brit[aâ]nia|\barno\b|\boster\b|\bwap\b|\bibyte\b|pichau|terabyte|philips|panasonic|\bepson\b|logitech|intelbras|\belgin\b|\bmidea\b|springer|\bcarrier\b|fujitsu/i, 'eletrônicos']
+];
+const CAT_LOJA_ICO = {
+  'serviços':{c:'#5B8DEF', d:'<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>'},
+  sem:{c:'#7C8798', d:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.8"/><path d="M12 17.2v.1"/>'}
+};
+function catLojaInfo(k){
+  const c = CAT_LOJAS.find(x => x[0] === k);
+  const ic = CAT_LOJA_ICO[k] || (k && typeof lzaIcone === 'function' ? lzaIcone(k) : CAT_LOJA_ICO.sem);
+  return {k:c ? k : '', n:c ? c[1] : 'Sem categoria', sub:c ? c[2] : 'a Torre ainda não sabe o que esta loja vende', c:c ? ic.c : CAT_LOJA_ICO.sem.c, d:c ? ic.d : CAT_LOJA_ICO.sem.d};
+}
+const _lctChave = n => (typeof normLoja === 'function' ? normLoja(String(n || '')) : String(n || '').toLowerCase().trim());
+function catLojaManual(nome){ const m = (typeof DB === 'object' && DB && DB.cfg && DB.cfg.catLojas) || {}; return m[_lctChave(nome)] || ''; }
+(function(){
+  if (typeof categoriaDaLoja !== 'function') return;
+  const oc = categoriaDaLoja;
+  categoriaDaLoja = function(nome){
+    const m = catLojaManual(nome); if (m) return m;
+    const r = oc.apply(this, arguments); if (r) return r;
+    const x = CAT_LOJA_EXTRA.find(([re]) => re.test(String(nome || '')));
+    return x ? x[1] : null;
+  };
+})();
+function catDaLojaPicker(nome){ const c = categoriaDaLoja(nome); return CAT_LOJAS.some(x => x[0] === c) ? c : ''; }
+function reclassificarLoja(nome, ao){
+  const atual = catDaLojaPicker(nome), manual = catLojaManual(nome);
+  document.querySelectorAll('.lct-pop, .lct-fundo').forEach(e => e.remove());
+  const fundo = document.createElement('div'); fundo.className = 'dck-fundo lct-fundo';
+  const pop = document.createElement('div'); pop.className = 'dck-pop lct-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Categoria da loja');
+  const fechar = () => { pop.remove(); fundo.remove(); document.removeEventListener('keydown', esc1, true); };
+  const esc1 = e => { if (e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); fechar(); } };
+  fundo.onclick = fechar;
+  pop.innerHTML = `<div class="dck-pop-cab"><b>Categoria · ${esc(nome)}</b></div>
+    <div class="dck-pop-corpo"><p class="lct-nota">${manual ? 'Você escolheu esta categoria.' : atual ? 'A Torre classificou pelo que a loja vende.' : 'A Torre ainda não sabe o que esta loja vende.'} A escolha vale para a Torre inteira: lista de desejos, cartões das lojas e filtros.</p>
+      <div class="lct-grade">${CAT_LOJAS.map(([k]) => { const i = catLojaInfo(k); return `<button type="button" class="lct-op${k === atual ? ' on' : ''}" data-cat="${esc(k)}" style="--ci:${i.c}"><span class="lct-ic"><svg viewBox="0 0 24 24">${i.d}</svg></span><span>${esc(i.n)}<small>${esc(i.sub)}</small></span></button>`; }).join('')}</div></div>
+    <div class="lct-pe"><button type="button" class="bt perigo" data-lct-fechar>Fechar</button>${manual ? '<button type="button" class="bt fantasma" data-lct-auto><svg><use href="#i-atualizar"/></svg>Voltar à automática</button>' : ''}</div>`;
+  document.body.appendChild(fundo); document.body.appendChild(pop);
+  document.addEventListener('keydown', esc1, true);
+  const gravar = k => {
+    DB.cfg = DB.cfg || {}; DB.cfg.catLojas = DB.cfg.catLojas || {};
+    if (k) DB.cfg.catLojas[_lctChave(nome)] = k; else delete DB.cfg.catLojas[_lctChave(nome)];
+    salvar(); try{ if (typeof corrigirCategoriasLojas === 'function') corrigirCategoriasLojas(); }catch(e){}
+    fechar(); if (ao) ao();
+    const i = catLojaInfo(catDaLojaPicker(nome));
+    avisar(k ? `${esc(nome)} agora está em ${esc(i.n)}.` : `${esc(nome)} voltou à categoria automática: ${esc(i.n)}.`, 'ok', 4000);
+  };
+  pop.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => gravar(b.dataset.cat));
+  pop.querySelector('[data-lct-fechar]').onclick = fechar;
+  const au = pop.querySelector('[data-lct-auto]'); if (au) au.onclick = () => gravar('');
+  (pop.querySelector('.lct-op.on') || pop.querySelector('[data-lct-fechar]')).focus({preventScroll:true});
+}
+(function(){
+  if (typeof montarLojasItem !== 'function') return;
+  const om = montarLojasItem;
+  montarLojasItem = function(dOrig){
+    const r = om.apply(this, arguments);
+    const box = document.getElementById('dsLojasBox'); if (!box || !box._estado) return r;
+    const est = box._estado, porK = {};
+    est.forEach(l => { l.cat = catDaLojaPicker(l.n); porK[l.k] = l; });
+    if (box._cat !== undefined && box._cat !== null && box._cat !== '*' && !est.some(l => l.cat === box._cat)) box._cat = '*';
+    const sel = box._cat == null ? '*' : box._cat;
+    const cont = {}; est.forEach(l => { cont[l.cat] = (cont[l.cat] || 0) + 1; });
+    const chip = (k, n, i, q) => `<button type="button" class="lct-f${sel === k ? ' on' : ''}${k === '*' ? ' todas' : ''}" data-lct="${esc(k)}" style="--ci:${i ? i.c : 'var(--anil)'}" aria-pressed="${sel === k}">${i ? `<span class="lct-ic"><svg viewBox="0 0 24 24">${i.d}</svg></span>` : ''}${esc(n)}<small>${q}</small></button>`;
+    const cats = CAT_LOJAS.filter(([k]) => cont[k]).map(([k]) => chip(k, catLojaInfo(k).n, catLojaInfo(k), cont[k]));
+    if (cont['']) cats.push(chip('', 'Sem categoria', catLojaInfo(''), cont['']));
+    const barra = box.querySelector('.li-barra');
+    if (barra) barra.insertAdjacentHTML('afterend', `<div class="lct-filtro" role="group" aria-label="Filtrar por categoria">${chip('*', 'Todas', null, est.length)}${cats.join('')}</div>`);
+    box.querySelectorAll('.li-l').forEach(lab => {
+      const inp = lab.querySelector('[data-lk]'); const l = inp && porK[inp.dataset.lk]; if (!l) return;
+      const i = catLojaInfo(l.cat), manual = !!catLojaManual(l.n);
+      lab.dataset.cat = l.cat;
+      inp.insertAdjacentHTML('afterend', `<button type="button" class="lct-ic lct-bt${l.cat ? '' : ' sem'}${manual ? ' meu' : ''}" data-lct-loja="${esc(l.n)}" style="--ci:${i.c}" title="${esc(i.n)}${manual ? ' (escolhida por você)' : ''} · clique para mudar a categoria" aria-label="Categoria: ${esc(i.n)}. Mudar"><svg viewBox="0 0 24 24">${i.d}</svg></button>`);
+      if (sel !== '*' && l.cat !== sel) lab.classList.add('lct-fora');
+    });
+    /* os títulos "Em promoção hoje"/"Sem promoção hoje" contam só o que aparece */
+    box.querySelectorAll('.li-grupo').forEach(g => {
+      let n = 0, e = g.nextElementSibling; while (e && !e.classList.contains('li-grupo')){ if (e.classList.contains('li-l') && !e.classList.contains('lct-fora')) n++; e = e.nextElementSibling; }
+      const sp = g.querySelector('span'); if (sp) sp.textContent = n; g.hidden = !n;
+    });
+    const lista = box.querySelector('.li-lista');
+    if (lista && sel !== '*' && !lista.querySelector('.li-l:not(.lct-fora)') && !lista.querySelector('.lct-nada')) lista.insertAdjacentHTML('afterbegin', '<p class="fraco li-vazio lct-nada">Nenhuma loja desta categoria com esse nome.</p>');
+    box.querySelectorAll('[data-lct]').forEach(b => b.onclick = () => { box._cat = b.dataset.lct; montarLojasItem(dOrig); });
+    box.querySelectorAll('[data-lct-loja]').forEach(b => b.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); reclassificarLoja(b.dataset.lctLoja, () => montarLojasItem(dOrig)); });
+    /* com uma categoria escolhida, Todas e Nenhuma valem só para ela */
+    if (sel !== '*') box.querySelectorAll('[data-li="todas"], [data-li="nenhuma"]').forEach(b => b.onclick = () => {
+      const on = b.dataset.li === 'todas';
+      est.forEach(l => { if (l.cat === sel) l.on = on; });
+      box._sim = est.filter(l => l.on && (!l.auto || l.extra)).map(l => l.n); box._nao = est.filter(l => !l.on && l.auto).map(l => l.n);
+      box._extra = (box._extra || []).filter(x => est.some(l => l.on && _nL(l.n) === _nL(x)));
+      montarLojasItem(dOrig);
+    });
+    return r;
+  };
+})();
+</script>
+
+<style id="bfl-css">
+:root:not([data-theme="papel"]) body, :root:not([data-theme="papel"]) .rm, :root:not([data-theme="papel"]) .com-modulos, :root:not([data-theme="papel"]) .topo{ background:linear-gradient(180deg, #10233A, #0A1828) fixed; }
+</style>
+<script id="bfl-js">
+/* 31/10/2026, pedidos do Jadiel:
+   1) lápis no cartão e na linha da compra bonificada: abre a campanha numa
+      janela, salva e a tela continua onde estava;
+   2) nome da loja limpo: "Até BELEZA WEB (Cosméticos)" vira "Beleza Web", e o
+      que estava entre parênteses vira a categoria. */
+function limparNomeLojaAnuncio(nome){
+  let n = String(nome || '').replace(/\s+/g, ' ').trim(), cat = '';
+  n = n.replace(/^at[eé]\s+(?=[A-ZÀ-Ú0-9])/i, '');
+  const m = n.match(/^(.*?)\s*\(([^()]{3,30})\)\s*$/);
+  if (m && typeof catDaLista === 'function'){ const c = catDaLista(m[2]); if (c && c !== 'geral'){ n = m[1].trim(); cat = c; } }
+  const letras = n.replace(/[^A-Za-zÀ-ú]/g, '');
+  if (letras.length >= 3 && letras === letras.toUpperCase()) n = n.toLowerCase().replace(/(^|[\s\-\/])(\p{L})/gu, (x, a, b) => a + b.toUpperCase()).replace(/ (E|De|Da|Do|Das|Dos|Na|No|Em) /g, w => w.toLowerCase()).replace(/\bC&a\b/g, 'C&A');
+  return {n, cat};
+}
+(function(){
+  /* nomes novos já entram limpos */
+  if (typeof bonificadaDoAnuncio === 'function'){
+    const ob = bonificadaDoAnuncio;
+    bonificadaDoAnuncio = function(){
+      const sg = ob.apply(this, arguments);
+      if (sg && sg.parceiro){ const x = limparNomeLojaAnuncio(sg.parceiro); sg.parceiro = x.n; if (x.cat && (!sg.cat || sg.cat === 'geral' || sg.cat === 'compras')) sg.cat = x.cat; }
+      return sg;
+    };
+  }
+  /* nomes já gravados: limpa uma vez ao abrir */
+  const migrar = () => {
+    if (typeof DB !== 'object' || !DB) return;
+    let n = 0;
+    (DB.campanhas || []).forEach(c => {
+      if (c.tipo !== 'bonificada' || !c.parceiro) return;
+      const x = limparNomeLojaAnuncio(c.parceiro);
+      if (x.n !== c.parceiro){ c.parceiro = x.n; n++; }
+      if (x.cat && (!c.cat || c.cat === 'geral')){ c.cat = x.cat; n++; }
+    });
+    (DB.mural || []).forEach(m => { if (m.sugestao && m.sugestao.parceiro){ const x = limparNomeLojaAnuncio(m.sugestao.parceiro); if (x.n !== m.sugestao.parceiro){ m.sugestao.parceiro = x.n; n++; } } });
+    if (n){ salvar(); try{ renderLojasParceiras(); }catch(e){} }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(migrar, 300)); else setTimeout(migrar, 300);
+  window.bflMigrar = migrar;
+
+  /* lápis da compra bonificada */
+  const LAPIS = id => `<button type="button" class="bt p fantasma icone bfl-ed" onclick="event.stopPropagation();editarCampanhaNoLugar('${esc(id)}')" data-dica="Editar a campanha" aria-label="Editar a campanha"><svg><use href="#i-lapis"/></svg></button>`;
+  /* toda edição de compra bonificada salva e devolve a tela ao mesmo lugar */
+  if (typeof editarBonificada === 'function'){
+    const oe = editarBonificada;
+    editarBonificada = function(){
+      const y = window.scrollY;
+      const r = oe.apply(this, arguments);
+      const bt = document.getElementById('bfeSalvar'); if (!bt) return r;
+      const so = bt.onclick;
+      bt.onclick = function(){ const x = so.apply(this, arguments); const volta = () => window.scrollTo(0, y); volta(); requestAnimationFrame(volta); setTimeout(volta, 150); return x; };
+      return r;
+    };
+  }
+  window.editarCampanhaNoLugar = function(id){
+    const y = window.scrollY, rolos = [...document.querySelectorAll('.cnt, main, .rm-corpo, .com-modulos')].map(e => [e, e.scrollTop]);
+    editarCampanha(id);
+    const bt = document.getElementById('bfeSalvar') || document.getElementById('btSalvarCampanha'); if (!bt) return;
+    const so = bt.onclick;
+    bt.onclick = function(){
+      const r = so.apply(this, arguments);
+      const volta = () => { window.scrollTo(0, y); rolos.forEach(([e, t]) => { if (document.contains(e)) e.scrollTop = t; }); };
+      volta(); requestAnimationFrame(volta); setTimeout(volta, 120);
+      return r;
+    };
+  };
+  if (typeof cartaoLoja === 'function'){
+    const oc = cartaoLoja;
+    cartaoLoja = function(l){
+      const h = oc.apply(this, arguments);
+      if (!l || l.origem !== 'bonificada' || !l.campId) return h;
+      return h.replace(`<button type="button" class="bt p fantasma" onclick="abrirCampanhasEm('bonificada')">Ver Campanhas</button>`, `${LAPIS(l.campId)}<button type="button" class="bt p fantasma" onclick="abrirCampanhasEm('bonificada')">Ver Campanhas</button>`);
+    };
+  }
+})();
+</script>
+
+<style id="mpl-css">
+.mpl-bt{ white-space:nowrap; }
+.mpl-bt svg{ width:14px; height:14px; }
+.cc-chips .etq.mpl-chip{ cursor:pointer; }
+.mpl-pop{ width:min(620px, calc(100vw - 24px)); }
+.mpl-hoje{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:var(--sup-1); border:1px solid var(--fio); color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-bottom:14px; }
+.mpl-hoje b{ color:var(--giz); }
+.mpl-t{ font:700 calc(11px * var(--esc))/1 var(--f-b, inherit); letter-spacing:.1em; text-transform:uppercase; color:var(--grafite); margin:4px 0 8px; }
+.mpl-planos{ display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:8px; margin-bottom:14px; }
+.mpl-pl{ all:unset; position:relative; display:flex; flex-direction:column; gap:3px; padding:11px 12px; border-radius:12px; border:1px solid var(--fio); cursor:pointer; background:var(--sup-0); }
+.mpl-pl:hover, .mpl-pl:focus-visible{ border-color:var(--marca, var(--ouro)); }
+.mpl-pl.on{ border-color:var(--marca, var(--ouro)); background:color-mix(in srgb, var(--marca, var(--ouro)) 12%, var(--sup-0)); box-shadow:0 0 0 1px var(--marca, var(--ouro)) inset; }
+.mpl-pl b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); }
+.mpl-pl small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.mpl-pl .mpl-atual{ position:absolute; top:8px; right:8px; font:700 calc(9.5px * var(--esc))/1.5 var(--f-b, inherit); letter-spacing:.06em; text-transform:uppercase; padding:0 7px; border-radius:99px; color:var(--grafite); border:1px solid var(--fio); }
+.mpl-grade{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+.mpl-res{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin-top:14px; padding:12px 14px; border-radius:14px; border:1px solid var(--fio); }
+.mpl-res.up{ border-color:color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, transparent); }
+.mpl-res.down{ border-color:color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:color-mix(in srgb, var(--ouro) 7%, transparent); }
+.mpl-sel{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:99px; font:800 calc(11px * var(--esc))/1.4 var(--f-b, inherit); letter-spacing:.08em; text-transform:uppercase; }
+.mpl-res.up .mpl-sel{ color:#fff; background:var(--jade); }
+.mpl-res.down .mpl-sel{ color:#1a1300; background:var(--ouro); }
+.mpl-res.igual .mpl-sel{ color:var(--giz); background:var(--sup-2); }
+.mpl-res span{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.mpl-res span b{ color:var(--giz); }
+.mpl-pe{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; padding:12px 18px; border-top:1px solid var(--fio); }
+.mpl-agendada{ margin:0 0 14px; padding:10px 14px; border-radius:12px; border-left:3px solid var(--ouro); background:color-mix(in srgb, var(--ouro) 9%, transparent); color:var(--giz); font-size:calc(12.5px * var(--esc)); }
+@media (max-width:520px){ .mpl-grade{ grid-template-columns:1fr; } .mpl-planos{ grid-template-columns:1fr 1fr; } }
+</style>
+<script id="mpl-js">
+/* Upgrade e downgrade do clube à mão (31/10/2026, pedido do Jadiel). Antes a
+   troca só entrava lendo o print da operadora. Agora cada assinatura ativa tem
+   "Mudar plano": escolhe o novo plano, a cobrança e a data. A Torre só agenda
+   (a.mudanca) e, no dia, pergunta em prioridade alta se a troca foi feita,
+   pelo mesmo caminho do print. Data de hoje ou passada: aplica na hora. */
+function abrirMudarPlano(id){
+  const a = (DB.assinaturas || []).find(x => x.id === id); if (!a) return;
+  const cat = catalogoDe(a.prog); if (!cat || !cat.planos || !cat.planos.length) return avisar('Este programa não tem planos no catálogo da Torre.', 'alerta');
+  const m0 = a.mudanca || null;
+  const plA = cat.planos.find(x => x.id === a.planoId) || null;
+  let planoSel = (m0 && m0.planoId) || a.planoId, modSel = (m0 && m0.modalidade) || a.modalidade || 'mensal';
+  document.querySelectorAll('.mpl-pop, .mpl-fundo').forEach(e => e.remove());
+  const fundo = document.createElement('div'); fundo.className = 'dck-fundo mpl-fundo';
+  const pop = document.createElement('div'); pop.className = 'dck-pop mpl-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Mudar de plano');
+  pop.style.setProperty('--marca', prog(a.prog).cor);
+  const fechar = () => { pop.remove(); fundo.remove(); document.removeEventListener('keydown', tecla, true); };
+  const tecla = e => { if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); fechar(); } };
+  fundo.onclick = fechar;
+  const mensalDe = (pl, mod) => Number(pl && pl.precos && pl.precos[mod]) || 0;
+  const modsDe = pl => Object.keys(MODALIDADES).filter(k => mensalDe(pl, k) > 0);
+  const nomeModC = k => (MODALIDADES[k] || k || '').toLowerCase();
+  const valAtualMes = typeof valorMensalAssin === 'function' ? valorMensalAssin(a) : Number(a.valor) || 0;
+  const cpmAtual = plA && plA.qtd ? valAtualMes / plA.qtd * 1000 : null;
+  pop.innerHTML = `<div class="dck-pop-cab">${discoProg(a.prog, 'p')}<b>Mudar de plano · Clube ${esc(prog(a.prog).n)} de ${esc(nomeCurtoConta(a.contaId))}</b></div>
+    <div class="dck-pop-corpo">
+      ${m0 && m0.planoId ? `<div class="mpl-agendada">Já existe uma mudança marcada para <b>${dataBR(m0.em)}</b>: ${esc(rotuloMudanca(a))}. Salvar aqui substitui essa marcação.</div>` : ''}
+      <div class="mpl-hoje"><span>Hoje: <b>${esc(plA ? plA.n : a.planoId)}</b> · ${esc(nomeModC(a.modalidade))} · <b>${brl2(a.valor)}</b>${String(a.modalidade).startsWith('anual_parcelado') ? ' por parcela' : String(a.modalidade) === 'mensal' ? ' por mês' : ''}${cpmAtual ? ` · milheiro ${brl2(cpmAtual)}` : ''}</span></div>
+      <div class="mpl-t">Novo plano</div>
+      <div class="mpl-planos">${cat.planos.map(pl => `<button type="button" class="mpl-pl" data-pl="${esc(pl.id)}">${pl.id === a.planoId ? '<span class="mpl-atual">atual</span>' : ''}<b>${esc(pl.n)}</b><small>${nBR(pl.qtd)} pontos por mês</small><small data-preco></small></button>`).join('')}</div>
+      <div class="mpl-grade">
+        <div class="campo"><label>Cobrança</label><select id="mplMod"></select></div>
+        <div class="campo"><label>A partir de</label><input type="date" id="mplEm" value="${esc((m0 && m0.em) || (a.renova && a.renova >= hojeISO() ? a.renova : hojeISO()))}"></div>
+        <div class="campo"><label id="mplValRot">Valor (R$)</label><input type="text" inputmode="decimal" data-moeda id="mplVal" value=""></div>
+        <div class="campo"><label>Cartão da cobrança</label><select id="mplCartao"><option value="">não informado</option>${(DB.cartoes || []).map(c => `<option value="${c.id}"${c.id === ((m0 && m0.cartaoId) || a.cartaoId) ? ' selected' : ''}>${esc(nomeCartao ? nomeCartao(c.id) : (c.banco + ' ' + (c.final || '')))}</option>`).join('')}</select></div>
+      </div>
+      <div class="mpl-res" id="mplRes"></div>
+    </div>
+    <div class="mpl-pe"><button type="button" class="bt perigo" data-mpl-fechar>Fechar</button>${m0 && m0.planoId ? '<button type="button" class="bt vermelho-solido" data-mpl-tirar><svg><use href="#i-lixo"/></svg>Excluir a mudança marcada</button>' : ''}<button type="button" class="bt primario" data-mpl-ok><svg><use href="#i-ok"/></svg>Programar mudança</button></div>`;
+  document.body.appendChild(fundo); document.body.appendChild(pop);
+  document.addEventListener('keydown', tecla, true);
+  try{ ligarCampoMoeda('#mplVal'); }catch(e){}
+  try{ prepararCamposData(pop); }catch(e){}
+  let valManual = !!(m0 && Number(m0.valor));
+  if (valManual) pop.querySelector('#mplVal').value = moedaTxt(m0.valor);
+  const parcelas = () => modSel === 'anual_parcelado' ? (Number(a.parcelas) > 1 ? Number(a.parcelas) : 12) : 1;
+  const desenhar = () => {
+    const pl = cat.planos.find(x => x.id === planoSel);
+    pop.querySelectorAll('.mpl-pl').forEach(b => {
+      const p2 = cat.planos.find(x => x.id === b.dataset.pl), v = mensalDe(p2, modSel) || mensalDe(p2, 'mensal');
+      b.classList.toggle('on', b.dataset.pl === planoSel);
+      b.querySelector('[data-preco]').textContent = v ? `${brl2(v)} por mês${mensalDe(p2, modSel) ? '' : ' (mensal)'}` : 'sem preço no catálogo';
+    });
+    const mods = modsDe(pl); if (!mods.includes(modSel)) modSel = mods[0] || modSel;
+    pop.querySelector('#mplMod').innerHTML = (mods.length ? mods : [modSel]).map(k => `<option value="${k}"${k === modSel ? ' selected' : ''}>${esc(MODALIDADES[k] || k)}</option>`).join('');
+    pop.querySelector('#mplValRot').textContent = modSel === 'mensal' ? 'Valor por mês (R$)' : modSel === 'anual_parcelado' ? `Valor de cada parcela (${parcelas()}x)` : 'Valor à vista (R$)';
+    if (!valManual) pop.querySelector('#mplVal').value = moedaTxt(valorCobranca(pl, modSel, parcelas()) || 0);
+    const vMes = mensalDe(pl, modSel), cpmN = pl && pl.qtd && vMes ? vMes / pl.qtd * 1000 : null;
+    const qA = plA ? Number(plA.qtd) || 0 : 0, qN = pl ? Number(pl.qtd) || 0 : 0;
+    const tipo = planoSel === a.planoId ? (modSel === a.modalidade ? 'nada' : 'cobranca') : qN > qA ? 'up' : qN < qA ? 'down' : 'lado';
+    const res = pop.querySelector('#mplRes');
+    res.className = 'mpl-res ' + (tipo === 'up' ? 'up' : tipo === 'down' ? 'down' : 'igual');
+    res.innerHTML = tipo === 'nada' ? '<span>Escolha outro plano ou outra forma de cobrança.</span>'
+      : `<i class="mpl-sel">${tipo === 'up' ? '▲ Upgrade' : tipo === 'down' ? '▼ Downgrade' : tipo === 'cobranca' ? 'Muda a cobrança' : 'Troca de plano'}</i>
+        <span>${tipo === 'up' || tipo === 'down' ? `<b>${nBR(qA)} → ${nBR(qN)}</b> pontos por mês (${qN > qA ? '+' : ''}${nBR(qN - qA)})` : `${esc(nomeModC(a.modalidade))} → <b>${esc(nomeModC(modSel))}</b>`}</span>
+        ${cpmN ? `<span>milheiro ${cpmAtual ? `${brl2(cpmAtual)} → ` : ''}<b>${brl2(cpmN)}</b></span>` : ''}`;
+    const ok = pop.querySelector('[data-mpl-ok]'), em = pop.querySelector('#mplEm').value;
+    ok.disabled = tipo === 'nada' || !em;
+    ok.innerHTML = `<svg><use href="#i-ok"/></svg>${em && em <= hojeISO() ? 'Aplicar a mudança agora' : 'Programar mudança'}`;
+  };
+  pop.querySelectorAll('.mpl-pl').forEach(b => b.onclick = () => { planoSel = b.dataset.pl; valManual = false; desenhar(); });
+  pop.querySelector('#mplMod').onchange = e => { modSel = e.target.value; valManual = false; desenhar(); };
+  pop.querySelector('#mplVal').addEventListener('input', () => { valManual = true; });
+  ['input', 'change'].forEach(ev => pop.querySelector('#mplEm').addEventListener(ev, desenhar));
+  pop.querySelector('[data-mpl-fechar]').onclick = fechar;
+  const tirar = pop.querySelector('[data-mpl-tirar]');
+  if (tirar) tirar.onclick = () => { delete a.mudanca; salvar(); fechar(); try{ renderClubes(); }catch(e){} try{ mostrarAvisosRenovacao(); }catch(e){} avisar('Mudança de plano desmarcada. A assinatura continua como está.', 'ok'); };
+  pop.querySelector('[data-mpl-ok]').onclick = () => {
+    const em = pop.querySelector('#mplEm').value; if (!em) return;
+    const pl = cat.planos.find(x => x.id === planoSel);
+    const valor = moedaNum(pop.querySelector('#mplVal').value) || valorCobranca(pl, modSel, parcelas()) || 0;
+    const ehAnual = k => String(k || '').startsWith('anual');
+    a.mudanca = {em, planoId:planoSel, modalidade:modSel, valor, cartaoId:pop.querySelector('#mplCartao').value || a.cartaoId || '', lidaEm:hojeISO(), confirmar:true, manual:true,
+      de:ehAnual(a.modalidade) ? 'anual' : 'mensal', para:ehAnual(modSel) ? 'anual' : 'mensal'};
+    const nome = `${prog(a.prog).n} de ${nomeCurto(nomeConta(a.contaId))}`;
+    if (em <= hojeISO()){
+      const n = altAplicar(a); salvar(); fechar();
+      try{ aplicarTudo(); }catch(e){} try{ renderClubes(); }catch(e){} try{ mostrarAvisosRenovacao(); }catch(e){}
+      avisar(`Plano trocado: ${esc(nome)} agora é ${esc(pl ? pl.n : '')}, ${esc(nomeModC(n.modalidade))}, ${brl2(n.valor)}.`, 'ok', 7000);
+    } else {
+      salvar(); fechar();
+      try{ renderClubes(); }catch(e){} try{ mostrarAvisosRenovacao(); }catch(e){}
+      avisar(`Mudança marcada: ${esc(nome)} vai para ${esc(pl ? pl.n : '')} (${esc(nomeModC(modSel))}) em ${dataBR(em)}. No dia, a Torre pergunta se a troca foi feita.`, 'ok', 7000);
+    }
+  };
+  desenhar();
+  (pop.querySelector('.mpl-pl.on') || pop.querySelector('[data-mpl-fechar]')).focus({preventScroll:true});
+}
+(function(){
+  if (typeof ccLinha !== 'function') return;
+  const ol = ccLinha;
+  ccLinha = function(a){
+    let h = ol.apply(this, arguments);
+    if (!a || a.status !== 'ativa') return h;
+    h = h.replace('<div class="cc-acoes">', `<div class="cc-acoes"><button class="bt p fantasma mpl-bt" onclick="abrirMudarPlano('${a.id}')" data-dica="Upgrade ou downgrade do plano"><svg><use href="#i-troca"/></svg>Mudar plano</button>`);
+    if (a.mudanca && a.mudanca.planoId) h = h.replace('<span class="etq ouro" data-dica="', `<span class="etq ouro mpl-chip" role="button" tabindex="0" onclick="abrirMudarPlano('${a.id}')" data-dica="Clique para ver ou mudar. `);
+    return h;
+  };
 })();
 </script>
 </body>
