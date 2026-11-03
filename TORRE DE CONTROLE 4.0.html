@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-01 23:55';
+const BUILD = '2026-11-03 13:40';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -76193,6 +76193,36 @@ function abrirMudarPlano(id){
     });
   }
   window.prvAtualizarFora = atualizarFora;
+  window.prvRedesenhar = box => desenharGrade(box);
+  /* guardar arquivos direto numa lista de provas, sem caixa na tela (prints
+     lidos por um leitor da Torre) */
+  window.prvGuardar = async function(dono, files){
+    let n = 0;
+    for (const f of [...files]){
+      const ehImg = /^image\//.test(f.type || ''); if (!ehImg) continue;
+      try {
+        const p = await prepararImagem(f), id = uid(), nome = f.name && !/^image\.(png|jpe?g)$/i.test(f.name) ? f.name : 'Print';
+        await arqGrava({id, blob:p.blob, mime:p.mime, mini:p.mini, nome, em:Date.now(), tam:p.blob.size});
+        lista(dono).push({id, t:'img', n:nome, kb:Math.round(p.blob.size / 1024), em:hojeISO()}); n++;
+      } catch(e){}
+    }
+    if (n){ salvar(); atualizarFora(); }
+    return n;
+  };
+  /* copiar provas de uma lista para outra: o arquivo é duplicado, para que
+     apagar de um lugar não apague do outro */
+  window.prvCopiar = async function(deDono, ids, paraDono){
+    let n = 0;
+    for (const id of ids){
+      const it = ((DB.provas || {})[deDono] || []).find(x => x.id === id); if (!it) continue;
+      if (it.t === 'link'){ lista(paraDono).push({...it, id:uid()}); n++; continue; }
+      const r = await arqPor(id).catch(() => null); if (!r) continue;
+      const novo = uid(); await arqGrava({...r, id:novo, em:Date.now()});
+      lista(paraDono).push({...it, id:novo}); n++;
+    }
+    if (n){ salvar(); atualizarFora(); }
+    return n;
+  };
   ['renderReceber', 'renderLancamentos'].forEach(nm => {
     if (typeof window[nm] !== 'function') return;
     const o = window[nm];
@@ -76373,7 +76403,10 @@ function abrirMudarPlano(id){
 <style id="pv-css">
 .pv-bt-abrir{ background:linear-gradient(135deg,#E6BE62,#B88A2E) !important; color:#1A1405 !important; border:0 !important; font-weight:700; box-shadow:0 6px 18px -8px rgba(230,190,98,.7); }
 .pv-bt-abrir svg{ fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
-.ec-cab .pv-bt-abrir{ margin-left:auto; flex:none; }
+.ec-cab{ flex-wrap:wrap; } .ec-cab .pv-bt-abrir{ margin-left:0; flex:1 1 100%; justify-content:center; white-space:nowrap; }
+#rtPlano{ container-type:inline-size; }
+@container (max-width:900px){ .ec-faixa{ grid-template-columns:1fr; } .ec-cab{ flex-wrap:nowrap; } .ec-cab .pv-bt-abrir{ flex:0 0 auto; margin-left:auto; } }
+@container (max-width:560px){ .ec-cab{ flex-wrap:wrap; } .ec-cab .pv-bt-abrir{ flex:1 1 100%; margin-left:0; } }
 .pv-resumo{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
 .pv-resumo > div{ border-radius:14px; padding:12px 14px; background:linear-gradient(160deg,#0E1530,#0A1022); color:#F4F1E8; border:1px solid rgba(230,190,98,.25); }
 .pv-resumo span{ display:block; font-size:12px; color:#AEB4C8; }
@@ -77077,6 +77110,465 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
     } catch(e){ console.error(e); }
     return r;
   };
+})();
+</script>
+
+<style id="psv-css">
+.psv{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30000; width:min(560px, calc(100vw - 24px)); display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  padding:12px 14px; border-radius:16px; background:linear-gradient(160deg,#121B3A,#0A1022); color:#F4F1E8; border:1px solid rgba(230,190,98,.45); box-shadow:0 18px 40px -12px rgba(0,0,0,.6); animation:psvSobe .25s ease; }
+@keyframes psvSobe{ from{ opacity:0; transform:translate(-50%, 12px); } to{ opacity:1; transform:translate(-50%, 0); } }
+.psv-minis{ display:flex; flex:none; } .psv-minis img{ width:38px; height:48px; object-fit:cover; object-position:top; border-radius:7px; border:2px solid #0A1022; margin-left:-12px; background:#fff; } .psv-minis img:first-child{ margin-left:0; }
+.psv-txt{ flex:1 1 220px; min-width:0; font-size:13.5px; line-height:1.4; } .psv-txt b{ color:#F7E2A6; } .psv-txt small{ display:block; color:#AEB4C8; font-size:12px; margin-top:2px; }
+.psv select{ background:#0E1530; color:#F4F1E8; border:1px solid rgba(255,255,255,.2); border-radius:8px; padding:5px 8px; font:inherit; font-size:13px; margin-top:6px; }
+.psv-bts{ display:flex; gap:8px; margin-left:auto; flex:none; }
+.psv-bts button{ border-radius:10px; padding:8px 14px; font:600 13px/1 inherit; cursor:pointer; border:1px solid rgba(255,255,255,.22); background:transparent; color:#F4F1E8; }
+.psv-bts .sim{ background:linear-gradient(135deg,#E6BE62,#B88A2E); color:#1A1405; border:0; }
+.pv-usar{ margin-top:8px; width:100%; justify-content:center; }
+.psb-lista{ display:grid; gap:14px; }
+.psb-grupo b{ display:block; font-size:13.5px; margin-bottom:6px; } .psb-grupo small{ color:var(--grafite); font-weight:400; margin-left:6px; }
+.psb-grade{ display:flex; flex-wrap:wrap; gap:8px; }
+.psb-it{ position:relative; width:84px; height:104px; border-radius:10px; overflow:hidden; border:2px solid transparent; cursor:pointer; background:#0A1022; padding:0; }
+.psb-it img{ width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
+.psb-it.on{ border-color:#E6BE62; box-shadow:0 0 0 3px rgba(230,190,98,.3); }
+.psb-it.on::after{ content:'✓'; position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; background:#E6BE62; color:#1A1405; font:700 12px/20px sans-serif; text-align:center; }
+@media (max-width:760px){ .psv{ bottom:12px; } .psv-bts{ width:100%; } .psv-bts button{ flex:1; } }
+</style>
+<script id="psv-js">
+/* Prints lidos viram prova (02/11/2026, pedido do Jadiel). Todo print que
+   passa por um leitor da Torre (cotação, emissão, trecho, upgrade, mercado)
+   era lido e descartado. Agora, depois da leitura, a Torre pergunta se quer
+   guardar como prova:
+   · no trecho, no upgrade e no mercado: vai direto para a etapa certa da
+     Prova daquele trecho (trecho novo: guarda quando ele for salvo);
+   · na cotação e na emissão: fica guardado na cotação ou na emissão, e entra
+     na Prova pelo botão "Usar prints já guardados" de cada etapa. */
+(function(){
+  const ETQ = {compra:'A compra', espelho:'A passagem espelho', upgrade:'O upgrade', mercado:'O mercado'};
+  let ctxTrecho = null, ctxMercado = null, ctxReserva = null, pendNovo = null;
+
+  /* ── a pergunta ── */
+  let bar = null;
+  const fechar = () => { if (bar){ bar.remove(); bar = null; } };
+  async function oferecer(files, alvo){
+    const imgs = [...files].filter(f => /^image\//.test(f.type || ''));
+    if (!imgs.length || typeof prvGuardar !== 'function') return;
+    fechar();
+    const pai = [...document.querySelectorAll('dialog[open]')].pop() || document.body;
+    bar = document.createElement('div'); bar.className = 'psv'; bar.setAttribute('role', 'dialog'); bar.setAttribute('aria-label', 'Guardar como prova');
+    const urls = imgs.slice(0, 3).map(f => URL.createObjectURL(f));
+    const n = imgs.length, pl = n === 1 ? 'este print' : `estes ${n} prints`;
+    bar.innerHTML = `<div class="psv-minis">${urls.map(u => `<img src="${u}" alt="">`).join('')}</div>
+      <div class="psv-txt"><b>Guardar ${pl} como prova?</b><small>${esc(alvo.txt)}</small>
+        ${alvo.etapas ? `<select aria-label="Etapa da prova">${Object.entries(ETQ).map(([k, v]) => `<option value="${k}"${k === alvo.etapa ? ' selected' : ''}>${v}</option>`).join('')}</select>` : ''}</div>
+      <div class="psv-bts"><button type="button" class="nao">Agora não</button><button type="button" class="sim">Guardar</button></div>`;
+    pai.appendChild(bar);
+    const limpar = () => urls.forEach(u => URL.revokeObjectURL(u));
+    bar.querySelector('.nao').onclick = () => { limpar(); fechar(); };
+    bar.querySelector('.sim').onclick = async () => {
+      const sel = bar.querySelector('select'), et = sel ? sel.value : alvo.etapa;
+      fechar(); limpar();
+      if (alvo.novo){
+        pendNovo = {pid:alvo.pid, antes:new Set(trechosDe(alvo.plano()).map(t => t.id)), files:(pendNovo && pendNovo.pid === alvo.pid ? pendNovo.files : []).concat(imgs.map(f => ({f, et})))};
+        avisar('Combinado: os prints entram na Prova deste trecho assim que você salvar o trecho.', 'ok', 5000);
+        return;
+      }
+      const dono = alvo.dono(et);
+      const g = await prvGuardar(dono, imgs);
+      avisar(g ? `${g === 1 ? 'Print guardado' : g + ' prints guardados'} ${alvo.ok(et)}.` : 'Não consegui guardar os prints.', g ? 'ok' : 'alerta', 5000);
+    };
+  }
+  window.psvOferecer = oferecer;
+
+  /* trecho novo: os prints esperam o trecho ser salvo */
+  if (typeof salvar === 'function'){
+    const oS = salvar;
+    salvar = function(){
+      const r = oS.apply(this, arguments);
+      if (pendNovo){
+        const p = (DB.planos || []).find(x => x.id === pendNovo.pid);
+        const novo = p && trechosDe(p).find(t => !pendNovo.antes.has(t.id));
+        if (novo){ const pend = pendNovo; pendNovo = null;
+          setTimeout(async () => { const por = {}; pend.files.forEach(x => (por[x.et] = por[x.et] || []).push(x.f));
+            for (const et of Object.keys(por)) await prvGuardar('prova:' + p.id + ':' + novo.id + ':' + et, por[et]); }, 0); }
+      }
+      return r;
+    };
+  }
+  if (typeof fecharFolha === 'function'){ const o = fecharFolha; fecharFolha = function(){ const r = o.apply(this, arguments); setTimeout(() => { if (pendNovo && !document.getElementById('veu').classList.contains('aberto')) pendNovo = null; }, 0); return r; }; }
+
+  const planoAtualOuDo = t => (typeof planoDoTrecho === 'function' && t ? planoDoTrecho(t) : null) || (typeof P === 'function' ? P() : null);
+  const rot = t => typeof rotuloTrecho === 'function' ? rotuloTrecho(t) : 'o trecho';
+  const alvoTrecho = (p, t, etapa) => ({etapas:true, etapa,
+    txt:t ? `Entram na Prova do trecho ${rot(t)}, na etapa escolhida.` : 'Entram na Prova deste trecho assim que ele for salvo.',
+    novo:!t, pid:p.id, plano:() => (DB.planos || []).find(x => x.id === p.id),
+    dono:et => 'prova:' + p.id + ':' + t.id + ':' + et, ok:et => `na Prova do trecho ${t ? rot(t) : ''} (${ETQ[et]})`});
+
+  /* 1. trecho: "Anexar prints ou PDFs" */
+  if (typeof editarTrecho === 'function'){ const o = editarTrecho; editarTrecho = function(id){ const p = typeof P === 'function' ? P() : null; ctxTrecho = p ? {pid:p.id, tid:id || ''} : null; return o.apply(this, arguments); }; }
+  if (typeof lerPrintsTrecho === 'function'){
+    const o = lerPrintsTrecho;
+    lerPrintsTrecho = function(arquivos){
+      const fs = [...(arquivos || [])];
+      try { const p = ctxTrecho && (DB.planos || []).find(x => x.id === ctxTrecho.pid); if (p){ const t = ctxTrecho.tid ? trechosDe(p).find(x => x.id === ctxTrecho.tid) : null; oferecer(fs, alvoTrecho(p, t, 'compra')); } } catch(e){ console.error(e); }
+      return o.apply(this, arguments);
+    };
+  }
+  /* 2. upgrade */
+  if (typeof lerPrintsUpgrade === 'function'){
+    const o = lerPrintsUpgrade;
+    lerPrintsUpgrade = function(t, arquivos){
+      const fs = [...(arquivos || [])];
+      try { const p = planoAtualOuDo(t); if (p && t) oferecer(fs, alvoTrecho(p, t, 'upgrade')); } catch(e){ console.error(e); }
+      return o.apply(this, arguments);
+    };
+  }
+  /* 3. mercado (Google Flights): o leitor é do próprio campo */
+  if (typeof editarMercado === 'function'){ const o = editarMercado; editarMercado = function(id){ const p = typeof P === 'function' ? P() : null; ctxMercado = p ? {pid:p.id, tid:id} : null; return o.apply(this, arguments); }; }
+  document.addEventListener('change', e => {
+    const inp = e.target; if (!inp.matches || !inp.matches('input[data-mk]') || !ctxMercado) return;
+    const fs = [...inp.files]; if (!fs.length) return;
+    const p = (DB.planos || []).find(x => x.id === ctxMercado.pid), t = p && trechosDe(p).find(x => x.id === ctxMercado.tid);
+    if (p && t) oferecer(fs, alvoTrecho(p, t, 'mercado'));
+  }, true);
+
+  /* 4. cotação (VEM) */
+  const alvoGuardado = (dono, txt) => ({txt, dono:() => dono, ok:() => 'e prontos para entrar numa Prova ("Usar prints já guardados")'});
+  ['cqReceberArquivos', 'vemLerPrintsFalta'].forEach(nm => {
+    if (typeof window[nm] !== 'function') return;
+    const o = window[nm];
+    window[nm] = function(lista){
+      const fs = [...(lista || [])];
+      const p = o.apply(this, arguments);
+      /* a cotação pode nascer na própria leitura: pergunta depois que ela existe */
+      setTimeout(() => { try { const c = typeof cqAtual === 'function' ? cqAtual() : null; oferecer(fs, alvoGuardado('cot:' + (c ? c.id : 'avulsa-' + hojeISO()), 'Ficam guardados nesta cotação, prontos para entrar numa Prova.')); } catch(e){ console.error(e); } }, 600);
+      return p;
+    };
+  });
+  /* 5. emissão (Registrar a emissão: "Escolher") */
+  if (typeof editarReserva === 'function'){ const o = editarReserva; editarReserva = function(id){ ctxReserva = {id:id || ''}; return o.apply(this, arguments); }; }
+  if (typeof lerDocumentosEmissao === 'function'){
+    const o = lerDocumentosEmissao;
+    lerDocumentosEmissao = function(arquivos){
+      const fs = [...(arquivos || [])];
+      try { const id = (ctxReserva && ctxReserva.id) || 'avulsa-' + hojeISO(); oferecer(fs, alvoGuardado('res:' + id, 'Ficam guardados nesta emissão, prontos para entrar numa Prova.')); } catch(e){ console.error(e); }
+      return o.apply(this, arguments);
+    };
+  }
+
+  /* ── na Prova: "Usar prints já guardados" em cada etapa ── */
+  function origens(excluir){
+    const out = [];
+    Object.entries(DB.provas || {}).forEach(([dono, l]) => {
+      if (dono === excluir || !(l || []).some(x => x.t === 'img')) return;
+      let nome = '';
+      if (dono.indexOf('cot:') === 0){ const c = (typeof cqLista === 'function' ? cqLista() : []).find(x => x.id === dono.slice(4)); nome = 'Cotação' + (c ? ' · ' + [((c.resumo || {}).cliente || c.cliente || ''), (c.resumo || {}).rota || ''].filter(Boolean).join(' · ') : ''); }
+      else if (dono.indexOf('res:') === 0){ const r = (DB.reservas || []).find(x => x.id === dono.slice(4)); nome = 'Emissão' + (r ? ' · ' + (r.desc || '') + (r.data ? ' · ' + dataBR(r.data) : '') : /avulsa-(\d{4}-\d\d-\d\d)/.test(dono) ? ' · lida em ' + dataBR(dono.match(/avulsa-(\d{4}-\d\d-\d\d)/)[1]) : ''); }
+      else if (dono.indexOf('prova:') === 0){ const pp = dono.split(':'); const p = (DB.planos || []).find(x => x.id === pp[1]); const t = p && pp.length > 3 ? trechosDe(p).find(x => x.id === pp[2]) : null; nome = 'Prova' + (t ? ' · ' + rot(t) : p ? ' · ' + (p.nome || '') : '') + ' · ' + (ETQ[pp[pp.length - 1]] || ''); }
+      else if (dono.indexOf('compra:') === 0) nome = 'Compra de produto';
+      else if (dono.indexOf('lanc:') === 0) nome = 'Lançamento';
+      else return;
+      out.push({dono, nome, its:l.filter(x => x.t === 'img')});
+    });
+    const ordem = d => d.indexOf('cot:') === 0 ? 0 : d.indexOf('res:') === 0 ? 1 : d.indexOf('prova:') === 0 ? 2 : 3;
+    return out.sort((a, b) => ordem(a.dono) - ordem(b.dono));
+  }
+  window.psvOrigens = origens;
+  window.psvEscolher = async function(paraDono, titulo, aoFim){
+    const grupos = origens(paraDono);
+    const fundo = document.createElement('div'); fundo.className = 'dck-fundo';
+    const pop = document.createElement('div'); pop.className = 'dck-pop psb-pop'; pop.setAttribute('role', 'dialog');
+    const sair = () => { fundo.remove(); pop.remove(); };
+    fundo.onclick = sair;
+    pop.innerHTML = `<div class="dck-pop-cab"><b>Usar prints já guardados · ${esc(titulo || '')}</b></div>
+      <div class="dck-pop-corpo">${grupos.length ? `<div class="psb-lista">${grupos.map((g, gi) => `<div class="psb-grupo"><b>${esc(g.nome)}<small>${g.its.length} ${g.its.length === 1 ? 'print' : 'prints'}</small></b><div class="psb-grade">${g.its.map(x => `<button type="button" class="psb-it" data-g="${gi}" data-id="${esc(x.id)}" aria-label="${esc(x.n)}"></button>`).join('')}</div></div>`).join('')}</div>`
+        : '<p class="fraco" style="margin:0">Nenhum print guardado ainda. Quando você ler prints numa cotação, numa emissão ou num trecho, a Torre pergunta se quer guardar como prova.</p>'}</div>
+      <div class="rcs-pe" style="display:flex;justify-content:center;gap:10px;padding:12px;border-top:1px solid var(--fio-suave, rgba(127,127,127,.2))"><button type="button" class="bt perigo" data-sair>Fechar</button>${grupos.length ? '<button type="button" class="bt primario" data-usar disabled>Usar os escolhidos</button>' : ''}</div>`;
+    const host = [...document.querySelectorAll('dialog[open]')].pop() || document.body;
+    host.appendChild(fundo); host.appendChild(pop);
+    pop.querySelector('[data-sair]').onclick = sair;
+    for (const b of pop.querySelectorAll('.psb-it')){ try { const r = await prvArq(b.dataset.id); if (r && r.mini) b.innerHTML = `<img src="${r.mini}" alt="">`; } catch(e){} }
+    const usar = pop.querySelector('[data-usar]');
+    pop.addEventListener('click', e => { const b = e.target.closest('.psb-it'); if (!b) return; b.classList.toggle('on'); const n = pop.querySelectorAll('.psb-it.on').length; if (usar){ usar.disabled = !n; usar.textContent = n ? `Usar ${n === 1 ? 'o escolhido' : 'os ' + n + ' escolhidos'}` : 'Usar os escolhidos'; } });
+    if (usar) usar.onclick = async () => {
+      const sel = [...pop.querySelectorAll('.psb-it.on')]; let n = 0;
+      const por = {}; sel.forEach(b => { const g = grupos[+b.dataset.g]; (por[g.dono] = por[g.dono] || []).push(b.dataset.id); });
+      for (const d of Object.keys(por)) n += await prvCopiar(d, por[d], paraDono);
+      sair(); avisar(n === 1 ? 'Print colocado na prova.' : `${n} prints colocados na prova.`, 'ok'); if (aoFim) aoFim();
+    };
+  };
+  if (typeof abrirProva === 'function'){
+    const o = abrirProva;
+    abrirProva = function(pid, tid){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#pvProvas .prv').forEach(box => {
+          if (box.parentElement.querySelector('.pv-usar')) return;
+          const dono = box.dataset.prv, et = dono.split(':').pop();
+          box.insertAdjacentHTML('afterend', `<button type="button" class="bt p fantasma pv-usar"><svg><use href="#i-imagem"/></svg>Usar prints já guardados</button>`);
+          box.parentElement.querySelector('.pv-usar').onclick = () => psvEscolher(dono, ETQ[et] || '', () => { const g = box.querySelector('.prv-grade'); if (g && typeof prvRedesenhar === 'function') prvRedesenhar(box); else { const a = (DB.planos || []).find(x => x.id === pid); if (a){ const y = document.getElementById('folhaCorpo').scrollTop; abrirProva(pid, tid); document.getElementById('folhaCorpo').scrollTop = y; } } });
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+})();
+</script>
+
+<style id="bdc-css">
+.bdc{ margin-top:12px; border-radius:16px; padding:14px 16px; border:1px solid color-mix(in oklab, #E6BE62 45%, transparent);
+  background:linear-gradient(160deg, color-mix(in oklab, #E6BE62 10%, transparent), color-mix(in oklab, var(--anil-claro) 6%, transparent)); }
+.bdc-cab{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.bdc-ic{ width:40px; height:40px; border-radius:12px; flex:none; display:grid; place-items:center; background:linear-gradient(135deg,#E6BE62,#B88A2E); color:#1A1405; }
+.bdc-ic svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.bdc-tit{ flex:1 1 220px; min-width:0; } .bdc-tit b{ display:block; font-size:calc(15px * var(--esc, 1)); } .bdc-tit small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc, 1)); margin-top:2px; line-height:1.4; }
+.bdc-pot{ text-align:right; flex:none; } .bdc-pot span{ display:block; font-size:calc(11.5px * var(--esc, 1)); color:var(--grafite); } .bdc-pot b{ display:block; font:700 calc(19px * var(--esc, 1)) var(--f-m, monospace); color:var(--jade); } .bdc-pot small{ font-size:calc(12px * var(--esc, 1)); color:var(--grafite); }
+.bdc-prog{ height:6px; border-radius:99px; background:color-mix(in oklab, var(--grafite) 18%, transparent); overflow:hidden; margin:12px 0 4px; } .bdc-prog i{ display:block; height:100%; background:linear-gradient(90deg,#B88A2E,#E6BE62); }
+.bdc-res{ font-size:calc(12.5px * var(--esc, 1)); color:var(--grafite); }
+.bdc-lista{ display:grid; gap:8px; margin-top:10px; }
+.bdc-lin{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; border-radius:12px; background:color-mix(in oklab, var(--grafite) 7%, transparent); }
+.bdc-nome{ flex:1 1 150px; min-width:0; font-weight:600; font-size:calc(14px * var(--esc, 1)); }
+.bdc-nome small{ display:block; font-weight:400; color:var(--grafite); font-size:calc(12px * var(--esc, 1)); margin-top:1px; }
+.bdc-bts{ display:flex; gap:6px; flex-wrap:wrap; }
+.bdc-pop .dck-pop-corpo{ display:grid; gap:12px; } .bdc-pop .grade{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.bdc-pe{ display:flex; justify-content:center; gap:10px; padding:12px; border-top:1px solid var(--fio-suave, rgba(127,127,127,.2)); flex-wrap:wrap; }
+@media (max-width:760px){ .bdc-pot{ text-align:left; } .bdc-bts{ width:100%; } .bdc-bts .bt{ flex:1; justify-content:center; } .bdc-pop .grade{ grid-template-columns:1fr; } }
+</style>
+<script id="bdc-js">
+/* Bônus de cadastro (03/11/2026, pedido do Jadiel). Anúncio do tipo "ganhe
+   700 pontos LATAM ao se cadastrar no Marriott Bonvoy" deixa de ser um alerta
+   comum: o cartão do mural mostra quanto vale por pessoa e para a família, uma
+   linha por conta (falta, já tinha conta, cadastrado, caiu), e cada cadastro
+   vira "pontos a receber" com a previsão em dias úteis. A partir daí vale tudo
+   o que as compras já fazem: Saldos "a receber", "Caiu na conta", aviso de
+   atraso, reivindicação e provas. */
+(function(){
+  /* nome da conta: "MARIA VARGES" vira "Maria Varges" */
+  const nm = k => { const n0 = typeof nomeCurto === 'function' ? nomeCurto(k.nome) : String(k.nome || ''); return n0 === n0.toUpperCase() ? n0.toLowerCase().replace(/(^|\s)(\S)/g, (x, a, c) => a + c.toUpperCase()).replace(/\b(De|Da|Do|Dos|Das|E)\b/g, w => w.toLowerCase()) : n0; };
+  const PRESENTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19v-3h-19z"/><path d="M12 6v14.5"/><path d="M12 6c-1.5-3-5.5-3.5-5.5-.8C6.5 6 9 6 12 6zm0 0c1.5-3 5.5-3.5 5.5-.8C17.5 6 15 6 12 6z"/></svg>';
+  const PROGS = [[/latam/i, 'latampass'], [/smiles/i, 'smiles'], [/tudo ?azul|azul fidelidade|\bazul\b/i, 'azul'], [/livelo/i, 'livelo'], [/esfera/i, 'esfera'], [/all accor|\baccor\b/i, 'accor'], [/tap miles|\btap\b/i, 'tap'], [/iberia/i, 'iberia'], [/flying blue/i, 'flyingblue'], [/átomos|atomos/i, 'atomos'], [/ita[uú] pontos/i, 'itau'], [/connect ?miles/i, 'connect'], [/hilton/i, 'hilton'], [/\bihg\b/i, 'ihg']];
+  const RX_CAD = /(ao se cadastrar|ao cadastrar|novos? cadastros?|ao criar (a |sua )?conta|cadastre-se e ganhe|novos? membros?|ao se inscrever|nova inscri|para quem se cadastrar)/i;
+
+  function numPts(s){ s = String(s).toLowerCase().trim(); const mil = /mil/.test(s); const n = Number(s.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0; return Math.round(mil ? n * 1000 : n); }
+  function bdcDoTexto(titulo, texto){
+    const t = String(titulo || '') + '\n' + String(texto || '');
+    if (!RX_CAD.test(t)) return null;
+    if (/(por real|pts\s*\/\s*R\$|transfer[eê]n|% de b[oô]nus|bônus de \d+\s*%|compre|cashback)/i.test(t)) return null;
+    const m = t.match(/(\d{1,3}(?:\.\d{3})+|\d+(?:,\d+)?\s*mil|\d+)\s*(pontos|milhas|pts)\b([^\n]{0,40})/i);
+    if (!m) return null;
+    const pts = numPts(m[1]); if (!(pts > 0)) return null;
+    let progId = '';
+    for (const [rx, id] of PROGS) if (rx.test(m[3]) && (typeof PROGRAMAS === 'undefined' || PROGRAMAS[id])){ progId = id; break; }
+    const pm = t.match(/(?:cadastr\w*|inscrev\w*|inscri\w*)\s+(?:no|na|em)\s+(?:programa\s+(?:de\s+\w+\s+)?)?((?:[A-ZÀ-Ú][\wÀ-ú&'’.-]*)(?:\s+(?:[A-ZÀ-Ú][\wÀ-ú&'’.-]*|de|do|da)){0,3})/);
+    let parceiro = pm ? pm[1].replace(/\s+(de|do|da)$/i, '').replace(/[!.,;:]+$/, '').trim() : '';
+    if (!progId){ for (const [rx, id] of PROGS) if (rx.test(t.replace(parceiro, '')) && (typeof PROGRAMAS === 'undefined' || PROGRAMAS[id])){ progId = id; break; } }
+    if (!progId) return null;
+    const dm = t.match(/(?:em at[eé]|at[eé]|em)\s*(\d{1,3})\s*dias?\s*(úteis|uteis|corridos)?/i);
+    return {pts, prog:progId, parceiro:parceiro || 'o parceiro', dias:dm ? Number(dm[1]) : 30, uteis:!!(dm && /^[úu]teis$/i.test(dm[2] || ''))};
+  }
+  window.bdcDoTexto = bdcDoTexto;
+
+  /* dias úteis: segunda a sexta (feriados não entram na conta) */
+  function somaUteis(iso, n){ const d = new Date((iso || hojeISO()) + 'T12:00:00'); let k = 0; while (k < n){ d.setDate(d.getDate() + 1); const w = d.getDay(); if (w && w < 6) k++; } return d.toISOString().slice(0, 10); }
+  window.bdcSomaUteis = somaUteis;
+  const prevDe = (cad, data) => cad.uteis ? somaUteis(data, cad.dias) : somaDiasISO(data, cad.dias);
+
+  /* marca os anúncios (os novos e os que já estavam no mural) */
+  function marcar(m){
+    if (!m || m.cadastro !== undefined) return false;
+    const r = bdcDoTexto(m.titulo, m.texto);
+    m.cadastro = r ? {...r, ja:{}} : null;
+    return !!r;
+  }
+  if (typeof gravarAnuncios === 'function'){
+    const o = gravarAnuncios;
+    gravarAnuncios = function(){ const antes = new Set((DB.mural || []).map(x => x.id)); const r = o.apply(this, arguments); let n = 0; (DB.mural || []).forEach(m => { if (!antes.has(m.id) && marcar(m)) n++; }); if (n){ salvar(); try { renderMural(); } catch(e){} } return r; };
+  }
+  setTimeout(() => { try { let n = 0; (DB.mural || []).forEach(m => { if (marcar(m)) n++; }); if (n){ salvar(); try { renderMural(); } catch(e){} } } catch(e){ console.error(e); } }, 1200);
+
+  const comprasDe = mid => (DB.compras || []).filter(c => c.origem === 'cadastro' && c.muralId === mid);
+  function estado(m, conta){
+    const c = comprasDe(m.id).find(x => x.contaId === conta.id);
+    if (c) return c.status === 'creditado' ? {k:'caiu', c} : {k:'feito', c};
+    if (m.cadastro.ja && m.cadastro.ja[conta.id]) return {k:'ja'};
+    return {k:'falta'};
+  }
+  const valor = (pts, pg) => (typeof valorMilheiro === 'function' ? valorMilheiro(pg) || 0 : 0) * pts / 1000;
+
+  function blocoHTML(m){
+    const cad = m.cadastro, contas = DB.contas || [], P = prog(cad.prog).n;
+    const es = contas.map(k => ({k, e:estado(m, k)}));
+    const podem = es.filter(x => x.e.k !== 'ja'), feitos = es.filter(x => x.e.k === 'feito' || x.e.k === 'caiu'), caiu = es.filter(x => x.e.k === 'caiu');
+    const pot = podem.length * cad.pts, v1 = valor(cad.pts, cad.prog), morta = m.fim && m.fim < hojeISO();
+    const linha = ({k, e}) => {
+      const st = e.k === 'caiu' ? `<span class="etq jade">caiu em ${dataBR(e.c.creditadoEm || e.c.previsto)}</span>`
+        : e.k === 'feito' ? `<span class="etq ${diasAte(e.c.previsto) < 0 ? 'brasa' : 'ouro'}">${diasAte(e.c.previsto) < 0 ? 'atrasou' : 'a receber até ' + dataBR(e.c.previsto)}</span>`
+        : e.k === 'ja' ? '<span class="etq">já tinha conta</span>' : morta ? '<span class="etq">não cadastrou</span>' : '<span class="etq brasa">falta cadastrar</span>';
+      const sub = e.k === 'feito' || e.k === 'caiu' ? `cadastro em ${dataBR(e.c.data)}` : e.k === 'ja' ? 'não entra: a promoção é só para novos cadastros' : `${nBR(cad.pts)} pontos ${esc(P)}`;
+      const bts = e.k === 'falta' ? (morta ? '' : `<button type="button" class="bt p primario" data-bdc-feito="${esc(m.id)}" data-conta="${esc(k.id)}"><svg><use href="#i-ok"/></svg>Me cadastrei</button><button type="button" class="bt p fantasma" data-bdc-ja="${esc(m.id)}" data-conta="${esc(k.id)}">Já tenho conta</button>`)
+        : e.k === 'feito' ? `<button type="button" class="bt p primario" onclick="creditarCompra('${esc(e.c.id)}')"><svg><use href="#i-ok"/></svg>Caiu na conta</button><button type="button" class="bt p fantasma" data-bdc-desfaz="${esc(m.id)}" data-conta="${esc(k.id)}">Desfazer</button>`
+        : e.k === 'ja' ? `<button type="button" class="bt p fantasma" data-bdc-desfaz="${esc(m.id)}" data-conta="${esc(k.id)}">Desfazer</button>` : '';
+      return `<div class="bdc-lin"><div class="bdc-nome">${esc(nm(k))}<small>${sub}</small></div>${st}<div class="bdc-bts">${bts}</div></div>`;
+    };
+    return `<div class="bdc" data-bdc="${esc(m.id)}">
+      <div class="bdc-cab"><span class="bdc-ic">${PRESENTE}</span>
+        <div class="bdc-tit"><b>Bônus de cadastro · ${esc(cad.parceiro)}</b><small>${nBR(cad.pts)} pontos ${esc(P)} por pessoa${v1 ? ` (≈ ${brl(v1)})` : ''} · cadastro grátis · crédito em até ${cad.dias} ${cad.uteis ? 'dias úteis' : 'dias'}</small></div>
+        <div class="bdc-pot"><span>${contas.length > 1 ? `Potencial da família · ${podem.length} ${podem.length === 1 ? 'pessoa' : 'pessoas'}` : 'Potencial'}</span><b>${nBR(pot)} pts</b>${valor(pot, cad.prog) ? `<small>≈ ${brl(valor(pot, cad.prog))} pelo valor-alvo do milheiro</small>` : ''}</div></div>
+      ${contas.length ? `<div class="bdc-prog"><i style="width:${podem.length ? (feitos.length / podem.length * 100).toFixed(1) : 0}%"></i></div>
+        <div class="bdc-res">${feitos.length} de ${podem.length} ${podem.length === 1 ? 'cadastro feito' : 'cadastros feitos'}${caiu.length ? ` · ${nBR(caiu.length * cad.pts)} pontos já caíram` : ''}</div>
+        <div class="bdc-lista">${es.map(linha).join('')}</div>` : '<p class="fraco" style="margin:10px 0 0;font-size:13px">Cadastre as contas da família em Carteira para a Torre acompanhar quem já se cadastrou.</p>'}
+    </div>`;
+  }
+  window.bdcBlocoHTML = blocoHTML;
+
+  if (typeof renderMural === 'function'){
+    const o = renderMural;
+    renderMural = function(){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#mrLista .mural-cartao').forEach(el => {
+          const ed = el.querySelector('[onclick^="editarMural(\'"]'); if (!ed) return;
+          const id = (ed.getAttribute('onclick').match(/'([^']+)'/) || [])[1];
+          const m = (DB.mural || []).find(x => x.id === id); if (!m || !m.cadastro) return;
+          const velho = el.querySelector('.bdc'); if (velho) velho.remove();
+          const prazo = el.querySelector('.mural-prazo');
+          (prazo || el.lastElementChild).insertAdjacentHTML('afterend', blocoHTML(m));
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+
+  /* "Me cadastrei": a data, a previsão e o print do cadastro */
+  let pop = null, fundo = null;
+  const fechar = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } };
+  function meCadastrei(mid, contaId){
+    const m = (DB.mural || []).find(x => x.id === mid), k = (DB.contas || []).find(x => x.id === contaId); if (!m || !k || !m.cadastro) return;
+    const cad = m.cadastro;
+    fechar();
+    fundo = document.createElement('div'); fundo.className = 'dck-fundo'; fundo.onclick = fechar; document.body.appendChild(fundo);
+    pop = document.createElement('div'); pop.className = 'dck-pop bdc-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Me cadastrei');
+    pop.innerHTML = `<div class="dck-pop-cab"><b>${esc(nm(k))} se cadastrou no ${esc(cad.parceiro)}</b></div>
+      <div class="dck-pop-corpo">
+        <div class="grade"><div class="campo"><label>Data do cadastro</label><input type="date" id="bdcData" value="${hojeISO()}" max="${hojeISO()}"></div>
+          <div class="campo"><label>Pontos que vão cair</label><input type="text" inputmode="numeric" id="bdcPts" value="${nBR(cad.pts)}"></div></div>
+        <div class="nota" id="bdcPrev"></div>
+        <div id="bdcProvas"></div>
+      </div>
+      <div class="bdc-pe"><button type="button" class="bt perigo" data-bdc-fechar>Fechar</button><button type="button" class="bt primario" id="bdcOk"><svg><use href="#i-ok"/></svg>Guardar o cadastro</button></div>`;
+    document.body.appendChild(pop);
+    const prev = () => { const d = pop.querySelector('#bdcData').value || hojeISO(); pop.querySelector('#bdcPrev').innerHTML = `<svg><use href="#i-relogio"/></svg><div>Os pontos ficam <b>a receber</b> até <b>${dataBR(prevDe(cad, d))}</b> (${cad.dias} ${cad.uteis ? 'dias úteis, sem contar feriados' : 'dias'}). Se não caírem, a Torre avisa para reivindicar.</div>`; };
+    pop.querySelector('#bdcData').addEventListener('change', prev); prev();
+    pop.querySelector('[data-bdc-fechar]').onclick = fechar;
+    pop.querySelector('#bdcOk').onclick = () => {
+      const data = pop.querySelector('#bdcData').value || hojeISO();
+      if (data > hojeISO()) return avisar('A data do cadastro não pode ser no futuro.', 'alerta');
+      const pts = typeof qtdNum === 'function' ? qtdNum(pop.querySelector('#bdcPts').value) : Number(String(pop.querySelector('#bdcPts').value).replace(/\D/g, ''));
+      if (!(pts > 0)) return avisar('Informe quantos pontos vão cair.', 'alerta');
+      const c = {id:uid(), origem:'cadastro', muralId:m.id, lojaNome:cad.parceiro, item:'Bônus de cadastro · ' + cad.parceiro, prog:cad.prog, pts, valor:0, frete:0, mult:0,
+        data, previsto:prevDe(cad, data), contaId:k.id, status:'pendente', pedido:''};
+      DB.compras = DB.compras || []; DB.compras.push(c); salvar();
+      try { renderMural(); } catch(e){} try { renderReceber(); } catch(e){} try { renderSaldoSeAberto(); } catch(e){}
+      /* agora o print do cadastro, que vira prova se os pontos não caírem */
+      pop.querySelector('.dck-pop-corpo').innerHTML = `<div class="nota" style="margin:0"><svg><use href="#i-ok"/></svg><div><b>Cadastro guardado.</b> ${nBR(pts)} pontos ${esc(prog(cad.prog).n)} a receber até ${dataBR(c.previsto)}. Guarde o print ou o e-mail de boas-vindas: é a prova se precisar reivindicar.</div></div><div id="bdcProvas"></div>`;
+      if (typeof prvCaixa === 'function') prvCaixa(pop.querySelector('#bdcProvas'), 'compra:' + c.id);
+      const ok = pop.querySelector('#bdcOk'); ok.innerHTML = '<svg><use href="#i-ok"/></svg>Pronto'; ok.onclick = fechar;
+      avisar(`Cadastro de ${nm(k)} guardado: ${nBR(pts)} pontos a receber.`, 'ok', 5000);
+    };
+  }
+  window.bdcMeCadastrei = meCadastrei;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop){ e.stopPropagation(); fechar(); } }, true);
+  document.addEventListener('click', e => {
+    const f = e.target.closest && e.target.closest('[data-bdc-feito]');
+    if (f){ e.preventDefault(); meCadastrei(f.dataset.bdcFeito, f.dataset.conta); return; }
+    const j = e.target.closest && e.target.closest('[data-bdc-ja]');
+    if (j){ e.preventDefault(); const m = (DB.mural || []).find(x => x.id === j.dataset.bdcJa); if (!m) return; m.cadastro.ja = m.cadastro.ja || {}; m.cadastro.ja[j.dataset.conta] = true; salvar(); renderMural(); return; }
+    const d = e.target.closest && e.target.closest('[data-bdc-desfaz]');
+    if (d){ e.preventDefault(); const m = (DB.mural || []).find(x => x.id === d.dataset.bdcDesfaz); if (!m) return; const conta = d.dataset.conta;
+      const c = comprasDe(m.id).find(x => x.contaId === conta);
+      if (c){ if (!d.classList.contains('certeza')){ d.classList.add('certeza'); d.textContent = 'Tirar o cadastro?'; setTimeout(() => { if (d.isConnected){ d.classList.remove('certeza'); d.textContent = 'Desfazer'; } }, 3500); return; }
+        DB.compras = DB.compras.filter(x => x.id !== c.id); }
+      if (m.cadastro.ja) delete m.cadastro.ja[conta];
+      salvar(); renderMural(); try { renderReceber(); } catch(e){} try { renderSaldoSeAberto(); } catch(e){} }
+  }, true);
+
+  /* a lista de compras e os números de compras não contam bônus de cadastro
+     (não é compra: não tem valor pago nem pontos por real) */
+  if (typeof renderCompras === 'function'){
+    const o = renderCompras;
+    let bak = null;
+    const oS = salvar;
+    salvar = function(){ if (!bak) return oS.apply(this, arguments); const cur = DB.compras; DB.compras = bak.concat((cur || []).filter(c => !bak.includes(c))); try { return oS.apply(this, arguments); } finally { DB.compras = cur; } };
+    renderCompras = function(){
+      if (bak) return o.apply(this, arguments);
+      bak = DB.compras || []; DB.compras = bak.filter(c => c.origem !== 'cadastro');
+      try { return o.apply(this, arguments); }
+      finally { const atual = DB.compras, b = bak; bak = null; DB.compras = b; (atual || []).forEach(c => { if (!b.includes(c)) b.push(c); }); }
+    };
+  }
+  /* no "a receber": o cartão diz que é bônus de cadastro, e o lápis edita a data */
+  if (typeof renderReceber === 'function'){
+    const o = renderReceber;
+    renderReceber = function(){
+      const r = o.apply(this, arguments);
+      try {
+        document.querySelectorAll('#lcReceber .lc-rec').forEach(el => {
+          const b = el.querySelector('[onclick^="creditarCompra(\'"]'); if (!b) return;
+          const id = (b.getAttribute('onclick').match(/'([^']+)'/) || [])[1], c = (DB.compras || []).find(x => x.id === id); if (!c || c.origem !== 'cadastro') return;
+          const k = (DB.contas || []).find(x => x.id === c.contaId);
+          const sub = el.querySelector('.lc-rec-t .fraco'); if (sub) sub.textContent = `Cadastro grátis${k ? ' · ' + nm(k) : ''} · em ${dataBR(c.data).slice(0, 5)}`;
+          el.querySelectorAll('.ccp-bt').forEach(x => x.remove());
+          const tr = el.querySelector('.rcz-trilho span'); if (tr) tr.innerHTML = tr.innerHTML.replace('Comprado em', 'Cadastrado em');
+        });
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+  if (typeof editarCompraPendente === 'function'){
+    const o = editarCompraPendente;
+    editarCompraPendente = function(id){
+      const c = (DB.compras || []).find(x => x.id === id);
+      if (!c || c.origem !== 'cadastro') return o.apply(this, arguments);
+      const m = (DB.mural || []).find(x => x.id === c.muralId);
+      abrirFolha({titulo:'Bônus de cadastro · ' + esc(c.lojaNome), corpo:`<div class="grade lc-grade">
+          <div class="campo"><label>Data do cadastro</label><input type="date" id="bdcEdData" value="${esc(c.data)}" max="${hojeISO()}"></div>
+          <div class="campo"><label>Previsão de crédito</label><input type="date" id="bdcEdPrev" value="${esc(c.previsto)}"></div>
+          <div class="campo"><label>Pontos</label><input type="text" inputmode="numeric" id="bdcEdPts" value="${nBR(c.pts)}"></div></div>`,
+        pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt vermelho-solido" id="bdcEdEx"><svg><use href="#i-lixo"/></svg>Excluir</button><button type="button" class="bt primario" id="bdcEdOk">Salvar</button>`});
+      const ld = document.getElementById('bdcEdData');
+      ld.addEventListener('change', () => { if (m && m.cadastro) document.getElementById('bdcEdPrev').value = prevDe(m.cadastro, ld.value || hojeISO()); });
+      document.getElementById('bdcEdOk').onclick = () => {
+        c.data = ld.value || c.data; c.previsto = document.getElementById('bdcEdPrev').value || c.previsto;
+        const p = typeof qtdNum === 'function' ? qtdNum(document.getElementById('bdcEdPts').value) : 0; if (p > 0) c.pts = p;
+        salvar(); fecharFolha(); try { renderReceber(); } catch(e){} try { renderMural(); } catch(e){} try { renderSaldoSeAberto(); } catch(e){} avisar('Bônus de cadastro atualizado.', 'ok');
+      };
+      document.getElementById('bdcEdEx').onclick = () => confirmar('Excluir este cadastro?', 'Os pontos a receber saem da conta. O cadastro volta para "falta cadastrar" no mural.', () => {
+        DB.compras = DB.compras.filter(x => x.id !== c.id); salvar(); fecharFolha(); try { renderReceber(); } catch(e){} try { renderMural(); } catch(e){} try { renderSaldoSeAberto(); } catch(e){} avisar('Cadastro excluído.', 'ok');
+      }, 'Excluir');
+    };
+  }
+
+  /* aviso: a promoção está acabando e ainda falta gente da família */
+  if (typeof avisos === 'function'){
+    const oa = avisos;
+    avisos = function(){
+      const L = oa.apply(this, arguments) || [];
+      try {
+        (DB.mural || []).forEach(m => {
+          if (!m.cadastro || !m.fim) return;
+          const d = diasAte(m.fim); if (d == null || d < 0 || d > 5) return;
+          const faltam = (DB.contas || []).filter(k => estado(m, k).k === 'falta'); if (!faltam.length) return;
+          const nomes = faltam.map(nm);
+          const a = {grau:d <= 1 ? 3 : 2, tipo:'cadastro', dias:d, ref:'cadastro:' + m.id + ':' + m.fim, curto:'bônus de cadastro ' + m.cadastro.parceiro,
+            t:`${d === 0 ? 'Termina hoje' : d === 1 ? 'Termina amanhã' : `Faltam ${d} dias`}: ${nBR(m.cadastro.pts * faltam.length)} pontos ${prog(m.cadastro.prog).n} no cadastro ${m.cadastro.parceiro}`,
+            s:`Ainda não se ${faltam.length === 1 ? 'cadastrou' : 'cadastraram'}: ${nomes.join(', ')}. O cadastro é grátis.`,
+            si:'#i-sino', ir:['fabrica', 'fb-mural']};
+          if (typeof avisoEscondido === 'function' && typeof chaveAviso === 'function' && avisoEscondido(chaveAviso(a))) return;
+          L.unshift(a);
+        });
+      } catch(e){ console.error(e); }
+      return L;
+    };
+  }
 })();
 </script>
 
