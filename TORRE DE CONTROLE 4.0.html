@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-03 13:40';
+const BUILD = '2026-11-04 20:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -17685,6 +17685,12 @@ function renderHeroiResultadosViagens(alvo){
   const lado = typeof filtroViagens !== 'undefined' && filtroViagens !== 'todas' ? filtroViagens : null;
   const X = numerosViagens(lado);
   const nomeLado = lado ? (lado === 'nac' ? ' nacionais' : ' internacionais') : '';
+  if (!X.viagens.length && X.garantida){ montarHeroi(alvo, {rot:`Economia das viagens${nomeLado}`, valor:brl(X.garantida),
+      linha:`<span>Garantida em <b>${X.nGarantida} ${X.nGarantida === 1 ? 'trecho emitido' : 'trechos emitidos'}</b></span><span class="heroi-chip sobe">passa para "economizou" quando o voo acontecer</span>`,
+      numeros:[[brl(X.garantida), 'garantida, a voar'], [X.ganho ? brl(X.ganho) : 'R$ 0,00', 'já economizado'], [nBR(X.agenda), X.agenda === 1 ? 'reservada à frente' : 'reservadas à frente']],
+      fatias:fatiasHeroi((DB.planos || []).filter(p => !lado || escopoPlano(p) === lado).flatMap(trechosDe).filter(t => t.situacao === 'emitido').map(t => ({t, v:economiaTrecho(t).valor})).filter(x => x.v > 0), x => rotuloTrecho(x.t)),
+      fmtFatia:v => brl(v), compRot:'Economia garantida por trecho',
+      serie:[], semSerie:'A curva aparece quando as viagens forem voadas.'}); return; }
   if (!X.viagens.length){ montarHeroi(alvo, {rot:`Resultados das viagens${nomeLado}`, vazio:'Nenhum resgate registrado ainda. Quando uma viagem com milhas for voada, ela entra aqui com quanto valeu cada milheiro e quanto economizou.'}); return; }
   const porProg = {}; X.feitas.forEach(r => { if (r.prog && Number(r.milhas) > 0) porProg[r.prog] = (porProg[r.prog] || 0) + Number(r.milhas); });
   const porMes = {}; X.feitas.forEach(r => { const k = String(r.data || '').slice(0, 7); if (k && Number(r.milhas) > 0) porMes[k] = (porMes[k] || 0) + Number(r.milhas); });
@@ -17693,7 +17699,7 @@ function renderHeroiResultadosViagens(alvo){
   montarHeroi(alvo, {
     rot:`Economia das viagens${nomeLado}`,
     valor: X.ganho ? brl(X.ganho) : 'n/d',
-    linha:`<span>Milheiro médio <b>${X.medio ? brl2(X.medio) : 'n/d'}</b></span>${X.vista ? `<span class="heroi-chip sobe">passagens de ${brl(X.vista)} na pagante</span>` : '<span class="heroi-chip">informe o preço na pagante</span>'}`,
+    linha:`<span>Milheiro médio <b>${X.medio ? brl2(X.medio) : 'n/d'}</b></span>${X.garantida ? `<span class="heroi-chip sobe">+ ${brl(X.garantida)} garantidos a voar</span>` : ''}${X.vista ? `<span class="heroi-chip sobe">passagens de ${brl(X.vista)} na pagante</span>` : '<span class="heroi-chip">informe o preço na pagante</span>'}`,
     numeros:[[nBR(X.feitas.length), X.feitas.length === 1 ? 'viagem realizada' : 'viagens realizadas'], [nBR(X.agenda), X.agenda === 1 ? 'reservada à frente' : 'reservadas à frente'], [nBR(X.milhas), 'milhas usadas']],
     fatias:fatiasHeroi(Object.keys(porProg).map(p => ({p, v:porProg[p]})), x => prog(x.p).n), fmtFatia:v => nBR(v) + ' milhas', compRot:'Milhas usadas por programa',
     dirRot:'Milhas usadas, mês a mês', dirSub:'Pelo mês do voo, nas viagens já realizadas.',
@@ -34309,7 +34315,13 @@ function numerosViagens(esc){
     milhas, vista:soma(vals.map(v => v.vista)), taxas:soma(vals.map(v => v.taxas)),
     ganho:soma(comValor.filter(v => v.ganho != null).map(v => v.ganho))
       + soma((DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
-          .filter(t => t.forma === 'dinheiro' && t.situacao === 'voado').map(t => economiaTrecho(t).valor).filter(v => v != null)),
+          .filter(t => t.situacao === 'voado' && (t.forma === 'dinheiro' || !t.reservaId)).map(t => economiaTrecho(t).valor).filter(v => v != null)),
+    /* Resultados conversa com as Jornadas (04/11/2026): o trecho emitido já tem
+       a economia travada (compra, passagem espelho, upgrade). Ela aparece como
+       garantida até o voo acontecer; voado, passa para "economizou". */
+    garantida:soma((DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
+          .filter(t => t.situacao === 'emitido').map(t => economiaTrecho(t).valor).filter(v => v != null)),
+    nGarantida:(DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe).filter(t => t.situacao === 'emitido' && economiaTrecho(t).valor != null).length,
     medio: milhas && liquido ? liquido / milhas * 1000 : 0,
     agenda:viagens.filter(r => r.status !== 'usada').length + trechosEmDinheiroNaAgenda(esc).length
   };
@@ -36356,14 +36368,16 @@ function renderViagens(){
     ${metrica('Viagens realizadas', String(X.feitas.length), X.agenda ? `${X.agenda} reservada${X.agenda > 1 ? 's' : ''} à frente` : 'Nada reservado à frente', '')}
     ${metrica('Milhas usadas', nBR(X.milhas), X.milhas ? 'Somando os resgates realizados' : 'Nenhum resgate registrado', '')}
     ${metrica('Valor médio do milheiro', X.medio ? brl2(X.medio) : 'n/d', X.medio ? `Passagens de ${brl(X.vista)} à vista` : 'Informe o preço à vista', X.medio ? 'jade' : '')}
-    ${metrica('Economizou', X.ganho ? brl(X.ganho) : 'n/d', X.ganho ? 'Já descontado o custo das milhas' : 'Precisa do custo lançado', X.ganho > 0 ? 'ouro' : '')}`;
+    ${X.ganho || !X.garantida ? metrica('Economizou', X.ganho ? brl(X.ganho) : 'n/d', X.ganho ? (X.garantida ? `+ ${brl(X.garantida)} garantidos a voar` : 'Já descontado o custo das milhas') : 'Precisa do custo lançado', X.ganho > 0 ? 'ouro' : '')
+      : metrica('Economia garantida', brl(X.garantida), `${X.nGarantida} ${X.nGarantida === 1 ? 'trecho emitido' : 'trechos emitidos'}, a voar`, 'ouro')}`;
 
   const semTipo = T.viagens.length - N.viagens.length - I.viagens.length;
   $('#viPanorama').innerHTML = geral ? cabecalhoSecao('Nacional e internacional', 'Os mesmos números, separados por lado: o que já foi voado, o que está reservado à frente, quanto valeu cada milheiro e quanto sobrou. Toque em "Ver viagens" para abrir só as daquele lado.') + cartoesDosLados(N, I, [
       ['Viagens realizadas', x => nBR(x.feitas.length)],
       ['Reservadas à frente', x => nBR(x.agenda)],
       ['Valor médio do milheiro', x => x.medio ? brl2(x.medio) : 'n/d'],
-      ['Economizou', x => x.ganho ? brl(x.ganho) : 'n/d']], 'irParaLadoViagens', 'viagens')
+      ['Economizou', x => x.ganho ? brl(x.ganho) : 'n/d'],
+      ['Garantida, a voar', x => x.garantida ? brl(x.garantida) : 'n/d']], 'irParaLadoViagens', 'viagens')
     + (semTipo ? `<div class="nota" style="margin:13px 0 0"><svg><use href="#i-info"/></svg><div>${semTipo} ${semTipo > 1 ? 'viagens não puderam' : 'viagem não pôde'} ser separada${semTipo > 1 ? 's' : ''} entre nacional e internacional, porque a emissão não tem os aeroportos de origem e destino: ${semTipo > 1 ? 'entram' : 'entra'} só nos números de cima. Para corrigir, abra a emissão em Viagens → Emissões e preencha o itinerário, ou ligue-a a uma jornada.</div></div>` : '')
     : '';
   $('#viListas').style.display = geral ? 'none' : '';
@@ -77567,6 +77581,225 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
         });
       } catch(e){ console.error(e); }
       return L;
+    };
+  }
+})();
+</script>
+
+<style id="vgx-css">
+/* 1. faixa fina no lugar do painel grande, nas abas Trechos, Dia a dia e Viagem inteira */
+.jfx{ display:flex; align-items:center; gap:6px 18px; flex-wrap:wrap; padding:12px 16px; border-radius:16px; margin:4px 0 14px;
+  background:linear-gradient(135deg, color-mix(in oklab, var(--anil-claro) 12%, var(--sup-1, #0E1530)), color-mix(in oklab, #E6BE62 8%, var(--sup-1, #0E1530))); border:1px solid var(--fio-suave, rgba(127,127,127,.2)); }
+.jfx-it{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.jfx-it span{ font-size:calc(11px * var(--esc, 1)); color:var(--grafite); letter-spacing:.04em; }
+.jfx-it b{ font:700 calc(16px * var(--esc, 1)) var(--f-m, monospace); white-space:nowrap; }
+.jfx-it b.ouro{ color:var(--ouro, #E6BE62); } .jfx-it b.jade{ color:var(--jade); }
+.jfx-sep{ width:1px; align-self:stretch; background:var(--fio-suave, rgba(127,127,127,.25)); }
+.jfx .bt{ margin-left:auto; }
+.jfx-pop .dck-pop-corpo{ padding:0; } .jfx-pop .pl-heroi{ margin:0; border-radius:0; box-shadow:none; }
+/* 5. antes de embarcar */
+.abq{ margin:14px 0; padding:16px 18px; border-radius:18px; border:1px solid var(--fio-suave, rgba(127,127,127,.2)); background:color-mix(in oklab, var(--anil-claro) 5%, transparent); }
+.abq-cab{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.abq-cab .abq-ic{ width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:color-mix(in oklab, var(--anil-claro) 18%, transparent); color:var(--anil-claro); flex:none; }
+.abq-cab .abq-ic svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.abq-cab div{ flex:1 1 220px; min-width:0; } .abq-cab b{ display:block; font-size:calc(15px * var(--esc, 1)); } .abq-cab small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc, 1)); margin-top:2px; }
+.abq-cont{ font:700 calc(13px * var(--esc, 1)) var(--f-m, monospace); color:var(--grafite); }
+.abq-lista{ display:grid; gap:8px; margin-top:12px; }
+.abq-it{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:color-mix(in oklab, var(--grafite) 7%, transparent); }
+.abq-ck{ width:24px; height:24px; border-radius:50%; flex:none; border:2px solid color-mix(in oklab, var(--grafite) 55%, transparent); background:transparent; cursor:pointer; display:grid; place-items:center; color:#fff; padding:0; }
+.abq-ck svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
+.abq-it.feito .abq-ck{ background:var(--jade); border-color:var(--jade); } .abq-it.feito .abq-ck svg{ opacity:1; }
+.abq-it.feito .abq-txt b{ text-decoration:line-through; color:var(--grafite); }
+.abq-txt{ flex:1 1 auto; min-width:0; } .abq-txt b{ display:block; font-size:calc(14px * var(--esc, 1)); font-weight:600; } .abq-txt small{ display:block; font-size:calc(12px * var(--esc, 1)); color:var(--grafite); margin-top:1px; }
+.abq-quando{ flex:none; font-size:calc(12.5px * var(--esc, 1)); }
+.abq-dica{ font-size:calc(12px * var(--esc, 1)); color:var(--grafite); margin-top:10px; }
+/* 7. status do voo */
+.vst-bt svg{ fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+/* 4. nova jornada rápida */
+.njr .grade{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.njr .njr-seg{ display:flex; gap:8px; }
+.njr .njr-seg button{ flex:1; padding:10px; border-radius:12px; border:1px solid var(--fio, rgba(127,127,127,.3)); background:transparent; color:inherit; cursor:pointer; font:inherit; font-weight:600; }
+.njr .njr-seg button.on{ border-color:var(--anil-claro); background:color-mix(in oklab, var(--anil-claro) 14%, transparent); color:var(--anil-claro); }
+@media (max-width:760px){ .jfx{ gap:8px 14px; } .jfx-sep{ display:none; } .jfx .bt{ margin-left:0; width:100%; justify-content:center; } .njr .grade{ grid-template-columns:1fr; } .abq-it{ flex-wrap:wrap; } .abq-quando{ width:100%; padding-left:34px; } }
+</style>
+<script id="vgx-js">
+/* Viagens mais leves (04/11/2026, pedido do Jadiel).
+   1. Nas abas Trechos, Dia a dia e Viagem inteira, o painel grande do custo vira
+      uma faixa fina; o painel completo abre numa janela, quando se quer ver.
+   3. Linha do tempo: noites seguidas sem hospedagem na mesma cidade viram um
+      aviso só ("22 noites sem hospedagem em Porto"), em vez de 22.
+   4. Nova jornada em 4 campos (para onde, ida e volta, quantas pessoas,
+      nacional ou internacional); o resto, depois, em "Mais detalhes".
+   5. "Antes de embarcar": a lista do que não pode esquecer (passaporte, entrada
+      no país, seguro, check-in), com um toque para marcar. Usa os prazos da
+      jornada, que já entram nos avisos.
+   7. Status do voo: perto do embarque, um botão abre o status do voo já com o
+      número certo (pela busca do Google, sem custo). */
+(function(){
+  const VIAJAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/><path d="M9 12h6"/></svg>';
+  const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+  /* ── 1. faixa fina ── */
+  let jfxPop = null, jfxFundo = null, jfxCasa = null;
+  const jfxFechar = () => { const h = document.getElementById('plHeroi'); if (h && jfxCasa){ jfxCasa.parentNode.insertBefore(h, jfxCasa); h.hidden = true; jfxCasa.remove(); jfxCasa = null; } if (jfxPop){ jfxPop.remove(); jfxPop = null; } if (jfxFundo){ jfxFundo.remove(); jfxFundo = null; } };
+  window.jfxAbrir = function(){
+    const h = document.getElementById('plHeroi'); if (!h) return;
+    jfxFechar();
+    jfxFundo = document.createElement('div'); jfxFundo.className = 'dck-fundo'; jfxFundo.onclick = jfxFechar; document.body.appendChild(jfxFundo);
+    jfxPop = document.createElement('div'); jfxPop.className = 'dck-pop jfx-pop'; jfxPop.setAttribute('role', 'dialog'); jfxPop.setAttribute('aria-label', 'Painel da viagem');
+    jfxPop.innerHTML = `<div class="dck-pop-cab"><b>Painel da viagem</b></div><div class="dck-pop-corpo"></div><div style="display:flex;justify-content:center;padding:12px;border-top:1px solid var(--fio-suave, rgba(127,127,127,.2))"><button type="button" class="bt perigo" data-jfx-fechar>Fechar</button></div>`;
+    document.body.appendChild(jfxPop);
+    jfxCasa = document.createElement('i'); jfxCasa.hidden = true; h.parentNode.insertBefore(jfxCasa, h);
+    jfxPop.querySelector('.dck-pop-corpo').appendChild(h); h.hidden = false;
+    jfxPop.querySelector('[data-jfx-fechar]').onclick = jfxFechar;
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && jfxPop){ e.stopPropagation(); jfxFechar(); } }, true);
+  if (typeof renderHeroiPlano === 'function'){
+    const o = renderHeroiPlano;
+    renderHeroiPlano = function(p, ds){
+      if (jfxPop) jfxFechar();
+      const r = o.apply(this, arguments);
+      try {
+        const h = document.getElementById('plHeroi'); if (!h) return r;
+        const velha = document.getElementById('plFaixa'); if (velha) velha.remove();
+        if (typeof modoRoteiro === 'undefined' || modoRoteiro === 'jornada' || h.querySelector('.heroi-vazio-esq')){ h.hidden = false; return r; }
+        const val = (h.querySelector('.heroi-valor') || {}).textContent || '';
+        const nums = [...h.querySelectorAll('.heroi-numeros > *')].slice(0, 2).map(x => { const b = x.querySelector('b') || x.firstElementChild; const t = (b ? b.textContent : '').trim(), s = x.textContent.replace(t, '').trim(); return {t, s}; });
+        const eco = typeof economiaJornada === 'function' ? economiaJornada(p) : 0;
+        const d = p && p.inicio ? diasAte(p.inicio) : null;
+        const it = (rot, v, c) => `<div class="jfx-it"><span>${esc(rot)}</span><b class="${c || ''}">${esc(v)}</b></div>`;
+        const html = `<div class="jfx" id="plFaixa">${it('Custo da viagem', val.trim(), 'ouro')}${nums.filter(x => x.t).map(x => it(x.s, x.t)).join('')}
+          ${eco ? '<i class="jfx-sep"></i>' + it('Economia', (eco < 0 ? '−' : '') + brl(Math.abs(eco)), eco < 0 ? '' : 'jade') : ''}
+          ${d != null && d >= 0 ? it('Embarque', d === 0 ? 'hoje' : `em ${nBR(d)} ${d === 1 ? 'dia' : 'dias'}`) : ''}
+          <button type="button" class="bt p fantasma" onclick="jfxAbrir()"><svg><use href="#i-grafico"/></svg>Ver painel</button></div>`;
+        h.insertAdjacentHTML('beforebegin', html); h.hidden = true;
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+
+  /* ── 3. noites seguidas sem hospedagem viram um aviso só ── */
+  if (typeof alertasViagem === 'function'){
+    const o = alertasViagem;
+    alertasViagem = function(p, ev){
+      const al = o.apply(this, arguments) || [];
+      const out = []; let g = null;
+      al.forEach(a => {
+        if (a.tipo !== 'noite'){ g = null; out.push(a); return; }
+        const onde = (String(a.txt).match(/ em (.+)$/) || [])[1] || '';
+        if (g && g.onde === onde && somaDiasISO(g.ate, 1) === a.iso){ g.ate = a.iso; g.n++; return; }
+        g = {...a, onde, de:a.iso, ate:a.iso, n:1}; out.push(g);
+      });
+      out.forEach(a => { if (a.tipo === 'noite' && a.n > 1) a.txt = `${a.n} noites sem hospedagem${a.onde ? ' em ' + a.onde : ''}: de ${dataBR(a.de).slice(0, 5)} a ${dataBR(a.ate).slice(0, 5)}`; });
+      return out;
+    };
+  }
+
+  /* ── 5. antes de embarcar ── */
+  const ehInt = p => typeof escopoPlano === 'function' && escopoPlano(p) === 'int';
+  const primeiroVoo = p => ordenarTrechos(trechosDe(p)).find(t => t.data) || null;
+  function sugestoes(p){
+    const ini = p.inicio || (primeiroVoo(p) || {}).data; if (!ini) return [];
+    const v = primeiroVoo(p), menos = n => somaDiasISO(ini, -n);
+    const L = [];
+    if (ehInt(p)){
+      L.push({o:'passaporte', quando:menos(120), txt:'Passaporte válido', sub:'Vale pelo menos 6 meses depois da volta? Se não, renove antes.'});
+      L.push({o:'visto', quando:menos(60), txt:'Entrada no país (visto ou autorização)', sub:'Confira no site oficial do destino. Para a Europa, acompanhe o ETIAS.'});
+      L.push({o:'seguro', quando:menos(15), txt:'Seguro-viagem', sub:'No espaço Schengen é obrigatório. Cartões premium às vezes já incluem.'});
+    } else {
+      L.push({o:'passaporte', quando:menos(7), txt:'Documento com foto', sub:'RG ou CNH dentro da validade, com o nome igual ao da passagem.'});
+    }
+    if (v && v.data) L.push({o:'checkin', quando:somaDiasISO(v.data, -1), txt:'Check-in online', sub:'Confira no app da companhia quando abre (costuma ser de 24 a 72 horas antes).'});
+    return L;
+  }
+  const TXT = {passaporte:'Passaporte válido', visto:'Entrada no país (visto ou autorização)', vacina:'Certificado de vacina', seguro:'Seguro-viagem', checkin:'Check-in online', cancel:'Cancelamento grátis', saldo:'Pagamento do saldo'};
+  function abqHTML(p){
+    const zs = (p.prazos || []).filter(z => z.quando);
+    if (!zs.length){
+      const s = sugestoes(p); if (!s.length) return '';
+      return `<section class="abq" id="abq"><div class="abq-cab"><span class="abq-ic">${VIAJAR}</span><div><b>Antes de embarcar</b><small>${ehInt(p) ? 'Passaporte, entrada no país, seguro e check-in' : 'Documento e check-in'}: a Torre monta a lista com as datas certas e avisa no sino.</small></div>
+        <button type="button" class="bt p primario" data-abq-montar="${esc(p.id)}"><svg><use href="#i-mais"/></svg>Montar a lista</button></div></section>`;
+    }
+    const ord = zs.slice().sort((a, b) => (a.feito - b.feito) || String(a.quando).localeCompare(String(b.quando)));
+    const feitos = zs.filter(z => z.feito).length;
+    return `<section class="abq" id="abq"><div class="abq-cab"><span class="abq-ic">${VIAJAR}</span><div><b>Antes de embarcar</b><small>${feitos === zs.length ? 'Tudo pronto para a viagem.' : 'Toque no círculo quando resolver. Os prazos também avisam no sino.'}</small></div><span class="abq-cont">${feitos} de ${zs.length}</span></div>
+      <div class="abq-lista">${ord.map(z => { const d = diasAte(z.quando), vence = !z.feito && d != null && d < 0, perto = !z.feito && d != null && d >= 0 && d <= 7;
+        return `<div class="abq-it${z.feito ? ' feito' : ''}"><button type="button" class="abq-ck" data-abq-ck="${esc(z.id)}" aria-label="${z.feito ? 'Desmarcar' : 'Marcar como resolvido'}">${OK}</button>
+          <div class="abq-txt"><b>${esc(z.txt || TXT[z.o] || PRAZOS_VIAGEM[z.o] || 'Prazo')}</b>${z.sub ? `<small>${esc(z.sub)}</small>` : ''}</div>
+          <span class="abq-quando etq ${z.feito ? 'jade' : vence ? 'brasa' : perto ? 'ouro' : ''}">${z.feito ? 'resolvido' : vence ? 'venceu em ' + dataBR(z.quando) : d === 0 ? 'hoje' : 'até ' + dataBR(z.quando)}</span></div>`; }).join('')}</div>
+      <div class="abq-dica">As datas sugeridas mudam em "Viagem" (lápis no topo), em Prazos que não perdoam.</div></section>`;
+  }
+  window.abqHTML = abqHTML;
+  document.addEventListener('click', e => {
+    const m = e.target.closest && e.target.closest('[data-abq-montar]');
+    if (m){ e.preventDefault(); const p = (DB.planos || []).find(x => x.id === m.dataset.abqMontar); if (!p) return;
+      p.prazos = (p.prazos || []).concat(sugestoes(p).map(s => ({id:uid(), feito:false, ...s}))); salvar(); renderPlano(); avisar('Lista de embarque montada. Os prazos entram nos avisos.', 'ok', 5000); return; }
+    const c = e.target.closest && e.target.closest('[data-abq-ck]');
+    if (c){ e.preventDefault(); const p = typeof P === 'function' ? P() : null; if (!p) return; const z = (p.prazos || []).find(x => x.id === c.dataset.abqCk); if (!z) return; z.feito = !z.feito; salvar(); renderPlano(); }
+  }, true);
+
+  /* ── 7. status do voo, perto do embarque ── */
+  const voosDo = t => [...new Set((String(t.cia || '').match(/\b([A-Z0-9]{2})\s?(\d{2,4})\b/g) || []).map(x => x.replace(/\s+/g, '')))];
+  window.vstLinkDoTrecho = t => { const v = voosDo(t); return v.length ? 'https://www.google.com/search?q=' + encodeURIComponent('status voo ' + v[0]) : ''; };
+  const vstPerto = t => { const d = t.data ? diasAte(t.data) : null; return d != null && d >= -1 && d <= 3 && (t.situacao || 'planejado') !== 'planejado'; };
+  window.vstPerto = vstPerto;
+
+  if (typeof renderPlano === 'function'){
+    const o = renderPlano;
+    renderPlano = function(){
+      const r = o.apply(this, arguments);
+      try {
+        const p = typeof P === 'function' ? P() : null;
+        if (p && roteiroAberto && modoRoteiro === 'jornada'){
+          const ref = document.querySelector('#rtJornada .rt-proximo') || document.querySelector('#rtJornada .rt-geral');
+          const velho = document.getElementById('abq'); if (velho) velho.remove();
+          const h = abqHTML(p); if (ref && h) ref.insertAdjacentHTML('afterend', h);
+        }
+        if (p && roteiroAberto && modoRoteiro === 'trechos'){
+          trechosDe(p).filter(vstPerto).forEach(t => {
+            const lk = vstLinkDoTrecho(t); if (!lk) return;
+            const card = document.querySelector(`#tatCx .tat-c[data-tat="${CSS.escape(t.id)}"] .pv-bt-abrir`);
+            if (card && !card.parentElement.querySelector('.vst-bt')) card.insertAdjacentHTML('beforebegin', `<a class="bt p fantasma vst-bt" href="${esc(lk)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M2.5 16.5l19-7-19-7 4 7z"/><path d="M6.5 9.5l15 0"/></svg>Status do voo ${esc(voosDo(t)[0])}</a>`);
+          });
+        }
+      } catch(e){ console.error(e); }
+      return r;
+    };
+  }
+
+  /* ── 4. nova jornada rápida ── */
+  if (typeof editarPlanoViagem === 'function'){
+    const o = editarPlanoViagem;
+    window.editarPlanoViagemCompleto = o;
+    editarPlanoViagem = function(id){
+      if (id) return o.apply(this, arguments);
+      const ini = somaDiasISO(hojeISO(), 30), fim = somaDiasISO(hojeISO(), 37);
+      abrirFolha({titulo:'Nova Jornada', corpo:`<div class="njr">
+          <div class="campo"><label>Para onde?</label><input type="text" id="njDest" placeholder="Lisboa e Porto" autocomplete="off"></div>
+          <div class="grade" style="margin-top:12px"><div class="campo"><label>Ida</label><input type="date" id="njIni" value="${ini}"></div><div class="campo"><label>Volta</label><input type="date" id="njFim" value="${fim}"></div></div>
+          <div class="grade" style="margin-top:12px"><div class="campo"><label>Quantas pessoas</label><input type="number" id="njPax" value="2" min="1" max="20"></div>
+            <div class="campo"><label>Tipo</label><div class="njr-seg" id="njEsc"><button type="button" class="on" data-v="nac">Nacional</button><button type="button" data-v="int">Internacional</button></div></div></div>
+          <p class="fraco" style="font-size:calc(12.5px * var(--esc, 1));margin:14px 0 0">Orçamento, milhas, câmbio e prazos ficam para depois, quando você quiser. A jornada abre direto em Trechos.</p></div>`,
+        pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt fantasma" id="njMais">Mais detalhes</button><button type="button" class="bt primario" id="njCriar"><svg><use href="#i-ok"/></svg>Criar jornada</button>`});
+      const seg = document.getElementById('njEsc');
+      seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+      const dest = document.getElementById('njDest');
+      dest.addEventListener('input', () => { const t = dest.value; if (/(lisboa|porto|paris|londres|madri|roma|europa|miami|orlando|nova york|buenos aires|santiago|lima|cancún|cancun|tóquio|toquio|japão|japao|portugal|espanha|itália|italia|frança|franca|alemanha|eua|estados unidos|canadá|canada|chile|argentina|peru|méxico|mexico|dubai|egito)/i.test(t)) seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === 'int')); });
+      setTimeout(() => dest.focus(), 60);
+      const ler = () => ({dest:dest.value.trim(), ini:document.getElementById('njIni').value, fim:document.getElementById('njFim').value, pax:Number(document.getElementById('njPax').value) || 1, esc:(seg.querySelector('.on') || {}).dataset ? seg.querySelector('.on').dataset.v : 'nac'});
+      const passar = v => {
+        o.call(this);   /* o formulário completo, preenchido com o que já foi digitado */
+        const val = (sel, x) => { const el = document.querySelector(sel); if (el && x != null){ el.value = x; el.dispatchEvent(new Event('input', {bubbles:true})); el.dispatchEvent(new Event('change', {bubbles:true})); } };
+        val('#pvNome', v.dest); val('#pvDest', v.dest); val('#pvIni', v.ini); val('#pvFim', v.fim); val('#pvPax', v.pax); val('#pvEsc', v.esc);
+      };
+      document.getElementById('njMais').onclick = () => passar(ler());
+      document.getElementById('njCriar').onclick = () => {
+        const v = ler();
+        if (!v.dest) return typeof erroNoCampo === 'function' ? erroNoCampo(dest, 'Diga para onde vai.') : avisar('Diga para onde vai.', 'alerta');
+        if (!v.ini || !v.fim || v.fim < v.ini) return avisar('A volta precisa ser depois da ida.', 'alerta');
+        passar(v);
+        const bt = document.getElementById('btSalvarPlano'); if (bt) bt.click();
+      };
     };
   }
 })();
