@@ -74493,7 +74493,8 @@ function altDataFutura(iso, ref){
     } catch(e){ console.error(e); }
     const resta = [...document.querySelectorAll('#mrPrevias .mr-inclui input')].some(x => x.checked);
     let r;
-    if (resta) r = o.apply(this, arguments);
+    /* a lista de lojas do dia não tem as caixas dos anúncios: segue direto (05/11/2026) */
+    if (resta || (typeof listaLida !== 'undefined' && listaLida)) r = o.apply(this, arguments);
     else if (feitos.length){ salvar(); fecharFolha(); try { renderMural(); } catch(_){} try { if (typeof renderMesa === 'function') renderMesa(); } catch(_){} try { aplicarTudo(); } catch(_){} }
     try {
       novosPr.forEach(n => { const m = (DB.mural || []).filter(x => x.titulo === n.t && x.fim === n.ate).pop(); if (m && !m.prorrogada){ m.prorrogada = {de:'', ate:n.ate, em:hojeISO()}; } });
@@ -77854,7 +77855,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
 .mpn-pe-txt{ flex:1 1 280px; min-width:0; font-size:calc(14.5px * var(--esc, 1)); color:var(--grafite); }
 .mpn-pe-txt b{ color:var(--giz); display:block; }
 .mpn-pe-sub{ display:block; margin-top:2px; }
-.mpn-pe .mpn-mais{ background:none; border:0; color:var(--anil); font:600 calc(13.5px * var(--esc, 1)) inherit; cursor:pointer; padding:4px 2px; }
+.mpn-pe .mpn-mais{ background:none; border:0; color:var(--anil); font-family:inherit; font-size:calc(13.5px * var(--esc, 1)); font-weight:600; cursor:pointer; padding:4px 2px; }
 #p-ms-hoje.mpn-on #mesaHeroi{ display:none; }
 .mpn-card{ container-type:inline-size; }
 @container (max-width:860px) and (min-width:440px){ .mpn-grid{ grid-template-columns:140px minmax(0,1fr); } .mpn-grid > .mpn-dir{ display:contents; }
@@ -77990,7 +77991,7 @@ window.rotuloAcaoAviso = function(a){
 .sis-linha .heroi-chip.desce{ background:color-mix(in oklab, var(--brasa) 14%, transparent); color:var(--brasa); }
 .sis .mpn-cab{ align-items:flex-start; }
 .sis .mpn-chip{ cursor:pointer; font:inherit; font-size:calc(13px * var(--esc, 1)); }
-.sis .mpn-chips .sis-vermais{ background:none; border:0; color:var(--anil); font:600 calc(13.5px * var(--esc, 1)) inherit; cursor:pointer; padding:4px 6px; }
+.sis .mpn-chips .sis-vermais{ background:none; border:0; color:var(--anil); font-family:inherit; font-size:calc(13.5px * var(--esc, 1)); font-weight:600; cursor:pointer; padding:4px 6px; }
 .sis .mpn-anel{ cursor:pointer; background:none; border:0; padding:0; }
 .sis .mpn-anel-txt span{ max-width:120px; }
 .sis .mpn-fluxo{ grid-template-columns:repeat(var(--n, 4), minmax(0,1fr)); }
@@ -78189,6 +78190,10 @@ window.rotuloAcaoAviso = function(a){
 .mrp-corpo > div{ overflow:hidden; min-height:0; }
 .mrp-corpo-in{ margin:0 18px 18px 22px; padding:16px 18px; border-radius:14px; background:var(--sup-1); border:1px solid var(--fio-suave, rgba(127,127,127,.15)); }
 .mrp-corpo-in > :first-child{ margin-top:0 !important; }
+.mrp-corpo-in .mrp-cc{ margin:0 0 12px; padding:0; }
+.mrp-texto-todo{ margin-top:6px; }
+.mrp-texto-todo > summary{ cursor:pointer; font-weight:600; color:var(--grafite); font-size:calc(13.5px * var(--esc, 1)); padding:8px 0; }
+.mrp-texto-todo[open] > summary{ margin-bottom:6px; }
 .mrp-corpo-in .mural-texto > *{ margin:0; padding:5px 0; }
 .mrp-corpo-in .mural-texto > * + *{ border-top:1px dashed var(--fio-suave, rgba(127,127,127,.18)); }
 .mrp-corpo-in .mural-arte img{ max-height:320px; width:auto; max-width:100%; border-radius:12px; }
@@ -78233,12 +78238,13 @@ window.rotuloAcaoAviso = function(a){
     const t = `${m.pontuacao || ''} ${m.titulo || ''}`;
     const curto = n => { const v = Number(String(n).replace(/\./g, '').replace(',', '.')); return v >= 1000 ? (v % 1000 === 0 || v >= 10000 ? nBR(Math.round(v / 1000)) : String((v / 1000).toFixed(1)).replace('.', ',')) + ' mil' : String(n); };
     let r;
+    if (/anuidade/i.test(t) && /(gr[aá]tis|nossa conta|isen|zerad|zero)/i.test(t) && !/\d\s*(pontos|pts|milhas)/i.test(m.pontuacao || '')) return {b:'1ª', s:'anuidade grátis'};
     if ((r = t.match(/(\d{1,3}(?:[.,]\d+)?)\s*%/))) return {b:r[1] + '%', s:/desconto|off/i.test(t) ? 'desconto' : /cashback|volta/i.test(t) ? 'de volta' : /b[ôo]nus/i.test(t) ? 'de bônus' : ''};
     if ((r = t.match(/(\d{1,3}(?:\.\d{3})+|\d+)\s*(?:pontos|pts)/i))) return {b:curto(r[1]), s:'pontos'};
     if ((r = t.match(/(\d{1,3}(?:\.\d{3})+|\d+)\s*milhas/i))) return {b:curto(r[1]), s:'milhas'};
     if ((r = t.match(/(\d+(?:,\d+)?)\s*(?:pontos|pts|milhas)\s*(?:por|\/)\s*(?:real|r\$|d[óo]lar)/i))) return {b:r[1] + 'x', s:'por real'};
     if ((r = t.match(/R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)/))) return {b:'R$ ' + r[1].replace(/,00$/, ''), s:/cashback/i.test(t) ? 'cashback' : ''};
-    if (m.pontuacao) return {b:m.pontuacao, s:''};
+    if (m.pontuacao){ const p = String(m.pontuacao).trim(), i = p.indexOf(' '); return p.length > 8 && i > 0 ? {b:p.slice(0, i), s:p.slice(i + 1)} : {b:p, s:''}; }
     return null;
   }
   function resumo(m){
@@ -78306,7 +78312,20 @@ window.rotuloAcaoAviso = function(a){
     if (resto.length){
       const corpo = document.createElement('div'); corpo.className = 'mrp-corpo';
       corpo.innerHTML = '<div><div class="mrp-corpo-in"></div></div>';
-      resto.forEach(e => corpo.querySelector('.mrp-corpo-in').appendChild(e));
+      const cin = corpo.querySelector('.mrp-corpo-in');
+      /* anúncio de cartão: o mesmo resumo organizado da campanha (metas, cartões,
+         melhores cartões) e o texto do anúncio recolhido logo abaixo */
+      const cc = (DB.campanhas || []).find(x => x.id === m.campId && x.tipo === 'cartao');
+      let grade = null;
+      if (cc && typeof ccCartaoHTML === 'function' && (cc.beneficio || (cc.cartoes || []).length || (cc.destaques || []).length)){
+        const t = document.createElement('div'); t.innerHTML = ccCartaoHTML(cc); grade = t.querySelector('.cc-grade');
+      }
+      if (grade){
+        grade.classList.add('mrp-cc'); cin.appendChild(grade);
+        const det = document.createElement('details'); det.className = 'mrp-texto-todo';
+        det.innerHTML = '<summary>Texto completo do anúncio</summary>';
+        resto.forEach(e => det.appendChild(e)); cin.appendChild(det);
+      } else resto.forEach(e => cin.appendChild(e));
       card.appendChild(corpo);
     }
     if (abertos.has(m.id)) abrir(card, true);
@@ -78340,6 +78359,142 @@ window.rotuloAcaoAviso = function(a){
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.mrp-mais.aberto').forEach(w => w.classList.remove('aberto')); });
   if (document.getElementById('mrLista')) mrpMontar();
+})();
+</script>
+
+<style id="cc5-css">
+/* Cartão com anuidade grátis, formato "👉 Visa: ÍCONE (Valor Mínimo...); o Infinite; ..." (05/11/2026) */
+.cc-dest{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+.cc-dest-c{ border:1px solid var(--fio); border-radius:14px; padding:12px 14px; background:var(--sup-0); }
+.cc-dest-c b{ display:block; font-size:calc(14.5px * var(--esc)); color:var(--giz); margin-bottom:6px; }
+.cc-dest-c ul{ margin:0; padding:0; list-style:none; display:grid; gap:5px; }
+.cc-dest-c li{ position:relative; padding-left:16px; font-size:calc(13.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.cc-dest-c li::before{ content:''; position:absolute; left:2px; top:.6em; width:6px; height:6px; border-radius:50%; background:var(--jade); }
+.cc-op.cc-op-larga{ grid-column:1 / -1; }
+@media (min-width:761px){ .cc-grade:has(> .cc-op-larga){ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+.cc-card.cc-piscar{ animation:ccPiscar 1.6s ease; }
+@keyframes ccPiscar{ 0%,100%{ box-shadow:0 0 0 0 transparent; } 30%{ box-shadow:0 0 0 4px color-mix(in oklab, var(--ouro) 55%, transparent); } }
+</style>
+<script id="cc5-js">
+/* Anúncio de cartão com a 1ª anuidade grátis no formato em que cada bandeira
+   vem numa linha só: "👉 Visa: ÍCONE (Valor Mínimo de Gasto total: R$ 30.000,00);
+   o Infinite; o Platinum; ...". Antes a Torre juntava tudo num chip e dizia
+   "sem meta de gastos" para cartões que têm meta. Agora: cada cartão sai
+   separado, a meta vai para o cartão certo, as datas por extenso ("13 de
+   dezembro de 2026") viram prazo, e "Melhores cartões da promoção" vira um
+   bloco próprio, em vez de se misturar às regras. */
+(function(){
+  if (typeof cartaoDoAnuncio !== 'function') return;
+  const MESES_N = {janeiro:1, fevereiro:2, marco:3, abril:4, maio:5, junho:6, julho:7, agosto:8, setembro:9, outubro:10, novembro:11, dezembro:12};
+  const iso = (d, m, a) => `${String(a).length === 2 ? '20' + a : a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  function dataNa(l){
+    const s = semAcento(String(l || '')).toLowerCase();
+    let m = s.match(/at[eé]\s*(?:o\s+dia\s+|dia\s+)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/) || s.match(/(?:^|\D)(\d{1,2})\/(\d{1,2})\/(\d{4})(?!.*\d{1,2}\/\d{1,2}\/\d{4})/);
+    if (m) return iso(m[1], m[2], m[3]);
+    const r = /(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/g; let x, ult = null;
+    while ((x = r.exec(s))) if (MESES_N[x[2]]) ult = iso(x[1], MESES_N[x[2]], x[3]);
+    return ult || '';
+  }
+  window.ccDataNa = dataNa;
+  const o = cartaoDoAnuncio;
+  cartaoDoAnuncio = function(texto){
+    const sg = o.apply(this, arguments);
+    try {
+      const L = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+      const sem = l => _cc3Sem(l);
+      const ehAnuidade = sg.beneficio === 'anuidade' || (typeof _cc4Ben === 'function' && _cc4Ben(L.slice(0, 3).join(' ')));
+      if (!ehAnuidade) return sg;
+      sg.beneficio = 'anuidade';
+      let sec = '', grupos = [], metas = [], dest = [], cur = null;
+      L.forEach(l => {
+        const s = sem(l), lt = _cc3Limpa(l);
+        if (/^cartoes elegiveis/.test(s)){ sec = 'eleg'; return; }
+        if (/^(melhores cartoes|cartoes em destaque|destaques)/.test(s)){ sec = 'dest'; cur = null; return; }
+        if (/^(regras|atencao|regulamento|informacoes importantes|importante)/.test(s) || /^regras e informacoes/.test(s)){ sec = ''; return; }
+        if (sec === 'eleg'){
+          const mb = lt.match(/^([A-Za-zÀ-ú ]{2,30}):\s*(.+)$/);
+          if (mb && /;/.test(mb[2])){
+            const g = {band:mb[1].trim(), itens:[]};
+            mb[2].split(/;\s*/).map(x => x.replace(/^o\s+|^a\s+/i, '').replace(/[.;]+$/, '').trim()).filter(Boolean).forEach(it => {
+              const mm = it.match(/^(.+?)\s*\((?:[^)]*?gasto[^)]*?):?\s*R\$\s*([\d.]+(?:,\d+)?)\)/i);
+              const n = (mm ? mm[1] : it).trim();
+              g.itens.push({n, meta:!!mm});
+              if (mm) metas.push({n:`${n} ${g.band}`.replace(/\s+/g, ' '), cartao:n, band:g.band, valor:_ccN(mm[2])});
+            });
+            grupos.push(g);
+          }
+          return;
+        }
+        if (sec === 'dest'){
+          const mc = lt.match(/^(cart[aã]o\s+.+?):\s*$/i);
+          if (mc){ cur = {n:mc[1].replace(/^cart[aã]o\s+/i, '').trim(), itens:[]}; dest.push(cur); return; }
+          if (cur) cur.itens.push(lt.replace(/\s+$/, ''));
+        }
+      });
+      if (grupos.length){ sg.elegGrupos = grupos; sg.metasGasto = metas; }
+      if (dest.length){
+        sg.destaques = dest;
+        const fora = new Set(dest.flatMap(d => d.itens.map(x => semAcento(x).toLowerCase().replace(/^caixa:\s*/, ''))));
+        sg.isenGeral = (sg.isenGeral || []).filter(x => !fora.has(semAcento(String(x)).toLowerCase().replace(/^caixa:\s*/, '')));
+        sg.elegiveis = (sg.elegiveis || []).filter(e => !/^cart[aã]o\s+.+:\s*$/i.test(e.n || ''));
+      }
+      if (!sg.prazoGasto){ const l = L.find(x => /meta de gastos?/i.test(x) && dataNa(x)); if (l) sg.prazoGasto = dataNa(l); }
+      if (!sg.prazoCompra){ const l = L.find(x => /primeira compra/i.test(x) && dataNa(x)); if (l) sg.prazoCompra = dataNa(l); }
+      if (!sg.prazoGasto && sg.prazoCompra && metas.length) sg.prazoGasto = sg.prazoCompra;
+    } catch(e){ console.error(e); }
+    return sg;
+  };
+  /* o bloco "Melhores cartões da promoção" no cartão da campanha */
+  if (typeof ccCartaoHTML === 'function'){
+    const oh = ccCartaoHTML;
+    const chave = x => semAcento(String(x || '')).toLowerCase().replace(/^[a-z ]{2,20}:\s*/, '').replace(/[.;\s]+$/, '');
+    ccCartaoHTML = function(c){
+      if (!(c.destaques || []).length) return oh.apply(this, arguments);
+      /* o que já está nos "Melhores cartões" não se repete nos benefícios gerais */
+      const fora = new Set(c.destaques.flatMap(d => d.itens.map(chave)));
+      let h = oh.call(this, Object.assign({}, c, {isenGeral:(c.isenGeral || []).filter(x => !fora.has(chave(x)))}));
+      const bloco = `<div class="cc-op cc-op-larga"><div class="cc-op-cab"><b>Melhores cartões da promoção</b></div><div class="cc-dest">${c.destaques.map(d => `<div class="cc-dest-c"><b>${esc(d.n)}</b><ul>${d.itens.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div></div>`;
+      return h.includes('<div class="cc-grade">') ? h.replace('<div class="cc-grade">', '<div class="cc-grade">' + bloco) : h.replace('<div class="cc-rodape">', `<div class="cc-grade">${bloco}</div><div class="cc-rodape">`);
+    };
+  }
+  /* a campanha nasce do anúncio: os campos novos vão junto */
+  if (typeof muralParaCampanha === 'function'){
+    const om = muralParaCampanha;
+    muralParaCampanha = function(m){
+      const r = om.apply(this, arguments);
+      try { const sg = m && m.sugestao, c = (DB.campanhas || []).find(x => x.id === (m && m.campId));
+        if (sg && c && c.tipo === 'cartao' && sg.destaques) c.destaques = sg.destaques; } catch(e){}
+      return r;
+    };
+  }
+
+  /* quem já colou este tipo de anúncio antes: refaz a leitura guardada uma vez */
+  try {
+    let mudou = false;
+    (DB.campanhas || []).forEach(c => {
+      if (c.tipo !== 'cartao' || !c.bruto || c.cc5) return;
+      const sg = cartaoDoAnuncio(c.bruto);
+      if (sg.beneficio !== 'anuidade') return;
+      Object.assign(c, {beneficio:'anuidade', elegGrupos:sg.elegGrupos || c.elegGrupos, metasGasto:sg.metasGasto || c.metasGasto,
+        prazoGasto:sg.prazoGasto || c.prazoGasto || '', prazoCompra:sg.prazoCompra || c.prazoCompra || '', cc5:1});
+      if (sg.destaques) c.destaques = sg.destaques;
+      mudou = true;
+    });
+    if (mudou) salvar();
+  } catch(e){ console.error(e); }
+  /* "Ver campanha" de um cartão abre o cartão em Campanhas › Cartões e Bônus,
+     não a janela de transferência (que mostrava "0% de bônus") */
+  if (typeof abrirRegras === 'function'){
+    const oa = abrirRegras;
+    abrirRegras = function(id){
+      const c = (DB.campanhas || []).find(x => x.id === id);
+      if (!c || c.tipo !== 'cartao') return oa.apply(this, arguments);
+      try { const d = document.getElementById('dlgRegras'); if (d && d.open) d.close(); } catch(e){}
+      irItemMenu('fabrica', 'fb-campanhas', 'cartao');
+      setTimeout(() => { const el = document.querySelector(`[data-cc="${CSS.escape(id)}"]`);
+        if (el){ el.scrollIntoView({behavior:'smooth', block:'start'}); el.classList.add('cc-piscar'); setTimeout(() => el.classList.remove('cc-piscar'), 1600); } }, 450);
+    };
+  }
 })();
 </script>
 
