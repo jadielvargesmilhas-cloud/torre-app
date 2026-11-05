@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-05 12:50';
+const BUILD = '2026-11-05 20:30';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -78535,6 +78535,62 @@ window.bfxCorrigir = function(){
   } catch(e){ console.error(e); return 0; }
 };
 bfxCorrigir();
+</script>
+
+<style id="cent-css">
+/* Centavos menores nos valores da Prateleira (05/11/2026, pedido do Jadiel):
+   "R$ 18.253,74" e a meta "R$ 16,50" com os centavos em tamanho menor. */
+data.cent-n{ font:inherit; color:inherit; }
+.cent{ align-self:baseline !important; font-family:inherit !important; display:inline !important; font-size:.66em !important; font-weight:600; letter-spacing:0; color:inherit !important; opacity:.85; vertical-align:baseline; line-height:inherit; margin:0; padding:0; text-transform:none; }
+#ptVitrine .pv-meta{ position:relative; }
+#ptVitrine .pv-val:has(.cent){ align-items:baseline !important; }
+#ptVitrine .pv-meta-ver{ position:absolute; display:block; pointer-events:none; white-space:nowrap; overflow:hidden;
+  color:var(--jade); font:700 calc(19px * var(--esc)) var(--f-m, inherit); letter-spacing:-.02em; }
+#ptVitrine .pv-preco.meta.minha .pv-meta-ver{ color:var(--ouro); }
+#ptVitrine .pv-meta.cent-on .pv-meta-in:not(:focus){ color:transparent !important; -webkit-text-fill-color:transparent; }
+#ptVitrine .pv-meta.cent-on:focus-within .pv-meta-ver{ visibility:hidden; }
+</style>
+<script id="cent-js">
+(function(){
+  /* troca ",74" no fim de um valor em dinheiro por <data class="cent">,74</data> (data: tag sem estilo próprio) */
+  function centavos(el){
+    if (!el || el.dataset.cent) return;
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); const ns = []; let n;
+    while ((n = w.nextNode())) if (!n.parentElement.closest('.cent') && /\d,\d{2}(?!\d)/.test(n.nodeValue)) ns.push(n);
+    ns.forEach(t => { const m = t.nodeValue.match(/^([\s\S]*\d)(,\d{2})(?!\d)([\s\S]*)$/); if (!m) return;
+      const f = document.createDocumentFragment(), w2 = document.createElement('data'); w2.className = 'cent-n'; w2.append(m[1]);
+      const s = document.createElement('data'); s.className = 'cent'; s.textContent = m[2]; w2.append(s); f.append(w2); if (m[3]) f.append(m[3]); t.replaceWith(f); });
+    el.dataset.cent = 1;
+  }
+  window.centavosMenores = centavos;
+  /* o campo da meta é um campo de digitar: por cima dele, quando não está em uso,
+     vai uma cópia do número com os centavos menores; ao tocar, volta o campo */
+  function espelho(inp){
+    const lab = inp.closest('.pv-meta'); if (!lab) return;
+    let v = lab.querySelector('.pv-meta-ver');
+    if (!v){ v = document.createElement('span'); v.className = 'pv-meta-ver'; v.setAttribute('aria-hidden', 'true'); lab.appendChild(v);
+      inp.addEventListener('input', () => pinta(inp, v)); inp.addEventListener('blur', () => setTimeout(() => pinta(inp, v), 0));
+      /* quando a aba aparece (o campo ganha tamanho), reposiciona */
+      if (window.ResizeObserver) new ResizeObserver(() => pinta(inp, v)).observe(inp); }
+    pinta(inp, v); lab.classList.add('cent-on');
+  }
+  function pinta(inp, v){
+    v.textContent = inp.value; delete v.dataset.cent; centavos(v);
+    v.style.left = inp.offsetLeft + 'px'; v.style.top = inp.offsetTop + 'px'; v.style.height = inp.offsetHeight + 'px'; v.style.lineHeight = inp.clientHeight + 'px'; v.style.paddingTop = getComputedStyle(inp).paddingTop; v.style.width = inp.offsetWidth + 'px';
+  }
+  function aplicar(){
+    const cx = document.getElementById('ptVitrine'); if (!cx) return;
+    cx.querySelectorAll('.pv-pe b, .pv-preco.custo b, .pv-preco.meta > b').forEach(centavos);
+    cx.querySelectorAll('.pv-meta-in').forEach(espelho);
+  }
+  window.centAplicar = aplicar;
+  if (typeof ptRenderVitrine === 'function'){
+    const o = ptRenderVitrine;
+    ptRenderVitrine = function(){ const r = o.apply(this, arguments); try { aplicar(); requestAnimationFrame(aplicar); } catch(e){ console.error(e); } return r; };
+  }
+  addEventListener('resize', () => document.querySelectorAll('#ptVitrine .pv-meta-in').forEach(i => { const v = i.closest('.pv-meta').querySelector('.pv-meta-ver'); if (v) pinta(i, v); }));
+  aplicar();
+})();
 </script>
 
 </body>
