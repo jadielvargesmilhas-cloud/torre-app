@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-04 22:10';
+const BUILD = '2026-11-04 23:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -77664,7 +77664,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
         const velha = document.getElementById('plFaixa'); if (velha) velha.remove();
         if (typeof modoRoteiro === 'undefined' || modoRoteiro === 'jornada' || h.querySelector('.heroi-vazio-esq')){ h.hidden = false; return r; }
         const val = (h.querySelector('.heroi-valor') || {}).textContent || '';
-        const nums = [...h.querySelectorAll('.heroi-numeros > *')].slice(0, 2).map(x => { const b = x.querySelector('b') || x.firstElementChild; const t = (b ? b.textContent : '').trim(), s = x.textContent.replace(t, '').trim(); return {t, s}; });
+        const nums = [...h.querySelectorAll('.heroi-numeros > *, .sis-passos > *')].slice(0, 2).map(x => { const b = x.querySelector('b') || x.firstElementChild; const rs = x.querySelector('.mpn-rot'); const t = (b ? b.textContent : '').trim(), s = rs ? rs.textContent.trim() : x.textContent.replace(t, '').trim(); return {t, s}; });
         const eco = typeof economiaJornada === 'function' ? economiaJornada(p) : 0;
         const d = p && p.inicio ? diasAte(p.inicio) : null;
         const it = (rot, v, c) => `<div class="jfx-it"><span>${esc(rot)}</span><b class="${c || ''}">${esc(v)}</b></div>`;
@@ -77961,6 +77961,176 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
     const o = renderMesaHeroi;
     renderMesaHeroi = function(){ const r = o.apply(this, arguments); try { aplicar(); } catch(e){ console.error(e); } return r; };
   }
+})();
+</script>
+
+<style id="sis-css">
+/* Todos os painéis no modelo do SisProf (04/11/2026, pedido do Jadiel): claro,
+   anel com a parte principal, os números como um caminho de passos, e o próximo
+   passo da seção no pé. Vale para o painel de cada aba (montarHeroi) e para os
+   painéis de números (.grade.painel-num). */
+.heroi.sis{ --giz:inherit; --giz-2:inherit; --grafite:inherit; --grafite-dim:inherit; --fio:inherit; --fio-suave:inherit; --sup-0:inherit;
+  display:block; padding:0; background:none; box-shadow:none; border-radius:22px; overflow:visible; color:var(--giz); }
+.heroi.sis::after{ display:none; }
+.heroi.sis .mpn-card{ margin:0; }
+.sis-val{ font:700 calc(26px * var(--esc, 1))/1.15 var(--f-d); color:var(--giz); margin-top:6px; letter-spacing:-.01em; }
+.sis-val small{ font-size:.55em; font-weight:500; color:var(--grafite); margin-left:2px; }
+.sis-linha{ display:flex; gap:6px 12px; flex-wrap:wrap; align-items:center; font-size:calc(14.5px * var(--esc, 1)); color:var(--grafite); }
+.sis-linha b{ color:var(--giz); font-family:var(--f-m); }
+.sis-linha{ min-width:0; max-width:100%; }
+.sis-linha .heroi-chip{ white-space:normal !important; max-width:100%; display:inline-flex; padding:3px 10px; border-radius:999px; font-size:calc(12.5px * var(--esc, 1)); font-weight:700; background:color-mix(in oklab, var(--anil) 12%, transparent); color:var(--anil); }
+.sis-linha .heroi-chip.sobe{ background:color-mix(in oklab, var(--jade) 14%, transparent); color:var(--jade); }
+.sis-linha .heroi-chip.desce{ background:color-mix(in oklab, var(--brasa) 14%, transparent); color:var(--brasa); }
+.sis .mpn-cab{ align-items:flex-start; }
+.sis .mpn-chip{ cursor:pointer; font:inherit; font-size:calc(14px * var(--esc, 1)); }
+.sis .mpn-chips .sis-vermais{ background:none; border:0; color:var(--anil); font:600 calc(13.5px * var(--esc, 1)) inherit; cursor:pointer; padding:4px 6px; }
+.sis .mpn-anel{ cursor:pointer; background:none; border:0; padding:0; }
+.sis .mpn-anel-txt span{ max-width:120px; }
+.sis .mpn-fluxo{ grid-template-columns:repeat(var(--n, 4), minmax(0,1fr)); }
+.sis .mpn-fluxo::before{ left:calc(50% / var(--n, 4)); right:calc(50% / var(--n, 4)); }
+.sis div.mpn-passo{ cursor:default; }
+.sis div.mpn-passo:hover .mpn-ic{ transform:none; }
+.sis .mpn-rot{ max-width:220px; }
+.sis .mpn-num{ font-size:min(calc(30px * var(--esc, 1)), calc(16.8cqi / var(--n, 4))); }
+.sis .mpn-num small{ font-size:.48em; }
+.sis-extra{ margin-top:18px; padding-top:16px; border-top:1px dashed var(--fio-suave, rgba(127,127,127,.25)); }
+.sis.sem-anel .mpn-grid{ grid-template-columns:minmax(0,1fr); }
+.sis .mpn-pe-txt .fraco{ color:var(--grafite); }
+.heroi.sis.compacto .sis-passos, .heroi.sis.compacto .mpn-chips, .heroi.sis.compacto .mpn-anel{ display:none; }
+.heroi.sis.compacto .mpn-grid{ grid-template-columns:minmax(0,1fr); }
+/* vazio: um cartão claro com a frase e o primeiro passo */
+.heroi.sis.heroi-unico{ padding:26px 30px; background:var(--sup-0); border:1px solid var(--fio-suave, rgba(127,127,127,.18)); overflow:hidden; position:relative; }
+.heroi.sis.heroi-unico::before{ content:''; position:absolute; left:0; right:0; top:0; height:4px; background:linear-gradient(90deg, #C9A24B, var(--anil-claro) 35%, var(--jade) 65%, var(--brasa)); opacity:.85; }
+.heroi.sis.heroi-unico .heroi-rot{ font:700 calc(11.5px * var(--esc, 1))/1.2 var(--f-m); letter-spacing:.14em; text-transform:uppercase; color:var(--giz); }
+.heroi.sis.heroi-unico .heroi-valor{ font:700 calc(34px * var(--esc, 1))/1.1 var(--f-m); color:var(--grafite); margin:10px 0 6px; }
+.heroi.sis.heroi-unico .heroi-vazio-txt{ color:var(--grafite); font-size:calc(15.5px * var(--esc, 1)); max-width:720px; }
+.heroi.sis.heroi-unico .heroi-vazio-pe{ color:var(--grafite); font-size:calc(13.5px * var(--esc, 1)); display:flex; align-items:center; gap:8px; }
+.heroi.sis.heroi-unico .heroi-vazio-pe svg{ width:16px; height:16px; stroke:var(--anil); }
+@media (max-width:640px){ .sis .mpn-fluxo{ grid-template-columns:repeat(2, minmax(0,1fr)); } .sis .mpn-num{ font-size:min(calc(24px * var(--esc, 1)), 8.4cqi); } .heroi.sis.heroi-unico{ padding:22px 18px; } }
+
+/* painéis de números (sem curva): o mesmo cartão claro, cada número como um passo */
+:root .grade.painel-num{ --giz:inherit; --giz-2:inherit; --grafite:inherit; --grafite-dim:inherit; --c:var(--anil); color:var(--giz);
+  display:grid !important; grid-template-columns:none !important; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr);
+  gap:0 !important; padding:30px 8px 20px !important; border-radius:22px !important; overflow:hidden; position:relative;
+  background:radial-gradient(70% 90% at 100% 100%, color-mix(in oklab, var(--jade) 6%, transparent), transparent 70%), var(--sup-0) !important;
+  border:1px solid var(--fio-suave, rgba(127,127,127,.18)) !important; box-shadow:none !important; }
+:root .grade.painel-num::before{ content:''; position:absolute; left:0; right:0; top:0; height:4px; background:linear-gradient(90deg, #C9A24B, var(--anil-claro) 35%, var(--jade) 65%, var(--brasa)); opacity:.85; }
+:root .grade.painel-num::after{ display:none; }
+:root .grade.painel-num > .metrica, :root .grade.painel-num > .metrica:first-child{ position:relative; grid-row:auto; grid-column:auto; text-align:center !important; display:flex !important; flex-direction:column; align-items:center !important; justify-content:flex-start !important;
+  padding:30px 14px 4px !important; background:transparent !important; border:0 !important; border-radius:14px !important; box-shadow:none !important; transform:none; }
+:root .grade.painel-num > .metrica::before{ content:''; position:absolute; top:0; left:50%; width:16px; height:16px; margin-left:-8px; border-radius:50%; background:var(--sup-0); border:3px solid var(--c); box-shadow:0 0 0 5px var(--sup-0); z-index:1; }
+:root .grade.painel-num > .metrica:not(:last-child)::after{ content:''; position:absolute; top:8px; left:calc(50% + 14px); right:calc(-50% + 14px); width:auto; height:0; border:0; border-top:3px dashed color-mix(in oklab, var(--grafite) 35%, transparent); rotate:none; translate:none; opacity:1; }
+:root .grade.painel-num > .metrica:last-child.clicavel::after{ display:none; }
+:root .grade.painel-num > .metrica:nth-child(4n+1){ --c:var(--ouro); } :root .grade.painel-num > .metrica:nth-child(4n+2){ --c:var(--anil-claro); }
+:root .grade.painel-num > .metrica:nth-child(4n+3){ --c:var(--lilas); } :root .grade.painel-num > .metrica:nth-child(4n){ --c:var(--jade); }
+:root .grade.painel-num > .metrica.jade{ --c:var(--jade); } :root .grade.painel-num > .metrica.ouro{ --c:var(--ouro); } :root .grade.painel-num > .metrica.brasa{ --c:var(--brasa); }
+:root .grade.painel-num > .metrica .rot{ order:2; color:var(--giz) !important; font:700 calc(11.5px * var(--esc, 1))/1.3 var(--f-m) !important; letter-spacing:.12em; text-transform:uppercase; margin-top:4px; }
+:root .grade.painel-num > .metrica .val, :root .grade.painel-num > .metrica:first-child .val{ order:1; color:color-mix(in oklab, var(--c) 75%, var(--giz)) !important; font-family:var(--f-m) !important;
+  font-size:min(calc(26px * var(--esc, 1)), 5.4vw) !important; font-weight:700; line-height:1.15; letter-spacing:-.02em; }
+:root .grade.painel-num > .metrica .pe{ order:3; color:var(--grafite) !important; font-size:calc(13.5px * var(--esc, 1)); margin-top:3px; }
+:root .grade.painel-num > .metrica .pe b{ color:var(--giz) !important; }
+:root .grade.painel-num > .metrica > :not(.rot):not(.val):not(.pe){ order:4; }
+:root .grade.painel-num > .metrica.clicavel{ cursor:pointer; }
+:root .grade.painel-num > .metrica.clicavel:hover{ background:color-mix(in oklab, var(--c) 7%, transparent) !important; }
+@media (max-width:560px){
+  :root .grade.painel-num{ grid-auto-flow:row; grid-template-columns:repeat(2, minmax(0,1fr)) !important; row-gap:14px !important; padding:24px 6px 16px !important; }
+  :root .grade.painel-num > .metrica:nth-child(even)::after{ display:none; }
+  :root .grade.painel-num > .metrica, :root .grade.painel-num > .metrica:first-child{ border:0 !important; padding:28px 8px 4px !important; }
+}
+</style>
+<script id="sis-js">
+/* Painéis no modelo do SisProf (04/11/2026). O montarHeroi continua recebendo
+   os mesmos dados de cada aba; muda só o desenho:
+     anel   = a maior fatia da composição (toque abre a composição inteira)
+     topo   = o nome do painel, o número principal e a comparação ao lado
+     chips  = as fatias com a porcentagem de cada uma
+     passos = os números de apoio e o último mês da curva (toque abre o detalhe)
+     pé     = o aviso mais urgente desta seção, com o botão Resolver */
+(function(){
+  if (typeof montarHeroi !== 'function') return;
+  const IC = {
+    dinheiro:'<path d="M12 3v18"/><path d="M16.5 7.5c0-1.8-2-3-4.5-3s-4.5 1.2-4.5 3S9.5 10.3 12 11s4.5 1.6 4.5 3.6-2 3.4-4.5 3.4-4.5-1.3-4.5-3.2"/>',
+    relogio:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+    aviao:'<path d="M2.5 15.5l19-7-19-7 4 7z"/><path d="M6.5 8.5h15"/><path d="M4 21h16"/>',
+    pessoa:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.8 4-5.6 7.5-5.6s6.3 1.8 7.5 5.6"/>',
+    cartao:'<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M7 15h4"/>',
+    grafico:'<path d="M4 19h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/>',
+    alerta:'<path d="M12 4l9 15.5H3z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/>',
+    estrela:'<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.6L12 16.7l-5.1 2.7 1-5.6-4.1-4 5.7-.8z"/>',
+    lista:'<path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M4.5 6.5h.1M4.5 12h.1M4.5 17.5h.1"/>',
+    pontos:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7M12 8.5v7"/>'};
+  const icone = (t, b) => {
+    const s = (t + ' ' + b).toLowerCase();
+    const k = /venc|atras|risco|prazo|expira/.test(s) ? 'alerta' : /clube|renova|por mês|dia|semana/.test(s) ? 'relogio'
+      : /cart[aã]o|fatura|anuidade|limite/.test(s) ? 'cartao' : /client|pessoa|passageir|cpf|conta/.test(s) ? 'pessoa'
+      : /viag|voo|trecho|emiss|embarque|jornada/.test(s) ? 'aviao' : /r\$|pago|cobrad|lucro|custo|valor|receb|econom/.test(s) ? 'dinheiro'
+      : /campanha|promo|oferta|bônus|bonus/.test(s) ? 'estrela' : /pont/.test(s) ? 'pontos' : /milha|pront/.test(s) ? 'check' : 'lista';
+    return `<svg viewBox="0 0 24 24">${IC[k]}</svg>`;
+  };
+  const CORES = ['var(--anil-claro)', 'var(--lilas)', 'var(--jade)', 'var(--ouro)', 'var(--brasa)'];
+  const CHIP = ['#C9A24B', '#3E8EDB', '#2FA37A', '#9B6BE0', '#9AA3B2'];
+  const txt = h => { const d = document.createElement('div'); d.innerHTML = String(h == null ? '' : h); return d.textContent.trim(); };
+  const ehAlerta = (b, sp) => /venc|atras|risco|expira|vencid/i.test(sp) && /[1-9]/.test(txt(b));
+  /* avisos lidos uma vez por rodada de desenho (vários painéis no mesmo salvar) */
+  let avCache = null;
+  const avTodos = () => { if (!avCache){ try { avCache = (typeof avisos === 'function' ? avisos() : []).slice().sort((a, b) => (b.grau - a.grau) || ((a.dias ?? 99) - (b.dias ?? 99))); } catch(e){ avCache = []; } setTimeout(() => avCache = null, 0); } return avCache; };
+  const acaoJs = a => `${a.ir ? `irPara('${a.ir[0]}');irParaAba('${a.ir[0]}','${a.ir[1]}');` : ''}${a.fn || ''}`;
+  function avisoDaSecao(alvo){
+    const v = ((alvo.closest('.vista') || {}).id || '').replace(/^v-/, ''), aba = ((alvo.closest('.painel-aba') || {}).id || '').replace(/^p-/, '');
+    if (!v) return null;
+    const l = avTodos().filter(a => a.ir && a.ir[0] === v);
+    return aba ? (l.find(a => a.ir[1] === aba) || null) : (l[0] || null);
+  }
+  const orig = montarHeroi;
+  window.montarHeroiAntigo = orig;
+  montarHeroi = function(alvo, o){
+    if (!alvo) return;
+    if (alvo.id === 'mesaHeroi' || DB.cfg.paineisAntigos) { alvo.classList.remove('sis'); return orig.apply(this, arguments); }
+    alvo.classList.add('sis');
+    if (o.vazio){ alvo.classList.remove('sem-anel'); return orig.apply(this, arguments); }
+    alvo.classList.remove('heroi-unico');
+    const fat = (o.fatias || []).filter(f => f.v > 0), tot = soma(fat.map(f => f.v));
+    const temSerie = o.serie && o.serie.length >= 2 && o.serie.some(p => p.v);
+    const passos = (o.numeros || []).map(([b, sp, det]) => ({b, sp:String(sp == null ? '' : sp), det}));
+    if (o.ult && temSerie) passos.push({b:o.ult.b, sp:`Último mês · ${o.ult.sp}`, serie:true});
+    const n = Math.max(1, Math.min(5, passos.length));
+    const C = 2 * Math.PI * 80, f0 = fat[0], p0 = f0 && tot ? f0.v / tot * 100 : 0, off = C * (1 - p0 / 100);
+    const anel = fat.length >= 2;
+    const a = avisoDaSecao(alvo);
+    alvo.classList.toggle('sem-anel', !anel);
+    alvo.innerHTML = `<div class="mpn-card">
+      <div class="mpn-grid">
+        ${anel ? `<button type="button" class="mpn-anel" data-sis="comp" aria-label="${esc(pct(p0, 0))} em ${esc(f0.n)}. Ver a composição">
+          <svg viewBox="0 0 190 190"><circle class="t" cx="95" cy="95" r="80"/><circle class="p" cx="95" cy="95" r="80" style="stroke:${esc(CHIP[0])}" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-alvo="${off.toFixed(1)}"/></svg>
+          <div class="mpn-anel-txt"><b>${Math.round(p0)}<small>%</small></b><span>em ${esc(f0.n)}</span></div></button>` : ''}
+        <div class="mpn-dir" style="min-width:0">
+          <div class="mpn-cab"><div style="min-width:0"><span class="mpn-olho">${esc(o.rot)}</span><div class="sis-val heroi-valor">${o.valor}</div></div>
+            ${o.linha ? `<div class="sis-linha">${o.linha}</div>` : ''}</div>
+          ${fat.length >= 2 ? `<div class="mpn-chips">${fat.map((x, i) => `<button type="button" class="mpn-chip" data-sis="comp" style="--c:${CHIP[Math.min(i, 4)]}"><b>${pct(x.v / tot * 100, 0)}</b>${esc(x.n)}</button>`).join('')}
+            ${o.fatias.todos && o.fatias.todos.length > fat.length ? `<button type="button" class="sis-vermais" data-sis="comp">ver os ${o.fatias.todos.length}</button>` : ''}</div>` : ''}
+          ${passos.length ? `<div class="mpn-fluxo sis-passos" style="--n:${n}">${passos.map((x, i) => {
+            const k = x.sp.indexOf(' · '), rot = k < 0 ? x.sp : x.sp.slice(0, k), sub = k < 0 ? '' : x.sp.slice(k + 3);
+            const clic = x.serie || (x.det && DETALHES_HEROI[x.det]), tag = clic ? 'button' : 'div';
+            return `<${tag}${clic ? ' type="button"' : ''} class="mpn-passo${ehAlerta(x.b, x.sp) ? ' alerta' : ''}" style="--c:${CORES[i % 4]}"${x.det ? ` data-det="${esc(x.det)}"` : ''}${x.serie ? ' data-sis="serie"' : ''}>
+              <span class="mpn-ic">${x.serie ? `<svg viewBox="0 0 24 24">${IC.grafico}</svg>` : icone(rot, x.b)}</span>
+              <b class="mpn-num">${x.b}</b> <span class="mpn-rot">${esc(rot)}</span> ${sub ? `<span class="mpn-sub">${esc(sub)}</span>` : ''}<i class="mpn-barra"></i></${tag}>`; }).join('')}</div>` : ''}
+        </div>
+      </div>
+      ${o.dirHtml && !o.dirAcao ? `<div class="sis-extra"><span class="mpn-olho">${esc(o.dirRot || '')}</span>${o.dirSub ? `<p class="fraco" style="margin:4px 0 10px">${esc(o.dirSub)}</p>` : ''}${o.dirHtml}</div>` : ''}
+      ${a || (o.dirHtml && o.dirAcao) ? `<div class="mpn-pe">
+        ${a ? `<span class="mpn-tag">Próximo passo</span><span class="mpn-pe-txt"><b>${esc(a.t)}.</b> ${esc(String(a.s || '').split('\n')[0])}</span>`
+          : `<span class="mpn-tag">${esc(o.dirRot || 'Detalhe')}</span><span class="mpn-pe-txt">${esc(o.dirSub || '')}</span>`}
+        ${o.dirHtml && o.dirAcao ? `<button type="button" class="mpn-mais" data-sis="dir">${esc(o.dirBt || 'Ver em detalhe')}</button>` : ''}
+        ${a ? `<button type="button" class="mpn-bt cheio" onclick="${esc(acaoJs(a))}">Resolver</button>` : ''}</div>` : ''}
+    </div>`;
+    contarValor(alvo.querySelector('.heroi-valor'));
+    alvo.querySelectorAll('[data-det]').forEach(b => b.onclick = () => DETALHES_HEROI[b.dataset.det]());
+    alvo.querySelectorAll('[data-sis="comp"]').forEach(b => b.onclick = () => janelaComposicao(o));
+    alvo.querySelectorAll('[data-sis="serie"]').forEach(b => b.onclick = () => janelaSerie(o));
+    alvo.querySelectorAll('[data-sis="dir"]').forEach(b => b.onclick = e => o.dirAcao(e.currentTarget));
+    requestAnimationFrame(() => setTimeout(() => { const c = alvo.querySelector('.mpn-anel .p'); if (c) c.style.strokeDashoffset = c.dataset.alvo; }, 60));
+  };
 })();
 </script>
 
