@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-05 22:45';
+const BUILD = '2026-11-05 23:10';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -34257,10 +34257,15 @@ let filtroViagens = 'todas';
 
 /* Os dois lados, lado a lado: o Panorama geral não lista nada, só compara. Cada
    lado é um cartão com quatro números e uma porta para a lista dele. */
+const LADO_VAZIO = {'Valor médio do milheiro':'depois do 1º voo', 'Economizou':'nada voado ainda', 'Garantida, a voar':'nada emitido ainda',
+  'Milhas que faltam':'nada falta', 'Próxima viagem':'sem data marcada', 'Valor do milheiro':'depois do 1º voo'};
 function cartoesDosLados(N, I, linhas, irPara, oQue){
   const lado = (k, X, nome) => `<div class="cartao lado-cartao">
       <div class="lado-cab"><span class="lado-nome">${nome}</span></div>
-      <div class="lado-dados">${linhas.map(([rot, f]) => `<div><span>${rot}</span><b>${f(X)}</b></div>`).join('')}</div>
+      <div class="lado-dados">${linhas.map(([rot, f]) => { const v = f(X);
+        /* sem número ainda: diz o porquê em vez de "n/d"; zero fica discreto (05/11/2026) */
+        if (v === 'n/d' || v == null || v === '') return `<div><span>${rot}</span><b class="lado-vazio">${LADO_VAZIO[rot] || 'ainda sem dado'}</b></div>`;
+        return `<div><span>${rot}</span><b${String(v).trim() === '0' ? ' class="lado-zero"' : ''}>${v}</b></div>`; }).join('')}</div>
       <button type="button" class="lado-ir" onclick="${irPara}('${k}')">Ver ${oQue} ${k === 'nac' ? 'nacionais' : 'internacionais'} <svg><use href="#i-seta"/></svg></button>
     </div>`;
   return `<div class="grade lados">${lado('nac', N, 'Nacional')}${lado('int', I, 'Internacional')}</div>`;
@@ -34313,15 +34318,26 @@ function numerosViagens(esc){
   const vals = feitas.map(valorResgate);
   const comValor = vals.filter(v => v.porMilheiro != null);
   const milhas = soma(feitas.map(r => Number(r.milhas) || 0));
-  const liquido = soma(comValor.map(v => v.liquido));
+  /* Viagem usada sem o preço da pagante na reserva, mas com o trecho da jornada
+     voado e medido (05/11/2026): o valor vem do trecho. Antes ficava n/d, e a
+     economia do trecho não entrava em lugar nenhum. */
+  const trechoDaRes = {};
+  (DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
+    .forEach(t => { if (t.reservaId && t.situacao === 'voado') trechoDaRes[t.reservaId] = t; });
+  const pelosTrechos = feitas.map((r, i) => ({r, v:vals[i], t:trechoDaRes[r.id]}))
+    .filter(x => x.v.porMilheiro == null && x.t && x.t.forma !== 'dinheiro' && Number(x.t.milhas) > 0 && Number(x.t.vista) > 0)
+    .map(x => ({t:x.t, liq:(Number(x.t.vista) || 0) - (Number(x.t.taxas) || 0) - (Number(x.t.pago) || 0), mil:Number(x.t.milhas) || 0, eco:economiaTrecho(x.t).valor}));
+  const milhasComValor = soma(feitas.filter((r, i) => vals[i].porMilheiro != null).map(r => Number(r.milhas) || 0)) + soma(pelosTrechos.map(x => x.mil));
+  const liquido = soma(comValor.map(v => v.liquido)) + soma(pelosTrechos.map(x => x.liq));
   return {
     metas, abertas, viagens, feitas,
     realizadas:metas.filter(m => m.feita).length,
     prontas:abertas.filter(m => (sal[m.prog] || 0) >= m.precisa).length,
     faltam:soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)))),
     custoFechar:soma(abertas.map(m => Math.max(0, m.precisa - (sal[m.prog] || 0)) / 1000 * faixasDe(m.prog).alvo)),
-    milhas, vista:soma(vals.map(v => v.vista)), taxas:soma(vals.map(v => v.taxas)),
+    milhas, vista:soma(vals.map(v => v.vista)) + soma(pelosTrechos.map(x => Number(x.t.vista) || 0)), taxas:soma(vals.map(v => v.taxas)),
     ganho:soma(comValor.filter(v => v.ganho != null).map(v => v.ganho))
+      + soma(pelosTrechos.map(x => x.eco).filter(v => v != null))
       + soma((DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
           .filter(t => t.situacao === 'voado' && (t.forma === 'dinheiro' || !t.reservaId)).map(t => economiaTrecho(t).valor).filter(v => v != null)),
     /* Resultados conversa com as Jornadas (04/11/2026): o trecho emitido já tem
@@ -34330,7 +34346,7 @@ function numerosViagens(esc){
     garantida:soma((DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe)
           .filter(t => t.situacao === 'emitido').map(t => economiaTrecho(t).valor).filter(v => v != null)),
     nGarantida:(DB.planos || []).filter(p => !esc || escopoPlano(p) === esc).flatMap(trechosDe).filter(t => t.situacao === 'emitido' && economiaTrecho(t).valor != null).length,
-    medio: milhas && liquido ? liquido / milhas * 1000 : 0,
+    medio: milhasComValor && liquido ? liquido / milhasComValor * 1000 : 0,
     agenda:viagens.filter(r => r.status !== 'usada').length + trechosEmDinheiroNaAgenda(esc).length
   };
 }
@@ -78734,7 +78750,38 @@ button.fxs:hover .fxs-tit{ text-decoration:underline; text-decoration-thickness:
       if (p.classList.contains('heroi-unico')) { const f = p.nextElementSibling; if (f && f.classList.contains('fxs')) f.remove(); return; }
       try { montar(p); } catch(e){ console.error(e); }
     });
+    requestAnimationFrame(() => document.querySelectorAll('.fxs').forEach(espacar));
   }
+  /* espaço medido (05/11/2026): do fim do painel até o texto da faixa e do fim do
+     texto até o próximo bloco, sempre ESPACO px, seja qual for o contêiner da página */
+  const ESPACO = 24;
+  function proximoVisivel(el){
+    let n = el.nextElementSibling;
+    while (n && (!n.offsetParent || n.getBoundingClientRect().height === 0)) n = n.nextElementSibling;
+    if (n) return n;
+    return el.parentElement && !el.parentElement.classList.contains('painel-aba') && !el.parentElement.classList.contains('vista') ? proximoVisivel(el.parentElement) : null;
+  }
+  function espacar(f){
+    if (!f || !f.offsetParent) return;
+    const pad = parseFloat(getComputedStyle(f).paddingTop) || 0;
+    f.style.marginTop = '0px'; f.style.marginBottom = '0px';
+    const ant = f.previousElementSibling, rf = f.getBoundingClientRect();
+    if (ant && ant.offsetParent){
+      f.style.marginTop = (ESPACO - pad - (rf.top - ant.getBoundingClientRect().bottom)) + 'px';
+      /* margens que se fundem (bloco comum) mudam a conta: confere e corrige uma vez */
+      const real = f.getBoundingClientRect().top + pad - ant.getBoundingClientRect().bottom;
+      if (Math.abs(real - ESPACO) > 0.5) f.style.marginTop = (parseFloat(f.style.marginTop) + ESPACO - real) + 'px';
+    }
+    const r2 = f.getBoundingClientRect(), prox = proximoVisivel(f);
+    if (prox){
+      f.style.marginBottom = (ESPACO - pad - (prox.getBoundingClientRect().top - r2.bottom)) + 'px';
+      const real = prox.getBoundingClientRect().top - (f.getBoundingClientRect().bottom - pad);
+      if (Math.abs(real - ESPACO) > 0.5) f.style.marginBottom = (parseFloat(f.style.marginBottom) + ESPACO - real) + 'px';
+    }
+    else f.style.marginBottom = (ESPACO - pad) + 'px';
+  }
+  window.fxsEspacar = () => document.querySelectorAll('.fxs').forEach(espacar);
+  addEventListener('resize', () => requestAnimationFrame(window.fxsEspacar));
   window.fxsVarrer = varrer;
   let ag = false; const agendar = () => { if (ag) return; ag = true; requestAnimationFrame(() => { ag = false; varrer(); setTimeout(varrer, 350); }); };
   ['montarHeroi', 'renderMesaHeroi', 'irParaAba', 'irPara', 'salvar'].forEach(fn => {
@@ -78806,5 +78853,66 @@ function avatarLoja(nome, cat, cls){
   return `<span class="lj-avatar cat${cls ? ' ' + cls : ''}" style="--cc:${i.c}" title="${esc(i.n)}" aria-hidden="true"><svg viewBox="0 0 24 24">${i.d}</svg></span>`;
 }
 </script>
+<script id="esp-js">
+/* Guarda de espaçamento do sistema inteiro (05/11/2026, regra do Jadiel: nada
+   colado). Dois blocos (cartões, quadros) um embaixo do outro com 4 px ou menos
+   entre eles ganham o espaço padrão de 16 px. Roda sozinho a cada tela desenhada,
+   então vale também para o que for criado depois. */
+(function(){
+  const PADRAO = 16;
+  const ehBloco = e => { if (!e || e.offsetParent === null) return false; const r = e.getBoundingClientRect(); if (r.height < 30 || r.width < 80) return false;
+    const s = getComputedStyle(e); return parseFloat(s.borderTopLeftRadius) >= 10 && (parseFloat(s.borderTopWidth) > 0 || s.boxShadow !== 'none' || (s.backgroundColor !== 'rgba(0, 0, 0, 0)' && s.backgroundColor !== 'transparent')); };
+  function arrumar(raiz){
+    (raiz || document).querySelectorAll('.vista.on *, #folha *, dialog[open] *').forEach(e => {
+      if (!ehBloco(e)) return;
+      let n = e.nextElementSibling; while (n && n.offsetParent === null) n = n.nextElementSibling;
+      if (!n || n.classList.contains('fxs') || !ehBloco(n)) return;
+      const a = e.getBoundingClientRect(), b = n.getBoundingClientRect();
+      if (b.left >= a.right - 2 || b.right <= a.left + 2) return;          /* lado a lado: não é empilhado */
+      const g = b.top - a.bottom; if (g < -1 || g > 4) return;
+      const mt = parseFloat(getComputedStyle(n).marginTop) || 0;
+      n.style.marginTop = (mt + PADRAO - g) + 'px'; n.dataset.espaco = '1';
+    });
+  }
+  /* cabeçalho de seção dentro da página: 28 px do bloco de cima e 14 px até o
+     conteúdo de baixo, medidos (o contêiner pode ter espaço próprio ou não) */
+  function cabecalhos(){
+    document.querySelectorAll('.vista.on div.sec-cab:not(.linha), #folha div.sec-cab:not(.linha)').forEach(h => {
+      if (h.offsetParent === null) return;
+      const vis = e => e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
+      let a = h.previousElementSibling; while (a && !vis(a)) a = a.previousElementSibling;
+      let n = h.nextElementSibling; while (n && !vis(n)) n = n.nextElementSibling;
+      const acerta = (prop, alvo, medir) => { const d = medir(); if (Math.abs(d - alvo) > 0.5) h.style.setProperty(prop, ((parseFloat(getComputedStyle(h)[prop === 'margin-top' ? 'marginTop' : 'marginBottom']) || 0) + alvo - d) + 'px', 'important'); };
+      if (a) { acerta('margin-top', 28, () => h.getBoundingClientRect().top - a.getBoundingClientRect().bottom); acerta('margin-top', 28, () => h.getBoundingClientRect().top - a.getBoundingClientRect().bottom); }
+      else h.style.setProperty('margin-top', '0px', 'important');
+      if (n) { acerta('margin-bottom', 14, () => n.getBoundingClientRect().top - h.getBoundingClientRect().bottom); acerta('margin-bottom', 14, () => n.getBoundingClientRect().top - h.getBoundingClientRect().bottom); }
+    });
+  }
+  const _arr = arrumar; arrumar = function(r){ _arr(r); try { cabecalhos(); } catch(e){} };
+  window.espacarBlocos = (r) => arrumar(r);
+  let ag = false;
+  const agendar = () => { if (ag) return; ag = true; setTimeout(() => { ag = false; try { arrumar(); } catch(e){} }, 120); };
+  new MutationObserver(agendar).observe(document.body, {childList:true, subtree:true});
+  addEventListener('resize', agendar);
+  agendar();
+})();
+</script>
+<style id="esp-css">
+/* linhas da coluna Economia dos trechos: um respiro entre elas */
+.vista td.n > div + div{ margin-top:4px; }
+.vista td.n > div.fraco{ margin-top:2px; }
+</style>
+<style id="sec2-css">
+/* Valores sem dado e zeros nos cartões Nacional / Internacional (05/11/2026) */
+.lado-dados b.lado-vazio{ font-family:inherit !important; font-weight:500 !important; font-size:calc(14px * var(--esc)) !important; color:var(--grafite) !important; letter-spacing:0; }
+.lado-dados b.lado-zero{ color:var(--grafite) !important; font-weight:600 !important; }
+/* Cabeçalho de seção dentro da página (título + explicação): um padrão só.
+   Título e explicação na mesma linha quando cabem; 28 px do bloco de cima,
+   14 px até o conteúdo de baixo. */
+div.sec-cab:not(.linha){ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin:28px 0 14px !important; padding:0 !important; }
+div.sec-cab:not(.linha):first-child{ margin-top:0 !important; }
+div.sec-cab:not(.linha) > p{ margin:0 !important; flex:1 1 320px; min-width:0; }
+div.sec-cab:not(.linha) > .olho{ flex:none; }
+</style>
 </body>
 </html>
