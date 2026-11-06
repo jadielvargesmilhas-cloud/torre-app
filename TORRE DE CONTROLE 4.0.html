@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-05 22:20';
+const BUILD = '2026-11-05 22:45';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -23186,7 +23186,7 @@ function cartaoLoja(l, vivas){
   const meuCpm = cpmPorPrograma()[l.prog] != null && cpmPorPrograma()[l.prog] > 0;
   return `<article class="lj-card lj-${z}">
     <header class="lj-cab">
-      <span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>
+      ${typeof avatarLoja === 'function' ? avatarLoja(l.n, l.cat) : `<span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>`}
       <div class="vt-nome"><b title="${esc(l.n)}">${esc(l.n)}</b>
         <span><span class="etq">${esc(l.cat)}</span>${l.origem === 'bonificada' ? '<span class="etq anil">compra bonificada</span>' : ''}</span></div>
       <span class="vt-prazo cp-${z || 'anil'}">${prazo}</span>
@@ -23251,7 +23251,7 @@ function renderArquivoLojas(mortas, busca){
     <div class="rolo" style="margin:10px 0 0;padding:0"><table class="tb-dados lj-tab">
       <thead><tr><th>Loja</th><th>Programa</th><th class="n">Recorde</th><th class="c">Quando</th><th class="c">Vezes</th></tr></thead>
       <tbody>${mostrar.map(g => `<tr>
-        <td><span class="lj-avatar mini" style="--h:${matizLoja(g.n)}">${esc(siglaLoja(g.n))}</span>${esc(g.n)}</td>
+        <td>${typeof avatarLoja === 'function' ? avatarLoja(g.n, g.cat, 'mini') : `<span class="lj-avatar mini" style="--h:${matizLoja(g.n)}">${esc(siglaLoja(g.n))}</span>`}${esc(g.n)}</td>
         <td><span class="lj-prog">${discoProg(g.prog, 'p')}${esc(prog(g.prog).n)}</span></td>
         <td class="n"><span class="lj-barrinha"><i style="width:${Math.max(6, g.rec / escala * 100)}%"></i></span><b>${multTxt(g.rec)}</b></td>
         <td class="c">${dataBR(g.quando)}</td>
@@ -23291,7 +23291,7 @@ function abrirValeLoja(id, gatilho){
   const t = tetoLoja(l), r = retornoLoja(l), mult = t.promo || t.base || 0;
   d.innerHTML = `<div class="dr-painel vl-painel">
     <header class="dr-cab">
-      <div class="dr-rota"><span class="lj-avatar" style="--h:${matizLoja(l.n)}">${esc(siglaLoja(l.n))}</span>
+      <div class="dr-rota">${typeof avatarLoja === 'function' ? avatarLoja(l.n, l.cat) : `<span class="lj-avatar" style="--h:${matizLoja(l.n)}">${esc(siglaLoja(l.n))}</span>`}
         <div class="dr-rota-txt"><h2 id="vlTit">${esc(l.n)}</h2><span class="rc-sub">${multTxt(mult)} pontos por real em ${esc(prog(l.prog).n)} · o milheiro vale ${brl2(r.cpm)}</span></div></div>
       <div class="dr-rotulo"><svg><use href="#i-dinheiro"/></svg>Vale a Pena?</div>
     </header>
@@ -58920,7 +58920,7 @@ function renderComparaLojas(){
     const frase = x.empate ? 'Tanto faz: rende igual nos dois.'
       : `Compre pela <b>${esc(prog(m.prog).n)}</b>: ${nBRdec(mult(m))} pontos por real, contra ${x.os.slice(1).map(o => `${nBRdec(mult(o))} na ${esc(prog(o.prog).n)}`).join(' e ')}.`;
     return `<div class="lc2-l">
-      <div class="lc2-n"><span class="lj-avatar" style="--h:${matizLoja(x.n)}" aria-hidden="true">${esc(siglaLoja(x.n))}</span><div><b>${esc(x.n)}</b><small>${frase}</small></div></div>
+      <div class="lc2-n">${typeof avatarLoja === 'function' ? avatarLoja(x.n, x.cat) : `<span class="lj-avatar" style="--h:${matizLoja(x.n)}" aria-hidden="true">${esc(siglaLoja(x.n))}</span>`}<div><b>${esc(x.n)}</b><small>${frase}</small></div></div>
       <div class="lc2-ps">${x.os.map((o, i) => { const f = bussolaDe(o.porDolar ? mult(o) / _cambioUSD : mult(o), o.prog);
         return `<div class="lc2-p${i === 0 && !x.empate ? ' win' : ''}">${discoProg(o.prog, 'p')}<span class="lc2-pn">${esc(prog(o.prog).n)}</span><b>${nBRdec(mult(o))}×</b>${f ? bussolaHTML(f, {rotulo:false, compacto:true}) : ''}<small>${vol(o)} de volta</small>${i === 0 && !x.empate ? '<em>Rende mais</em>' : ''}</div>`; }).join('')}</div>
     </div>`;
@@ -59295,7 +59295,7 @@ function linhaLojaHTML(l){
   const gasto = gastoLojaV > 0 ? Math.floor(gastoLojaV * mult) : 0;
   const r = retornoLoja(l);
   return `<div class="ljl-l${des.length ? ' tem-des' : ''}" data-ljl="${esc(String(l.id))}">
-    <span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>
+    ${typeof avatarLoja === 'function' ? avatarLoja(l.n, l.cat) : `<span class="lj-avatar" style="--h:${matizLoja(l.n)}" aria-hidden="true">${esc(siglaLoja(l.n))}</span>`}
     <div class="ljl-n"><b>${esc(l.n)}</b><small>${esc(catRot(l.cat))}${l.modo === 'shopping' ? ' · <span class="ljl-shop">Shopping ' + esc(prog(l.prog).n) + '</span>' : ''}${prazo ? ' · ' + prazo : ''}</small>${(l._outros || []).length ? `<small class="ljl-tb">Também na ${l._outros.map(o => `${esc(curto(prog(o.prog).n))}: ${nBRdec(tetoLoja(o).promo || tetoLoja(o).base || 0)} por real`).join('; na ')}</small>` : ''}
       ${des.length ? `<span class="ljl-des"><svg><use href="#i-alvo"/></svg>${des[0].hora ? 'Hora de comprar' : 'Na sua lista'}: ${esc(des.map(x => x.d.n).join(', '))}</span>` : ''}</div>
     <span class="ljl-p">${discoProg(l.prog, 'p')}<span>${esc(prog(l.prog).n)}</span></span>
@@ -59742,7 +59742,7 @@ function abrirComparaContas(){
   };
   const custo = _ctRs[0] ? _ctRs[0].custoExtra : 0;
   d.innerHTML = `<div class="dr-painel ctd-painel">
-    <header class="dr-cab"><div class="dr-rota"><span class="lj-avatar" style="--h:${matizLoja(l.n)}">${esc(siglaLoja(l.n))}</span>
+    <header class="dr-cab"><div class="dr-rota">${typeof avatarLoja === 'function' ? avatarLoja(l.n, l.cat) : `<span class="lj-avatar" style="--h:${matizLoja(l.n)}">${esc(siglaLoja(l.n))}</span>`}
       <div class="dr-rota-txt"><h2 id="ctdTit">Comparar contas · ${esc(l.n)}</h2><span class="rc-sub">${esc(prog(l.prog).n)} · o que essa compra faz no milheiro de cada conta</span></div></div></header>
     <div class="dr-corpo">
       <div class="ctd-ord" role="group" aria-label="Ordenar por">
@@ -78788,5 +78788,23 @@ function drBlackHTML(c){
   .lj-card .vt-nome b{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; white-space:normal; overflow:hidden; }
 }
 </style>
+<style id="ljav-css">
+/* No lugar das iniciais da loja, o desenho da categoria (05/11/2026, pedido do
+   Jadiel): a Torre não tem a logo de cada marca, e a categoria diz mais. */
+.lj-avatar.cat{ color:var(--cc); background:color-mix(in oklab, var(--cc) 13%, var(--sup-0)); box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--cc) 32%, transparent); }
+.lj-avatar.cat svg{ width:58%; height:58%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+<script id="ljav-js">
+function avatarLoja(nome, cat, cls){
+  const ok = c => typeof CAT_LOJAS !== 'undefined' && CAT_LOJAS.some(x => x[0] === c);
+  let k = '';
+  try { k = (typeof catLojaManual === 'function' && catLojaManual(nome)) || ''; } catch(e){}
+  if (!ok(k)) k = cat || '';
+  if (!ok(k)) try { k = typeof categoriaDaLoja === 'function' ? categoriaDaLoja(nome) : k; } catch(e){}
+  const i = typeof catLojaInfo === 'function' ? catLojaInfo(k) : null;
+  if (!i) return `<span class="lj-avatar${cls ? ' ' + cls : ''}" style="--h:${matizLoja(nome)}" aria-hidden="true">${esc(siglaLoja(nome))}</span>`;
+  return `<span class="lj-avatar cat${cls ? ' ' + cls : ''}" style="--cc:${i.c}" title="${esc(i.n)}" aria-hidden="true"><svg viewBox="0 0 24 24">${i.d}</svg></span>`;
+}
+</script>
 </body>
 </html>
