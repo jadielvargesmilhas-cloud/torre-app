@@ -10237,6 +10237,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
 
         <div class="painel-aba" id="p-ms-lancamentos">
           <div class="pilha" style="gap:16px">
+            <section class="heroi" id="lcHeroi"></section>
             <div class="linha">
               <div class="esticar">
                 <div class="olho anil" style="margin-bottom:4px">Diário de bordo</div>
@@ -10244,8 +10245,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
               </div>
               <button class="bt primario" id="btNovoLancamento"><svg><use href="#i-mais"/></svg>Novo Lançamento</button>
             </div>
-            <section class="heroi" id="lcHeroi"></section>
-            <!-- Filtros pelas próprias colunas da tabela: programa, titular e como
+                        <!-- Filtros pelas próprias colunas da tabela: programa, titular e como
                  entrou são as três perguntas que se faz a um livro — o quê, de quem,
                  de que jeito —, e o período recorta o quando. Os selects nascem do
                  que existe no livro, não do catálogo inteiro: oferecer um programa
@@ -11573,6 +11573,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <!-- Painel da seção, logo abaixo do título, como nas demais. -->
           <section class="heroi" id="ajHeroiProv" style="margin-bottom:18px"></section>
           <div class="pilha" style="gap:18px">
+            <div class="sec-cab"><div class="olho">Provedores de tarifa</div><p>Onde a Torre busca o preço da passagem, em dinheiro e em milhas. Escolha qual usar e, se quiser, cole a chave do provedor.</p></div>
             <div class="nota"><svg><use href="#i-chave"/></svg><div>As chaves ficam só no seu navegador, neste computador. Nada é enviado para lugar nenhum além do provedor que você mesmo escolher. Sem chave, a Torre continua funcionando por inteiro no motor local.</div></div>
             <div class="grade g2" id="ajProvedores"></div>
             <div class="cartao">
@@ -11590,6 +11591,7 @@ setTimeout(() => document.documentElement.classList.remove('restaurando'), 3000)
           <!-- Painel da seção, logo abaixo do título, como nas demais. -->
           <section class="heroi" id="ajHeroiProg" style="margin-bottom:16px"></section>
           <div class="pilha" style="gap:16px">
+            <div class="sec-cab"><div class="olho">Faixas do milheiro por programa</div><p>Ótimo, valor-alvo, razoável e preço de tabela de cada programa. São esses números que desenham o termômetro.</p></div>
             <div class="nota ouro"><svg><use href="#i-alvo"/></svg><div>Estas são as quatro faixas que desenham o termômetro. Vêm da referência pública de mercado para 2026 e podem ser reescritas a qualquer momento, o termômetro se redesenha na hora.</div></div>
             <div class="cartao" style="padding:0"><div class="rolo" style="margin:0;padding:0" id="ajFaixas"></div></div>
             <div class="cartao" style="padding:0">
@@ -78768,7 +78770,7 @@ button.fxs:hover .fxs-tit{ text-decoration:underline; text-decoration-thickness:
   }
   /* espaço medido (05/11/2026): do fim do painel até o texto da faixa e do fim do
      texto até o próximo bloco, sempre ESPACO px, seja qual for o contêiner da página */
-  const ESPACO = 24;
+  const ESPACO_BASE = 24, ESPACO_ACIMA = 40; /* acima, mais folga para separar do bloco de cima (pedido do Jadiel, 05/11/2026) */
   function proximoVisivel(el){
     let n = el.nextElementSibling;
     while (n && (!n.offsetParent || n.getBoundingClientRect().height === 0)) n = n.nextElementSibling;
@@ -78776,17 +78778,20 @@ button.fxs:hover .fxs-tit{ text-decoration:underline; text-decoration-thickness:
     return el.parentElement && !el.parentElement.classList.contains('painel-aba') && !el.parentElement.classList.contains('vista') ? proximoVisivel(el.parentElement) : null;
   }
   function espacar(f){
-    if (!f || !f.offsetParent) return;
+    if (!f || !f.offsetParent || f.classList.contains('fxs-cab')) return;
     const pad = parseFloat(getComputedStyle(f).paddingTop) || 0;
     f.style.marginTop = '0px'; f.style.marginBottom = '0px';
     const ant = f.previousElementSibling, rf = f.getBoundingClientRect();
     if (ant && ant.offsetParent){
-      f.style.marginTop = (ESPACO - pad - (rf.top - ant.getBoundingClientRect().bottom)) + 'px';
+      f.style.marginTop = (ESPACO_ACIMA - pad - (rf.top - ant.getBoundingClientRect().bottom)) + 'px';
       /* margens que se fundem (bloco comum) mudam a conta: confere e corrige uma vez */
-      const real = f.getBoundingClientRect().top + pad - ant.getBoundingClientRect().bottom;
-      if (Math.abs(real - ESPACO) > 0.5) f.style.marginTop = (parseFloat(f.style.marginTop) + ESPACO - real) + 'px';
+      for (let i = 0; i < 3; i++){ const real = f.getBoundingClientRect().top + pad - ant.getBoundingClientRect().bottom;
+        if (Math.abs(real - ESPACO_ACIMA) > 0.5) f.style.marginTop = (parseFloat(f.style.marginTop) + ESPACO_ACIMA - real) + 'px'; else break; }
     }
     const r2 = f.getBoundingClientRect(), prox = proximoVisivel(f);
+    const comecaComTitulo = el => { if (!el) return false; if (el.classList.contains('st-cab') || el.classList.contains('fxs')) return true;
+      const t = el.querySelector('.st-cab'); return !!t && t.offsetParent !== null && Math.abs(t.getBoundingClientRect().top - el.getBoundingClientRect().top) < 2; };
+    const ESPACO = comecaComTitulo(prox) ? ESPACO_ACIMA : ESPACO_BASE;
     if (prox){
       f.style.marginBottom = (ESPACO - pad - (prox.getBoundingClientRect().top - r2.bottom)) + 'px';
       const real = prox.getBoundingClientRect().top - (f.getBoundingClientRect().bottom - pad);
@@ -78891,7 +78896,7 @@ function avatarLoja(nome, cat, cls){
   /* cabeçalho de seção dentro da página: 28 px do bloco de cima e 14 px até o
      conteúdo de baixo, medidos (o contêiner pode ter espaço próprio ou não) */
   function cabecalhos(){
-    document.querySelectorAll('.vista.on div.sec-cab:not(.linha), #folha div.sec-cab:not(.linha)').forEach(h => {
+    document.querySelectorAll('.vista.on div.sec-cab:not(.linha):not(.st-cab), #folha div.sec-cab:not(.linha):not(.st-cab)').forEach(h => {
       if (h.offsetParent === null) return;
       const vis = e => e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
       let a = h.previousElementSibling; while (a && !vis(a)) a = a.previousElementSibling;
@@ -78928,5 +78933,130 @@ div.sec-cab:not(.linha):first-child{ margin-top:0 !important; }
 div.sec-cab:not(.linha) > p{ margin:0 !important; flex:1 1 320px; min-width:0; }
 div.sec-cab:not(.linha) > .olho{ flex:none; }
 </style>
+
+<style id="patcab-css">
+/* Título de Patrimônio no mesmo padrão da faixa de atenção (05/11/2026, pedido do
+   Jadiel): olho com fio, título grande e uma linha de explicação. Só texto. */
+.fxs.fxs-cab{ --c:var(--anil); padding:10px 4px; }
+#p-ms-hoje .pat-filtro{ margin-top:-9px; margin-bottom:1px; } /* 10 do respiro da faixa + 13 da pilha - 9 = 14 px do texto até os nomes */
+#p-ms-hoje .pat-filtro > .olho{ display:none; }
+</style>
+<script id="patcab-js">
+(function(){
+  const ID = 'mesaPatCab';
+  function montar(){
+    const comp = document.getElementById('mesaComposicao'); if (!comp) return;
+    const bloco = comp.parentElement, filtro = document.getElementById('mesaFiltroConta');
+    const linha = filtro && filtro.parentElement; if (!linha) return;
+    linha.classList.add('pat-filtro');
+    const sal = saldoPorProgramaDe(filtroConta), inv = investidoPorProgramaDe(filtroConta);
+    let pts = 0, mil = 0, inve = 0, nP = 0, nM = 0;
+    PROG_IDS.forEach(p => { const q = sal[p] || 0; if (q <= 0) return; inve += inv[p] || 0;
+      if (prog(p).tipo === 'pontos'){ pts += q; nP++; } else if (prog(p).tipo === 'milhas'){ mil += q; nM++; } });
+    const dono = filtroConta === 'grupo' ? null : DB.contas.find(c => c.id === filtroConta);
+    const quem = dono ? String(dono.nome).split(/\s+/)[0] : `Grupo de ${DB.contas.length} ${DB.contas.length === 1 ? 'conta' : 'contas'}`;
+    const partes = []; if (pts) partes.push(`${nBR(pts)} pontos`); if (mil) partes.push(`${nBR(mil)} milhas`);
+    const tit = partes.length ? partes.join(' e ') : 'Nenhum saldo lançado';
+    const sub = partes.length
+      ? `${inve ? `Investido ${brl(inve)}. ` : ''}Pontos nos bancos, ainda a direcionar, e milhas prontas para emitir. ${dono ? `Mostrando só o saldo de ${quem}. Toque em Grupo para ver todos.` : 'Escolha um nome abaixo para ver só o saldo dele.'}`
+      : 'Lance a primeira compra ou o saldo de um programa para o patrimônio aparecer aqui.';
+    const novo = `<div class="fxs fxs-cab" id="${ID}"><div class="fxs-txt"><span class="fxs-olho">Patrimônio em pontos e milhas · ${esc(quem)}</span>
+      <b class="fxs-tit">${esc(tit)}</b><span class="fxs-sub">${esc(sub)}</span></div></div>`;
+    let h = document.getElementById(ID);
+    if (!h){ linha.insertAdjacentHTML('beforebegin', novo); h = document.getElementById(ID); }
+    else { const t = document.createElement('div'); t.innerHTML = novo; if (h.innerHTML !== t.firstElementChild.innerHTML) h.innerHTML = t.firstElementChild.innerHTML; }
+    setTimeout(espacar, 0); setTimeout(espacar, 400);
+  }
+  /* espaço medido: 24 px do bloco de cima até o texto, como nas outras faixas */
+  function espacar(){
+    const h = document.getElementById(ID); if (!h || !h.offsetParent) return;
+    const bloco = h.parentElement; let ant = bloco.previousElementSibling;
+    while (ant && (!ant.offsetParent || ant.getBoundingClientRect().height === 0 || ant.classList.contains('fxs') && ant.hidden)) ant = ant.previousElementSibling;
+    if (!ant) return;
+    const pad = parseFloat(getComputedStyle(h).paddingTop) || 0;
+    h.style.marginTop = '0px';
+    const g = h.getBoundingClientRect().top + pad - ant.getBoundingClientRect().bottom;
+    h.style.marginTop = (40 - g) + 'px';
+    const real = h.getBoundingClientRect().top + pad - ant.getBoundingClientRect().bottom;
+    if (Math.abs(real - 40) > 0.5) h.style.marginTop = (parseFloat(h.style.marginTop) + 40 - real) + 'px';
+  }
+  window.patCabEspacar = espacar;
+  const o = renderComposicao;
+  renderComposicao = function(){ const r = o.apply(this, arguments); try { montar(); } catch(e){ console.error(e); } return r; };
+  addEventListener('resize', () => setTimeout(espacar, 50));
+  try { montar(); } catch(e){}
+})();
+</script>
+
+<style id="st-css">
+/* Título de seção no padrão da faixa (05/11/2026, regra do Jadiel: cada seção com
+   o seu título, do assunto dela). Olho dourado com fio (a página), título grande
+   (o assunto da seção) e, quando houver, uma linha de explicação. */
+.st-bloco{ display:grid; gap:4px; min-width:0; flex:1 1 auto; }
+.st-olho{ display:flex; align-items:center; gap:14px; font:700 calc(12px * var(--esc, 1))/1.2 var(--f-m); letter-spacing:.16em; text-transform:uppercase;
+  color:color-mix(in oklab, var(--ouro) 78%, var(--giz)); }
+.st-olho::after{ content:''; flex:0 1 180px; height:1px; background:color-mix(in oklab, var(--ouro) 55%, transparent); }
+.olho.st-tit{ display:block !important; font:700 calc(25px * var(--esc, 1))/1.2 var(--f-d) !important; color:var(--giz) !important; letter-spacing:-.01em !important;
+  text-transform:none !important; margin:0 !important; padding:0 !important; }
+.olho.st-tit::before, .olho.st-tit::after{ display:none !important; content:none !important; }
+.st-sub{ white-space:normal !important; overflow:visible !important; text-overflow:clip !important; font-size:calc(15px * var(--esc, 1)) !important; color:var(--grafite) !important; line-height:1.45 !important; margin:0 !important; }
+.st-cab{ align-items:flex-end !important; }
+div.sec-cab.st-cab{ display:block !important; }
+@media (max-width:640px){ .olho.st-tit{ font-size:calc(21px * var(--esc, 1)) !important; } .st-olho::after{ flex-basis:60px; } }
+</style>
+<script id="st-js">
+(function(){
+  const FORA = '.cartao, .heroi, .mpn, .fxs, dialog, #folha, .tq-cartao, button, summary, label, .st-bloco, .seg';
+  const nomePagina = el => { const pa = el.closest('.painel-aba'); const b = pa && document.querySelector(`.abas .aba[data-aba="${pa.id.replace(/^p-/, '')}"]`);
+    return b ? b.textContent.replace(/\d+/g, '').replace(/\s+/g, ' ').trim() : ''; };
+  /* a "fileira" do título: sobe enquanto o título estiver sozinho no contêiner */
+  function fileira(b){
+    let r = b;
+    while (r.parentElement && !r.parentElement.classList.contains('painel-aba')){
+      const p = r.parentElement, cs = getComputedStyle(p);
+      const emLinha = cs.display.includes('flex') && !cs.flexDirection.startsWith('column');
+      const sozinho = [...p.children].filter(x => x.offsetParent !== null).length === 1;
+      if (emLinha || sozinho) r = p; else break;
+    }
+    return r === b ? b.parentElement : r;
+  }
+  function transformar(o){
+    if (o.closest(FORA) || o.classList.contains('st-tit') || !o.offsetParent) return;
+    if (!o.closest('.painel-aba')) return;
+    const b = document.createElement('div'); b.className = 'st-bloco';
+    const ol = document.createElement('span'); ol.className = 'st-olho'; ol.textContent = nomePagina(o) || 'Seção';
+    o.before(b); b.append(ol, o); o.classList.add('st-tit');
+    let p = b.nextElementSibling;
+    if (!p && b.parentElement.children.length === 1) p = b.parentElement.nextElementSibling;
+    if (p && p.tagName === 'P'){ p.classList.add('st-sub'); b.append(p); }
+    const r = fileira(b); if (r) r.classList.add('st-cab');
+  }
+  const vis = e => e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
+  function antes(r){ let a = r.previousElementSibling; while (a && !vis(a)) a = a.previousElementSibling;
+    if (a) return a; const p = r.parentElement; return p && !p.classList.contains('painel-aba') && p.firstElementChild === r ? antes(p) : null; }
+  function depois(r){ let n = r.nextElementSibling; while (n && !vis(n)) n = n.nextElementSibling; return n; }
+  function espacar(r){
+    if (!vis(r)) return;
+    const a = antes(r), n = depois(r), cs = () => getComputedStyle(r);
+    const acerta = (prop, alvo, medir) => { for (let i = 0; i < 2; i++){ const d = medir(); if (Math.abs(d - alvo) <= 0.5) return;
+      r.style.setProperty(prop, ((parseFloat(cs()[prop === 'margin-top' ? 'marginTop' : 'marginBottom']) || 0) + alvo - d) + 'px', 'important'); } };
+    if (a && !a.classList.contains('fxs')) acerta('margin-top', 40, () => r.getBoundingClientRect().top - a.getBoundingClientRect().bottom);
+    if (n) acerta('margin-bottom', 14, () => n.getBoundingClientRect().top - r.getBoundingClientRect().bottom);
+  }
+  function varrer(){
+    let novo = false;
+    document.querySelectorAll('.vista.on .painel-aba.on .olho').forEach(o => { try { if (!o.classList.contains('st-tit')){ transformar(o); novo = novo || o.classList.contains('st-tit'); } } catch(e){} });
+    document.querySelectorAll('.vista.on .st-cab').forEach(r => { try { espacar(r); } catch(e){} });
+    if (window.fxsEspacar) try { fxsEspacar(); } catch(e){}
+    if (window.patCabEspacar) try { patCabEspacar(); } catch(e){}
+  }
+  window.stVarrer = varrer;
+  let ag = false;
+  const agendar = () => { if (ag) return; ag = true; setTimeout(() => { ag = false; obs.disconnect(); try { varrer(); } catch(e){} ligar(); }, 140); };
+  const obs = new MutationObserver(agendar);
+  const ligar = () => obs.observe(document.body, {childList:true, subtree:true});
+  ligar(); addEventListener('resize', agendar); agendar();
+})();
+</script>
 </body>
 </html>
