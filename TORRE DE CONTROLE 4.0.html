@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-05 22:00';
+const BUILD = '2026-11-05 22:20';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -62280,7 +62280,9 @@ const _bkAntes = s => s.lastIndexOf('</');
     const o = cartaoLoja;
     cartaoLoja = function(l){
       const h = o.apply(this, arguments), b = blackDaLoja(l); if (!b || !b.ref) return h;
-      const i = _bkAntes(h); return h.slice(0, i) + `<div class="bk-linha">${blackChipHTML(b.v, b.ref, '×')}</div>` + h.slice(i);
+      /* o selo da Black fica dentro do cartão, antes dos botões (05/11/2026) */
+      const pe = h.indexOf('<footer class="lj-pe">'), i = pe >= 0 ? pe : _bkAntes(h);
+      return h.slice(0, i) + `<div class="bk-linha">${blackChipHTML(b.v, b.ref, '×')}</div>` + h.slice(i);
     };
   }
   if (typeof cartaoCampanha === 'function'){
@@ -78768,5 +78770,23 @@ function drBlackHTML(c){
 }
 </script>
 
+<style id="lj3-css">
+/* Lojas Parceiras em cartões: três por linha quando cabe (05/11/2026, pedido do
+   Jadiel: a página estava comprida demais). Dois no tablet, um no celular. */
+#ljVitrine{ container-type:inline-size; container-name:ljv; }
+@container ljv (min-width:1000px){ #ljVitrine .lj-grade{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; } }
+@container ljv (min-width:600px) and (max-width:999.98px){ #ljVitrine .lj-grade{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@container ljv (max-width:599.98px){ #ljVitrine .lj-grade{ grid-template-columns:minmax(0, 1fr); } }
+#ljVitrine .lj-card .bk-linha{ padding:0; }
+/* cartão estreito: botões compactos, sem quebrar em duas linhas */
+@container (max-width:430px){
+  .lj-card .lj-pe{ flex-wrap:nowrap; gap:4px; }
+  .lj-card .lj-pe .bt.p:not(.icone){ padding-inline:9px; font-size:calc(13px * var(--esc)); white-space:nowrap; }
+  .lj-card .lj-pe .bt.p:not(.icone) svg{ display:none; }
+  .lj-card .vt-volta small{ white-space:normal; }
+  .lj-card .vt-mult s{ white-space:nowrap; }
+  .lj-card .vt-nome b{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; white-space:normal; overflow:hidden; }
+}
+</style>
 </body>
 </html>
