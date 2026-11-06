@@ -22381,11 +22381,13 @@ function abrirRegras(id, gatilho){
     /* Clube de desconto, sem pontos extras: o número que decide é o milheiro. */
     : c.tipo === 'clube' && !(Number(c.bonus) > 0) && Number(c.desconto) > 0 && cpmClubeSeguro(c) != null ? brl2(cpmClubeSeguro(c))
     : c.tipo === 'clube' ? `${nBRdec(Math.round((c.bonus || 0) * 10) / 10)}%`
+    : c.tipo === 'transferencia' && Number(c.volta) > 0 ? `${nBRdec(c.volta)}%`
     : `${nBRdec(c.bonus || 0)}%`;
   const numRot = c.tipo === 'bonificada' ? (Number(c.ptsPorReal) === 1 ? 'ponto por real' : 'pontos por real')
     : c.tipo === 'compra' && c.desconto ? 'de desconto'
     : c.tipo === 'clube' && !(Number(c.bonus) > 0) && Number(c.desconto) > 0 && cpmClubeSeguro(c) != null ? `o milheiro, com ${nBRdec(Math.round(c.desconto))}% de desconto`
-    : c.tipo === 'clube' ? 'de pontos extras' : 'de bônus';
+    : c.tipo === 'clube' ? 'de pontos extras'
+    : c.tipo === 'transferencia' && Number(c.volta) > 0 ? `de volta${Number(c.bonus) > 0 ? ` + ${nBRdec(c.bonus)}% de bônus` : ''}` : 'de bônus';
   const nomeRota = c.tipo === 'bonificada' ? `${esc(c.parceiro || '')} para ${esc(prog(c.para).n)}`
     : c.tipo === 'clube' ? 'Clube ' + esc(prog(c.para).n) + (c.plano ? ' ' + esc((((catalogoDe(c.para) || {}).planos || []).find(x => x.id === c.plano) || {n:''}).n) : '')
     : (c.de ? esc(prog(c.de).n) + ' para ' : '') + esc(prog(c.para).n);
@@ -52778,6 +52780,9 @@ function clubeETetoDoAnuncio(texto, bonus){
   const out = {};
   const numsClube = [...t.matchAll(/(\d{1,3}(?:[.,]\d+)?)\s*%[^.;\n]{0,70}?\b(?:clube|assinantes?)\b/gi)].map(m => Number(m[1].replace(',', '.')));
   const numsSem = [...t.matchAll(/(\d{1,3}(?:[.,]\d+)?)\s*%[^.;\n]{0,70}?\b(?:demais(?:\s+clientes)?|n[aã]o[\s-]+assinantes?|sem\s+clube|n[aã]o\s+clientes?\s+clube)\b/gi)].map(m => Number(m[1].replace(',', '.')));
+  /* a ordem ao contrário também: "Demais clientes recebem 70% de bônus" (06/11/2026) */
+  [...t.matchAll(/\b(?:demais\s+clientes|n[aã]o[\s-]+assinantes?|clientes\s+sem\s+clube|sem\s+clube)\b[^.;\n%]{0,40}?(\d{1,3}(?:[.,]\d+)?)\s*%/gi)].forEach(m => numsSem.push(Number(m[1].replace(',', '.'))));
+  [...t.matchAll(/\b(?:clientes\s+(?:do\s+)?clube|assinantes?)\b[^.;\n%]{0,40}?(\d{1,3}(?:[.,]\d+)?)\s*%/gi)].forEach(m => numsClube.push(Number(m[1].replace(',', '.'))));
   if (/para\s+todos(?:\s+os\s+clientes)?[^.;\n]{0,40}sem\s+exigir\s+clube|sem\s+exigir\s+clube/i.test(t)) out.bonusSemClube = Number(bonus) || 0;
   else if (numsSem.length) out.bonusSemClube = Math.min(...numsSem);
   if (numsClube.length && out.bonusSemClube != null) out.bonusClube = Math.max(...numsClube);
@@ -70588,7 +70593,7 @@ function impInformarValores(){
       if (c.via) return `Compra de ${unid(c.para)} pelo ${prog(c.via).n}`;
       return `Compra de ${unid(c.para)}`;
     }
-    return 'Transferência bonificada';
+    return Number(c.volta) > 0 ? 'Transferência bumerangue' : 'Transferência bonificada';
   };
   window.cpxCapa = function(c){
     const para = c.para, de = c.tipo === 'compra' ? c.via : c.de;
@@ -70596,7 +70601,7 @@ function impInformarValores(){
     const turbo = c.tipo === 'compra' && /turbo/i.test(c.titulo || '');
     const ponta1 = c.tipo === 'bonificada' ? `<span class="cx-ico" style="--c1:var(--anil)">${esc(String(c.parceiro || '?').slice(0, 2).toUpperCase())}</span>`
       : de ? discoProg(de) : `<span class="cx-ico">${ico(turbo ? 'raio' : 'sacola')}</span>`;
-    const selo = c.tipo === 'transferencia' ? `+${nBRdec(c.bonus || 0)}%` : c.tipo === 'compra' && c.lote ? `+${nBRdec(c.bonus || 0)}%`
+    const selo = c.tipo === 'transferencia' && Number(c.volta) > 0 ? `${nBRdec(c.volta)}% volta` : c.tipo === 'transferencia' ? `+${nBRdec(c.bonus || 0)}%` : c.tipo === 'compra' && c.lote ? `+${nBRdec(c.bonus || 0)}%`
       : c.tipo === 'compra' && (c.precos || []).length ? brl2(Math.min(...c.precos.map(p => p.v)))
       : c.tipo === 'bonificada' ? `${nBRdec(c.ptsPorReal || 0)} por real` : c.tipo === 'clube' && c.bonus ? `+${nBRdec(Math.round(c.bonus))}%` : '';
     const mover = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -70611,6 +70616,7 @@ function impInformarValores(){
         <div class="cx-ponta a">${ponta1}</div><div class="cx-ponta b">${discoProg(para)}</div>
         ${selo ? `<span class="cx-selo">${esc(selo)}</span>` : ''}`;
     const sub = c.tipo === 'compra' && c.lote ? `${brl2(c.lote.preco)} o lote de ${nBR(c.lote.qtd)} ${unid(para)}`
+      : c.tipo === 'transferencia' && Number(c.volta) > 0 ? `${nBRdec(c.volta)}% de volta para todos${Number(c.bonus) > 0 ? ` · +${nBRdec(c.bonus)}% de bônus ${c.publicoBonus ? 'para ' + c.publicoBonus : (c.bonusSemClube != null ? 'no Clube' : 'para todos')}` : ''}`
       : c.tipo === 'transferencia' && c.bonusSemClube != null ? `${nBRdec(c.bonusSemClube)}% para todos · ${nBRdec(c.bonus)}% ${c.clubeNome ? 'com ' + c.clubeNome : 'no Clube'}${(c.tempoClube || []).length ? ` · até ${nBRdec(c.bonus + Math.max(...c.tempoClube.map(t => t.extra)))}% por tempo de Clube` : ''}`
       : '';
     return `<div class="cx-capa" style="--c1:${c1};--c2:${c2}"><div class="cx-arte">${arte}</div>
@@ -70665,7 +70671,9 @@ function impInformarValores(){
         const par = PARIDADES.find(x => x.de === c.de && x.para === c.para) || {p:1};
         const meu = (cpmPorPrograma() || {})[c.de];
         porque.push(`Cada ponto <b>${esc(prog(c.de).n)}</b> custa ${meu > 0 ? `<b>${brl2(meu)}</b> o milheiro na sua carteira` : `<b>${brl2((faixasDe(c.de) || {}).alvo || 0)}</b> o milheiro (alvo, você ainda não tem custo médio)`}${par.p !== 1 ? `, e a paridade é ${nBRdec(par.p)} : 1` : ''}.`);
-        porque.push(`Com <b>${nBRdec(bonusDoUsuario(c) != null ? bonusDoUsuario(c) : c.bonus)}%</b> de bônus, a milha ${esc(prog(c.para).n)} sai a <b>${brl2(cpm)}</b> o milheiro.`);
+        porque.push(Number(c.volta) > 0
+          ? `Com <b>${nBRdec(c.volta)}%</b> dos pontos de volta na ${esc(prog(c.de).n)} e <b>${nBRdec(bonusDoUsuario(c) != null ? bonusDoUsuario(c) : c.bonus)}%</b> de bônus, ${typeof bumFator === 'function' && bumFator(c, bonusDoUsuario(c) != null ? bonusDoUsuario(c) : c.bonus) ? `cada ponto ${esc(prog(c.para).n)} sai por <b>${String(bumFator(c, bonusDoUsuario(c) != null ? bonusDoUsuario(c) : c.bonus).toFixed(2)).replace('.', ',')}</b> pontos ${esc(prog(c.de).n)}, e ` : ''}a milha sai a <b>${brl2(cpm)}</b> o milheiro.`
+          : `Com <b>${nBRdec(bonusDoUsuario(c) != null ? bonusDoUsuario(c) : c.bonus)}%</b> de bônus, a milha ${esc(prog(c.para).n)} sai a <b>${brl2(cpm)}</b> o milheiro.`);
       } else if (c.lote){
         porque.push(`Você paga <b>${brl2(c.lote.preco)}</b> por ${nBR(c.lote.qtd)} ${u} e recebe mais <b>${nBRdec(c.bonus)}%</b>: são ${nBR(c.lote.qtd * (1 + c.bonus / 100))} ${u} por lote.`);
         porque.push(`Isso dá <b>${brl2(cpm)}</b> o milheiro ${esc(prog(p).n)}, contra <b>${brl2(tabelaDe(p) || 0)}</b> na tabela de compra.`);
@@ -71938,7 +71946,7 @@ article.cp.cpz .cpz-miolo{ padding-top:16px; }
 
   let _cpzN = 0;
   const ICO_SACOLA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>';
-  const TIPO = c => c.tipo === 'transferencia' ? 'Transferência bonificada' : c.tipo === 'compra' ? (Number(c.desconto) > 0 ? 'Compra com desconto' : 'Compra bonificada') : c.tipo === 'clube' ? 'Clube' : '';
+  const TIPO = c => c.tipo === 'transferencia' ? (Number(c.volta) > 0 ? 'Transferência bumerangue' : 'Transferência bonificada') : c.tipo === 'compra' ? (Number(c.desconto) > 0 ? 'Compra com desconto' : 'Compra bonificada') : c.tipo === 'clube' ? 'Clube' : '';
   window.cpzRota = function(c, rotaEl){
     const txt = rotaEl ? rotaEl.querySelector('.cp-rota-txt') : null;
     const de = c.tipo === 'compra' ? (c.via || '') : (c.de || ''), para = c.para;
@@ -74329,7 +74337,7 @@ function altDataFutura(iso, ref){
 </style>
 <script id="tl1-js">
 (function(){
-  const TIPO = c => c.tipo === 'transferencia' ? 'Transferência bonificada' : c.tipo === 'compra' ? (Number(c.desconto) > 0 ? 'Compra com desconto' : /turbo/i.test(c.titulo || '') ? 'Turbo' : 'Compra bonificada') : c.tipo === 'bonificada' ? 'Compra bonificada' : c.tipo === 'clube' ? 'Clube de assinatura' : '';
+  const TIPO = c => c.tipo === 'transferencia' ? (Number(c.volta) > 0 ? 'Transferência bumerangue' : 'Transferência bonificada') : c.tipo === 'compra' ? (Number(c.desconto) > 0 ? 'Compra com desconto' : /turbo/i.test(c.titulo || '') ? 'Turbo' : 'Compra bonificada') : c.tipo === 'bonificada' ? 'Compra bonificada' : c.tipo === 'clube' ? 'Clube de assinatura' : '';
   const limpa = t => String(t || '').replace(/[*_~]/g, '').replace(/[!.\s]+$/, '').replace(/\s+/g, ' ').trim();
   if (typeof cpzMontar === 'function'){
     const o = cpzMontar;
@@ -79131,6 +79139,166 @@ div.sec-cab.st-cab{ display:block !important; }
   const obs = new MutationObserver(agendar);
   const ligar = () => obs.observe(document.body, {childList:true, subtree:true});
   ligar(); addEventListener('resize', agendar); agendar();
+})();
+</script>
+
+<style id="bum-css">
+/* Transferência bumerangue (06/11/2026): parte dos pontos volta para a origem. */
+.cpz-hero .bum-num{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+.cpz-hero .bum-num small{ font-size:.42em; font-weight:700; color:var(--grafite); letter-spacing:0; }
+.bum-mais{ display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:4px 10px; border-radius:99px; font:700 calc(12.5px * var(--esc, 1))/1.2 var(--f-b, inherit);
+  color:color-mix(in oklab, var(--ouro) 80%, var(--giz)); background:color-mix(in oklab, var(--ouro) 12%, transparent); border:1px solid color-mix(in oklab, var(--ouro) 35%, var(--fio)); }
+.bum-fator{ display:block; margin-top:6px; font-size:calc(12.5px * var(--esc, 1)); color:var(--grafite); line-height:1.4; }
+.bum-fator b{ color:var(--giz); font-family:var(--f-m); }
+</style>
+<script id="bum-js">
+/* ══ TRANSFERÊNCIA BUMERANGUE (06/11/2026) ═════════════════════════════════
+   "Bumerangue Esfera e ALL Accor: 20% dos pontos de volta e até 10% de bônus".
+   Antes a Torre lia só o bônus (10%, como se fosse de todos), punha o anúncio em
+   "Descontos em resgate" e calculava o milheiro sem a volta. Agora:
+   · a parte que volta para a origem ("X% de volta") entra na conta do milheiro;
+   · o bônus que é só de assinante (ALL Signature) fica só para assinante;
+   · paridade, mínimo, uma vez por CPF, quando os pontos caem e a validade da
+     volta viram dados da campanha, e o cartão mostra o fator real (2,55 : 1). */
+(function(){
+  if (typeof lerUmAnuncio !== 'function') return;
+  const num = x => Number(String(x).replace(/\./g, '').replace(',', '.'));
+  window.bumDoTexto = function(titulo, texto){
+    const t = (typeof SEM_EMOJI === 'function' ? SEM_EMOJI(titulo + '\n' + texto) : titulo + '\n' + texto).replace(/[ \t]+/g, ' ');
+    const mv = t.match(/(\d{1,2}(?:[.,]\d+)?)\s*%\s*(?:dos\s+pontos\s+)?(?:\w+\s+)?de\s+volta/i);
+    if (!mv || !(/bumerangue/i.test(t) || /transfer/i.test(t))) return null;
+    const o = {volta:num(mv[1])};
+    const mp = t.match(/(\d{1,2}(?:[.,]\d+)?)\s*pontos?\s+[A-Za-zÀ-ú]+\s*=\s*1\s*ponto/i) || t.match(/paridade\s+de\s+(\d{1,2}(?:[.,]\d+)?)\s*(?:x|:)\s*1/i);
+    if (mp) o.paridade = num(mp[1]);
+    const mm = t.match(/m[ií]nimo\s+de\s+(\d{1,3}(?:[.,]\d+)?)\s*(k|mil)?\s*(?:de\s+)?(?:pontos|milhas)?/i);
+    if (mm){ let v = num(mm[1]); if (mm[2]) v *= 1000; if (v >= 1000) o.minimo = v; }
+    const mq = t.match(/(\d{1,3})\s*dias?\s*(?:[uú]teis\s*)?ap[oó]s\s+(?:o\s+)?(?:t[eé]rmino|fim|encerramento)/i);
+    if (mq) o.voltaDias = Number(mq[1]);
+    const mval = t.match(/de\s+volta[^.\n]*?validade\s+de\s+(\d{1,2})\s*meses/i) || t.match(/volta[^\n]*?validade\s+de\s+(\d{1,2})\s*meses/i);
+    if (mval) o.voltaValidade = Number(mval[1]);
+    const md = t.match(/disponibilizad[oa]s?[^.\n]*?em\s+(\d{1,2})\s*dias?\s*([uú]teis)?/i);
+    if (md) o.creditoDias = `${Number(md[1])} ${Number(md[1]) === 1 ? 'dia' : 'dias'}${md[2] ? (Number(md[1]) === 1 ? ' útil' : ' úteis') : ''}`;
+    /* volta para todos, bônus só para assinante */
+    const linhaBonus = (t.match(/[^\n]*\d{1,3}\s*%\s*de\s*b[oô]nus[^\n]*/i) || [''])[0];
+    const mAss = linhaBonus.match(/assinantes?\s+([A-Za-zÀ-ú ]{2,30}?)(?:\s+recebem|\s*$|[,;.])/i);
+    if (mAss && /todos\s+os\s+clientes[^\n]*de\s+volta/i.test(t)){ o.bonusSemClube = 0; o.publicoBonus = 'assinantes ' + mAss[1].trim().replace(/\s+/g, ' '); }
+    return o;
+  };
+  const _l = lerUmAnuncio;
+  lerUmAnuncio = function(bloco){
+    const a = _l.apply(this, arguments);
+    try {
+      if (!a || !a.titulo) return a;
+      const texto = (Array.isArray(bloco) ? bloco.join('\n') : String(bloco || ''));
+      const b = bumDoTexto(a.titulo, texto);
+      if (!b) return a;
+      if (!a.sugestao || a.sugestao.tipo !== 'transferencia'){
+        /* "Bumerangue Esfera e ALL Accor": origem e destino pelo título */
+        const mt = SEM_EMOJI(a.titulo).match(/bumerangue\s+(.+?)\s+(?:e|para|→)\s+(.+?)(?:\s+-|\s*:|$)/i);
+        const acha = n => { const x = SEM_EMOJI(n).toLowerCase().trim(); return progDoMercado(x) || progDoMercado(x.split(' ')[0]) || Object.keys(PROGRAMAS).find(k => x.includes(prog(k).n.toLowerCase())) || null; };
+        const de = mt && acha(mt[1]), para = mt && acha(mt[2]);
+        if (!de || !para || de === para) return a;
+        const mb = texto.match(/(\d{1,3}(?:[.,]\d+)?)\s*%\s*de\s*b[oô]nus/i);
+        a.sugestao = {tipo:'transferencia', de, para, bonus:mb ? num(mb[1]) : 0};
+      }
+      Object.assign(a.sugestao, b, {bumerangue:true});
+      a.cat = 'alerta';
+      const bon = Number(a.sugestao.bonus) || 0;
+      a.destaque = `${pct(b.volta, 0)} de volta${bon ? ` + ${pct(bon, 0)} de bônus` : ''}`;
+    } catch(e){ console.error(e); }
+    return a;
+  };
+  /* a campanha criada do anúncio leva os dados da bumerangue */
+  const CAMPOS = ['volta', 'paridade', 'minimo', 'voltaDias', 'voltaValidade', 'creditoDias', 'publicoBonus', 'bumerangue', 'umaVez'];
+  function levar(m){
+    const sg = m && m.sugestao; if (!sg || !sg.bumerangue || !m.campId) return false;
+    const c = (DB.campanhas || []).find(x => x.id === m.campId); if (!c) return false;
+    let mudou = false;
+    CAMPOS.forEach(k => { if (sg[k] != null && c[k] !== sg[k]){ c[k] = sg[k]; mudou = true; } });
+    if (sg.bonusSemClube != null && c.bonusSemClube !== sg.bonusSemClube){ c.bonusSemClube = sg.bonusSemClube; mudou = true; }
+    if (sg.minimo && !(Number(c.minimo) > 0)){ c.minimo = sg.minimo; mudou = true; }
+    return mudou;
+  }
+  if (typeof muralParaCampanha === 'function'){
+    const _m = muralParaCampanha;
+    muralParaCampanha = function(m){ const r = _m.apply(this, arguments); try { levar(m); } catch(e){} return r; };
+  }
+  /* o milheiro desconta a parte que volta: ela volta no mesmo programa de onde
+     saiu, ao mesmo custo dos pontos enviados */
+  if (typeof contaCarrinho === 'function'){
+    const _c = contaCarrinho;
+    contaCarrinho = function(c, qtd){
+      const r = _c.apply(this, arguments);
+      const v = Number(c && c.volta) || 0;
+      if (!(v > 0) || !r) return r;
+      const devolve = Math.round(qtd * v / 100);
+      const valorVolta = devolve / 1000 * (Number(r.cpmProprio) || 0);
+      const total = Math.max(0, r.total - valorVolta);
+      const cb = r.comBonus;
+      return Object.assign({}, r, {devolve, valorVolta, totalBruto:r.total, total, cpmOrigem: total / (qtd / 1000),
+        comBonus: b => { const x = cb(b); return Object.assign({}, x, {cpm: total / (x.chega / 1000)}); }});
+    };
+  }
+  /* quantos pontos da origem custam 1 do destino, já com a volta e o bônus */
+  window.bumFator = function(c, bonus){
+    const par = (typeof paridadeCT === 'function' ? paridadeCT(c.de, c.para) : 0) || Number(c.paridade) || 0;
+    if (!par) return null;
+    return par * (1 - (Number(c.volta) || 0) / 100) / (1 + (Number(bonus) || 0) / 100);
+  };
+  const fatorTxt = f => String(f.toFixed(2)).replace('.', ',') + ' : 1';
+  /* o cartão: "20% de volta" no lugar do bônus, o bônus de assinante ao lado e o fator real */
+  if (typeof window.cpzMontar === 'function'){
+    const _z = window.cpzMontar;
+    window.cpzMontar = function(c, h){
+      const out = _z.apply(this, arguments);
+      if (!c || !(Number(c.volta) > 0)) return out;
+      try {
+        const t = document.createElement('template'); t.innerHTML = out.trim();
+        const hero = t.content.querySelector('.cpz-hero'); if (!hero) return out;
+        const bon = Number(c.bonus) || 0;
+        let seu = null; try { seu = bonusDoUsuario(c); } catch(e){}
+        const fTodos = bumFator(c, c.bonusSemClube != null ? c.bonusSemClube : bon), fAss = bumFator(c, bon);
+        const pub = c.publicoBonus ? esc(c.publicoBonus) : 'assinantes';
+        hero.innerHTML = `<span class="cpz-rot">Bumerangue</span>
+          <div class="cpz-num bum-num">${pct(c.volta, 0)}<small>de volta</small></div>
+          ${bon ? `<span class="bum-mais">+${pct(bon, 0)} de bônus · ${pub}</span>` : ''}
+          ${fAss ? `<span class="bum-fator">Fator real: <b>${fatorTxt(fAss)}</b>${bon && fTodos && Math.abs(fTodos - fAss) > 0.001 ? ` com o bônus · <b>${fatorTxt(fTodos)}</b> sem ele` : ''}</span>` : ''}`;
+        const tipo = t.content.querySelector('.cpz-tipo'); if (tipo) tipo.textContent = 'Transferência bumerangue';
+        const fatos = t.content.querySelector('.cpz-pe .cp-fatos');
+        if (fatos){
+          const add = [];
+          if (Number(c.minimo) > 0) add.push(`Mínimo ${nBR(c.minimo)} pontos`);
+          if (c.voltaDias) add.push(`A volta cai ${c.voltaDias} dias após o fim${c.voltaValidade ? `, vale ${c.voltaValidade} meses` : ''}`);
+          if (c.creditoDias) add.push(`No destino em ${/dia/.test(c.creditoDias) ? c.creditoDias : c.creditoDias + ' dias'}`);
+          if (c.umaVez) add.push('1 vez por pessoa');
+          fatos.insertAdjacentHTML('afterbegin', add.map(x => `<span class="cp-fato">${esc(x)}</span>`).join(''));
+        }
+        return t.innerHTML;
+      } catch(e){ console.error(e); return out; }
+    };
+  }
+  /* anúncios já gravados com a leitura antiga: relidos uma vez */
+  function migrar(){
+    if (typeof DB === 'undefined' || !DB || !Array.isArray(DB.mural)) return;
+    let n = 0;
+    DB.mural.forEach(m => {
+      if (!m || !/bumerangue|de\s+volta/i.test(m.titulo || '') || (m.sugestao && m.sugestao.bumerangue)) return;
+      const a = lerUmAnuncio([m.titulo, '', ...String(m.texto || '').split('\n')]);
+      if (!a || !a.sugestao || !a.sugestao.bumerangue) return;
+      m.sugestao = Object.assign({}, m.sugestao || {}, a.sugestao); m.cat = a.cat; m.pontuacao = a.destaque;
+      if (!m.campId && !(m.fim && m.fim < hojeISO())) muralParaCampanha(m); else levar(m);
+      n++;
+    });
+    if (n){ salvar(); try { prRedesenharTudo(); } catch(e){} }
+    return n;
+  }
+  window.bumMigrar = migrar;
+  if (typeof window.cpxTipo === 'function'){ const _t = window.cpxTipo; window.cpxTipo = function(c){ return c && c.tipo === 'transferencia' && Number(c.volta) > 0 ? 'Transferência bumerangue' : _t.apply(this, arguments); }; }
+  if (typeof aplicarTudo === 'function'){
+    const _a = aplicarTudo;
+    aplicarTudo = function(){ const r = _a.apply(this, arguments); try { if (migrar()) _a.apply(this, arguments); } catch(e){} return r; };
+  }
+  setTimeout(() => { try { migrar(); } catch(e){} }, 1300);
 })();
 </script>
 </body>
