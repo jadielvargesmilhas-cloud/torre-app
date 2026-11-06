@@ -78731,15 +78731,29 @@ button.fxs:hover .fxs-tit{ text-decoration:underline; text-decoration-thickness:
     const vista = painel.closest('.vista'), pa = painel.closest('.painel-aba');
     const v = vista ? vista.id.replace(/^v-/, '') : ''; if (!v) return;
     const aba = pa ? pa.id.replace(/^p-/, '') : '';
-    let f = painel.nextElementSibling;
     const novo = html(v, aba);
-    if (f && f.classList.contains('fxs')){ if (f.outerHTML !== novo) f.outerHTML = novo; }
-    else painel.insertAdjacentHTML('afterend', novo);
-    f = painel.nextElementSibling;
+    /* Painel de bordo (05/11/2026): os avisos estão nos cartões "Exige decisão hoje"
+       e "Janelas de decolagem", lá embaixo. A faixa vira o título dessa seção, logo
+       acima deles, em vez de ficar em cima de Patrimônio, que não tem nada a ver. */
+    const trio = painel.id === 'mpn' && pa ? pa.querySelector('.mesa-trio') : null;
+    let f;
+    if (trio){
+      const solta = painel.nextElementSibling; if (solta && solta.classList.contains('fxs')) solta.remove();
+      f = trio.previousElementSibling;
+      if (f && f.classList.contains('fxs')){ const t = document.createElement('div'); t.innerHTML = novo; const n = t.firstElementChild;
+        if (f.tagName !== n.tagName || f.innerHTML !== n.innerHTML || f.classList.contains('g3') !== n.classList.contains('g3') || f.classList.contains('ok') !== n.classList.contains('ok')) f.outerHTML = novo; }
+      else trio.insertAdjacentHTML('beforebegin', novo);
+      f = trio.previousElementSibling; f.classList.add('fxs-secao');
+    } else {
+      f = painel.nextElementSibling;
+      if (f && f.classList.contains('fxs')){ if (f.outerHTML !== novo) f.outerHTML = novo; }
+      else painel.insertAdjacentHTML('afterend', novo);
+      f = painel.nextElementSibling;
+    }
     /* um painel, uma faixa: se algo foi encaixado entre os dois depois, a antiga sai */
     const dono = painel.id || (painel.dataset.fxsDono = painel.dataset.fxsDono || 'p' + Math.random().toString(36).slice(2, 8));
     f.dataset.fxsDe = dono;
-    painel.parentElement.querySelectorAll(':scope > .fxs').forEach(x => { if (x !== f && x.dataset.fxsDe === dono) x.remove(); if (x !== f && !x.dataset.fxsDe && x.previousElementSibling !== painel && x.dataset.fxs === f.dataset.fxs) x.remove(); });
+    f.parentElement.querySelectorAll(':scope > .fxs').forEach(x => { if (x !== f && x.dataset.fxsDe === dono) x.remove(); if (x !== f && !x.dataset.fxsDe && x.previousElementSibling !== painel && x.dataset.fxs === f.dataset.fxs) x.remove(); });
     if (f && f.matches('[data-fxs-abrir]')) f.onclick = () => abrirLista(v, aba);
     /* esconde junto com o painel */
     if (f) f.hidden = painel.hidden || getComputedStyle(painel).display === 'none' || (painel.offsetParent === null && !!(pa ? pa.offsetParent : vista.offsetParent));
