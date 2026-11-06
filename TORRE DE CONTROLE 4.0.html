@@ -11837,7 +11837,7 @@ const VERSAO = '4.0';
 
    Sem ele, a única saída é procurar na tela algum detalhe que mudou — e quando o
    que mudou é justamente o que não está aparecendo, não há como saber. */
-const BUILD = '2026-11-05 21:00';
+const BUILD = '2026-11-05 22:00';
 /* ── modo de partida ──────────────────────────────────────────────────────────
    Esta cópia abre em branco. Não há conjunto de demonstração embutido: nenhuma
    conta, nenhum lançamento, nenhuma campanha, nenhum clube, nenhum cartão. Tudo
@@ -22440,6 +22440,7 @@ function abrirRegras(id, gatilho){
         <dl class="dr-meta">
           ${prazo ? `<div><dt>Prazo</dt><dd class="dr-prazo">${prazo}${c.fim ? ` <small>${dataBR(c.fim)}</small>` : ''}</dd></div>` : ''}
           ${c.tipo === 'bonificada' && seuDegrauBonificada(c) ? (m => `<div><dt>O seu degrau</dt><dd><b class="cp-jade">${nBRdec(m.v)} ${Number(m.v) === 1 ? 'ponto' : 'pontos'} por real</b> <small class="fraco">${esc(m.rot)}</small></dd></div>`)(seuDegrauBonificada(c)) : ''}
+          ${typeof drBlackHTML === 'function' ? drBlackHTML(c) : ''}
           ${cpm != null ? `<div><dt>Milheiro projetado</dt><dd><b class="cp-${tomCpm}" data-drcpm>${brl2(cpm)}</b>${bUser != null ? ` <small class="fraco">com ${nBRdec(bUser)}%</small>` : ''}</dd></div>` : ''}
           ${fatos.length ? `<div class="dr-meta-lim"><dt>Limites</dt><dd>${fatos.join('<span class="dr-sep">·</span>')}</dd></div>` : ''}
         </dl>
@@ -56188,10 +56189,11 @@ function ptRenderVitrine(){
 .pp-cpf-top b{ color:var(--giz); font:600 calc(13.5px * var(--esc)) var(--f-m, inherit); }
 .pp-cpf-top b.jade{ color:var(--jade); } .pp-cpf-top b.brasa{ color:var(--brasa); } .pp-cpf-top b.fraco{ color:var(--grafite); font-weight:500; }
 .pp-pontos{ display:grid; grid-template-columns:repeat(var(--n), minmax(0, 10px)); gap:3px; justify-content:space-between; }
-.pp-pontos i{ width:100%; aspect-ratio:1; height:auto; border-radius:50%; background:var(--jade); box-shadow:0 0 0 1px color-mix(in srgb, var(--jade) 40%, transparent); }
+/* bolinhas de vaga mais suaves (05/11/2026): o número acima continua no verde forte */
+.pp-pontos i{ width:100%; aspect-ratio:1; height:auto; border-radius:50%; background:color-mix(in srgb, var(--jade) 38%, var(--sup-0)); box-shadow:0 0 0 1px color-mix(in srgb, var(--jade) 22%, transparent); }
 .pp-pontos i.usado{ background:transparent; box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--grafite) 55%, transparent); }
 .pp-barra{ height:7px; border-radius:99px; background:color-mix(in srgb, var(--grafite) 25%, transparent); overflow:hidden; }
-.pp-barra i{ display:block; height:100%; background:var(--jade); border-radius:99px; }
+.pp-barra i{ display:block; height:100%; background:color-mix(in srgb, var(--jade) 38%, var(--sup-0)); border-radius:99px; }
 </style>
 <script id="pp-js">
 /* ══ PRATELEIRA POR PROGRAMA ════════════════════════════════════════════════════ */
@@ -62262,7 +62264,7 @@ function blackDaCampanha(c){
   if (c.tipo === 'transferencia') return {v:Number(c.bonus) || 0, ref:blackRefTransf(c.de, c.para), un:'%'};
   /* a Black 2025 guarda a compra como desconto equivalente (100% de bônus = 50%): compara na mesma régua */
   if (c.tipo === 'compra'){ const desc = Number(c.desconto) > 0; return {v:descontoEquivalente(c), ref:blackRefCompra(c.para, desc ? 'desc' : 'bonus'), un:'%'}; }
-  if (c.tipo === 'bonificada'){ const top = Math.max(0, ...(c.faixas || []).map(f => Number(f.v) || 0), Number(c.mult) || 0); return {v:top, ref:blackRefLoja(c.para, c.loja || c.n || ''), un:'×'}; }
+  if (c.tipo === 'bonificada'){ const top = Math.max(0, ...(c.faixas || []).map(f => Number(f.v) || 0), Number(c.mult) || 0); return {v:top, ref:blackRefLoja(c.para, c.parceiro || c.loja || c.n || ''), un:'×'}; }
   return null;
 }
 const _bkAntes = s => s.lastIndexOf('</');
@@ -77928,9 +77930,9 @@ window.rotuloAcaoAviso = function(a){
       : D.prox ? {num:diaV === 0 ? 'hoje' : `${nBR(diaV)}<small>dias</small>`, sub:`até ${esc(D.prox.nome || 'a próxima viagem')}`} : {num:'—', sub:'nenhuma viagem planejada'};
     return `<div class="mpn" id="mpn">
       <div class="mpn-faixa" style="--c:${a0 ? (a0.grau === 3 ? 'var(--brasa)' : a0.grau === 2 ? 'var(--ouro)' : 'var(--anil)') : 'var(--jade)'}">
-        <div class="mpn-faixa-txt"><span class="mpn-olho">${a0 ? `Próxima ação · ${a0.dias != null && a0.dias !== undefined ? esc(quando(a0.dias)) : 'agora'}` : 'Tudo em dia'}</span>
-          <b class="mpn-faixa-tit">${a0 ? esc(a0.t) : 'Nada pede ação agora'}</b>
-          <span class="mpn-faixa-sub">${a0 ? esc(String(a0.s || '').split('\n')[0]) : 'Quando surgir uma campanha, um crédito ou um prazo, ele aparece aqui.'}</span></div>
+        <div class="mpn-faixa-txt"><span class="mpn-olho">${a0 ? `Próxima ação · ${a0.dias != null && a0.dias !== undefined ? esc(quando(a0.dias)) : 'agora'}` : 'Atalhos'}</span>
+          <b class="mpn-faixa-tit">${a0 ? esc(a0.t) : 'O que você quer registrar agora?'}</b>
+          <span class="mpn-faixa-sub">${a0 ? esc(String(a0.s || '').split('\n')[0]) : 'Lance uma compra de pontos ou cole um anúncio que você recebeu.'}</span></div>
         <div class="mpn-bts">${a0 ? `<button type="button" class="bt primario mpn-bt" onclick="${esc(acaoJs(a0))}">${esc(rotuloAcaoAviso(a0))}</button>` : ''}
           <button type="button" class="bt ${a0 ? 'fantasma' : 'primario'} mpn-bt" onclick="editarLancamento()">Lançar</button>
           <button type="button" class="bt fantasma mpn-bt" onclick="irItemMenu('fabrica','fb-mural');setTimeout(()=>{try{abrirColarMural()}catch(e){}},350)">Colar anúncio</button></div>
@@ -77957,7 +77959,7 @@ window.rotuloAcaoAviso = function(a){
             </div>
           </div>
         </div>
-        ${av.length ? `<div class="mpn-pe"><span class="mpn-tag">Próximo passo</span><span class="mpn-pe-txt">${(() => { const b = av[1] || av[0]; return `<b>${esc(String(b.t).replace(/\.\s*$/, ''))}.</b>${b.s ? `<span class="mpn-pe-sub">${esc(String(b.s).split('\n')[0])}</span>` : ''}`; })()}</span>
+        ${false && av.length ? `<div class="mpn-pe"><span class="mpn-tag">Próximo passo</span><span class="mpn-pe-txt">${(() => { const b = av[1] || av[0]; return `<b>${esc(String(b.t).replace(/\.\s*$/, ''))}.</b>${b.s ? `<span class="mpn-pe-sub">${esc(String(b.s).split('\n')[0])}</span>` : ''}`; })()}</span>
           ${av.length > 1 ? `<button type="button" class="mpn-mais" onclick="abrirHoje()">ver os ${av.length}</button>` : ''}<button type="button" class="bt primario mpn-bt" onclick="${esc(acaoJs(av[1] || av[0]))}">${esc(rotuloAcaoAviso(av[1] || av[0]))}</button></div>` : ''}
       </div>
     </div>`;
@@ -78112,7 +78114,8 @@ window.rotuloAcaoAviso = function(a){
     const n = Math.max(1, Math.min(5, passos.length));
     const C = 2 * Math.PI * 80, f0 = fat[0], p0 = f0 && tot ? f0.v / tot * 100 : 0, off = C * (1 - p0 / 100);
     const anel = fat.length >= 2;
-    const a = avisoDaSecao(alvo);
+    /* o próximo passo agora fica na faixa de atenção logo abaixo do painel (05/11/2026) */
+    const a = null; void avisoDaSecao;
     alvo.classList.toggle('sem-anel', !anel);
     alvo.innerHTML = `<div class="mpn-card">
       <div class="mpn-grid">
@@ -78535,6 +78538,12 @@ window.bfxCorrigir = function(){
   } catch(e){ console.error(e); return 0; }
 };
 bfxCorrigir();
+/* os dados que chegam da nuvem (outro aparelho) também passam pela correção:
+   antes ela rodava só ao abrir, e a cópia da nuvem trazia o "!" de volta (05/11/2026) */
+if (typeof aplicarTudo === 'function'){
+  const _apT = aplicarTudo;
+  aplicarTudo = function(){ const r = _apT.apply(this, arguments); try { if (bfxCorrigir()) _apT.apply(this, arguments); } catch(e){ console.error(e); } return r; };
+}
 </script>
 
 <style id="cent-css">
@@ -78638,6 +78647,125 @@ input.cent-on:focus + .cent-esp, input.cent-on:hover:focus + .cent-esp{ visibili
   /* valor mudado por programa (sem digitar) também atualiza a cópia */
   setInterval(() => document.querySelectorAll('input.cent-on').forEach(i => { const e = i.__centEsp; if (e && document.activeElement !== i && e.textContent !== i.value) pinta(i); }), 700);
 })();
+</script>
+
+<style id="fxs-css">
+/* Faixa de atenção abaixo do painel de cada página (05/11/2026, modelo que o
+   Jadiel mandou): olho dourado com fio, título grande, uma linha de explicação.
+   Fundo transparente, só o texto; um facho de farol passa devagar. */
+.fxs{ position:relative; overflow:hidden; display:flex; align-items:center; gap:18px; margin:0; padding:10px 4px; border-radius:14px; cursor:default;
+  background:transparent; border:0; text-align:left; width:100%; font:inherit; color:inherit; box-sizing:border-box; isolation:isolate; }
+/* o farol da torre: um facho de luz bem suave que passa devagar pelo fundo, de tempos em tempos */
+.fxs::before{ content:''; position:absolute; z-index:-1; top:0; bottom:0; left:-40%; width:34%; pointer-events:none; filter:blur(14px);
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%, #000 30%, transparent 100%); mask-image:radial-gradient(ellipse 50% 50% at 50% 50%, #000 30%, transparent 100%);
+  background:linear-gradient(100deg, transparent 0%, color-mix(in oklab, var(--c, var(--ouro)) 10%, transparent) 45%, color-mix(in oklab, var(--c, var(--ouro)) 16%, transparent) 50%, color-mix(in oklab, var(--c, var(--ouro)) 10%, transparent) 55%, transparent 100%);
+  transform:skewX(-18deg) translateX(0); animation:fxsFarol 9s ease-in-out infinite; }
+@keyframes fxsFarol{ 0%{ transform:skewX(-18deg) translateX(0); opacity:0; } 8%{ opacity:1; } 45%{ opacity:1; } 55%{ transform:skewX(-18deg) translateX(420%); opacity:0; } 100%{ transform:skewX(-18deg) translateX(420%); opacity:0; } }
+@media (prefers-reduced-motion: reduce){ .fxs::before{ animation:none; display:none; } }
+button.fxs{ cursor:pointer; transition:box-shadow .2s, transform .2s; }
+button.fxs:hover .fxs-tit{ text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; }
+.fxs-txt{ flex:1 1 auto; min-width:0; display:grid; gap:4px; }
+.fxs-olho{ display:flex; align-items:center; gap:14px; font:700 calc(12px * var(--esc, 1))/1.2 var(--f-m); letter-spacing:.16em; text-transform:uppercase; color:color-mix(in oklab, var(--c, var(--ouro)) 78%, var(--giz)); }
+.fxs-olho::after{ content:''; flex:0 1 180px; height:1px; background:color-mix(in oklab, var(--c, var(--ouro)) 55%, transparent); }
+.fxs-tit{ font:700 calc(25px * var(--esc, 1))/1.2 var(--f-d); color:var(--giz); letter-spacing:-.01em; }
+.fxs-sub{ font-size:calc(15px * var(--esc, 1)); color:var(--grafite); line-height:1.45; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.fxs-ir{ flex:none; display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:calc(14px * var(--esc, 1)); color:var(--giz); background:color-mix(in oklab, var(--sup-0) 70%, transparent);
+  border:1px solid var(--fio); border-radius:12px; padding:9px 14px; backdrop-filter:blur(6px); }
+.fxs-ir svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; }
+.fxs.ok{ --c:var(--jade); }
+.fxs.g3{ --c:var(--brasa); }
+@media (max-width:640px){ .fxs{ padding:8px 2px; flex-wrap:wrap; } .fxs-tit{ font-size:calc(21px * var(--esc, 1)); } .fxs-ir{ width:100%; justify-content:center; } .fxs-olho::after{ flex-basis:60px; } }
+</style>
+<script id="fxs-js">
+/* A faixa mostra o que pede atenção naquela página (os mesmos avisos do sistema,
+   só os que levam até ela). Tocar abre a lista, e cada item leva aonde se resolve.
+   Sem pendência, a faixa diz que está tudo em dia. O "Próximo passo" que ficava no
+   pé dos painéis passou para cá, para não repetir a mesma informação duas vezes. */
+(function(){
+  const NOME_ABA = id => { const b = document.querySelector(`.abas .aba[data-aba="${id}"]`); return b ? b.textContent.replace(/\d+/g, '').replace(/\s+/g, ' ').trim() : ''; };
+  const NOME_VISTA = v => (typeof TITULOS !== 'undefined' && TITULOS[v] && (TITULOS[v][0] || TITULOS[v].t || TITULOS[v])) || v;
+  const plural = (n, s, p) => `${n} ${n === 1 ? s : p}`;
+  function itens(v, aba){
+    let l = []; try { l = (typeof avisos === 'function' ? avisos() : []).filter(a => a.ir); } catch(e){}
+    if (!(v === 'mesa' && aba === 'ms-hoje')) l = l.filter(a => a.ir[0] === v && (!aba || !a.ir[1] || a.ir[1] === aba));
+    return l.sort((a, b) => (b.grau - a.grau) || ((a.dias ?? 99) - (b.dias ?? 99)));
+  }
+  function html(v, aba){
+    const l = itens(v, aba), n = l.length, pagina = NOME_ABA(aba) || String(NOME_VISTA(v));
+    const g3 = l.some(a => a.grau === 3);
+    if (!n) return `<div class="fxs ok" data-fxs="${esc(aba || v)}"><div class="fxs-txt"><span class="fxs-olho">Tudo em dia · ${esc(pagina)}</span>
+      <b class="fxs-tit">Nada pede atenção aqui</b><span class="fxs-sub">Quando algo desta página tiver prazo ou precisar de você, aparece nesta faixa.</span></div></div>`;
+    const resumo = l.slice(0, 2).map(a => String(a.t).replace(/\.\s*$/, '')).join(' · ') + (n > 2 ? ` · e mais ${n - 2}` : '');
+    return `<button type="button" class="fxs${g3 ? ' g3' : ''}" data-fxs="${esc(aba || v)}" data-fxs-abrir><span class="fxs-txt"><span class="fxs-olho">Precisa de atenção · ${g3 ? 'urgente' : esc(pagina)}</span>
+      <b class="fxs-tit">${plural(n, 'ponto de atenção', 'pontos de atenção')}</b><span class="fxs-sub">${esc(resumo)}</span></span>
+      <span class="fxs-ir">${n === 1 ? 'Ver' : 'Ver os ' + n}<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>`;
+  }
+  function abrirLista(v, aba){
+    const l = itens(v, aba), pagina = NOME_ABA(aba) || String(NOME_VISTA(v));
+    abrirFolha({titulo:`Atenção · ${pagina}`, largura:'media',
+      corpo:`<p class="fraco jn-sub">Toque num item para ir direto ao lugar de resolver.</p><div class="pilha" style="gap:8px">${l.map(linhaAviso).join('')}</div>`,
+      pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+  }
+  window.fxsAbrir = abrirLista;
+  /* coloca (ou atualiza) a faixa logo abaixo de cada painel */
+  function montar(painel){
+    if (!painel || !painel.isConnected) return;
+    const vista = painel.closest('.vista'), pa = painel.closest('.painel-aba');
+    const v = vista ? vista.id.replace(/^v-/, '') : ''; if (!v) return;
+    const aba = pa ? pa.id.replace(/^p-/, '') : '';
+    let f = painel.nextElementSibling;
+    const novo = html(v, aba);
+    if (f && f.classList.contains('fxs')){ if (f.outerHTML !== novo) f.outerHTML = novo; }
+    else painel.insertAdjacentHTML('afterend', novo);
+    f = painel.nextElementSibling;
+    /* um painel, uma faixa: se algo foi encaixado entre os dois depois, a antiga sai */
+    const dono = painel.id || (painel.dataset.fxsDono = painel.dataset.fxsDono || 'p' + Math.random().toString(36).slice(2, 8));
+    f.dataset.fxsDe = dono;
+    painel.parentElement.querySelectorAll(':scope > .fxs').forEach(x => { if (x !== f && x.dataset.fxsDe === dono) x.remove(); if (x !== f && !x.dataset.fxsDe && x.previousElementSibling !== painel && x.dataset.fxs === f.dataset.fxs) x.remove(); });
+    if (f && f.matches('[data-fxs-abrir]')) f.onclick = () => abrirLista(v, aba);
+    /* esconde junto com o painel */
+    if (f) f.hidden = painel.hidden || getComputedStyle(painel).display === 'none' || (painel.offsetParent === null && !!(pa ? pa.offsetParent : vista.offsetParent));
+  }
+  function varrer(){
+    document.querySelectorAll('.heroi.sis, #mpn, .grade.painel-num').forEach(p => {
+      if (p.id === 'mesaHeroi') return;
+      if (p.classList.contains('heroi-unico')) { const f = p.nextElementSibling; if (f && f.classList.contains('fxs')) f.remove(); return; }
+      try { montar(p); } catch(e){ console.error(e); }
+    });
+  }
+  window.fxsVarrer = varrer;
+  let ag = false; const agendar = () => { if (ag) return; ag = true; requestAnimationFrame(() => { ag = false; varrer(); setTimeout(varrer, 350); }); };
+  ['montarHeroi', 'renderMesaHeroi', 'irParaAba', 'irPara', 'salvar'].forEach(fn => {
+    if (typeof window[fn] !== 'function') return;
+    const o = window[fn];
+    window[fn] = function(){ const r = o.apply(this, arguments); agendar(); return r; };
+  });
+  agendar();
+})();
+</script>
+
+<style id="drbk-css">
+/* Black 2025 dentro das Regras Completas (05/11/2026) */
+.dr-meta .dr-bk dd b{ font-weight:700; }
+.dr-meta .dr-bk dd small{ display:block; margin-top:2px; }
+</style>
+<script id="drbk-js">
+/* Na janela de regras de cada campanha, a pergunta da época: bate a Black do ano
+   passado? Usa a mesma comparação do cartão da campanha (mesma loja no mesmo
+   programa; sem ela, a melhor loja do programa na Black 2025) e diz qual foi. */
+function drBlackHTML(c){
+  let b = null; try { b = typeof blackDaCampanha === 'function' ? blackDaCampanha(c) : null; } catch(e){}
+  if (!b || !b.ref || !(b.v > 0)) return '';
+  const d = Math.round((b.v - b.ref.v) * 10) / 10;
+  const cls = d > 0 ? 'jade' : d === 0 ? 'ouro' : 'brasa';
+  const tit = d > 0 ? 'Já bate a Black 2025' : d === 0 ? 'Empata com a Black 2025' : 'Abaixo da Black 2025';
+  const f = v => b.un === '%' ? nBRdec(v) + '%' : nBRdec(v) + (c.tipo === 'bonificada' ? ' por real' : '×');
+  const e = b.ref.e || {};
+  const quem = b.ref.nivel === 'loja' ? `${e.loja} pagou ${f(b.ref.v)} na Black 2025`
+    : b.ref.nivel === 'programa' ? `${c.parceiro || 'Esta loja'} não teve campanha registrada na Black 2025. A melhor loja da ${prog(c.para).n} foi ${e.loja}, com ${f(b.ref.v)}`
+    : `${b.ref.txt} pagou ${f(b.ref.v)}`;
+  return `<div class="dr-bk"><dt>Black 2025</dt><dd><b class="cp-${cls}">${tit}</b><small class="fraco">${esc(quem)}${e.fx && e.fx.length ? ` (${esc(e.fx.map(x => x[0] + ': ' + x[1]).join(' · '))})` : ''}.</small></dd></div>`;
+}
 </script>
 
 </body>
