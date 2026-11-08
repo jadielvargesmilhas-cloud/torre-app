@@ -31416,7 +31416,7 @@ function editarMercado(id){
     try{
       const w = await prepararLeitorOCR();
       let txt = '';
-      for (const f of fs){ const {data} = await w.recognize(f); txt += '\n' + (data.text || ''); }
+      for (const f of fs){ txt += '\n' + await lerPrecosDoPrint(w, f); }
       const ofertas = ofertasDoTexto(txt);
       if (!$('#mkLidos_' + k)) return;
       if (!ofertas.length){ alvo.innerHTML = `<div class="brasa" style="font-size:calc(13px * var(--esc))">Nenhum preço encontrado no print. Confira se a lista de voos aparece inteira, ou digite o valor.</div>`; return; }
@@ -31454,12 +31454,18 @@ function ofertasDoTexto(txt){
   const out = [];
   linhas.forEach((l, i) => {
     [...l.matchAll(/R\$\s*([\d.]{1,9}(?:,\d{2})?)/g)].forEach(m => {
+      if (/\.\d{1,2}$/.test(m[1]) || /\.\d{1,2}\./.test(m[1])) return;   /* "24.94": milhar cortado na leitura, não é preço */
       const v = numBR(m[1]); if (!(v >= 100)) return;
       /* a companhia mais perto do preço: a mesma linha, depois as de cima, por último a de baixo */
-      const acha = txt => CIAS_MERCADO.find(c => new RegExp('\\b' + c.replace(/ /g, '\\s+') + '\\b', 'i').test(txt || ''));
+      /* a companhia que aparece primeiro na linha ("Air Europa, Gol" é Air Europa) */
+      const acha = txt => { let m = null; CIAS_MERCADO.forEach(c => { const r = new RegExp('\\b' + c.replace(/ /g, '\\s+') + '\\b', 'i').exec(txt || ''); if (r && (!m || r.index < m.i)) m = {c, i:r.index}; }); return m ? m.c : undefined; };
       /* linha vizinha só vale se não tiver preço próprio: senão a companhia é do voo de cima ou de baixo */
       const semPreco = l => l != null && !/R\$\s*[\d.]/.test(l);
-      let cia = acha(linhas[i]) || (semPreco(linhas[i - 1]) && acha(linhas[i - 1])) || (semPreco(linhas[i + 1]) && acha(linhas[i + 1])) || '';
+      /* na lista do Google Flights a companhia vem na linha de baixo do preço; no voo
+         aberto, mais abaixo, antes do próximo preço */
+      let cia = acha(linhas[i]) || (semPreco(linhas[i + 1]) && acha(linhas[i + 1])) || '';
+      if (!cia) for (let j = i + 2; j < linhas.length && j < i + 14 && semPreco(linhas[j]); j++){ const c = acha(linhas[j]); if (c){ cia = c; break; } }
+      if (!cia && semPreco(linhas[i - 1])) cia = acha(linhas[i - 1]) || '';
       /* voo aberto no Google Flights: a companhia vem no pé do cartão ("Tap Air Portugal ·
          Classe executiva"), longe do preço. Com um preço só no print, vale a companhia citada. */
       if (!cia && (String(txt).match(/R\$\s*[\d.]{3,}/g) || []).length === 1) cia = acha(txt) || '';
@@ -31968,6 +31974,37 @@ function programaPorNome(v){
    leitor é baixado uma vez (uns 4 MB) e fica no cache do navegador. Nada sai
    do computador. */
 const OCR_SCRIPT = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+/* Print de lista de preços (Google Flights, tela escura, preço em verde): lido do
+   jeito que vem, o leitor cortava dígitos ("R$ 24.945" virava "R$ 24.94:").
+   A imagem é ampliada 2x, passa para tons de cinza e, se o fundo é escuro, é
+   invertida (texto escuro em fundo claro, que é o que o leitor lê melhor). */
+async function imagemParaLeitura(f, escala){
+  try {
+    const u = URL.createObjectURL(f);
+    const img = await new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = u; });
+    const k = Math.min(escala || 2, 4200 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u);
+    const d = g.getImageData(0, 0, cv.width, cv.height), px = d.data; let soma = 0;
+    for (let i = 0; i < px.length; i += 4){ const y = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; px[i] = px[i + 1] = px[i + 2] = y; soma += y; }
+    if (soma / (px.length / 4) < 110) for (let i = 0; i < px.length; i += 4){ px[i] = px[i + 1] = px[i + 2] = 255 - px[i]; }
+    g.putImageData(d, 0, 0);
+    return cv;
+  } catch(e){ return f; }
+}
+/* preço cortado ("R$ 24.94", milhar com 2 dígitos) não existe: lê de novo em outra escala */
+const PRECO_CORTADO = /R\$\s*\d{1,3}\.\d{1,2}(?![\d,.])/;
+async function lerPrecosDoPrint(w, f){
+  /* com preço cortado, lê em outras escalas e junta as leituras: cada uma acerta
+     uma parte, e o preço cortado é descartado na hora de listar */
+  const lidos = [];
+  for (const esc of [2, 1.5, 2.6, 1.2]){
+    const {data} = await w.recognize(await imagemParaLeitura(f, esc)); const t = data.text || '';
+    lidos.push(t);
+    if (!PRECO_CORTADO.test(t)) break;
+  }
+  return lidos.join('\n');
+}
 let _ocrWorker = null;
 async function prepararLeitorOCR(aoProgresso){
   if (_ocrWorker) return _ocrWorker;
@@ -79501,17 +79538,25 @@ div.sec-cab.st-cab{ display:block !important; }
     if (!its.length) return {vazio:true};
     const chave = its.map(x => x.id).join(',');
     const c = lidas()[dono];
-    if (c && c.ids === chave && c.d) return c;
+    if (c && c.ids === chave && c.d && c.v === 2) return c;
     const recs = []; let faltam = 0;
     for (const it of its){ let r = null; try { r = await prvArq(it.id); } catch(e){} if (r && r.blob) recs.push(r); else faltam++; }
     if (!recs.length) return {faltam};
     const worker = await prepararLeitorOCR();
     const textos = [];
-    for (const r of recs) textos.push(await textoDoArquivo(new File([r.blob], 'print.jpg', {type:r.mime || r.blob.type || 'image/jpeg'}), worker));
+    const ehMercado = /:mercado$/.test(dono);
+    for (const r of recs){ const f = new File([r.blob], 'print.jpg', {type:r.mime || r.blob.type || 'image/jpeg'});
+      textos.push(ehMercado && typeof lerPrecosDoPrint === 'function' ? await lerPrecosDoPrint(worker, f) : await textoDoArquivo(f, worker)); }
+    /* o mercado é o MENOR preço das listas de voos (Google Flights). Tela de compra da
+       própria companhia ("Total a pagar", "Congelar tarifa") é o preço da mesma
+       companhia, não o do mercado: fica de fora. */
+    let minMerc = null, ciaMerc = '';
+    if (ehMercado) textos.forEach(tx => { if (/Total a pagar|Congelar tarifa|Resumo da viagem|Informar viajantes/i.test(tx)) return;
+      const o = (typeof ofertasDoTexto === 'function' ? ofertasDoTexto(tx) : [])[0]; if (o && (minMerc == null || o.preco < minMerc)){ minMerc = o.preco; ciaMerc = o.cia || ''; } });
     const d = interpretarTextosPrints(textos, t.data || '') || {};
     const din = d.dinheiro || null, mil = d.milhas || null;
     const res = {ids:faltam ? '' : chave, d:{total:din && Number(din.total) || null, pontos:mil && Number(mil.pontos) || null, taxasMil:mil && Number(mil.taxas) || null,
-      maior:maiorReais(textos.join('\n')), pax:Number(d.passageiros) || null}, manter:(c && c.manter) || {}};
+      maior:maiorReais(textos.join('\n')), pax:Number(d.passageiros) || null, minMerc, ciaMerc}, v:2, manter:(c && c.manter) || {}};
     if (!faltam){ lidas()[dono] = res; salvar(); }
     return Object.assign({faltam}, res);
   }
@@ -79532,7 +79577,8 @@ div.sec-cab.st-cab{ display:block !important; }
     if (et === 'mercado'){
       const cab = (t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica')) === 'economica' ? 'economica' : 'executiva';
       const m = (t.mercado || {})[cab] || {};
-      add('Menor preço do mercado', reais, m.preco, v => { t.mercado = t.mercado || {}; t.mercado[cab] = Object.assign({}, t.mercado[cab] || {}, {preco:v}); });
+      const lido = d.minMerc != null ? d.minMerc : reais;
+      add(`Menor preço do mercado${d.ciaMerc ? ' (' + d.ciaMerc + ')' : ''}`, lido, m.preco, v => { t.mercado = t.mercado || {}; t.mercado[cab] = Object.assign({}, t.mercado[cab] || {}, {preco:v}, d.ciaMerc ? {cia:d.ciaMerc} : {}); });
     }
     return out;
   }
