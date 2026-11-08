@@ -19894,7 +19894,7 @@ function copiarCupomVelho(cod, ok){
   ta.remove();
 }
 const cupomDoMural = m => (m && (m.cupom || cupomDoTexto((m.titulo || '') + '\n' + (m.texto || '')))) || '';
-const chipCupom = (cod, sub, dica) => cod ? `<button type="button" class="mr-cupom" onclick="copiarCupom('${esc(cod)}')" data-dica="${esc(dica || 'Copiar o cupom')}"><span>Cupom</span><b>${esc(cod)}</b>${sub ? `<small class="mr-cupom-sub">${esc(sub)}</small>` : ''}<svg><use href="#i-copiar"/></svg></button>` : '';
+const chipCupom = (cod, sub, dica) => cod ? `<button type="button" class="mr-cupom" onclick="copiarCupom('${esc(cod)}')" data-dica="${esc(dica || 'Copiar o cupom')}"><span>Cupom</span><b>${esc(cod)}</b>${sub ? `<small class="mr-cupom-sub">${(m => m ? `<i>${esc(m[1])}</i><em>${esc(m[2])}</em>` : esc(sub))(String(sub).match(/^(\d[\d.,]*%)(.*)$/))}</small>` : ''}<svg><use href="#i-copiar"/></svg></button>` : '';
 /* Vários cupons no mesmo anúncio (08/11/2026, "ECONOMIA25", "EMBARQUE20", "APROVEITE20"):
    cada um vira um botão de copiar, com o que ele dá ao lado ("25% · pacotes"). */
 function cuponsDoTexto(texto){
@@ -19906,13 +19906,16 @@ function cuponsDoTexto(texto){
     const ini = t.lastIndexOf('\n', m.index) + 1, fim = t.indexOf('\n', m.index), linha = t.slice(ini, fim < 0 ? undefined : fim);
     const d = linha.match(/(\d{1,3}(?:[.,]\d+)?)\s*%\s*(?:de\s+)?(?:desconto|off)?(?:\s+em\s+([^.;\n]+))?/i);
     let sub = '';
-    if (d){ const em = (d[2] || '').replace(/[()]/g, ' ').replace(/\bselecionad[oa]s?\b/i, '').replace(/\s+/g, ' ').trim().toLowerCase(); sub = d[1] + '%' + (em ? ' · ' + (em.length > 28 ? em.slice(0, 27).trim() + '…' : em) : ''); }
+    if (d){ const em = (d[2] || '').replace(/[()]/g, ' ').replace(/\bselecionad[oa]s?\b/i, '').replace(/\s+/g, ' ').trim().toLowerCase(); /* descrição curta, para os cupons caberem numa linha: "pacotes aéreo + resorts" vira
+       "aéreo + resorts", "hotéis e locação de carros" vira "hotéis e carros" */
+    const curto = em.replace(/\bpacotes?\s+(?=a[eé]reo)/, '').replace(/\b(?:loca[cç][aã]o|aluguel)\s+de\s+/g, '').replace(/\s+e\s+/g, ' e ').trim();
+    sub = d[1] + '%' + (curto ? ' · ' + (curto.length > 28 ? curto.slice(0, 27).trim() + '…' : curto) : ''); }
     out.push({cod, sub, linha:linha.replace(/["“”]+/g, '"').trim()});
   }
   return out;
 }
 const cuponsDoMural = m => { if (!m) return []; const l = cuponsDoTexto((m.titulo || '') + '\n' + (m.texto || '')); if (m.cupom && !l.some(x => x.cod === m.cupom)) l.unshift({cod:m.cupom, sub:'', linha:''}); return l; };
-const chipsCupons = m => { const l = cuponsDoMural(m); return l.length > 1 ? `<span class="mr-cupons">${l.map(x => chipCupom(x.cod, x.sub, x.linha ? 'Copiar · ' + x.linha : '')).join('')}</span>` : chipCupom(cupomDoMural(m)); };
+const chipsCupons = m => { const l = cuponsDoMural(m); return l.length > 1 ? `<span class="mr-cupons"><span class="mr-cupons-l"><span class="mr-cupons-rot">Cupons</span>${l.map(x => chipCupom(x.cod, x.sub, x.linha ? 'Copiar · ' + x.linha : '')).join('')}</span></span>` : chipCupom(cupomDoMural(m)); };
 function lerUmAnuncio(bloco){
   const brutas = bloco.map(l => l.trim()).filter(Boolean);
   if (!brutas.length) return null;
@@ -55413,9 +55416,30 @@ function exControles(){
 .mr-cupom b{ font:700 calc(13.5px * var(--esc)) var(--f-m, inherit); letter-spacing:.04em; color:var(--giz); }
 .mr-cupom .mr-cupom-sub{ font:500 calc(11.5px * var(--esc)) var(--f-b, inherit); color:var(--grafite); white-space:nowrap; }
 .mr-cupons{ display:inline-flex; flex-wrap:wrap; gap:8px; max-width:100%; min-width:0; }
+.mr-cupons-rot{ flex:none; align-self:center; margin-right:1px; font:700 calc(10px * var(--esc)) var(--f-b, inherit); text-transform:uppercase; letter-spacing:.08em; color:var(--grafite); }
 .mr-cupons .mr-cupom{ max-width:100%; min-width:0; }
 .mr-cupons .mr-cupom-sub{ overflow:hidden; text-overflow:ellipsis; min-width:0; }
-@media (max-width:640px){ .mr-cupons .mr-cupom{ display:grid; grid-template-columns:auto 1fr auto; column-gap:7px; } .mr-cupons .mr-cupom-sub{ grid-column:1 / -1; grid-row:2; white-space:normal; } }
+/* os cupons numa linha só (08/11/2026): cada um divide a largura; o que não couber
+   da descrição vira reticências, e a regra inteira aparece ao passar o mouse */
+.mr-cupom-sub i, .mr-cupom-sub em{ font-style:normal; }
+/* os cupons numa linha só (08/11/2026). Decide pela largura do espaço deles:
+   cabe tudo → uma linha; um pouco menos → uma linha só com o percentual (a regra
+   inteira continua ao passar o mouse); estreito → um embaixo do outro, inteiros. */
+.mr-cupons{ display:block; width:100%; container-type:inline-size; container-name:cupons; }
+.mr-cupons-l{ display:flex; flex-wrap:nowrap; align-items:center; gap:5px; min-width:0; }
+.mr-cupons-l .mr-cupom{ flex:0 1 auto; gap:5px; padding:4px 6px 4px 8px; min-width:0; }
+.mr-cupons-l .mr-cupom > span{ display:none; }
+.mr-cupons-l .mr-cupom b{ font-size:calc(12px * var(--esc)); letter-spacing:.02em; }
+.mr-cupons-l .mr-cupom-sub{ flex:1 1 auto; font-size:calc(10.5px * var(--esc)); }
+.mr-cupons-l .mr-cupom svg{ width:13px; height:13px; }
+@container cupons (max-width:729px){ .mr-cupons-l .mr-cupom-sub em{ display:none; } }
+@container cupons (max-width:519px){
+  .mr-cupons-l{ flex-wrap:wrap; }
+  .mr-cupons-rot{ display:none; }
+  .mr-cupons-l .mr-cupom{ display:grid; grid-template-columns:1fr auto; column-gap:7px; flex:0 1 auto; }
+  .mr-cupons-l .mr-cupom-sub{ grid-column:1 / -1; grid-row:2; white-space:normal; }
+  .mr-cupons-l .mr-cupom-sub em{ display:inline; }
+}
 .mr-cupons .mr-cupom b, .mr-cupons .mr-cupom svg, .mr-cupons .mr-cupom > span{ flex:none; }
 .mr-cupom svg{ width:15px; height:15px; fill:none; stroke:var(--ouro); stroke-width:1.8; }
 .mr-cupom:hover{ border-style:solid; background:color-mix(in srgb, var(--ouro) 18%, transparent); }
