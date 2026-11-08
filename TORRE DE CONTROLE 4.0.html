@@ -19894,7 +19894,25 @@ function copiarCupomVelho(cod, ok){
   ta.remove();
 }
 const cupomDoMural = m => (m && (m.cupom || cupomDoTexto((m.titulo || '') + '\n' + (m.texto || '')))) || '';
-const chipCupom = cod => cod ? `<button type="button" class="mr-cupom" onclick="copiarCupom('${esc(cod)}')" data-dica="Copiar o cupom"><span>Cupom</span><b>${esc(cod)}</b><svg><use href="#i-copiar"/></svg></button>` : '';
+const chipCupom = (cod, sub, dica) => cod ? `<button type="button" class="mr-cupom" onclick="copiarCupom('${esc(cod)}')" data-dica="${esc(dica || 'Copiar o cupom')}"><span>Cupom</span><b>${esc(cod)}</b>${sub ? `<small class="mr-cupom-sub">${esc(sub)}</small>` : ''}<svg><use href="#i-copiar"/></svg></button>` : '';
+/* Vários cupons no mesmo anúncio (08/11/2026, "ECONOMIA25", "EMBARQUE20", "APROVEITE20"):
+   cada um vira um botão de copiar, com o que ele dá ao lado ("25% · pacotes"). */
+function cuponsDoTexto(texto){
+  const t = String(texto || '').replace(/[*_~]/g, '');
+  const re = /(?:\b[Cc]upo(?:m|ns)|\bC[ÓOóo]DIGO|\b[Cc][óo]digo)(?:\s+(?:promocional|de\s+desconto))?\s*[:=]?\s*["“”'‘’«]*\s*([A-Z0-9][A-Z0-9_-]{3,24})(?![a-z])/g;
+  const out = []; let m;
+  while ((m = re.exec(t))){
+    const cod = m[1]; if (!/[A-Z]/.test(cod) || /^(PARA|COM|NO|NA|DE|DO|DA)$/.test(cod) || out.some(x => x.cod === cod)) continue;
+    const ini = t.lastIndexOf('\n', m.index) + 1, fim = t.indexOf('\n', m.index), linha = t.slice(ini, fim < 0 ? undefined : fim);
+    const d = linha.match(/(\d{1,3}(?:[.,]\d+)?)\s*%\s*(?:de\s+)?(?:desconto|off)?(?:\s+em\s+([^.;\n]+))?/i);
+    let sub = '';
+    if (d){ const em = (d[2] || '').replace(/[()]/g, ' ').replace(/\bselecionad[oa]s?\b/i, '').replace(/\s+/g, ' ').trim().toLowerCase(); sub = d[1] + '%' + (em ? ' · ' + (em.length > 28 ? em.slice(0, 27).trim() + '…' : em) : ''); }
+    out.push({cod, sub, linha:linha.replace(/["“”]+/g, '"').trim()});
+  }
+  return out;
+}
+const cuponsDoMural = m => { if (!m) return []; const l = cuponsDoTexto((m.titulo || '') + '\n' + (m.texto || '')); if (m.cupom && !l.some(x => x.cod === m.cupom)) l.unshift({cod:m.cupom, sub:'', linha:''}); return l; };
+const chipsCupons = m => { const l = cuponsDoMural(m); return l.length > 1 ? `<span class="mr-cupons">${l.map(x => chipCupom(x.cod, x.sub, x.linha ? 'Copiar · ' + x.linha : '')).join('')}</span>` : chipCupom(cupomDoMural(m)); };
 function lerUmAnuncio(bloco){
   const brutas = bloco.map(l => l.trim()).filter(Boolean);
   if (!brutas.length) return null;
@@ -20272,7 +20290,7 @@ function renderMural(){
       <div class="mural-prazo">
         <span class="etq ${zPrazo}">${morta ? 'encerrada' : d === null ? 'sem prazo' : d === 0 ? 'termina hoje' : 'válida até ' + dataBR(m.fim)}</span>
         ${!morta && d !== null && d > 0 ? `<span class="fraco">${prazoTexto(d)}</span>` : ''}
-        ${chipCupom(cupomDoMural(m))}
+        ${chipsCupons(m)}
         ${m.link ? `<a class="mural-link" href="${esc(m.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg><span>${esc(linkCurto(m.link))}</span></a>` : ''}
       </div>
       ${(typeof vereditoHTML === 'function' && !morta) ? vereditoHTML(m) : ''}
@@ -55393,6 +55411,12 @@ function exControles(){
   border:1px dashed color-mix(in srgb, var(--ouro) 70%, var(--fio)); background:var(--lavagem-ouro, color-mix(in srgb, var(--ouro) 10%, transparent)); color:var(--ouro); transition:.15s var(--ease, ease); }
 .mr-cupom span{ font:600 calc(10.5px * var(--esc)) var(--f-b, inherit); text-transform:uppercase; letter-spacing:.06em; color:var(--grafite); }
 .mr-cupom b{ font:700 calc(13.5px * var(--esc)) var(--f-m, inherit); letter-spacing:.04em; color:var(--giz); }
+.mr-cupom .mr-cupom-sub{ font:500 calc(11.5px * var(--esc)) var(--f-b, inherit); color:var(--grafite); white-space:nowrap; }
+.mr-cupons{ display:inline-flex; flex-wrap:wrap; gap:8px; max-width:100%; min-width:0; }
+.mr-cupons .mr-cupom{ max-width:100%; min-width:0; }
+.mr-cupons .mr-cupom-sub{ overflow:hidden; text-overflow:ellipsis; min-width:0; }
+@media (max-width:640px){ .mr-cupons .mr-cupom{ display:grid; grid-template-columns:auto 1fr auto; column-gap:7px; } .mr-cupons .mr-cupom-sub{ grid-column:1 / -1; grid-row:2; white-space:normal; } }
+.mr-cupons .mr-cupom b, .mr-cupons .mr-cupom svg, .mr-cupons .mr-cupom > span{ flex:none; }
 .mr-cupom svg{ width:15px; height:15px; fill:none; stroke:var(--ouro); stroke-width:1.8; }
 .mr-cupom:hover{ border-style:solid; background:color-mix(in srgb, var(--ouro) 18%, transparent); }
 .mr-cupom:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
