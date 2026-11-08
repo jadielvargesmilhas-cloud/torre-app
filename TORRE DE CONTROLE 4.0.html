@@ -31332,7 +31332,7 @@ function escadaEconomiaHTML(ts){
   if (!E.linhas.some(l => l.compra != null)) return '';
   const temCort = E.cortesia > 0.004, temUp = Math.abs(E.upgrade) > 0.004;
   /* os degraus, na ordem do que aconteceu */
-  const degraus = [{k:'compra', n:'A compra', v:E.compra}];
+  const degraus = [{k:'compra', n:'A forma de pagar', v:E.compra}];
   if (temCort) degraus.push({k:'cortesia', n:'A cortesia', v:E.cortesia});
   if (temUp) degraus.push({k:'upgrade', n:'O upgrade', v:E.upgrade});
   let acum = 0;
@@ -76840,7 +76840,7 @@ h2 em, h1 em{ font-style:italic; color:var(--gold); }
 
     /* 4. o resultado */
     const wPagou = D.valeria > 0 ? Math.max(1.5, D.custo / D.valeria * 100) : 0;
-    const seg = [[E.compra, 'var(--azul)', 'A compra'], [E.cortesia, 'var(--gold)', 'A passagem espelho'], [E.upgrade, 'var(--teal)', 'O upgrade']].filter(x => x[0] > 0.004);
+    const seg = [[E.compra, 'var(--azul)', 'A forma de pagar'], [E.cortesia, 'var(--gold)', 'A passagem espelho'], [E.upgrade, 'var(--teal)', 'O upgrade']].filter(x => x[0] > 0.004);
     const segTot = soma(seg.map(x => x[0])) || 1;
     caps.push({k:'resultado', h:`<section class="cap" id="c-resultado"><div class="in">
       <div class="olho revela">O resultado</div>
@@ -77234,16 +77234,23 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
   function cartaoTrecho(p, l, i){
     const t = l.t, cab0 = CABINES_TRECHO[t.cabine || 'economica'], cab1 = t.upgrade ? CABINES_TRECHO[t.upgrade.cabine] : '';
     const custo = (custoTrechoReais(t) || 0) + (t.upgrade ? custoUpgradeReais(t) || 0 : 0);
-    const partes = [[l.compra, COR.compra, 'A compra'], [l.cort, COR.cort, 'A passagem espelho'], [l.up, COR.up, 'O upgrade']].filter(x => x[0] != null && Math.abs(x[0]) > 0.004);
+    /* "A compra +R$ 3,42" parecia o preço pago (08/11/2026, Jadiel). A linha diz o
+       que compara: a forma de pagar contra a outra, com os dois preços embaixo. */
+    const custoBase = custoTrechoReais(t);
+    const rotCompra = t.forma === 'dinheiro' ? 'Dinheiro em vez de milhas' : t.forma === 'misto' ? 'Milhas + dinheiro em vez da pagante' : 'Milhas em vez de dinheiro';
+    const subCompra = l.compra == null ? '' : t.forma === 'dinheiro'
+      ? `pagou ${R(t.pago)} · em milhas sairia ${R((Number(t.pago) || 0) + l.compra)}`
+      : `custou ${R(custoBase)} · na pagante ${R(t.vista)}`;
+    const partes = [[l.compra, COR.compra, rotCompra, subCompra], [l.cort, COR.cort, 'A passagem espelho', l.cort > 0 ? `${Number(t.cortesiaQtd) || 1} ${(Number(t.cortesiaQtd) || 1) === 1 ? 'passagem' : 'passagens'} de graça` : ''], [l.up, COR.up, 'O upgrade', t.upgrade ? `${CABINES_TRECHO[t.cabine || 'economica']} para ${CABINES_TRECHO[t.upgrade.cabine]}` : '']].filter(x => x[0] != null && Math.abs(x[0]) > 0.004);
     const pos = partes.filter(x => x[0] > 0), sp = soma(pos.map(x => x[0])) || 1;
     const cia = String(t.cia || '').split(' · ')[0].trim();
     const cidade = k => (typeof AEROPORTOS === 'object' && AEROPORTOS[String(k || '').toUpperCase()] && AEROPORTOS[String(k).toUpperCase()].c) || String(k || '').toUpperCase();
     return `<div class="tat-c" data-tat="${esc(t.id)}">
       <div class="tat-top"><span class="tat-n">${i + 1}</span><div><b>${esc(cidade(t.origem))} → ${esc(cidade(t.destino))}</b><small>${t.data ? dataBR(t.data) : 'sem data'}${cia ? ' · ' + esc(cia) : ''} · ${t.forma === 'dinheiro' ? 'na pagante' : 'com milhas'}</small></div></div>
       <div class="tat-cabs"><span class="etq">${esc(cab0)}</span>${cab1 ? `<svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-seta"/></svg><span class="etq jade">${esc(cab1)}</span>` : ''}</div>
-      <div class="tat-val">${l.total == null ? `<b class="nd">economia a medir</b><span>falta o preço de comparação</span>` : `<b class="${l.total < 0 ? 'neg' : ''}">${l.total < 0 ? '−' : ''}${R(l.total)}</b><span>custou ${R(custo)}<br>valia ${R(custo + l.total)}</span>`}</div>
+      <div class="tat-val">${l.total == null ? `<b class="nd">economia a medir</b><span>falta o preço de comparação</span>` : `<b class="${l.total < 0 ? 'neg' : ''}"><small class="tat-rot">${l.total < 0 ? 'Prejuízo do trecho' : 'Economia do trecho'}</small>${l.total < 0 ? '−' : ''}${R(l.total)}</b><span>custou ${R(custo)}<br>valia ${R(custo + l.total)}</span>`}</div>
       ${pos.length ? `<div class="tat-barra">${pos.map(x => `<i style="width:${(x[0] / sp * 100).toFixed(2)}%;background:${x[1]}"></i>`).join('')}</div>` : ''}
-      <ul class="tat-lin">${partes.map(x => `<li><span style="--c:${x[1]}">${x[2]}</span><em>${x[0] >= 0 ? '+' : '−'}${R(x[0])}</em></li>`).join('')}
+      <ul class="tat-lin">${partes.length ? `<li class="tat-lin-cab"><span>De onde veio a economia</span><em>economizou</em></li>` : ''}${partes.map(x => `<li><span style="--c:${x[1]}">${x[2]}${x[3] ? `<small class="tat-sub">${x[3]}</small>` : ''}</span><em>${x[0] >= 0 ? '+' : '−'}${R(x[0])}</em></li>`).join('')}
         ${l.merc ? `<li class="merc"><span style="--c:transparent">Contra o mercado${l.merc.cia ? ' (' + esc(l.merc.cia) + ')' : ''}</span><em>${l.merc.valor >= 0 ? '' : '−'}${R(l.merc.valor)}</em></li>` : ''}</ul>
       <button type="button" class="bt p pv-bt-abrir" onclick="abrirProva('${esc(p.id)}','${esc(t.id)}')">${ESTRELA}Prova deste trecho</button>
     </div>`;
@@ -79423,6 +79430,15 @@ div.sec-cab.st-cab{ display:block !important; }
 .pvc-bts{ display:flex; gap:8px; flex-wrap:wrap; }
 .pvc-gira{ width:14px; height:14px; border-radius:50%; border:2px solid var(--fio); border-top-color:var(--ouro); animation:pvcGira .8s linear infinite; flex:none; }
 @keyframes pvcGira{ to{ transform:rotate(360deg); } }
+
+/* linha do trecho a trecho: o que foi comparado, embaixo do nome (08/11/2026) */
+.tat-lin li > span .tat-sub{ display:block; margin:2px 0 0 15px; font-size:calc(12.5px * var(--esc, 1)); color:var(--grafite); font-weight:400; line-height:1.35; }
+
+/* deixa claro que os números do cartão são economia (08/11/2026) */
+.tat-val > b .tat-rot{ display:block; font:700 calc(11px * var(--esc, 1))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); margin-bottom:4px; }
+.tat-lin li.tat-lin-cab{ font:700 calc(11px * var(--esc, 1))/1.2 var(--f-b, inherit); letter-spacing:.12em; text-transform:uppercase; color:var(--grafite); padding-bottom:4px; border-bottom:1px dashed var(--fio-suave, rgba(127,127,127,.25)); }
+.tat-lin li.tat-lin-cab span::before{ display:none !important; }
+.tat-lin li.tat-lin-cab em{ font-family:inherit !important; }
 </style>
 <script id="pvc-js">
 /* ══ A PROVA LÊ OS PRINTS (08/11/2026, pedido do Jadiel) ════════════════════
