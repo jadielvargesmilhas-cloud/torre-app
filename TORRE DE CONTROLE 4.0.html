@@ -31399,7 +31399,7 @@ function editarMercado(id){
       <div class="mk-bts"><a class="bt p fantasma" href="${linkGoogleFlights(t, k, pax)}" target="_blank" rel="noopener"><svg><use href="#i-busca"/></svg>Abrir no Google Flights</a>
       <label class="bt p fantasma" style="cursor:pointer"><svg><use href="#i-imagem"/></svg>Ler print<input type="file" accept="image/*" multiple hidden data-mk="${k}"></label></div></div>
       <div class="mk-campos"><div class="campo"><label>Companhia</label><input type="text" id="mkCia_${k}" value="${esc((m[k] || {}).cia || '')}" placeholder="LATAM"></div>
-      <div class="campo"><label>Menor preço, todos os passageiros (R$)</label><input type="text" inputmode="decimal" data-moeda id="mkPreco_${k}" value="${moedaTxt((m[k] || {}).preco || 0)}"></div></div>
+      <div class="campo"><label>Menor preço, todos os passageiros (R$)</label><input type="text" inputmode="decimal" data-moeda data-vazio="sim" id="mkPreco_${k}" value="${Number((m[k] || {}).preco) > 0 ? moedaTxt(m[k].preco) : ''}" placeholder="sem pesquisa"></div></div>
       <div class="mk-lidos" id="mkLidos_${k}"></div>
     </div>`;
   abrirFolha({titulo:`Mercado · ${esc(rotuloTrecho(t))}`, largura:'larga',
@@ -31424,7 +31424,7 @@ function editarMercado(id){
          viagem para um trecho de 3, uma companhia não lida) sai da lista, e a
          escolha passa para a próxima mais barata. */
       let lista = ofertas.slice(0, 8), escolhida = 0;
-      const usar = i => { const o = lista[i]; $('#mkCia_' + k).value = o ? (o.cia || '') : ''; $('#mkPreco_' + k).value = moedaTxt(o ? o.preco : 0); };
+      const usar = i => { const o = lista[i]; $('#mkCia_' + k).value = o ? (o.cia || '') : ''; $('#mkPreco_' + k).value = o ? moedaTxt(o.preco) : ''; try { const el = $('#mkPreco_' + k); if (window.centVarrer) centVarrer(); el.dispatchEvent(new Event('change')); } catch(_){} };
       const desenharOfertas = () => {
         if (!lista.length){ alvo.innerHTML = `<div class="fraco" style="font-size:calc(13px * var(--esc))">Todas as ofertas foram descartadas. Leia outro print ou digite o valor.</div>`; usar(-1); return; }
         alvo.innerHTML = `<div class="mk-ofertas"><span>Lidas no print, da mais barata para a mais cara:</span>${lista.map((o, i) => `<span class="mk-oferta${i === escolhida ? ' on' : ''}${o.cia ? '' : ' sem-cia'}">
@@ -31459,7 +31459,10 @@ function ofertasDoTexto(txt){
       const acha = txt => CIAS_MERCADO.find(c => new RegExp('\\b' + c.replace(/ /g, '\\s+') + '\\b', 'i').test(txt || ''));
       /* linha vizinha só vale se não tiver preço próprio: senão a companhia é do voo de cima ou de baixo */
       const semPreco = l => l != null && !/R\$\s*[\d.]/.test(l);
-      const cia = acha(linhas[i]) || (semPreco(linhas[i - 1]) && acha(linhas[i - 1])) || (semPreco(linhas[i + 1]) && acha(linhas[i + 1])) || '';
+      let cia = acha(linhas[i]) || (semPreco(linhas[i - 1]) && acha(linhas[i - 1])) || (semPreco(linhas[i + 1]) && acha(linhas[i + 1])) || '';
+      /* voo aberto no Google Flights: a companhia vem no pé do cartão ("Tap Air Portugal ·
+         Classe executiva"), longe do preço. Com um preço só no print, vale a companhia citada. */
+      if (!cia && (String(txt).match(/R\$\s*[\d.]{3,}/g) || []).length === 1) cia = acha(txt) || '';
       out.push({preco:v, cia});
     });
   });
@@ -77304,7 +77307,8 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
 .psb-it img{ width:100%; height:100%; object-fit:cover; object-position:top; display:block; }
 .psb-it.on{ border-color:#E6BE62; box-shadow:0 0 0 3px rgba(230,190,98,.3); }
 .psb-it.on::after{ content:'✓'; position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; background:#E6BE62; color:#1A1405; font:700 12px/20px sans-serif; text-align:center; }
-@media (max-width:760px){ .psv{ bottom:12px; } .psv-bts{ width:100%; } .psv-bts button{ flex:1; } }
+.psv.psv-topo{ top:16px; bottom:auto; }
+@media (max-width:760px){ .psv{ bottom:12px; } .psv.psv-topo{ top:10px; bottom:auto; } .psv-bts{ width:100%; } .psv-bts button{ flex:1; } }
 </style>
 <script id="psv-js">
 /* Prints lidos viram prova (02/11/2026, pedido do Jadiel). Todo print que
@@ -77327,7 +77331,11 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
     if (!imgs.length || typeof prvGuardar !== 'function') return;
     fechar();
     const pai = [...document.querySelectorAll('dialog[open]')].pop() || document.body;
-    bar = document.createElement('div'); bar.className = 'psv'; bar.setAttribute('role', 'dialog'); bar.setAttribute('aria-label', 'Guardar como prova');
+    bar = document.createElement('div'); bar.className = 'psv';
+    /* com uma janela aberta, a barra vai para o alto da tela: embaixo ela cobria o
+       Salvar da janela (08/11/2026, janela do Mercado) */
+    { const v = document.getElementById('veu'); if ((v && v.classList.contains('aberto')) || pai !== document.body) bar.classList.add('psv-topo'); }
+    bar.setAttribute('role', 'dialog'); bar.setAttribute('aria-label', 'Guardar como prova');
     const urls = imgs.slice(0, 3).map(f => URL.createObjectURL(f));
     const n = imgs.length, pl = n === 1 ? 'este print' : `estes ${n} prints`;
     bar.innerHTML = `<div class="psv-minis">${urls.map(u => `<img src="${u}" alt="">`).join('')}</div>
@@ -78768,7 +78776,11 @@ input.cent-on:focus + .cent-esp, input.cent-on:hover:focus + .cent-esp{ visibili
     e.style.display = 'block';
     ['fontFamily','fontSize','fontWeight','fontStyle','letterSpacing','textAlign','paddingLeft','paddingRight','paddingTop','paddingBottom',
      'borderLeftWidth','borderRightWidth','borderTopWidth','borderBottomWidth','borderStyle','lineHeight','textIndent','fontVariantNumeric'].forEach(k => e.style[k] = cs[k]);
-    i.classList.remove('cent-on'); e.style.color = getComputedStyle(i).color; i.classList.add('cent-on');
+    /* a cor do texto do campo: sem a transição de cor, senão vinha "transparente" no meio
+       do efeito e o valor sumia (08/11/2026, campo do Mercado) */
+    const tr = i.style.transition; i.style.transition = 'none'; i.classList.remove('cent-on');
+    let cor = getComputedStyle(i).color; if (/rgba\(.*,\s*0\)$/.test(cor) || cor === 'transparent') cor = getComputedStyle(i.parentElement || document.body).color;
+    e.style.color = cor; i.classList.add('cent-on'); void i.offsetWidth; i.style.transition = tr;
     e.style.left = i.offsetLeft + 'px'; e.style.top = i.offsetTop + 'px'; e.style.width = i.offsetWidth + 'px'; e.style.height = i.offsetHeight + 'px';
     e.style.lineHeight = (i.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) + 'px';
     e.textContent = i.value;
