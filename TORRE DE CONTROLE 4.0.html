@@ -75974,9 +75974,81 @@ function abrirMudarPlano(id){
     r.onsuccess = () => ok(r.result); r.onerror = () => err(r.error);
   }));
   const tx = async (modo, fn) => { const d = await idb(); return new Promise((ok, err) => { const t = d.transaction('arq', modo); const s = t.objectStore('arq'); const r = fn(s); t.oncomplete = () => ok(r && r.result); t.onerror = () => err(t.error); }); };
-  const arqPor = id => tx('readonly', s => s.get(id));
-  const arqGrava = rec => tx('readwrite', s => s.put(rec));
-  const arqApaga = id => tx('readwrite', s => s.delete(id));
+  const arqLocal = id => tx('readonly', s => s.get(id));
+  const arqGravaLocal = rec => tx('readwrite', s => s.put(rec));
+  const arqApagaLocal = id => tx('readwrite', s => s.delete(id));
+  /* ── nuvem (08/11/2026): cada print vai também para uma pasta privada da sua
+     conta, para abrir em qualquer aparelho. Neste aparelho fica uma cópia, que
+     abre sem internet. Sem conta ligada, tudo segue só no aparelho. ── */
+  const NUV = {balde:'provas'};
+  const nuvemOk = () => { try { return typeof contaAtiva === 'function' && contaAtiva() && !!(contaSessao() || {}).user; } catch(e){ return false; } };
+  const nuvemCaminho = id => `${contaSessao().user.id}/${encodeURIComponent(id)}`;
+  async function nuvemFetch(metodo, caminho, corpo, tipo){
+    const ir = async forcar => fetch(CONTA.url.replace(/\/+$/, '') + '/storage/v1/object/' + caminho, {method:metodo, cache:'no-store',
+      headers:Object.assign({apikey:CONTA.chave, Authorization:'Bearer ' + await contaToken(forcar)}, corpo ? {'Content-Type':tipo || 'application/octet-stream', 'x-upsert':'true'} : {}), body:corpo});
+    let r = await ir(false); if (r.status === 401 || r.status === 403 && /jwt|token/i.test(await r.clone().text())) r = await ir(true);
+    return r;
+  }
+  async function nuvemSobe(rec){
+    if (!nuvemOk() || !rec || !rec.blob) return false;
+    const r1 = await nuvemFetch('POST', NUV.balde + '/' + nuvemCaminho(rec.id), rec.blob, rec.mime || rec.blob.type);
+    if (!r1.ok){ const e = new Error('nuvem ' + r1.status); e.grande = r1.status === 413 || /size|large|grande/i.test(await r1.text().catch(() => '')); throw e; }
+    if (rec.mini){ const r2 = await nuvemFetch('POST', NUV.balde + '/' + nuvemCaminho(rec.id + '.mini'), new Blob([rec.mini], {type:'text/plain'}), 'text/plain'); if (!r2.ok) throw new Error('nuvem ' + r2.status); }
+    return true;
+  }
+  const baixando = {};
+  async function nuvemBaixa(id){
+    if (!nuvemOk()) return null;
+    if (baixando[id]) return baixando[id];
+    return (baixando[id] = (async () => {
+      try {
+        const r = await nuvemFetch('GET', 'authenticated/' + NUV.balde + '/' + nuvemCaminho(id));
+        if (!r.ok) return null;
+        const blob = await r.blob();
+        let mini = '';
+        try { const m = await nuvemFetch('GET', 'authenticated/' + NUV.balde + '/' + nuvemCaminho(id + '.mini')); if (m.ok) mini = await m.text(); } catch(e){}
+        const rec = {id, blob, mime:blob.type, mini, nome:'', em:Date.now(), tam:blob.size, daNuvem:true};
+        try { await arqGravaLocal(rec); } catch(e){}
+        return rec;
+      } catch(e){ return null; } finally { setTimeout(() => delete baixando[id], 0); }
+    })());
+  }
+  async function nuvemApaga(id){
+    if (!nuvemOk()) return;
+    try { await nuvemFetch('DELETE', NUV.balde, JSON.stringify({prefixes:[nuvemCaminho(id), nuvemCaminho(id + '.mini')]}), 'application/json'); } catch(e){}
+  }
+  const arqPor = async id => { let r = null; try { r = await arqLocal(id); } catch(e){} return r || await nuvemBaixa(id); };
+  const arqGrava = async rec => { await arqGravaLocal(rec); nuvemSobe(rec).then(ok => { if (ok) marcarNaNuvem(rec.id); }).catch(() => agendarEnvio()); };   /* vídeo grande demais: o envio pendente marca e não insiste */
+  const arqApaga = async id => { try { await arqApagaLocal(id); } catch(e){} nuvemApaga(id); };
+  /* a lista marca o que já está na nuvem; o que ficou só aqui (antes desta
+     versão, ou sem internet na hora) sobe sozinho */
+  function marcarNaNuvem(id){
+    let mudou = false;
+    Object.values(DB.provas || {}).forEach(l => (l || []).forEach(it => { if (it.id === id && !it.nv){ it.nv = 1; mudou = true; } }));
+    if (mudou) salvar();
+  }
+  let envioAg = null, enviando = false;
+  function agendarEnvio(ms){ clearTimeout(envioAg); envioAg = setTimeout(enviarPendentes, ms || 4000); }
+  async function enviarPendentes(){
+    if (enviando || !nuvemOk()) return 0;
+    enviando = true; let n = 0;
+    try {
+      const its = []; Object.values(DB.provas || {}).forEach(l => (l || []).forEach(it => { if (it.t !== 'link' && !it.nv && !it.nvGrande) its.push(it); }));
+      for (const it of its){
+        let rec = null; try { rec = await arqLocal(it.id); } catch(e){}
+        if (!rec) continue;                       /* está em outro aparelho: sobe de lá */
+        try { if (await nuvemSobe(rec)){ it.nv = 1; n++; } }
+        catch(e){ if (e.grande){ it.nvGrande = 1; n++; continue; }   /* vídeo grande demais para a nuvem: fica no aparelho */
+          agendarEnvio(60000); break; }
+      }
+      if (n) salvar();
+    } finally { enviando = false; }
+    return n;
+  }
+  window.prvNuvem = {enviar:enviarPendentes, baixar:nuvemBaixa, ok:nuvemOk};
+  setTimeout(() => agendarEnvio(1500), 0);
+  addEventListener('online', () => agendarEnvio(1000));
+  if (typeof aplicarTudo === 'function'){ const _ap = aplicarTudo; aplicarTudo = function(){ const r = _ap.apply(this, arguments); agendarEnvio(3000); return r; }; }
   window.prvArq = arqPor;
 
   /* ── lista: nos dados da Torre ── */
@@ -76979,8 +77051,29 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
     const site = String(vemCfg().site || VEM_PADRAO.site).replace(/\/+$/, '') + '/';
     return {nome, k:x.k, pagina:carregador(D, x), solta:html, url:site + nome + '.html', link:site + nome + '.html#k=' + x.k};
   };
+  /* prints da lista que não estão guardados neste aparelho (08/11/2026): os
+     arquivos ficam no aparelho onde foram anexados; só a lista vai para a nuvem */
+  async function ausentesDe(pid, tid){
+    let n = 0;
+    for (const [k] of ETAPAS) for (const it of ((DB.provas || {})['prova:' + chaveP(pid, tid) + ':' + k] || [])){
+      if (it.t === 'link') continue;
+      let r = null; try { r = typeof prvArq === 'function' ? await prvArq(it.id) : null; } catch(e){}
+      if (!r || !r.blob) n++;
+    }
+    return n;
+  }
+  window.provaAusentes = ausentesDe;
+  window.provaAvisarAusentes = async function(pid, tid){
+    const el = document.getElementById('pvAusentes'); if (!el) return 0;
+    const n = await ausentesDe(pid, tid);
+    el.hidden = !n;
+    if (n) el.innerHTML = `<span><b>${n === 1 ? '1 print desta prova está guardado só no outro aparelho' : n + ' prints desta prova estão guardados só no outro aparelho'}.</b> Aqui eles aparecem como "outro aparelho" e não entram no link, no PDF, na apresentação nem no Instagram. Para sair completa, publique a prova de lá.</span>`;
+    return n;
+  };
   window.provaPublicar = async function(pid, bt, tid){
     const p = acharP(pid); if (!p) return;
+    /* publicar daqui apagaria do link os prints que estão no outro aparelho */
+    try { const n = await ausentesDe(pid, tid); if (n){ avisar(`${n === 1 ? '1 print está' : n + ' prints estão'} só no outro aparelho. Publique a prova de lá, ou o link sai sem ${n === 1 ? 'ele' : 'eles'}.`, 'erro', 9000); provaAvisarAusentes(pid, tid); return; } } catch(e){}
     if (bt) bt.classList.add('pv-gerando');
     try {
       const g = await provaGerarLink(pid, tid);
@@ -77035,7 +77128,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
             <div class="campo"><label>Em quantos meses</label><input type="number" min="1" max="36" id="pvMU" value="${mt.upgrade.meses || ''}" placeholder="opcional"></div></div></div>` : ''}
           ${D.ben.total > 0.004 ? `<label class="pv-chave"><input type="checkbox" id="pvMostrar"${mt.mostrar ? ' checked' : ''}><span><b>Mostrar o valor das metas</b><small>Mostra quanto foi gasto no cartão e quanto voltou a cada R$ 100. Desligado, a prova diz só que a meta foi batida.</small></span></label>` : '<p class="fraco" style="margin:0;font-size:13px">Nenhum trecho marca a cortesia ou o upgrade como vindos do cartão. Ajuste em cada trecho ("Como veio").</p>'}
         </div></div>
-      <div class="pv-sec"><h4>Os prints de cada etapa</h4><p class="fraco">Arraste os prints: entram na etapa certa e no capítulo final.</p>
+      <div class="pv-sec"><h4>Os prints de cada etapa</h4><p class="fraco">Arraste os prints: entram na etapa certa e no capítulo final.</p><div class="nota aviso pv-ausentes" id="pvAusentes" hidden></div>
         <div class="pv-provas" id="pvProvas"></div>
         <p class="pv-aviso">Os prints vão como estão. Antes de publicar, confira se não aparecem CPF, e-mail ou localizador.</p></div>`,
       pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>
@@ -77074,6 +77167,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
     btn('pvPDF', () => provaPDF(p.id, tid));
     btn('pvIG', () => provaCarrossel(p.id, null, tid));
     const bp = document.getElementById('pvPublicar'); if (bp) bp.onclick = () => provaPublicar(p.id, bp, tid);
+    try { provaAvisarAusentes(p.id, tid); } catch(e){}
   };
 
   /* o botão: na faixa "Economia da viagem" */
@@ -78658,6 +78752,9 @@ input.cent-on:focus + .cent-esp, input.cent-on:hover:focus + .cent-esp{ visibili
   function espelho(i){
     if (i.__centEsp){ pinta(i); return; }
     if (!ehCampoDinheiro(i)) return;
+    /* a cópia fica presa ao pai do campo: dentro de janelas com rolagem, ela rola junto
+       (antes ficava solta e aparecia "0,00" no meio da tela, 08/11/2026) */
+    const pai = i.parentElement; if (pai && getComputedStyle(pai).position === 'static') pai.style.position = 'relative';
     const e = document.createElement('span'); e.className = 'cent-esp'; e.setAttribute('aria-hidden', 'true');
     i.insertAdjacentElement('afterend', e); i.__centEsp = e;
     i.addEventListener('input', () => pinta(i)); i.addEventListener('blur', () => setTimeout(() => pinta(i), 0)); i.addEventListener('change', () => pinta(i));
