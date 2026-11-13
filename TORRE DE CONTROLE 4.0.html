@@ -19910,6 +19910,8 @@ function cuponsDoTexto(texto){
        "aéreo + resorts", "hotéis e locação de carros" vira "hotéis e carros" */
     const curto = em.replace(/\bpacotes?\s+(?=a[eé]reo)/, '').replace(/\b(?:loca[cç][aã]o|aluguel)\s+de\s+/g, '').replace(/\s+e\s+/g, ' e ').trim();
     sub = d[1] + '%' + (curto ? ' · ' + (curto.length > 28 ? curto.slice(0, 27).trim() + '…' : curto) : ''); }
+    if (sub && !/·/.test(sub)){ const mm = linha.toLowerCase().match(/(?:entre|de)\s*(\d{1,3})\s*(?:a|e|até)\s*(\d{1,3})\s*mes|(?:a\s+partir\s+de|acima\s+de)\s*(\d{1,3})\s*mes|até\s*(\d{1,3})\s*mes/);
+      if (mm) sub += ' · ' + (mm[1] ? `${mm[1]} a ${mm[2]} meses` : mm[3] ? `${mm[3]}+ meses` : `até ${mm[4]} meses`); }
     out.push({cod, sub, linha:linha.replace(/["“”]+/g, '"').trim()});
   }
   return out;
@@ -79674,6 +79676,172 @@ div.sec-cab.st-cab{ display:block !important; }
   }
   const o = window.abrirProva;
   window.abrirProva = function(){ const r = o.apply(this, arguments); setTimeout(ligar, 300); return r; };
+})();
+</script>
+
+<style id="cpf-css">
+/* Compra de pontos por faixa de assinante (13/11/2026): "55% até 12 meses, 56% de
+   13 a 48, 57% a partir de 49", cada faixa com o seu cupom e o seu milheiro. */
+.cpf{ margin:0 20px 14px; display:grid; gap:8px; }
+.cpf-rot{ font:700 calc(11px * var(--esc, 1))/1.2 var(--f-m); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); }
+.cpf-grade{ display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px; }
+.cpf-f{ display:grid; gap:4px; padding:10px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); min-width:0; }
+.cpf-f.sua{ border-color:color-mix(in oklab, var(--jade) 55%, var(--fio)); background:color-mix(in oklab, var(--jade) 8%, var(--sup-0)); }
+.cpf-pub{ display:flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--esc, 1)); color:var(--grafite); }
+.cpf-pub .cpf-voce{ font:700 calc(10px * var(--esc, 1)) var(--f-m); letter-spacing:.1em; text-transform:uppercase; color:var(--jade); background:color-mix(in oklab, var(--jade) 14%, transparent); border-radius:99px; padding:2px 7px; }
+.cpf-mil{ font:700 calc(20px * var(--esc, 1))/1.15 var(--f-m); color:var(--giz); }
+.cpf-mil small{ font:500 calc(12px * var(--esc, 1)) var(--f-b, inherit); color:var(--grafite); margin-left:4px; }
+.cpf-lin{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:calc(12.5px * var(--esc, 1)); color:var(--grafite); }
+.cpf-lin .mr-cupom{ padding:3px 6px 3px 8px; }
+.cpf-pix{ margin:0; font-size:calc(13px * var(--esc, 1)); color:var(--grafite); line-height:1.45; }
+.cpz-mil-dest{ display:block; margin-top:4px; font-size:calc(12px * var(--esc, 1)); color:var(--grafite); line-height:1.35; }
+.cpf-pix b{ color:var(--giz); }
+@media (max-width:640px){ .cpf{ margin:0 14px 12px; } }
+</style>
+<script id="cpf-js">
+/* ══ COMPRA DE PONTOS POR FAIXA (13/11/2026) ══════════════════════════════════
+   "Livelo oferece até 57% de desconto: 55% assinantes até 12 meses (cupom
+   BOASVINDAS, R$ 31,50), 56% de 13 a 48 meses (ACELERA, R$ 30,80), 57% a partir
+   de 49 (LEGADO, R$ 30,10) e +2% no Pix". Antes a Torre lia só o "2% de desconto"
+   do Pix, e o milheiro saía R$ 54,88 "Caro". Agora:
+   · cada faixa vira um degrau, com público, desconto, cupom e milheiro do anúncio;
+   · a sua faixa sai da assinatura cadastrada (há quantos meses você assina); sem
+     ela, a conta usa a 1ª faixa, a mais cara, e diz isso;
+   · o milheiro da campanha é o da sua faixa; o Pix aparece à parte;
+   · limite de pontos e "exclusiva para assinantes" viram dados da campanha. */
+(function(){
+  if (typeof lerUmAnuncio !== 'function') return;
+  const num = x => Number(String(x).replace(/\./g, '').replace(',', '.'));
+  function mesesDaFaixa(txt){
+    const t = String(txt).toLowerCase();
+    let m;
+    if ((m = t.match(/(?:entre|de)\s*(\d{1,3})\s*(?:a|e|até)\s*(\d{1,3})\s*mes/))) return {de:+m[1], ate:+m[2], rot:`${m[1]} a ${m[2]} meses`};
+    if ((m = t.match(/(?:a\s+partir\s+de|acima\s+de|mais\s+de)\s*(\d{1,3})\s*mes/))) return {de:+m[1], ate:9999, rot:`${m[1]} meses ou mais`};
+    if ((m = t.match(/(?:com\s+)?até\s*(\d{1,3})\s*mes/))) return {de:0, ate:+m[1], rot:`até ${m[1]} meses`};
+    return null;
+  }
+  window.faixasCompraDoTexto = function(texto){
+    const linhas = String(texto).split('\n').map(l => typeof SEM_EMOJI === 'function' ? SEM_EMOJI(l) : l.replace(/[*_~]/g, ''));
+    const faixas = []; let pix = null;
+    linhas.forEach(l => {
+      const lm = l.match(/R\$\s*(\d{1,3}(?:[.,]\d{2}))\s*(?:o\s+)?milheiro|milheiro\s*(?:a\s+partir\s+de\s*)?R\$\s*(\d{1,3}(?:[.,]\d{2}))/i);
+      if (!lm) return;
+      const mil = num(lm[1] || lm[2]);
+      if (/pix/i.test(l)){ const pp = l.match(/\+?\s*(\d{1,2}(?:[.,]\d+)?)\s*%/); pix = {pct:pp ? num(pp[1]) : 0, milheiro:mil}; return; }
+      const pm = l.match(/^\s*(\d{1,2}(?:[.,]\d+)?)\s*%/) || l.match(/(\d{1,2}(?:[.,]\d+)?)\s*%\s*(?:de\s+)?desconto/i);
+      if (!pm) return;
+      const cup = l.match(/cupom\s*["“”']*\s*([A-Z0-9][A-Z0-9_-]{2,24})\b/);
+      const pub = l.replace(/^\s*\d{1,2}(?:[.,]\d+)?\s*%\s*/, '').replace(/cupom\s*\S+/i, '').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
+      faixas.push({pct:num(pm[1]), milheiro:mil, cupom:cup ? cup[1] : '', publico:pub, meses:mesesDaFaixa(l)});
+    });
+    if (faixas.length < 2) return null;
+    const lim = String(texto).match(/limitad[ao]\s+(?:em\s+)?(?:at[ée]\s+)?(\d{1,3}(?:\.\d{3})+|\d+\s*mil)\s*pontos/i);
+    return {faixas, pix, limite:lim ? (/mil/i.test(lim[1]) ? num(lim[1]) * 1000 : num(lim[1])) : 0,
+      soClube:/exclusiv[ao]\s+(?:para\s+)?(?:os\s+)?assinantes|somente\s+(?:para\s+)?assinantes/i.test(texto)};
+  };
+  /* a faixa de quem usa a Torre: pelo tempo da assinatura ativa do programa */
+  window.faixaDoUsuario = function(c){
+    const fx = c.faixasCompra || []; if (!fx.length) return {i:-1};
+    const ass = (DB.assinaturas || []).find(a => a.prog === c.para && a.status === 'ativa');
+    if (!ass || !ass.inicio || typeof mesesDesde !== 'function') return {i:-1, ass};
+    const meses = mesesDesde(ass.inicio);
+    const i = fx.findIndex(f => f.meses && meses >= f.meses.de && meses <= f.meses.ate);
+    return {i, meses, ass};
+  };
+  const faixaUsada = c => { const u = faixaDoUsuario(c); return u.i >= 0 ? u.i : 0; };
+  /* leitura do anúncio */
+  const _l = lerUmAnuncio;
+  lerUmAnuncio = function(bloco){
+    const a = _l.apply(this, arguments);
+    try {
+      if (!a || a.cat !== 'pontos' || !a.sugestao || a.sugestao.tipo !== 'compra') return a;
+      const texto = Array.isArray(bloco) ? bloco.join('\n') : String(bloco || '');
+      const r = faixasCompraDoTexto(texto); if (!r) return a;
+      const top = Math.max(...r.faixas.map(f => f.pct));
+      Object.assign(a.sugestao, {faixasCompra:r.faixas, pix:r.pix, desconto:r.faixas[0].pct, carrinho:0, limite:r.limite || a.sugestao.limite || 0, soClube:r.soClube});
+      a.destaque = `até ${nBRdec(top)}% de desconto`;
+    } catch(e){ console.error(e); }
+    return a;
+  };
+  /* a campanha criada do anúncio leva as faixas */
+  function levar(m){
+    const sg = m && m.sugestao; if (!sg || !(sg.faixasCompra || []).length || !m.campId) return false;
+    const c = (DB.campanhas || []).find(x => x.id === m.campId); if (!c) return false;
+    let mudou = false;
+    ['faixasCompra', 'pix', 'soClube'].forEach(k => { if (JSON.stringify(c[k]) !== JSON.stringify(sg[k])){ c[k] = sg[k]; mudou = true; } });
+    if (sg.limite && !(Number(c.limite) > 0)){ c.limite = sg.limite; mudou = true; }
+    if (Number(c.carrinho) > 0 && !c.carrinhoEm){ c.carrinho = 0; mudou = true; }
+    const d = sg.faixasCompra[faixaUsada(c)].pct; if (c.desconto !== d){ c.desconto = d; mudou = true; }
+    return mudou;
+  }
+  if (typeof muralParaCampanha === 'function'){
+    const _m = muralParaCampanha;
+    muralParaCampanha = function(m){ const r = _m.apply(this, arguments); try { levar(m); } catch(e){} return r; };
+  }
+  /* o milheiro da campanha é o da sua faixa, como o anúncio diz */
+  const milFaixa = c => { const fx = c && c.tipo === 'compra' ? c.faixasCompra : null; return fx && fx.length ? Number(fx[faixaUsada(c)].milheiro) || null : null; };
+  window.cpfMilheiro = milFaixa;
+  if (typeof cpmProjetadoCampanha === 'function'){
+    const _p = cpmProjetadoCampanha;
+    cpmProjetadoCampanha = function(c){ const v = milFaixa(c); return v != null ? v : _p.apply(this, arguments); };
+  }
+  if (typeof metricaCampanha === 'function'){
+    const _mc = metricaCampanha;
+    metricaCampanha = function(c){ const v = milFaixa(c); return v != null ? {v, menor:true, reais:true} : _mc.apply(this, arguments); };
+  }
+  /* o cartão: a sua faixa em destaque e as faixas lado a lado, com o cupom de cada uma */
+  function faixasHTML(c){
+    const fx = c.faixasCompra, u = faixaDoUsuario(c);
+    const cup = f => f.cupom ? (typeof chipCupom === 'function' ? chipCupom(f.cupom, '', `Copiar o cupom de ${f.meses ? f.meses.rot : f.publico}`) : `<b>${esc(f.cupom)}</b>`) : '';
+    const pix = c.pix && c.pix.pct ? (() => { const f = fx[faixaUsada(c)]; const v = Math.round(f.milheiro * (1 - c.pix.pct / 100) * 100) / 100;
+      return `<p class="cpf-pix">No Pix, mais ${nBRdec(c.pix.pct)}% de desconto: a ${u.i >= 0 ? 'sua faixa' : '1ª faixa'} sai a <b>${brl2(v)}</b> o milheiro${c.pix.milheiro ? ` (a partir de ${brl2(c.pix.milheiro)} na melhor faixa)` : ''}.</p>`; })() : '';
+    const aviso = u.i >= 0 ? '' : `<p class="cpf-pix">${u.ass ? 'A sua assinatura não tem a data de início' : `Sem assinatura do ${esc(prog(c.para).n)} cadastrada`}: a conta usa a 1ª faixa. Com o início da assinatura em Clubes, a Torre acha a sua.</p>`;
+    return `<div class="cpf"><span class="cpf-rot">Faixas por tempo de assinatura${c.soClube ? ' · só para assinantes' : ''}${Number(c.limite) > 0 ? ` · até ${nBR(c.limite)} pontos` : ''}</span>
+      <div class="cpf-grade">${fx.map((f, i) => `<div class="cpf-f${i === u.i ? ' sua' : ''}"><span class="cpf-pub">${esc(f.meses ? 'Assinantes ' + f.meses.rot : f.publico)}${i === u.i ? '<span class="cpf-voce">você</span>' : ''}</span>
+        <span class="cpf-mil">${brl2(f.milheiro)}<small>o milheiro</small></span><span class="cpf-lin">${nBRdec(f.pct)}% de desconto ${cup(f)}</span></div>`).join('')}</div>${pix}${aviso}</div>`;
+  }
+  if (typeof window.cpzMontar === 'function'){
+    const _z = window.cpzMontar;
+    window.cpzMontar = function(c, h){
+      const out = _z.apply(this, arguments);
+      /* o milheiro do cartão de ponto de banco é o da milha de destino: diz qual */
+      let saida = out;
+      try { const v = c && (c.tipo === 'compra' || c.tipo === 'transferencia') && typeof cpxVale === 'function' ? cpxVale(c) : null; const base = cpmProjetadoCampanha(c);
+        if (v && v.rot && v.cpm > 0 && base > 0 && Math.abs(v.cpm - base) > 0.005){ const t0 = document.createElement('template'); t0.innerHTML = saida.trim();
+          const cc = t0.content.querySelector('.cpz-custo'); if (cc && !cc.querySelector('.cpz-mil-dest')){ cc.insertAdjacentHTML('beforeend', `<span class="cpz-mil-dest">em ${esc(v.rot.replace(/^a\s+/, ''))} · ${brl2(base)} no ${esc(prog(c.para).n)}</span>`); saida = t0.innerHTML; } } } catch(e){}
+      if (!c || c.tipo !== 'compra' || !(c.faixasCompra || []).length) return saida;
+      try {
+        const t = document.createElement('template'); t.innerHTML = saida.trim();
+        const hero = t.content.querySelector('.cpz-hero'), u = faixaDoUsuario(c), f = c.faixasCompra[faixaUsada(c)];
+        if (hero) hero.innerHTML = `<span class="cpz-rot">${u.i >= 0 ? 'A sua faixa' : 'Desconto'}</span><div class="cpz-num">${nBRdec(f.pct)}%</div>
+          <div class="cpz-num-sub">${u.i >= 0 ? `${u.meses} meses de assinatura` : `de desconto · até ${nBRdec(Math.max(...c.faixasCompra.map(x => x.pct)))}% na melhor faixa`}</div>`;
+        const miolo = t.content.querySelector('.cpz-miolo'); if (miolo) miolo.insertAdjacentHTML('afterend', faixasHTML(c));
+        return t.innerHTML;
+      } catch(e){ console.error(e); return saida; }
+    };
+  }
+  /* anúncios já gravados com a leitura antiga: relidos uma vez */
+  function migrar(){
+    if (typeof DB === 'undefined' || !DB || !Array.isArray(DB.mural)) return 0;
+    let n = 0;
+    DB.mural.forEach(m => {
+      if (!m || m.cat !== 'pontos' || (m.sugestao && (m.sugestao.faixasCompra || []).length)) return;
+      const r = faixasCompraDoTexto((m.titulo || '') + '\n' + (m.texto || '')); if (!r) return;
+      const a = lerUmAnuncio([m.titulo, '', ...String(m.texto || '').split('\n')]);
+      if (!a || !a.sugestao || !(a.sugestao.faixasCompra || []).length) return;
+      m.sugestao = Object.assign({}, m.sugestao || {}, a.sugestao); m.pontuacao = a.destaque;
+      if (!m.campId && !(m.fim && m.fim < hojeISO())) muralParaCampanha(m); else levar(m);
+      n++;
+    });
+    if (n){ salvar(); try { prRedesenharTudo(); } catch(e){} }
+    return n;
+  }
+  window.cpfMigrar = migrar;
+  if (typeof aplicarTudo === 'function'){
+    const _a = aplicarTudo;
+    aplicarTudo = function(){ const r = _a.apply(this, arguments); try { if (migrar()) _a.apply(this, arguments); } catch(e){} return r; };
+  }
+  setTimeout(() => { try { migrar(); } catch(e){} }, 1400);
 })();
 </script>
 </body>
