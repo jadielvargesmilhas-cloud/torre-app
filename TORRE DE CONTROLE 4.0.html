@@ -24956,7 +24956,7 @@ function editarCampanha(id, tipoPadrao){
         <select id="cpPlano" data-ordem="natural"></select></div>
       <div class="campo"><label>Bônus (%)</label><input type="number" id="cpBonus" value="${c.bonus || 0}" step="5"></div>
       <div class="campo"><label>Desconto (%)</label><input type="number" id="cpDesc" value="${c.desconto || 0}" step="5"></div>
-      <div class="campo"><label>Fecha em</label><input type="date" id="cpFim" value="${c.fim || ''}"></div>
+      <div class="campo"><label>Fecha em</label><input type="date" id="cpFim" value="${c.fim || ''}"><label class="cps-check"><input type="checkbox" id="cpSemPrazo"${!c.fim && c.semPrazo ? ' checked' : ''}> Sem prazo: o anúncio não diz quando acaba</label></div>
       <div class="campo"><label>Limite por CPF</label><input type="number" id="cpLim" value="${c.limite || 0}" step="10000"></div>
       <!-- Teto separado do bônus extra por tempo de assinatura. A Azul, por
            exemplo, limita o bônus da campanha a 300 mil por CPF, mas o adicional
@@ -24986,7 +24986,7 @@ function editarCampanha(id, tipoPadrao){
     <div class="campo" style="margin-top:13px"><label>Título</label><input type="text" id="cpTit" value="${esc(c.titulo)}" placeholder="Até 110% de bônus na transferência para o Azul"></div>
     <div class="campo" style="margin-top:13px"><label>Regra que importa</label><textarea id="cpRegra" placeholder="Cadastro obrigatório antes de transferir. Crédito em até 15 dias úteis. Validade do bônus: 6 meses.">${esc(c.regra)}</textarea><div class="dica">Escreva a letra miúda que costuma custar caro esquecer: cadastro prévio, prazo de crédito, validade do bônus, exigência de clube ativo. Cada frase vira uma linha no cartão, então separe as condições com ponto.</div></div>
     <div class="campo" style="margin-top:13px"><label>Link</label><input type="url" id="cpLink" value="${esc(c.link)}" placeholder="https://"></div>`,
-    pe:`<button class="bt fantasma" onclick="fecharFolha()">Cancelar</button><button class="bt primario" id="btSalvarCampanha">Salvar campanha</button>`
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button><button class="bt primario" id="btSalvarCampanha">Salvar campanha</button>`
   });
   /* O seletor de plano só existe para campanha de clube, e sua lista depende do
      programa escolhido — por isso é remontado sempre que um dos dois muda. */
@@ -25129,6 +25129,10 @@ function editarCampanha(id, tipoPadrao){
         .sort((x, y) => x.total - y.total);
       novo.naoCumulativo = !!($('#cpNaoCum') || {}).checked;
     }
+    /* campanha sem prazo só com confirmação (13/11/2026): ou tem "Fecha em", ou é
+       marcada como por tempo indeterminado, e aí a Torre pergunta de tempos em
+       tempos se ela continua ativa */
+    if (typeof campSemPrazoAoSalvar === 'function' && !campSemPrazoAoSalvar(novo, c)) return;
     if (!conferirAntesDeSalvar('campanhas', novo, 'uma campanha')) return;
     if (id) DB.campanhas[DB.campanhas.findIndex(x => x.id === id)] = novo; else DB.campanhas.push(novo);
     salvar(); fecharFolha(); abaCampanha = novo.tipo;
@@ -79842,6 +79846,114 @@ div.sec-cab.st-cab{ display:block !important; }
     aplicarTudo = function(){ const r = _a.apply(this, arguments); try { if (migrar()) _a.apply(this, arguments); } catch(e){} return r; };
   }
   setTimeout(() => { try { migrar(); } catch(e){} }, 1400);
+})();
+</script>
+
+<style id="cps-css">
+/* Campanha sem prazo (13/11/2026) */
+.cps-check{ display:flex !important; align-items:center; gap:8px; margin-top:8px; font-size:calc(13px * var(--esc, 1)) !important; font-weight:500 !important; color:var(--grafite) !important; text-transform:none !important; letter-spacing:0 !important; cursor:pointer; }
+.cps-check input{ width:16px; height:16px; accent-color:var(--ouro); flex:none; }
+.cps-selo{ flex:none; display:grid; place-items:center; text-align:center; width:62px; height:62px; border-radius:50%; border:2px dashed color-mix(in oklab, var(--c, var(--ouro)) 70%, transparent); color:var(--c, var(--ouro)); line-height:1.05; cursor:pointer; background:transparent; font:inherit; padding:0; }
+.cps-selo b{ display:block; font:700 calc(18px * var(--esc, 1))/1 var(--f-m); }
+.cps-selo small{ display:block; font:700 calc(7.5px * var(--esc, 1))/1.1 var(--f-m); letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
+.cps-selo.pede{ --c:var(--brasa); }
+.cps-folha p{ margin:0 0 12px; line-height:1.5; }
+.cps-op{ display:grid; gap:10px; }
+.cps-op .cps-data{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.cps-op .cps-data input{ flex:1 1 160px; }
+.cps-agenda{ font-size:calc(13px * var(--esc, 1)); color:var(--grafite); margin-top:12px !important; }
+</style>
+<script id="cps-js">
+/* ══ CAMPANHA SEM PRAZO (13/11/2026, regra do Jadiel) ═══════════════════════
+   Campanha sem "Fecha em" não entra sem confirmação. Quem confirma que ela é por
+   tempo indeterminado recebe a pergunta "ainda está ativa?":
+   · a 1ª depois de 7 dias;
+   · as 3 seguintes a cada 3 dias;
+   · a partir da 4ª seguinte, todo dia.
+   Campanha antiga ou vinda do mural sem prazo aparece logo como aviso, para
+   pôr a data ou confirmar. */
+(function(){
+  const hoje = () => hojeISO();
+  const soma = (iso, d) => { const x = new Date(iso + 'T12:00:00'); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); };
+  const intervalo = k => k === 0 ? 7 : k <= 3 ? 3 : 1;
+  window.campSemPrazoProxima = c => !c || c.fim || !c.semPrazo ? null : soma(c.semPrazoConferida || c.semPrazoDesde || hoje(), intervalo(Number(c.semPrazoConf) || 0));
+  window.campSemPrazoAoSalvar = function(novo, antes){
+    const marcado = !!($('#cpSemPrazo') || {}).checked;
+    if (novo.fim){ delete novo.semPrazo; delete novo.semPrazoDesde; delete novo.semPrazoConferida; delete novo.semPrazoConf; return true; }
+    if (!marcado){
+      avisar('Falta o prazo. Ponha a data em "Fecha em" ou marque "Sem prazo" se o anúncio não diz quando acaba.', 'erro', 8000);
+      const f = $('#cpFim'); if (f){ f.focus(); f.scrollIntoView({block:'center'}); }
+      return false;
+    }
+    novo.semPrazo = true;
+    if (!(antes && antes.semPrazo && !antes.fim)){ novo.semPrazoDesde = hoje(); novo.semPrazoConf = 0; delete novo.semPrazoConferida; }
+    return true;
+  };
+  const ativa = c => c && !c.fim && !c.encerrada;
+  /* os avisos: sem prazo e sem confirmação, ou a conferência do dia chegou */
+  const _av = avisos;
+  avisos = function(){
+    const L = _av.apply(this, arguments);
+    try {
+      (DB.campanhas || []).forEach(c => {
+        if (!ativa(c)) return;
+        const nome = c.titulo || prog(c.para).n;
+        if (!c.semPrazo){
+          L.push({grau:2, tipo:'campanha', dias:null, ref:'semprazo:' + c.id, curto:'Campanha sem prazo',
+            t:`Campanha sem prazo: ${nome}`, s:'Ponha a data em que ela fecha, ou confirme que é por tempo indeterminado.',
+            ir:['fabrica', 'fb-campanhas'], fn:`campSemPrazoAbrir('${c.id}')`});
+          return;
+        }
+        const prox = campSemPrazoProxima(c); if (!prox || prox > hoje()) return;
+        const k = Number(c.semPrazoConf) || 0;
+        L.push({grau:k >= 4 ? 2 : 1, tipo:'campanha', dias:0, ref:'semprazo:' + c.id + ':' + k, curto:'Ainda ativa?',
+          t:`Ainda está ativa? ${nome}`, s:`Campanha sem prazo. ${k === 0 ? '1ª conferência, 7 dias depois do cadastro' : `${k + 1}ª conferência`}: confirme se ela continua no ar.`,
+          ir:['fabrica', 'fb-campanhas'], fn:`campSemPrazoAbrir('${c.id}')`});
+      });
+    } catch(e){ console.error(e); }
+    return L;
+  };
+  /* a janela da conferência: pôr a data, confirmar que continua, ou encerrar */
+  window.campSemPrazoAbrir = function(id){
+    const c = (DB.campanhas || []).find(x => x.id === id); if (!c) return;
+    const k = Number(c.semPrazoConf) || 0, prox = campSemPrazoProxima(c);
+    setTimeout(() => abrirFolha({titulo:'Campanha sem prazo', largura:'media',
+      corpo:`<div class="cps-folha"><p><b>${esc(c.titulo || prog(c.para).n)}</b></p>
+        <p class="fraco">${c.semPrazo ? `Marcada como por tempo indeterminado desde ${dataBR(c.semPrazoDesde || hoje())}${k ? `, conferida ${k} ${k === 1 ? 'vez' : 'vezes'}` : ''}. Ela ainda está no ar?` : 'Esta campanha não tem data para fechar. Sem prazo, a Torre não sabe quando ela deixa de valer.'}</p>
+        <div class="cps-op">
+          <div class="cps-data"><input type="date" id="cpsData" min="${hoje()}"><button type="button" class="bt primario" id="cpsPorData">Pôr esta data</button></div>
+          <button type="button" class="bt" id="cpsContinua">${c.semPrazo ? 'Continua ativa, sem prazo' : 'É por tempo indeterminado'}</button>
+          <button type="button" class="bt perigo" id="cpsEncerrou">Já encerrou</button>
+        </div>
+        <p class="cps-agenda">Sem prazo, a Torre pergunta de novo: a 1ª vez 7 dias depois, as 3 seguintes a cada 3 dias e, a partir daí, todo dia.${prox ? ` Próxima: ${dataBR(prox)}.` : ''}</p></div>`,
+      pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`}), 0);
+    setTimeout(() => {
+      const fim = () => { salvar(); fecharFolha(); try { renderCampanhas(); renderFita(); } catch(e){} try { prRedesenharTudo(); } catch(e){} };
+      const bd = $('#cpsPorData'); if (bd) bd.onclick = () => { const v = ($('#cpsData') || {}).value; if (!v){ avisar('Escolha a data em que a campanha fecha.', 'erro'); return; }
+        c.fim = v; delete c.semPrazo; delete c.semPrazoDesde; delete c.semPrazoConferida; delete c.semPrazoConf; fim(); avisar(`Prazo gravado: fecha em ${dataBR(v)}.`, 'ok'); };
+      const bc = $('#cpsContinua'); if (bc) bc.onclick = () => {
+        if (!c.semPrazo){ c.semPrazo = true; c.semPrazoDesde = hoje(); c.semPrazoConf = 0; delete c.semPrazoConferida; }
+        else { c.semPrazoConf = (Number(c.semPrazoConf) || 0) + 1; c.semPrazoConferida = hoje(); }
+        fim(); avisar(`Anotado. A Torre pergunta de novo em ${dataBR(campSemPrazoProxima(c))}.`, 'ok'); };
+      const be = $('#cpsEncerrou'); if (be) be.onclick = () => { const ontem = soma(hoje(), -1); c.fim = ontem; c.encerradaEm = hoje(); delete c.semPrazo; fim(); avisar('Campanha encerrada. Ela sai das vivas e fica no histórico.', 'ok'); };
+    }, 60);
+  };
+  /* no cartão, onde fica o anel do prazo, um selo "sem prazo" que abre a conferência */
+  if (typeof window.cpzMontar === 'function'){
+    const _z = window.cpzMontar;
+    window.cpzMontar = function(c, h){
+      const out = _z.apply(this, arguments);
+      if (!c || c.fim) return out;
+      try {
+        const t = document.createElement('template'); t.innerHTML = out.trim();
+        const topo = t.content.querySelector('.cpz-topo'); if (!topo || topo.querySelector('.cps-selo')) return out;
+        const prox = campSemPrazoProxima(c), pede = !c.semPrazo || (prox && prox <= hoje());
+        topo.insertAdjacentHTML('beforeend', `<button type="button" class="cps-selo${pede ? ' pede' : ''}" onclick="event.stopPropagation();campSemPrazoAbrir('${c.id}')"
+          data-dica="${c.semPrazo ? (pede ? 'Confirme se ainda está ativa' : `Sem prazo · próxima conferência ${dataBR(prox)}`) : 'Sem prazo: ponha a data ou confirme'}"><span><b>∞</b><small>${pede ? 'conferir' : 'sem prazo'}</small></span></button>`);
+        return t.innerHTML;
+      } catch(e){ return out; }
+    };
+  }
 })();
 </script>
 </body>
