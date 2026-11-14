@@ -78507,7 +78507,9 @@ window.rotuloAcaoAviso = function(a){
   }
   function resumo(m){
     const ls = String(m.texto || '').split('\n').map(l => l.trim()).filter(Boolean)
-      .filter(l => !/^passo a passo:?$/i.test(l) && !/^\d+[.)]\s/.test(l) && l.length > 25);
+      .filter(l => !/^passo a passo:?$/i.test(l) && !/^\d+[.)]\s/.test(l) && l.length > 25)
+      /* título do anúncio em caixa alta ou pergunta ("O QUE É A TARIFA CONGELADA?") não é resumo (14/11/2026) */
+      .filter(l => { const le = l.replace(/[^A-Za-zÀ-ú]/g, ''); return !(le.length > 8 && le === le.toUpperCase()) && !/\?\s*$/.test(l); });
     return ls[0] ? (typeof SEM_EMOJI === 'function' ? SEM_EMOJI(ls[0]) : ls[0]) : '';
   }
   function montar(card){
@@ -79954,6 +79956,109 @@ div.sec-cab.st-cab{ display:block !important; }
       } catch(e){ return out; }
     };
   }
+})();
+</script>
+
+<style id="tpn-css">
+/* Tabela de preços por categoria (14/11/2026): "de R$ 20 por R$ 6 para Diamante
+   Unique, de R$ 30 por R$ 9 para Diamante, de R$ 40 por R$ 12 para os demais". */
+.tpn{ margin:0 18px 14px 130px; display:grid; gap:12px; }
+.tpn-voce{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:10px 14px; border-radius:12px; border:1px solid color-mix(in oklab, var(--jade) 40%, var(--fio)); background:color-mix(in oklab, var(--jade) 7%, var(--sup-0)); font-size:calc(13.5px * var(--esc, 1)); }
+.tpn-voce > b{ font:700 calc(11px * var(--esc, 1)) var(--f-m); letter-spacing:.12em; text-transform:uppercase; color:var(--jade); }
+.tpn-voce span{ color:var(--grafite); white-space:nowrap; } .tpn-voce span i{ font-style:normal; font-weight:600; color:var(--giz); margin-right:2px; } .tpn-voce span em{ font-style:normal; font-weight:700; color:var(--giz); }
+.tpn-secs{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+.tpn-sec{ border:1px solid var(--fio); border-radius:14px; background:var(--sup-0); overflow:hidden; min-width:0; }
+.tpn-sec > h5{ margin:0; padding:9px 14px; font:700 calc(11px * var(--esc, 1)) var(--f-m); letter-spacing:.14em; text-transform:uppercase; color:var(--grafite); border-bottom:1px solid var(--fio); background:var(--sup-1); }
+.tpn-t{ width:100%; border-collapse:collapse; font-size:calc(13px * var(--esc, 1)); }
+.tpn-t th{ text-align:right; padding:8px 12px 4px; font-weight:600; color:var(--grafite); font-size:calc(11.5px * var(--esc, 1)); white-space:nowrap; }
+.tpn-t th:first-child, .tpn-t td:first-child{ text-align:left; }
+.tpn-t td{ padding:7px 12px; border-top:1px dashed var(--fio-suave, rgba(127,127,127,.2)); text-align:right; white-space:nowrap; color:var(--grafite); }
+.tpn-t td b{ display:block; font:700 calc(15px * var(--esc, 1)) var(--f-m); color:var(--giz); }
+.tpn-t td s{ font-size:calc(11px * var(--esc, 1)); opacity:.75; }
+.tpn-t .sua{ background:color-mix(in oklab, var(--jade) 8%, transparent); }
+.tpn-t th.sua{ color:var(--jade); }
+@media (max-width:760px){ .tpn{ margin:0 14px 12px; } .tpn-secs{ grid-template-columns:1fr; } .tpn-t th, .tpn-t td{ padding-left:8px; padding-right:8px; } }
+.tpn-sec{ container-type:inline-size; }
+@container (max-width:420px){
+  .tpn-t{ table-layout:fixed; } .tpn-t th:first-child{ width:24%; }
+  .tpn-t th{ white-space:normal; line-height:1.25; vertical-align:bottom; font-size:calc(10.5px * var(--esc, 1)); }
+  .tpn-t th, .tpn-t td{ padding-left:6px; padding-right:6px; }
+  .tpn-t td:first-child{ white-space:normal; font-size:calc(12px * var(--esc, 1)); }
+  .tpn-t td b{ font-size:calc(13.5px * var(--esc, 1)); }
+}
+</style>
+<script id="tpn-js">
+/* ══ PREÇO POR CATEGORIA NO MURAL (14/11/2026) ══════════════════════════════════
+   Anúncio com "de R$ X por R$ Y para clientes <categoria>" em várias linhas (a
+   tarifa congelada da Azul, por exemplo) vira uma tabela: cada bloco ("Passagens
+   nacionais", "internacionais"), cada prazo ("até 48h", "até 14 meses") e cada
+   categoria, com o preço de antes riscado. A sua categoria (Contas › nível no
+   programa) fica marcada, e o resumo do que você paga aparece logo no cartão. */
+(function(){
+  const num = x => Number(String(x).replace(/\./g, '').replace(',', '.'));
+  const limpo = l => (typeof SEM_EMOJI === 'function' ? SEM_EMOJI(l) : l).replace(/[*_~]/g, '').trim();
+  const nomeNivel = t => { t = String(t).replace(/^(?:os\s+|as\s+)?(?:clientes|membros|assinantes)\s+/i, '').replace(/[;.,]+$/, '').trim(); return /^(?:os\s+)?demais/i.test(t) ? 'Demais clientes' : t.replace(/^\w/, c => c.toUpperCase()); };
+  window.precosPorNivelDoTexto = function(texto){
+    const secs = []; let sec = null;
+    String(texto || '').split('\n').map(limpo).filter(Boolean).forEach(l => {
+      const itens = [...l.matchAll(/de\s+R\$\s*([\d.]+(?:,\d{2})?)\s+por\s+R\$\s*([\d.]+(?:,\d{2})?)\s+para\s+(?:os\s+|as\s+)?([^,;]+?)(?=\s*(?:,|;|\bou\b|$|\.\s|\.$))/gi)]
+        .map(m => ({nivel:nomeNivel(m[3]), de:num(m[1]), por:num(m[2])}));
+      if (itens.length >= 2){
+        if (!sec){ sec = {nome:'', linhas:[]}; secs.push(sec); }
+        const rot = (l.split(':')[0] || '').replace(/^(?:congelamento|congelar|tarifa)\s+(?:por\s+)?/i, '').trim();
+        sec.linhas.push({rot:rot.length < 40 ? rot.replace(/^\w/, c => c.toUpperCase()) : '', itens});
+      } else if (/:\s*$/.test(l) && l.length < 60 && !/R\$/.test(l)){ sec = {nome:l.replace(/:\s*$/, ''), linhas:[]}; secs.push(sec); }
+    });
+    let ok = secs.filter(x => x.linhas.length);
+    /* sem o título do bloco (o mural guarda o texto sem as linhas de ✅): um prazo
+       repetido abre um bloco novo; nacional e internacional pelo próprio texto */
+    if (ok.length === 1 && !ok[0].nome){
+      const novos = []; ok[0].linhas.forEach(l => { const at = novos[novos.length - 1]; if (!at || at.linhas.some(x => x.rot && x.rot === l.rot)) novos.push({nome:'', linhas:[l]}); else at.linhas.push(l); });
+      if (novos.length === 2 && /internacion/i.test(texto) && /passage|voo|trecho/i.test(texto)){ novos[0].nome = 'Passagens nacionais'; novos[1].nome = 'Passagens internacionais'; }
+      ok = novos;
+    }
+    return ok.reduce((n, x) => n + x.linhas.length, 0) >= 2 ? ok : null;
+  };
+  /* sua categoria no programa do anúncio, pelas contas */
+  function suasCategorias(prog){
+    const out = {};
+    (DB.contas || []).forEach(c => { const n = c.niveis && c.niveis[prog]; if (n) (out[n] = out[n] || []).push(String(c.nome || '').split(/\s+/)[0]); });
+    return out;
+  }
+  const progDoMural = m => { const t = (m.titulo || '') + ' ' + (m.texto || ''); return (typeof progDoMercado === 'function' && Object.keys(PROGRAMAS).find(k => new RegExp('\\b' + prog(k).n.split(' ')[0] + '\\b', 'i').test(m.titulo || ''))) || ''; };
+  const R = v => Number.isInteger(v) ? 'R$ ' + nBR(v) : brl(v);
+  function html(m, secs){
+    const pg = progDoMural(m), cats = pg ? suasCategorias(pg) : {};
+    const niveis = [...new Set(secs.flatMap(s => s.linhas.flatMap(l => l.itens.map(i => i.nivel))))];
+    const daConta = nv => Object.keys(cats).find(k => k.toLowerCase() === nv.toLowerCase());
+    let sua = niveis.find(n => daConta(n));
+    const temConta = Object.keys(cats).length > 0;
+    if (!sua && temConta && niveis.includes('Demais clientes')) sua = 'Demais clientes';
+    const quem = sua ? (daConta(sua) ? cats[daConta(sua)] : Object.values(cats).flat()).join(' e ') : '';
+    const voce = sua ? `<div class="tpn-voce"><b>Você paga</b>${secs.map(s => { const ps = s.linhas.map(l => { const it = l.itens.find(i => i.nivel === sua); return it ? `${esc(l.rot.replace(/^até\s+/i, ''))} <em>${R(it.por)}</em>` : ''; }).filter(Boolean);
+        const nome = s.nome ? s.nome.replace(/^passagens\s+/i, '').replace(/^\w/, c => c.toUpperCase()).replace(/is$/, 'l') : '';
+        return ps.length ? `<span>${nome ? `<i>${esc(nome)}</i> ` : ''}${ps.join(' · ')}</span>` : ''; }).join('')}<span>(${esc(sua)}${quem ? ' · ' + esc(quem) : ''})</span></div>`
+      : `<div class="tpn-voce" style="border-color:var(--fio);background:var(--sup-0)"><b style="color:var(--grafite)">Sua categoria</b><span>Cadastre o nível ${pg ? 'no ' + esc(prog(pg).n) : 'no programa'} em Contas para a Torre marcar o seu preço.</span></div>`;
+    const sec = s => `<div class="tpn-sec">${s.nome ? `<h5>${esc(s.nome)}</h5>` : ''}<table class="tpn-t"><thead><tr><th></th>${niveis.map(n => `<th class="${n === sua ? 'sua' : ''}">${esc(n)}${n === sua ? ' · você' : ''}</th>`).join('')}</tr></thead>
+      <tbody>${s.linhas.map(l => `<tr><td>${esc(l.rot)}</td>${niveis.map(n => { const it = l.itens.find(i => i.nivel === n); return `<td class="${n === sua ? 'sua' : ''}">${it ? `<b>${R(it.por)}</b><s>${R(it.de)}</s>` : '—'}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
+    return `<div class="tpn">${voce}<div class="tpn-secs">${secs.map(sec).join('')}</div></div>`;
+  }
+  function aplicar(){
+    document.querySelectorAll('#mrLista .mrp[data-mrp]').forEach(card => {
+      if (card.querySelector(':scope > .tpn')) return;
+      const m = (DB.mural || []).find(x => x.id === card.dataset.mrp); if (!m) return;
+      const secs = precosPorNivelDoTexto(m.texto); if (!secs) return;
+      const cab = card.querySelector(':scope > .mrp-cab'); if (!cab) return;
+      const fx = card.querySelector(':scope > .mrp-fixo');
+      (fx || cab).insertAdjacentHTML('afterend', html(m, secs));
+    });
+  }
+  window.tpnAplicar = aplicar;
+  if (typeof renderMural === 'function'){
+    const o = renderMural;
+    renderMural = function(){ const r = o.apply(this, arguments); try { aplicar(); } catch(e){ console.error(e); } return r; };
+  }
+  setTimeout(() => { try { aplicar(); } catch(e){} }, 800);
 })();
 </script>
 </body>
