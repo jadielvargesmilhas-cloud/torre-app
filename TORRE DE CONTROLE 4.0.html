@@ -80102,6 +80102,11 @@ html.eq-vendo:not(.mt-mentorado) .trilho-dir .tb-mt{ display:none !important; }
 .mt-pagina-bts{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .mt-ajustes{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px 12px; grid-column:1 / -1; padding-top:12px; border-top:1px dashed var(--fio); }
 .mt-ajustes .campo{ margin:0; }
+.mt-turma{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px 12px; padding-top:12px; border-top:1px dashed var(--fio); }
+.mt-turma .campo{ margin:0; }
+.mt-turma-pe{ grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:10px 14px; flex-wrap:wrap; }
+.mt-turma-pe small{ display:inline; margin:0; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+.mt-turma-pe small b{ display:inline; color:var(--giz); font-size:inherit; }
 .mt-chave{ grid-column:1 / -1; display:flex; align-items:flex-start; gap:10px; font-size:calc(13px * var(--esc)); color:var(--giz); cursor:pointer; }
 .mt-chave input{ margin-top:3px; accent-color:#10A97A; width:16px; height:16px; flex:none; }
 .mt-chave small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:2px; line-height:1.45; }
@@ -80124,7 +80129,7 @@ html.eq-vendo:not(.mt-mentorado) .trilho-dir .tb-mt{ display:none !important; }
 .mt-ok .eq-selo svg{ width:30px; height:30px; }
 .mt-ok b{ display:block; font-size:calc(17px * var(--esc)); color:var(--giz); }
 .mt-ok p{ margin:6px auto 0; max-width:460px; color:var(--grafite); font-size:calc(13.5px * var(--esc)); line-height:1.5; }
-@media (max-width:760px){ .mt .eq-perfis{ grid-template-columns:repeat(2, minmax(0,1fr)); } .mt-ajustes{ grid-template-columns:minmax(0,1fr); } }
+@media (max-width:760px){ .mt .eq-perfis{ grid-template-columns:repeat(2, minmax(0,1fr)); } .mt-ajustes, .mt-turma{ grid-template-columns:minmax(0,1fr); } }
 @media (max-width:620px){ .mt-pagina{ grid-template-columns:minmax(0,1fr); } .mt-pagina-bts{ justify-content:stretch; } .mt-pagina-bts .bt{ flex:1 1 auto; justify-content:center; } }
 
 /* o mentorado: cartão "Minha mentoria" no topo do Meu perfil */
@@ -80193,6 +80198,23 @@ function mtPermsDoPerfil(pk){
   const p = MT_PERFIS[pk] || MT_PERFIS.livre, P = {};
   eqCatalogo().forEach(a => a.itens.forEach(n => { const r = p.r[a.k + '|' + n] != null ? p.r[a.k + '|' + n] : p.r[a.k + '|*']; if (r) P[a.k + '|' + n] = r; }));
   return P;
+}
+/* turma: todos com o mesmo prazo, contado do fechamento da turma */
+function mtSomaMesesDe(iso, n){ const [a, m, d] = String(iso).slice(0, 10).split('-').map(Number); const x = new Date(a, m - 1 + n, 1); const ult = new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate(); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(Math.min(d, ult)).padStart(2, '0'); }
+function mtFimTurma(){ const t = mtCfg().turma; return t && t.inicio ? mtSomaMesesDe(t.inicio, Number(t.meses) || 12) : ''; }
+function mtTurmaResumo(){
+  const t = mtCfg().turma, fim = mtFimTurma();
+  if (!fim) return '<small>Preencha o fechamento da turma: o prazo de todos passa a contar dessa data.</small>';
+  const fora = mtDB().filter(m => m.ativo !== false && (m.validade !== fim || (t.nome && m.turma !== t.nome)));
+  return `<small>Todos ${t.nome ? 'da ' + esc(t.nome) : 'desta turma'} entram até <b>${mtData(fim)}</b>.</small>${fora.length ? `<button type="button" class="bt p fantasma" id="mtTurmaTodos"><svg><use href="#i-ok"/></svg>Usar esta data para ${fora.length === 1 ? '1 mentorado' : fora.length + ' mentorados'}</button>` : ''}`;
+}
+function mtTurmaAplicar(){
+  const t = mtCfg().turma, fim = mtFimTurma(); if (!fim) return;
+  const alvo = mtDB().filter(m => m.ativo !== false && (m.validade !== fim || (t.nome && m.turma !== t.nome)));
+  alvo.forEach(m => { m.validade = fim; if (t.nome) m.turma = t.nome; m.pend = true; m.alterado = Date.now(); });
+  salvar(); avisar(`${alvo.length === 1 ? '1 mentorado agora entra' : alvo.length + ' mentorados agora entram'} até ${mtData(fim)}.`, 'ok');
+  mtEnviarPendentes().then(() => { const dd = document.getElementById('dlgMentoria'); if (dd && dd.open && !_mtEd) mtDesenharLista(dd, true); });
+  mtDesenharLista(document.getElementById('dlgMentoria'), true);
 }
 function mtPaginaMentoria(){ return /[?&]mentoria\b/.test(location.search); }
 function mtLinkPagina(){ return location.origin + location.pathname + '?mentoria'; }
@@ -80321,6 +80343,12 @@ function mtDesenharLista(d, semAnimar){
         <div class="campo"><label>Nome da mentoria</label><input type="text" id="mtNomeMent" value="${esc(c.nome || '')}" placeholder="ex.: Mentoria ROTA"></div>
         <div class="campo"><label>Seu nome <span class="fraco">como o mentorado vê</span></label><input type="text" id="mtNomeMentor" value="${esc(c.mentorNome || '')}" placeholder="${esc(mtNomeMentor() || 'Seu nome')}"></div>
         <div class="campo"><label>Seu WhatsApp <span class="fraco">para ele falar com você</span></label><input type="text" inputmode="tel" id="mtZapMentor" value="${esc(c.zap || '')}" placeholder="(71) 9 9999-9999"></div>
+        <div class="mt-turma">
+          <div class="campo"><label>Turma atual</label><input type="text" id="mtTurmaNome" value="${esc((c.turma || {}).nome || '')}" placeholder="ex.: Turma de novembro"></div>
+          <div class="campo"><label>Fechamento da turma <span class="fraco">o prazo conta daqui</span></label><input type="date" id="mtTurmaIni" value="${esc((c.turma || {}).inicio || '')}"></div>
+          <div class="campo"><label>Acesso à Torre</label><select id="mtTurmaMeses">${[3, 6, 12, 24].map(n => `<option value="${n}"${Number((c.turma || {}).meses || 12) === n ? ' selected' : ''}>${n === 12 ? '1 ano' : n === 24 ? '2 anos' : n + ' meses'}</option>`).join('')}</select></div>
+          <div class="mt-turma-pe" id="mtTurmaPe">${mtTurmaResumo()}</div>
+        </div>
         <label class="mt-chave"><input type="checkbox" id="mtVitMural"${c.vitMural !== false ? ' checked' : ''}><span>Mostrar também o Mural de ofertas aos mentorados
           <small>As campanhas sempre vão. O Mural leva os anúncios que você grava; desligue se eles vierem de grupos pagos que não permitem repassar.</small></span></label>
       </div>
@@ -80355,6 +80383,14 @@ function mtDesenharLista(d, semAnimar){
   d.querySelector('#mtNomeMentor').onchange = e => { c.mentorNome = e.target.value.trim(); marcarTodos(); };
   d.querySelector('#mtZapMentor').onchange = e => { c.zap = e.target.value.trim(); marcarTodos(); };
   d.querySelector('#mtVitMural').onchange = e => { c.vitMural = e.target.checked; salvar(); };
+  const turmaMudou = () => {
+    c.turma = {nome:d.querySelector('#mtTurmaNome').value.trim(), inicio:d.querySelector('#mtTurmaIni').value || '', meses:Number(d.querySelector('#mtTurmaMeses').value) || 12};
+    salvar(); const pe = d.querySelector('#mtTurmaPe'), novo = mtTurmaResumo(); if (pe._html !== novo){ pe.innerHTML = novo; pe._html = novo; ligarTurmaPe(); }
+  };
+  const ligarTurmaPe = () => { const b = d.querySelector('#mtTurmaTodos'); if (b) b.onclick = () => mtTurmaAplicar(); };
+  d.querySelector('#mtTurmaPe')._html = mtTurmaResumo();
+  ['#mtTurmaNome', '#mtTurmaIni', '#mtTurmaMeses'].forEach(sel => d.querySelector(sel).onchange = turmaMudou);
+  ligarTurmaPe();
 }
 async function mtCopiar(t, msg){
   try { await navigator.clipboard.writeText(t); avisar(msg, 'ok'); }
@@ -80363,7 +80399,8 @@ async function mtCopiar(t, msg){
 function mtEditar(id){
   const d = document.getElementById('dlgMentoria'); if (!d) return;
   const orig = id ? mtDB().find(m => m.id === id) : null;
-  _mtEd = orig ? JSON.parse(JSON.stringify(orig)) : {id:'', nome:'', email:'', zap:'', turma:'', perfil:'', ativo:true, validade:mtSomaMeses(6), perms:{}};
+  const tF = mtFimTurma();
+  _mtEd = orig ? JSON.parse(JSON.stringify(orig)) : {id:'', nome:'', email:'', zap:'', turma:tF ? (mtCfg().turma.nome || '') : '', perfil:'', ativo:true, validade:tF || mtSomaMeses(6), perms:{}};
   const e = _mtEd; _eqEd = e;
   const chip = (k, t) => `<button type="button" data-val="${k}">${t}</button>`;
   d.innerHTML = `<div class="dr-painel">${mtCab(orig ? 'Editar mentorado' : 'Novo mentorado', orig ? esc(orig.nome) : 'Três passos: quem é a pessoa, até quando entra e o que ela vê.')}
@@ -80377,7 +80414,7 @@ function mtEditar(id){
       </div>
       <div class="eq-tit">2 · Até quando entra</div>
       <div class="mt-validade">
-        <div class="mt-chips" id="mtChips">${chip('3', '3 meses')}${chip('6', '6 meses')}${chip('12', '1 ano')}${chip('', 'Sem data para terminar')}</div>
+        <div class="mt-chips" id="mtChips">${tF ? chip('turma', 'Fim da turma: ' + mtData(tF)) : ''}${chip('3', '3 meses')}${chip('6', '6 meses')}${chip('12', '1 ano')}${chip('', 'Sem data para terminar')}</div>
         <div class="eq-campos"><div class="campo"><label>Último dia de acesso</label><input type="date" id="mtValidade" value="${esc(e.validade || '')}"></div></div>
       </div>
       <div class="eq-tit">3 · O que vê</div>
@@ -80392,8 +80429,11 @@ function mtEditar(id){
       <button type="button" class="bt primario" id="mtSalvar"><svg><use href="#i-ok"/></svg>${orig ? 'Salvar' : 'Cadastrar'}</button></footer></div>`;
   eqDesenharMatriz();
   const val = d.querySelector('#mtValidade'), chips = d.querySelector('#mtChips');
-  const marcaChip = () => chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.val === '' ? !val.value : false));
-  chips.querySelectorAll('button').forEach(b => b.onclick = () => { val.value = b.dataset.val ? mtSomaMeses(Number(b.dataset.val)) : ''; marcaChip(); });
+  const marcaChip = () => chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.val === '' ? !val.value : b.dataset.val === 'turma' ? !!tF && val.value === tF : false));
+  chips.querySelectorAll('button').forEach(b => b.onclick = () => {
+    val.value = b.dataset.val === 'turma' ? tF : b.dataset.val ? mtSomaMeses(Number(b.dataset.val)) : '';
+    if (b.dataset.val === 'turma'){ const t = d.querySelector('#mtTurma'); if (t && !t.value) t.value = mtCfg().turma.nome || ''; }
+    marcaChip(); });
   val.oninput = marcaChip; marcaChip();
   d.querySelectorAll('.eq-pf').forEach(b => b.onclick = () => {
     e.perfil = b.dataset.pf; d.querySelectorAll('.eq-pf').forEach(x => x.classList.toggle('on', x === b));
