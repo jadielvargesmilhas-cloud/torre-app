@@ -21681,6 +21681,7 @@ function abrirPerfil(){
     if ($('#cropUsar')){ $('#cropUsar').click(); await new Promise(ok => setTimeout(ok, 250)); }
     const email = $('#pfEmail').value.trim();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ erroNoCampo('#pfEmail', 'Esse e-mail não parece completo (falta o @ ou o domínio).'); return; }
+    DB.cfg.perfilEditado = hojeISO();
     DB.cfg.perfil = {nome:$('#pfNome').value.trim(), email, tel:$('#pfTel').value.trim(), cidade:$('#pfCidade').value.trim(), marca:$('#pfMarca').value.trim(), foto:_fotoPerfil || '', contaId:($('#pfConta') || {}).value || ''};
     salvar(); pintarAvatar(); fecharFolha(); try { aplicarTudo(); } catch(_){} avisar('Perfil salvo. A foto aparece em todo lugar onde a sua conta aparece.', 'ok', 5000);
     if (vistaAtual === 'saldo' && typeof renderSaldo === 'function') renderSaldo();
@@ -51793,7 +51794,7 @@ function vereditoHTML(m, compacto){
 function nomeSaudacao(){
   const pf = ((DB.cfg || {}).perfil || {}).nome;
   const t = (DB.contas || []).find(c => /^titular/i.test(c.papel || '')) || (DB.contas || [])[0];
-  const n = String(pf || (t && t.nome) || '').trim();
+  const n = String(pf || (t && t.nome) || (window._mtSou && window._mtSou.nome) || '').trim();
   return n ? nomeCurto(n) : '';
 }
 function rsNome(){ return nomeSaudacao(); }
@@ -51848,7 +51849,7 @@ function abrirResumoDia(){
 function rsBotao(){
   const bh = document.querySelector('#btHoje'); if (!bh || document.querySelector('#btResumo')) return;
   const b = document.createElement('button'); b.type = 'button'; b.className = 'bt'; b.id = 'btResumo';
-  b.innerHTML = '<svg><use href="#i-sol"/></svg>Resumo do dia'; b.onclick = abrirResumoDia;
+  b.innerHTML = '<svg><use href="#i-sol"/></svg>Resumo do dia'; b.onclick = () => abrirResumoDia();
   bh.parentNode.insertBefore(b, bh);
 }
 (function(){
@@ -81255,25 +81256,30 @@ function mtAbrirBoasVindas(){
   const bc = document.getElementById('bvComecar'); if (bc) bc.onclick = () => ir(passos[0][0], passos[0][1]);
   DB.cfg = DB.cfg || {}; DB.cfg.mtBoasVindas = hojeISO(); DB.cfg.resumoVisto = hojeISO(); salvar();
 }
+/* o mentorado "começou" quando cadastrou alguma coisa ou salvou o próprio perfil.
+   Até lá, toda entrada mostra as Boas-vindas, nunca o Resumo do dia
+   (pedido do Jadiel, 15/11: "se ele entrar e sair 10 vezes, aparece a mesma tela") */
+function mtComecou(){
+  const n = k => Array.isArray(DB[k]) && DB[k].length > 0;
+  return !!((DB.cfg || {}).perfilEditado || n('contas') || n('saldos') || n('lancamentos') || n('cartoes') || n('planos') || n('assinaturas') || n('lotes') || n('desejos'));
+}
 (function(){
-  /* no primeiro acesso do mentorado: boas-vindas no lugar do Resumo do dia */
   const _ent = mtEntrarModo;
   mtEntrarModo = function(row){
     const ja = !!window._mtSou;
     const v = _ent.apply(this, arguments);
     try {
-      if (!ja && !(DB.cfg || {}).mtBoasVindas){
+      if (!ja && !mtComecou()){
         DB.cfg = DB.cfg || {}; DB.cfg.resumoVisto = hojeISO();
-        setTimeout(() => { if (window._mtSou && !(DB.cfg || {}).mtBoasVindas && !document.querySelector('#veu.aberto')) mtAbrirBoasVindas(); }, 900);
+        setTimeout(() => { if (window._mtSou && !mtComecou() && !document.querySelector('.bv-heroi')) mtAbrirBoasVindas(); }, 900);
       }
     } catch(e){ console.error(e); }
     return v;
   };
-  /* o Resumo do dia não abre sozinho para o mentorado no dia das boas-vindas */
+  /* enquanto não começou, o Resumo do dia dá lugar às Boas-vindas */
   const _rs = abrirResumoDia;
   abrirResumoDia = function(){
-    if (window._mtSou && (!(DB.cfg || {}).mtBoasVindas || DB.cfg.mtBoasVindas === hojeISO()) && !abrirResumoDia._pedido) return mtAbrirBoasVindas();
-    abrirResumoDia._pedido = false;
+    if (window._mtSou && !mtComecou()) return mtAbrirBoasVindas();
     return _rs.apply(this, arguments);
   };
   /* "Boas-vindas" no cartão da mentoria (Meu perfil), para rever os passos */
