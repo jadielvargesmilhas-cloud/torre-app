@@ -80281,9 +80281,16 @@ async function mtBuscarAcessos(){
 
 /* ── servidor: a vitrine de promoções que os mentorados leem ──────────────────── */
 const MT_PESSOAL = ['carrinho', 'obs', 'nota', 'notas', 'semPrazoConf', 'semPrazoConferida', 'lida', 'voto', 'contaId', 'contas', 'feito', 'usei'];
+/* o que é de todos (mercado e promoções) vai para o mentorado; o que é da pessoa
+   (contas, saldos, lançamentos, viagens, cartões, clubes, lista de desejos) fica */
+const MT_COMUNS_LISTAS = ['campanhas', 'mural', 'lojas', 'vitrines'];
+const MT_COMUNS_MAPAS = ['faixas', 'mercado', 'catalogo', 'catCorrecoes', 'logos', 'politicas', 'dicaClube'];
 function mtVitrineDados(){
-  const c = mtCfg(), limpa = o => { const x = Object.assign({}, o); MT_PESSOAL.forEach(k => delete x[k]); return x; };
-  return {v:1, campanhas:(DB.campanhas || []).map(limpa), mural:c.vitMural === false ? [] : (DB.mural || []).map(limpa), lojas:(DB.lojas || []).map(limpa)};
+  const c = mtCfg(), limpa = o => { const x = Object.assign({}, o); MT_PESSOAL.forEach(k => delete x[k]); delete x._mt; return x; };
+  const v = {v:2};
+  MT_COMUNS_LISTAS.forEach(k => { v[k] = (k === 'mural' && c.vitMural === false) ? [] : (DB[k] || []).map(limpa); });
+  MT_COMUNS_MAPAS.forEach(k => { if (DB[k] != null) v[k] = DB[k]; });
+  return v;
 }
 function mtMarca(t){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return t.length + ':' + h; }
 let _mtVitT = null;
@@ -80609,16 +80616,18 @@ async function mtVitrineBaixar(){
     let ult = null; try { ult = localStorage.getItem(k); } catch(_){}
     if (ult === String(r.j[0].atualizado)) return false;
     const v = contaDesembrulha(r.j[0].dados) || {};
-    ['campanhas', 'mural', 'lojas'].forEach(col => {
-      const deles = Array.isArray(v[col]) ? v[col] : [], meus = (DB[col] || []).filter(x => !x._mt), antes = {};
-      (DB[col] || []).filter(x => x._mt).forEach(x => antes[x.id] = x);
-      const ids = new Set(meus.map(x => String(x.id)));
-      DB[col] = meus.concat(deles.map(x => {
-        const n = Object.assign({}, x, {_mt:1}); if (ids.has(String(n.id))) n.id = 'mt-' + n.id;
-        const a = antes[n.id]; if (a) ['lida', 'voto', 'carrinho', 'semPrazoConf'].forEach(p => { if (a[p] != null) n[p] = a[p]; });
+    /* o mentorado passa a ver exatamente o que o mentor vê; só o que é dele em
+       cada item (lido, voto, carrinho, conferência) continua */
+    MT_COMUNS_LISTAS.forEach(col => {
+      if (!Array.isArray(v[col])) return;
+      const antes = {}; (DB[col] || []).forEach(x => { antes[String(x.id).replace(/^mt-/, '')] = x; });
+      DB[col] = v[col].map(x => {
+        const n = Object.assign({}, x); delete n._mt;
+        const a = antes[String(n.id)]; if (a) ['lida', 'voto', 'carrinho', 'semPrazoConf'].forEach(p => { if (a[p] != null) n[p] = a[p]; });
         return n;
-      }));
+      });
     });
+    MT_COMUNS_MAPAS.forEach(k => { if (v[k] != null) DB[k] = v[k]; });
     salvar();
     try { localStorage.setItem(k, String(r.j[0].atualizado)); } catch(_){}
     try { aplicarTudo(); } catch(_){}
@@ -80724,7 +80733,7 @@ async function mtSairJa(){
 /* ── ligações com o resto da Torre ────────────────────────────────────────────── */
 (function(){
   const _p = contaPronta;
-  contaPronta = function(){ const v = _p.apply(this, arguments); setTimeout(() => { mtVerificar(); mtEnviarPendentes(); }, 0); return v; };
+  contaPronta = function(){ const v = _p.apply(this, arguments); setTimeout(() => { mtVerificar(); mtEnviarPendentes().then(() => { if (!window._mtSou) mtVitrineEnviar(); }); }, 0); return v; };
   /* aparelho já conectado: aplica o que estava guardado antes mesmo da internet responder */
   const ir = () => {
     if (!contaLigada() || !contaAtiva()) return;
