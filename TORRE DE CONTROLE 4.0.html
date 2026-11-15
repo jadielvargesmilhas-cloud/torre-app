@@ -81311,5 +81311,52 @@ function mtComecou(){
 })();
 </script>
 
+
+<style id="ecl-css">
+/* ══ FAIXA "ECONOMIA DA VIAGEM" ORGANIZADA (15/11/2026): Prova da viagem acima do cartão do mercado;
+   "Trechos no painel" embaixo, alinhado com a base dos cartões ══ */
+.ec-faixa.ecl{ align-items:stretch; }
+.ecl .ec-esq{ display:flex; flex-direction:column; justify-content:space-between; gap:14px; min-width:0; }
+.ecl .ec-esq .ec-cab{ flex-wrap:nowrap; }
+.ecl .ec-esq .ptr-bt{ width:100%; justify-content:center; margin:0; color:rgba(255,255,255,.88); border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.06); }
+.ecl .ec-esq .ptr-bt:hover{ background:rgba(255,255,255,.12); color:#fff; }
+.ecl .ec-esq .ptr-bt svg{ stroke:currentColor; }
+.ecl .ec-dir{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+.ecl .ec-topo{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+.ecl .ec-topo .pv-bt-abrir{ grid-column:3; width:100%; margin:0; justify-content:center; white-space:nowrap; }
+@media (max-width:700px){ .ecl .ec-topo{ grid-template-columns:1fr; } .ecl .ec-topo .pv-bt-abrir{ grid-column:1; } }
+@container (max-width:700px){ .ecl .ec-topo{ grid-template-columns:1fr; } .ecl .ec-topo .pv-bt-abrir{ grid-column:1; } }
+</style>
+<script id="ecl-js">
+(function(){
+  if (typeof renderTrechos !== 'function') return;
+  const o = renderTrechos;
+  renderTrechos = function(p){
+    const r = o.apply(this, arguments);
+    try {
+      const f = document.querySelector('#rtPlano .ec-faixa'); if (!f) return r;
+      if (f.classList.contains('ecl')){
+        /* a faixa ficou e os botões foram recriados no cabeçalho: os novos trocam os antigos */
+        const cab = f.querySelector('.ec-cab'), esq = f.querySelector('.ec-esq'), topo = f.querySelector('.ec-topo');
+        const nTr = cab && cab.querySelector('.ptr-bt'), nPv = cab && cab.querySelector('.pv-bt-abrir');
+        if (nTr){ esq.querySelectorAll(':scope > .ptr-bt').forEach(x => x.remove()); esq.appendChild(nTr); }
+        if (nPv && topo){ topo.querySelectorAll('.pv-bt-abrir').forEach(x => x.remove()); topo.appendChild(nPv); }
+        return r;
+      }
+      const cab = f.querySelector(':scope > .ec-cab'), nums = f.querySelector(':scope > .ec-nums'); if (!cab || !nums) return r;
+      const esq = document.createElement('div'); esq.className = 'ec-esq';
+      const dir = document.createElement('div'); dir.className = 'ec-dir';
+      const topo = document.createElement('div'); topo.className = 'ec-topo';
+      f.insertBefore(esq, cab); esq.appendChild(cab);
+      const tr = cab.querySelector('.ptr-bt'); if (tr) esq.appendChild(tr);
+      f.insertBefore(dir, nums);
+      const pv = cab.querySelector('.pv-bt-abrir'); if (pv){ topo.appendChild(pv); dir.appendChild(topo); }
+      dir.appendChild(nums);
+      f.classList.add('ecl');
+    } catch(e){ console.error(e); }
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
