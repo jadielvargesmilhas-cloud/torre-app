@@ -80455,7 +80455,9 @@ function mtConvite(id, novo){
 
 /* ── o mentorado ──────────────────────────────────────────────────────────────── */
 function mtCacheLer(){ try { return JSON.parse(localStorage.getItem(MT_CACHE) || 'null'); } catch(_){ return null; } }
-function mtCacheGravar(uid, row){ try { localStorage.setItem(MT_CACHE, JSON.stringify({uid, row, quando:Date.now()})); } catch(_){} }
+function mtCacheGravar(uid, row, admin){ try { localStorage.setItem(MT_CACHE, JSON.stringify({uid, row, admin:admin == null ? null : !!admin, quando:Date.now()})); } catch(_){} }
+/* link da página de venda da assinatura (Hotmart): quando existir, aparece na tela de quem não tem acesso */
+const TORRE_LINK_VENDA = '';
 function mtCacheApagar(){ try { localStorage.removeItem(MT_CACHE); } catch(_){} }
 let _mtVerif = null;
 function mtVerificar(){
@@ -80471,11 +80473,25 @@ function mtVerificar(){
       else semRede = true;
     } catch(e){ if (e.saiu) return; semRede = true; }
     if (semRede){
-      const c = mtCacheLer(); row = c && c.uid === s.user.id ? c.row : null;
-      if (row) mtAplicarLinha(row);
+      const c = mtCacheLer(); if (!c || c.uid !== s.user.id) return;
+      if (c.row) mtAplicarLinha(c.row); else if (c.admin === false) mtTelaBloqueio(mtPaginaMentoria() ? 'naoliberado' : 'fechado');
       return;
     }
-    if (row) mtCacheGravar(s.user.id, row); else mtCacheApagar();
+    if (!row){
+      /* Torre fechada: quem não é mentorado nem assinante só entra se for o dono */
+      let admin = null;
+      if (!falta){
+        try { const r = await contaRest('POST', '/rest/v1/rpc/torre_sou_admin', {}); if (r.ok) admin = r.j === true; } catch(e){ if (e.saiu) return; }
+      }
+      if (admin === true){
+        mtCacheGravar(s.user.id, null, true); mtSairModo();
+        const tela = document.getElementById('contaTela'); if (tela && tela.classList.contains('mt-bloq')) contaFecharTela();
+        return;
+      }
+      if (admin === false){ mtCacheGravar(s.user.id, null, false); mtSairModo(); mtTelaBloqueio(mtPaginaMentoria() ? 'naoliberado' : 'fechado'); return; }
+      mtCacheApagar(); mtAplicarLinha(null, falta); return;
+    }
+    mtCacheGravar(s.user.id, row);
     mtAplicarLinha(row, falta);
     if (row && mtSituacao(row) === 'ativo'){
       contaRest('POST', '/rest/v1/rpc/torre_mentoria_entrei', {}).catch(() => {});
@@ -80612,18 +80628,21 @@ function mtTelaBloqueio(tipo, row){
     naoliberado:['Seu e-mail ainda não está liberado', `Você entrou com <b>${esc(s.user.email || '')}</b>, mas este e-mail não está na lista da mentoria. Confira se é o mesmo e-mail que você passou para o seu mentor, ou peça para ele liberar.`],
     pausado:['Seu acesso está pausado', `O acesso à ${esc((row && row.mentoria) || 'mentoria')} foi pausado. Fale com ${esc(quem)} para reativar.`],
     vencido:['Seu acesso terminou', `O acesso à ${esc((row && row.mentoria) || 'mentoria')} terminou em <b>${row ? mtData(row.validade) : ''}</b>. Fale com ${esc(quem)} para renovar.`],
-    preparando:['A área da mentoria ainda está sendo preparada', 'Seu mentor ainda está ligando esta parte. Tente de novo mais tarde.']
+    preparando:['A área da mentoria ainda está sendo preparada', 'Seu mentor ainda está ligando esta parte. Tente de novo mais tarde.'],
+    fechado:['A Torre é exclusiva para assinantes e mentorados', `Você entrou com <b>${esc(s.user.email || '')}</b>, e este e-mail ainda não tem acesso. Se você já assinou, entre com o mesmo e-mail usado na compra. O acesso é liberado assim que o pagamento é aprovado.`]
   };
   const m = M[tipo] || M.naoliberado;
   el.innerHTML = `<div class="ct-caixa">
     <div class="ct-marca">${contaLogoVem() ? `<div class="ct-vem">${contaLogoVem()}</div>` : `<div class="ct-logo"><svg><use href="#i-escudo"/></svg></div>`}
-      <span class="mt-selo-entrada"><i><svg><use href="#i-bussola"/></svg></i>MENTORIA</span><h1>Área do Mentorado</h1><p class="ct-lema">Sua jornada com milhas, com acompanhamento.</p></div>
+      ${tipo === 'fechado' ? '<span class="mt-selo-entrada"><i><svg><use href="#i-escudo"/></svg></i>ACESSO EXCLUSIVO</span><h1>Torre de Controle</h1><p class="ct-lema">Para assinantes e mentorados.</p>'
+        : '<span class="mt-selo-entrada"><i><svg><use href="#i-bussola"/></svg></i>MENTORIA</span><h1>Área do Mentorado</h1><p class="ct-lema">Sua jornada com milhas, com acompanhamento.</p>'}</div>
     <div class="ct-form" id="mtBloq" data-tipo="${tipo}">
       <span class="mt-bloq-ic"><svg><use href="#i-${tipo === 'preparando' ? 'relogio' : 'alerta'}"/></svg></span>
       <h2>${m[0]}</h2><p class="ct-sub">${m[1]}</p>
       <div class="mt-bloq-bts">
         ${z ? `<a class="bt primario" href="https://wa.me/${z}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Falar com ${esc(quem)}</a>` : ''}
-        <button type="button" class="bt ${z ? 'fantasma' : 'primario'}" id="mtBloqDeNovo"><svg><use href="#i-atualizar"/></svg>Tentar de novo</button>
+        ${tipo === 'fechado' && TORRE_LINK_VENDA ? `<a class="bt primario" href="${esc(TORRE_LINK_VENDA)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Conhecer a assinatura</a>` : ''}
+        <button type="button" class="bt ${z || (tipo === 'fechado' && TORRE_LINK_VENDA) ? 'fantasma' : 'primario'}" id="mtBloqDeNovo"><svg><use href="#i-atualizar"/></svg>Tentar de novo</button>
         <button type="button" class="bt fantasma" id="mtBloqSair"><svg><use href="#i-sair"/></svg>Sair e entrar com outro e-mail</button>
       </div></div></div>`;
   el.querySelector('#mtBloqDeNovo').onclick = async ev => { ev.currentTarget.disabled = true; await mtVerificar(); const b = document.getElementById('mtBloqDeNovo'); if (b) b.disabled = false; };
@@ -80647,7 +80666,8 @@ async function mtSairJa(){
   const ir = () => {
     if (!contaLigada() || !contaAtiva()) return;
     const c = mtCacheLer(), s = contaSessao();
-    if (c && c.row && s && c.uid === s.user.id) mtAplicarLinha(c.row);
+    if (!c || !s || c.uid !== s.user.id) return;
+    if (c.row) mtAplicarLinha(c.row); else if (c.admin === false) mtTelaBloqueio(mtPaginaMentoria() ? 'naoliberado' : 'fechado');
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ir); else ir();
 })();
