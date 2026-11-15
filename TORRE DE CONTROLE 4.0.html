@@ -51783,10 +51783,15 @@ function vereditoHTML(m, compacto){
    vez por dia (dá para desligar no rodapé) e fica no botão "Resumo do dia" do
    Painel. Os avisos dele são os mesmos do Painel, com Já aproveitei, Lembrar
    depois e Não me interessa. */
-function rsNome(){
-  const t = (DB.contas || []).find(c => /^titular/i.test(c.papel || ''));
-  return t && t.nome ? String(t.nome).trim().split(/\s+/)[0].replace(/^./, x => x.toUpperCase()).replace(/(?<=.)\S+$/, x => x.toLowerCase()) : '';
+/* nome da saudação: o primeiro nome de quem usa a Torre (Meu perfil), senão o
+   titular, senão a primeira conta; com a primeira letra maiúscula e o resto minúsculo */
+function nomeSaudacao(){
+  const pf = ((DB.cfg || {}).perfil || {}).nome;
+  const t = (DB.contas || []).find(c => /^titular/i.test(c.papel || '')) || (DB.contas || [])[0];
+  const n = String(pf || (t && t.nome) || '').trim().split(/\s+/)[0] || '';
+  return n ? n.charAt(0).toLocaleUpperCase('pt-BR') + n.slice(1).toLocaleLowerCase('pt-BR') : '';
 }
+function rsNome(){ return nomeSaudacao(); }
 function rsMelhorOportunidade(){
   const peso = {otimo:4, bom:3};
   const h = hojeISO();
@@ -56653,8 +56658,7 @@ renderComposicao = function(){
           const el = document.getElementById('fmResumo');
           if (el && v === 'mesa'){
             const h = new Date().getHours(), oi = h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-            const p = typeof perfilAtual === 'function' ? perfilAtual() : {};
-            const nome = String((p && p.nome) || '').trim().split(/\s+/)[0] || '';
+            const nome = typeof nomeSaudacao === 'function' ? nomeSaudacao() : '';
             el.textContent = `${oi}${nome ? ', ' + nome : ''} · ${el.textContent}`;
           }
         } catch(_){}
