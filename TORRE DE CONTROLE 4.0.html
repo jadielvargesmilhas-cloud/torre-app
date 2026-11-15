@@ -80673,5 +80673,347 @@ async function mtSairJa(){
 })();
 </script>
 
+<script id="sinc-seguro-js">
+/* ══ SINCRONIZAÇÃO SEGURA (15/11/2026) ═════════════════════════════════════════
+   O que aconteceu em 13/11: um aparelho com dados antigos sincronizou e a junção
+   ficou com o lado dele. Três defeitos permitiram isso:
+   1. Só as LISTAS (lançamentos, saldos...) contavam na sincronização. As partes
+      guardadas como "mapa" (os prints das provas, as leituras dos prints, os
+      ajustes) não contavam: um aparelho sem elas achava que estava igual à
+      conta e, na gravação seguinte, enviava o banco dele sem elas.
+   2. No empate do mesmo registro, valia o registro inteiro deste aparelho.
+      Bastava abrir a Prova (que grava um campo vazio) para a viagem inteira
+      voltar aos valores antigos.
+   3. Sem a anotação do que já tinha sido sincronizado, valia este aparelho.
+   Agora: os mapas contam; a junção é campo por campo; sem anotação, vale a
+   conta; e nada some da conta só porque este aparelho não tem. */
+(function(){
+  const ehObj = v => v != null && typeof v === 'object' && !Array.isArray(v);
+  const ehListaId = v => Array.isArray(v) && v.every(x => x && typeof x === 'object' && x.id != null);
+  const J = v => JSON.stringify(v === undefined ? null : v);
+  const imp = v => contaImpressao(J(v));
+  const LOCAIS_CFG = ['nuvem'];
+  const FORA = ['versao'];
+  /* uma cópia do cfg sem o que é só deste aparelho */
+  const cfgComum = cfg => { if (!ehObj(cfg)) return cfg; const c = Object.assign({}, cfg); LOCAIS_CFG.forEach(k => delete c[k]); Object.keys(c).forEach(k => { if (CHAVE_SEGREDO.test(k)) delete c[k]; }); return c; };
+  function mapasDe(a, b){
+    const s = new Set();
+    [a, b].forEach(db => Object.keys(db || {}).forEach(k => { if (!FORA.includes(k) && ehObj((db || {})[k])) s.add(k); }));
+    return [...s].sort();
+  }
+  const valor = (db, k) => k === 'cfg' ? cfgComum((db || {}).cfg || {}) : (db || {})[k];
+  window.sincMapasDe = mapasDe;
+
+  /* 1) os mapas entram em "o que mudou" */
+  const _ass = assinaturaDados;
+  assinaturaDados = function(db){
+    if (!db) return '';
+    const m = mapasDe(db, db).map(k => k + ':' + J(valor(db, k))).join('|');
+    return _ass(db) + (m ? '|#|' + m : '');
+  };
+  const _dif = diferencasEntre;
+  diferencasEntre = function(a, b){
+    const d = _dif(a, b);
+    mapasDe(a, b).forEach(k => { if (J(valor(a, k)) !== J(valor(b, k))) d.push({colecao:k, aqui:Object.keys(valor(a, k) || {}).length, la:Object.keys(valor(b, k) || {}).length}); });
+    return d;
+  };
+  window.mesmoConteudo = mesmoConteudo = function(a, b){ if (!a || !b) return false; return diferencasEntre(a, b).length === 0; };
+
+  /* 2) impressões: por coleção, por registro e por campo */
+  function impressoes(db){
+    const o = {};
+    colecoesDe(db, db).forEach(k => { o[k] = imp(colecaoDe(db, k)); });
+    mapasDe(db, db).forEach(k => { o['#' + k] = imp(valor(db, k)); });
+    return o;
+  }
+  function impressoesItens(db){
+    const o = {};
+    colecoesDe(db, db).forEach(k => {
+      const l = colecaoDe(db, k); if (COLECOES_DE_CFG.includes(k) || !ehListaId(l)) return;
+      const m = {}; l.forEach(x => { m[String(x.id)] = imp(x); }); o[k] = m;
+    });
+    mapasDe(db, db).forEach(k => { const v = valor(db, k), m = {}; Object.keys(v).forEach(s => { m[s] = imp(v[s]); }); o['#' + k] = m; });
+    return o;
+  }
+  function impressoesCampos(db){
+    const o = {};
+    colecoesDe(db, db).forEach(k => {
+      const l = colecaoDe(db, k); if (COLECOES_DE_CFG.includes(k) || !ehListaId(l)) return;
+      const m = {}; l.forEach(x => { const c = {}; Object.keys(x).forEach(f => { c[f] = imp(x[f]); }); m[String(x.id)] = c; }); o[k] = m;
+    });
+    return o;
+  }
+  window.contaImpressoes = contaImpressoes = impressoes;
+  window.contaImpressoesItens = contaImpressoesItens = impressoesItens;
+  const _marcar = contaMarcarBase;
+  contaMarcarBase = function(){
+    try { if (contaAtiva() && nuvemCfg().marca === assinaturaDados(DB)){ nuvemCfg().marcas = impressoes(DB); nuvemCfg().marcasItens = impressoesItens(DB); nuvemCfg().marcasCampos = impressoesCampos(DB); } } catch(_){}
+  };
+
+  /* 3) a junção, campo por campo. pref = quem fica quando os dois mudaram e não
+     há como saber: 'aqui' quando a anotação existe (a pessoa está aqui agora),
+     'la' quando não existe (aparelho sem anotação = dados possivelmente velhos). */
+  function fundir(a, l, pref){
+    if (a === undefined) return l;
+    if (l === undefined) return a;
+    if (J(a) === J(l)) return a;
+    if (ehObj(a) && ehObj(l)){
+      const o = {};
+      new Set([...Object.keys(a), ...Object.keys(l)]).forEach(k => { const v = fundir(a[k], l[k], pref); if (v !== undefined) o[k] = v; });
+      return o;
+    }
+    if (ehListaId(a) && ehListaId(l)){
+      const mL = new Map(l.map(x => [String(x.id), x])), vistos = new Set(), saida = [];
+      a.forEach(x => { const id = String(x.id); vistos.add(id); saida.push(mL.has(id) ? fundir(x, mL.get(id), pref) : x); });
+      l.forEach(x => { if (!vistos.has(String(x.id))) saida.push(x); });
+      return saida;
+    }
+    return pref === 'aqui' ? a : l;
+  }
+  function juntarRegistro(x, y, bc){
+    if (!bc) return fundir(x, y, 'la');
+    const o = {};
+    new Set([...Object.keys(x), ...Object.keys(y)]).forEach(f => {
+      const xf = x[f], yf = y[f], b = bc[f];
+      let v;
+      if (J(xf) === J(yf)) v = xf;
+      else if (b !== undefined && imp(xf) === b) v = yf;            /* só lá mudou */
+      else if (b !== undefined && imp(yf) === b) v = xf;            /* só aqui mudou */
+      else v = fundir(xf, yf, b === undefined ? 'la' : 'aqui');     /* os dois: junta por dentro */
+      if (v !== undefined) o[f] = v;
+    });
+    return o;
+  }
+  function juntarLista(a, l, bIt, bCp){
+    a = Array.isArray(a) ? a : []; l = Array.isArray(l) ? l : [];
+    if (!ehListaId(a) || !ehListaId(l)) return fundir(a.length ? a : undefined, l.length ? l : undefined, bIt ? 'aqui' : 'la') || [];
+    const mA = new Map(a.map(x => [String(x.id), x])), mL = new Map(l.map(x => [String(x.id), x]));
+    const fica = new Map();
+    for (const id of new Set([...mA.keys(), ...mL.keys()])){
+      const x = mA.get(id), y = mL.get(id), b = bIt ? bIt[id] : undefined;
+      if (x && y){
+        const ix = imp(x), iy = imp(y);
+        if (ix === iy) fica.set(id, x);
+        else if (b !== undefined && ix === b) fica.set(id, y);
+        else if (b !== undefined && iy === b) fica.set(id, x);
+        else fica.set(id, juntarRegistro(x, y, b !== undefined && bCp ? bCp[id] : null));
+      } else if (x){ if (b === undefined || imp(x) !== b) fica.set(id, x); }   /* novo aqui, ou mudado aqui: fica */
+      else { if (b === undefined || imp(y) !== b) fica.set(id, y); }           /* novo lá, ou mudado lá: vem */
+    }
+    const saida = [], usados = new Set();
+    a.forEach(x => { const id = String(x.id); if (fica.has(id)){ saida.push(fica.get(id)); usados.add(id); } });
+    l.forEach(x => { const id = String(x.id); if (fica.has(id) && !usados.has(id)){ saida.push(fica.get(id)); usados.add(id); } });
+    return saida;
+  }
+  function juntarMapa(a, l, bIt, nuncaApaga){
+    a = ehObj(a) ? a : {}; l = ehObj(l) ? l : {};
+    const o = {};
+    new Set([...Object.keys(a), ...Object.keys(l)]).forEach(s => {
+      const x = a[s], y = l[s], b = bIt ? bIt[s] : undefined;
+      let v;
+      if (x !== undefined && y !== undefined){
+        const ix = imp(x), iy = imp(y);
+        if (ix === iy) v = x;
+        else if (b !== undefined && ix === b) v = y;
+        else if (b !== undefined && iy === b) v = x;
+        else v = fundir(x, y, b === undefined ? 'la' : 'aqui');
+      } else if (x !== undefined){ if (nuncaApaga || b === undefined || imp(x) !== b) v = x; }
+      else { if (nuncaApaga || b === undefined || imp(y) !== b) v = y; }
+      if (v !== undefined) o[s] = v;
+    });
+    return o;
+  }
+  window.sincJuntar = {fundir, juntarRegistro, juntarLista, juntarMapa};
+
+  contaJuntar = function(remoto, primeira){
+    const R = remoto.dados || {};
+    const temBase = !primeira && !!nuvemCfg().marcas;
+    const base = temBase ? nuvemCfg().marcas : {}, bIt = temBase ? (nuvemCfg().marcasItens || {}) : {}, bCp = temBase ? (nuvemCfg().marcasCampos || null) : null;
+    const novo = JSON.parse(JSON.stringify(DB));
+    let veio = false;
+    /* listas */
+    colecoesDe(DB, R).forEach(k => {
+      const a = colecaoDe(DB, k), l = colecaoDe(R, k);
+      if (J(a) === J(l)) return;
+      const b = base[k];
+      const aquiMudou = b === undefined || imp(a) !== b, laMudou = b === undefined || imp(l) !== b;
+      let v;
+      if (laMudou && !aquiMudou) v = l;
+      else if (aquiMudou && !laMudou) return;
+      else v = juntarLista(a, l, temBase ? bIt[k] : null, bCp ? bCp[k] : null);
+      if (COLECOES_DE_CFG.includes(k)){ novo.cfg = novo.cfg || {}; if (v && v.length) novo.cfg[k] = v[0]; else delete novo.cfg[k]; }
+      else novo[k] = v;
+      veio = true;
+    });
+    /* mapas (prints das provas, leituras, ajustes) */
+    mapasDe(DB, R).forEach(k => {
+      const a = valor(DB, k), l = valor(R, k);
+      if (J(a) === J(l)) return;
+      const b = base['#' + k];
+      const aquiMudou = b === undefined || imp(a) !== b, laMudou = b === undefined || imp(l) !== b;
+      let v;
+      if (laMudou && !aquiMudou) v = l;
+      else if (aquiMudou && !laMudou) return;
+      else v = juntarMapa(a, l, temBase ? bIt['#' + k] : null, k === 'cfg');
+      if (k === 'cfg'){ const loc = {}; Object.keys(DB.cfg || {}).forEach(s => { if (LOCAIS_CFG.includes(s) || CHAVE_SEGREDO.test(s)) loc[s] = DB.cfg[s]; }); novo.cfg = Object.assign({}, v || {}, loc); }
+      else if (v === undefined) delete novo[k]; else novo[k] = v;
+      veio = true;
+    });
+    DB = novo;
+    nuvemCfg().sha = remoto.sha;
+    nuvemCfg().marca = assinaturaDados(R);
+    nuvemCfg().marcas = impressoes(R);
+    nuvemCfg().marcasItens = impressoesItens(R);
+    nuvemCfg().marcasCampos = impressoesCampos(R);
+    nuvemCfg().ultima = Date.now();
+    salvar(); try { aplicarTudo(); } catch(_){} nuvemEstado('ok');
+    if (veio) avisar('Dados atualizados com o que você fez no outro aparelho.', 'ok');
+    if (assinaturaDados(DB) !== nuvemCfg().marca) setTimeout(function t(){ if (nuvemOcupada) return setTimeout(t, 300); nuvemSincronizar(false); }, 300);
+    return true;
+  };
+  window.contaJuntar = contaJuntar;
+})();
+</script>
+
+<style id="rc-css">
+/* ══ RECUPERAR DE UMA CÓPIA DE SEGURANÇA (15/11/2026) ══════════════════════════ */
+.rc-lista{ display:flex; flex-direction:column; gap:8px; max-height:min(52vh, 460px); overflow:auto; padding:2px; }
+.rc-copia{ all:unset; box-sizing:border-box; cursor:pointer; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px 14px; border-radius:14px;
+  border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font-size:calc(14px * var(--esc)); }
+.rc-copia:hover{ border-color:color-mix(in srgb, var(--anil-claro) 45%, var(--fio)); }
+.rc-copia small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:2px; }
+.rc-copia .etq{ white-space:nowrap; }
+.rc-itens{ display:flex; flex-direction:column; gap:8px; }
+.rc-item{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:12px; align-items:flex-start; padding:12px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); cursor:pointer; }
+.rc-item input{ width:17px; height:17px; margin-top:2px; accent-color:var(--jade); }
+.rc-item b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
+.rc-item small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:3px; line-height:1.45; }
+.rc-vazio{ padding:18px; text-align:center; color:var(--grafite); }
+</style>
+<script id="rc-js">
+/* ══ RECUPERAR DE UMA CÓPIA DE SEGURANÇA (15/11/2026) ═══════════════════════════
+   A conta guarda uma cópia por hora (as 48 mais recentes). Aqui a pessoa escolhe
+   a cópia de ANTES de uma perda. A Torre compara três versões: a cópia boa, a
+   cópia seguinte (a que veio estragada) e o que existe agora. O que sumiu volta;
+   o que foi mexido DEPOIS da perda fica como está; repetidos não voltam. */
+const RC_NOMES = {provas:'Prints das provas', provasLidas:'Leituras dos prints', planos:'Viagens', lancamentos:'Lançamentos', saldos:'Saldos', campanhas:'Campanhas',
+  lojas:'Lojas parceiras', mural:'Mural de ofertas', cfg:'Ajustes e importações', contas:'Contas', cartoes:'Cartões', assinaturas:'Clubes', reservas:'Reservas', metas:'Metas',
+  desejos:'Lista de desejos', cotacoes:'Cotações', vitrines:'Vitrines', vemRascunho:'Rascunho da cotação', precoVenda:'Preço de venda', lotes:'Lotes', compras:'Compras'};
+const rcEhObj = v => v != null && typeof v === 'object' && !Array.isArray(v);
+const rcEhListaId = v => Array.isArray(v) && v.every(x => x && typeof x === 'object' && x.id != null);
+const rcJ = v => JSON.stringify(v === undefined ? null : v);
+/* "gêmeo": o mesmo registro com outro id (ex.: o clube lançado de novo pelo aparelho velho) */
+const rcSemId = x => { const c = Object.assign({}, x); ['id', 'criadoEm', 'importadoEm', 'ext'].forEach(k => delete c[k]); return rcJ(c); };
+function rcJuntar3(g, s, c, conta){
+  if (c === undefined && s === undefined){ if (g !== undefined && conta) conta.volta++; return g; }
+  if (c === undefined) return undefined;
+  const mexidoDepois = rcJ(c) !== rcJ(s);
+  if (rcEhObj(c) && rcEhObj(g) && (rcEhObj(s) || s === undefined)){
+    const o = {}, S = rcEhObj(s) ? s : {};
+    new Set([...Object.keys(g), ...Object.keys(S), ...Object.keys(c)]).forEach(k => { const v = rcJuntar3(g[k], S[k], c[k], conta); if (v !== undefined) o[k] = v; });
+    return o;
+  }
+  if (rcEhListaId(c) && rcEhListaId(g) && (rcEhListaId(s) || s === undefined)){
+    const mg = new Map(g.map(x => [String(x.id), x])), ms = new Map((s || []).map(x => [String(x.id), x])), mc = new Map(c.map(x => [String(x.id), x]));
+    const gemeos = new Set(c.map(rcSemId)), saida = [], usados = new Set();
+    c.forEach(x => { const id = String(x.id); usados.add(id); const v = rcJuntar3(mg.get(id), ms.get(id), x, conta); if (v !== undefined) saida.push(v); });
+    g.forEach(x => { const id = String(x.id); if (usados.has(id) || ms.has(id)) return;
+      if (gemeos.has(rcSemId(x))) return;            /* já existe de novo com outro id */
+      if (conta) conta.volta++; saida.push(x); });
+    return saida;
+  }
+  if (mexidoDepois) return c;                          /* mexido depois da perda: fica */
+  if (g === undefined) return c;
+  if (rcJ(g) !== rcJ(c) && conta) conta.corrige++;
+  return g;
+}
+async function rcCopias(){
+  const r = await contaRest('GET', '/rest/v1/torre_historico?select=id,versao,criado&order=criado.desc');
+  if (!r.ok) throw new Error(contaTraduz(r));
+  return r.j || [];
+}
+async function rcCopia(id){
+  const r = await contaRest('GET', `/rest/v1/torre_historico?select=dados,criado&id=eq.${encodeURIComponent(id)}`);
+  if (!r.ok || !r.j || !r.j.length) throw new Error('Não deu para abrir esta cópia.');
+  return contaDesembrulha(r.j[0].dados);
+}
+function rcQuando(iso){ const d = new Date(iso); return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); }
+async function abrirRecuperar(){
+  if (!contaAtiva()) return avisar('Entre na sua conta para ver as cópias de segurança.', 'alerta');
+  const d = _janela('dlgRecuperar', 'eq rc');
+  const cab = (t, s) => `<div class="eq-cab"><div class="eq-cab-l"><span class="eq-selo"><svg><use href="#i-atualizar"/></svg></span><div><h2>${t}</h2><p>${s}</p></div></div></div>`;
+  const pe = extra => `<footer class="dr-pe"><button type="button" class="bt perigo" onclick="document.getElementById('dlgRecuperar').close()">Fechar</button><span class="esticar"></span>${extra || ''}</footer>`;
+  d.innerHTML = `<div class="dr-painel">${cab('Cópias de segurança', 'Carregando as cópias da sua conta...')}<div class="dr-corpo"><div class="rc-vazio">Um instante...</div></div>${pe()}</div>`;
+  if (!d.open){ d.showModal(); travarFundo(true); }
+  let lista;
+  try { lista = await rcCopias(); } catch(e){ d.querySelector('.rc-vazio').textContent = e.message || 'Não deu para carregar.'; return; }
+  d.innerHTML = `<div class="dr-painel">${cab('Cópias de segurança', 'A conta guarda uma cópia por hora, das últimas 48 vezes em que algo mudou. Escolha a cópia de ANTES do problema.')}
+    <div class="dr-corpo"><div class="rc-lista">${lista.length ? lista.map((c, i) => `<button type="button" class="rc-copia" data-i="${i}"><span>${rcQuando(c.criado)}<small>Versão ${c.versao}</small></span><span class="etq">Ver o que volta</span></button>`).join('')
+      : '<div class="rc-vazio">Ainda não há cópias.</div>'}</div>
+    <div class="eq-nota" style="margin-top:16px"><svg><use href="#i-info"/></svg><span>Nada muda até você confirmar. O que você fez DEPOIS da cópia continua como está.</span></div></div>${pe()}</div>`;
+  d.querySelectorAll('.rc-copia').forEach(b => b.onclick = () => rcComparar(d, lista, Number(b.dataset.i), cab, pe));
+}
+async function rcComparar(d, lista, i, cab, pe){
+  const boa = lista[i], seguinte = lista[i - 1];
+  d.querySelector('.dr-corpo').innerHTML = '<div class="rc-vazio">Comparando com o que existe agora...</div>';
+  let G, S;
+  try {
+    G = await rcCopia(boa.id);
+    if (seguinte) S = await rcCopia(seguinte.id);
+    else { const r = await contaLer(); S = r && r.dados ? r.dados : JSON.parse(JSON.stringify(DB)); }
+  } catch(e){ d.querySelector('.dr-corpo').innerHTML = `<div class="rc-vazio">${esc(e.message || 'Não deu para abrir.')}</div>`; return; }
+  const C = DB, itens = [];
+  new Set([...Object.keys(G), ...Object.keys(C)]).forEach(k => {
+    if (k === 'versao') return;
+    let g = G[k], s = S[k], c = C[k];
+    if (k === 'cfg'){ const tira = o => { if (!rcEhObj(o)) return o; const x = Object.assign({}, o); delete x.nuvem; Object.keys(x).forEach(t => { if (CHAVE_SEGREDO.test(t)) delete x[t]; }); return x; }; g = tira(g); s = tira(s); c = tira(c); }
+    const conta = {volta:0, corrige:0};
+    const v = rcJuntar3(g, s, c, conta);
+    if (rcJ(v) === rcJ(c)) return;
+    itens.push({k, v, conta});
+  });
+  const texto = it => {
+    const p = [];
+    if (it.conta.volta) p.push(`${it.conta.volta} ${it.conta.volta === 1 ? 'item volta' : 'itens voltam'}`);
+    if (it.conta.corrige) p.push(`${it.conta.corrige} ${it.conta.corrige === 1 ? 'valor volta ao que era' : 'valores voltam ao que eram'}`);
+    return p.join(' · ') || 'Volta ao que era na cópia';
+  };
+  d.innerHTML = `<div class="dr-painel">${cab('O que volta', 'Da cópia de ' + rcQuando(boa.criado) + '. Desmarque o que não quiser.')}
+    <div class="dr-corpo">${itens.length ? `<div class="rc-itens">${itens.map((it, n) => `<label class="rc-item"><input type="checkbox" checked data-n="${n}"><span><b>${esc(RC_NOMES[it.k] || it.k)}</b><small>${texto(it)}</small></span></label>`).join('')}</div>
+      <div class="eq-nota" style="margin-top:16px"><svg><use href="#i-info"/></svg><span>Antes de recuperar, a Torre guarda neste aparelho uma cópia de como está agora.</span></div>`
+      : '<div class="rc-vazio">Nada para recuperar: esta cópia não tem nada que falte agora.</div>'}</div>
+    ${pe(`<button type="button" class="bt fantasma" id="rcVoltar">Outra cópia</button>${itens.length ? '<button type="button" class="bt primario" id="rcOk"><svg><use href="#i-ok"/></svg>Recuperar</button>' : ''}`)}</div>`;
+  d.querySelector('#rcVoltar').onclick = () => abrirRecuperar();
+  const ok = d.querySelector('#rcOk');
+  if (ok) ok.onclick = () => {
+    const marcados = [...d.querySelectorAll('.rc-item input:checked')].map(x => itens[Number(x.dataset.n)]);
+    if (!marcados.length) return avisar('Marque pelo menos um item.', 'alerta');
+    try { localStorage.setItem('torre-antes-da-recuperacao', JSON.stringify({quando:Date.now(), db:DB})); } catch(_){}
+    marcados.forEach(it => {
+      if (it.k === 'cfg'){ const loc = {}; Object.keys(DB.cfg || {}).forEach(t => { if (t === 'nuvem' || CHAVE_SEGREDO.test(t)) loc[t] = DB.cfg[t]; }); DB.cfg = Object.assign({}, it.v || {}, loc); }
+      else if (it.v === undefined) delete DB[it.k]; else DB[it.k] = it.v;
+    });
+    salvar(); try { aplicarTudo(); } catch(_){}
+    if (typeof nuvemSincronizar === 'function') setTimeout(() => nuvemSincronizar(false), 300);
+    d.close();
+    avisar(`Recuperado: ${marcados.map(it => RC_NOMES[it.k] || it.k).join(', ')}.`, 'ok', 7000);
+  };
+}
+/* botão no cartão "Sua conta" (Ajustes › Dados) */
+(function(){
+  const _c = contaCartao;
+  contaCartao = function(){
+    const v = _c.apply(this, arguments);
+    const box = document.getElementById('contaCartao');
+    if (box && !box.querySelector('#rcAbrir')){
+      const bts = box.querySelector('.cf-bts');
+      if (bts) bts.insertAdjacentHTML('beforeend', '<button type="button" class="bt p fantasma" id="rcAbrir"><svg><use href="#i-atualizar"/></svg>Cópias de segurança</button>');
+      const b = box.querySelector('#rcAbrir'); if (b) b.onclick = () => abrirRecuperar();
+    }
+    return v;
+  };
+})();
+</script>
+
 </body>
 </html>
