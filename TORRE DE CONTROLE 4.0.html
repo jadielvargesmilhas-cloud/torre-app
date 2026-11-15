@@ -53422,7 +53422,7 @@ const contaLigada = () => !!(CONTA.url && CONTA.chave);
 function contaSessao(){ try { return JSON.parse(localStorage.getItem(CONTA_SESSAO) || 'null'); } catch(_){ return null; } }
 function contaGuardar(s){ try { localStorage.setItem(CONTA_SESSAO, JSON.stringify(s)); } catch(_){} }
 const contaAtiva = () => contaLigada() && !!(contaSessao() || {}).refresh_token;
-const contaVolta = () => location.origin + location.pathname + (/[?&]mentoria\b/.test(location.search) ? '?mentoria' : '');
+const contaVolta = () => location.origin + location.pathname + (/[?&]mentoria\b/.test(location.search) ? '?mentoria' : /[?&]assinante\b/.test(location.search) ? '?assinante' : '');
 
 async function contaApi(caminho, {method = 'GET', corpo, token, prefer} = {}){
   const h = {'apikey':CONTA.chave, 'Content-Type':'application/json'};
@@ -80214,19 +80214,24 @@ function mtFimTurma(){ const t = mtCfg().turma; return t && t.inicio ? mtSomaMes
 function mtTurmaResumo(){
   const t = mtCfg().turma, fim = mtFimTurma();
   if (!fim) return '<small>Preencha o fechamento da turma: o prazo de todos passa a contar dessa data.</small>';
-  const fora = mtDB().filter(m => m.ativo !== false && (m.validade !== fim || (t.nome && m.turma !== t.nome)));
+  const fora = mtDB().filter(m => m.ativo !== false && !mtEhAssinatura(m) && (m.validade !== fim || (t.nome && m.turma !== t.nome)));
   return `<small>Todos ${t.nome ? 'da ' + esc(t.nome) : 'desta turma'} entram até <b>${mtData(fim)}</b>.</small>${fora.length ? `<button type="button" class="bt p fantasma" id="mtTurmaTodos"><svg><use href="#i-ok"/></svg>Usar esta data para ${fora.length === 1 ? '1 mentorado' : fora.length + ' mentorados'}</button>` : ''}`;
 }
 function mtTurmaAplicar(){
   const t = mtCfg().turma, fim = mtFimTurma(); if (!fim) return;
-  const alvo = mtDB().filter(m => m.ativo !== false && (m.validade !== fim || (t.nome && m.turma !== t.nome)));
+  const alvo = mtDB().filter(m => m.ativo !== false && !mtEhAssinatura(m) && (m.validade !== fim || (t.nome && m.turma !== t.nome)));
   alvo.forEach(m => { m.validade = fim; if (t.nome) m.turma = t.nome; m.pend = true; m.alterado = Date.now(); });
   salvar(); avisar(`${alvo.length === 1 ? '1 mentorado agora entra' : alvo.length + ' mentorados agora entram'} até ${mtData(fim)}.`, 'ok');
   mtEnviarPendentes().then(() => { const dd = document.getElementById('dlgMentoria'); if (dd && dd.open && !_mtEd) mtDesenharLista(dd, true); });
   mtDesenharLista(document.getElementById('dlgMentoria'), true);
 }
-function mtPaginaMentoria(){ return /[?&]mentoria\b/.test(location.search); }
-function mtLinkPagina(){ return location.origin + location.pathname + '?mentoria'; }
+/* produtos que dão acesso à Torre (Hotmart): mentorias com a Torre de bônus e a assinatura */
+const MT_PRODUTOS = ['Mentoria ROTA Internacional', 'Turma ROTA Internacional', 'Assinatura da Torre'];
+const mtEhAssinatura = m => /assinatura/i.test(String((m && (m.produto || m.mentoria)) || ''));
+function mtProdutoDe(m){ return (m && m.produto) || mtCfg().nome || 'Mentoria'; }
+function mtPaginaMentoria(){ return /[?&](mentoria|assinante)\b/.test(location.search); }
+function mtPaginaAssinante(){ return /[?&]assinante\b/.test(location.search); }
+function mtLinkPagina(m){ return location.origin + location.pathname + (m && mtEhAssinatura(m) ? '?assinante' : '?mentoria'); }
 function mtZapDigitos(z){ let d = String(z || '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; return d.length >= 12 ? d : ''; }
 function mtAcessoTexto(iso){
   if (!iso) return '';
@@ -80239,7 +80244,7 @@ function mtSemTabela(r){ return r && (r.status === 404 || /PGRST205|PGRST202|42P
 function mtLinha(m){
   const c = mtCfg(), s = contaSessao();
   return {mentor_id:s.user.id, email:m.email, nome:m.nome, zap:m.zap || null, turma:m.turma || null, perfil:m.perfil || null, perms:m.perms || {},
-          ativo:m.ativo !== false, validade:m.validade || null, mentoria:c.nome || 'Mentoria', mentor_nome:mtNomeMentor() || null, mentor_zap:c.zap || null};
+          ativo:m.ativo !== false, validade:m.validade || null, mentoria:mtProdutoDe(m), mentor_nome:mtNomeMentor() || null, mentor_zap:c.zap || null};
 }
 let _mtEnviando = null;
 function mtEnviarPendentes(){
@@ -80372,7 +80377,7 @@ function mtDesenharLista(d, semAnimar){
     ${ms.length ? `<div class="eq-grade">${ms.map(m => {
       const pf = MT_PERFIS[m.perfil] || MT_PERFIS.livre, ar = eqResumoAreas(m);
       return `<div class="eq-card${mtSituacao(m) !== 'ativo' ? ' pausado' : ''}" style="--pc:${pf.cor}" data-id="${esc(m.id)}">
-        <div class="eq-quem">${mtAvatar(m)}<div><b>${esc(m.nome)}</b><small>${esc(m.email)}${m.turma ? ' · ' + esc(m.turma) : ''}</small></div></div>
+        <div class="eq-quem">${mtAvatar(m)}<div><b>${esc(m.nome)}</b><small>${esc(m.email)} · ${esc(mtProdutoDe(m))}${m.turma && !mtEhAssinatura(m) ? ' · ' + esc(m.turma) : ''}</small></div></div>
         <span class="eq-perfil"><svg><use href="${pf.ic}"/></svg>${esc(pf.n)}</span>
         ${sit(m)}
         <div class="eq-areas">${ar.length ? ar.map(x => `<span>${esc(x)}</span>`).join('') : '<span class="nada">Ainda sem acesso a nenhum menu</span>'}</div>
@@ -80426,6 +80431,7 @@ function mtEditar(id){
         <div class="campo"><label>Nome completo</label><input type="text" id="mtNome" value="${esc(e.nome)}" placeholder="ex.: Ana Paula Souza" autocomplete="off"></div>
         <div class="campo"><label>E-mail <span class="fraco">é com ele que a pessoa entra</span></label><input type="text" inputmode="email" autocapitalize="off" spellcheck="false" id="mtEmail" value="${esc(e.email)}" placeholder="ana@email.com" autocomplete="off"></div>
         <div class="campo"><label>WhatsApp <span class="fraco">para mandar o convite</span></label><input type="text" inputmode="tel" id="mtZap" value="${esc(e.zap || '')}" placeholder="(71) 9 9999-9999"></div>
+        <div class="campo"><label>Produto</label><select id="mtProduto">${MT_PRODUTOS.map(x => `<option${(e.produto || MT_PRODUTOS[0]) === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
         <div class="campo"><label>Turma ou plano <span class="fraco">opcional</span></label><input type="text" id="mtTurma" value="${esc(e.turma || '')}" placeholder="ex.: Turma de março"></div>
       </div>
       <div class="eq-tit">2 · Até quando entra</div>
@@ -80476,7 +80482,7 @@ function mtSalvar(orig){
   const meu = contaAtiva() ? String((contaSessao().user || {}).email || '').toLowerCase() : '';
   if (meu && email === meu) return erroNoCampo(d.querySelector('#mtEmail'), 'Este é o e-mail da sua própria conta. Use o e-mail do mentorado.');
   if (!e.perfil){ const pf = d.querySelector('.eq-perfis'); pf.scrollIntoView({block:'center', behavior:'smooth'}); pf.animate([{transform:'translateX(0)'}, {transform:'translateX(-6px)'}, {transform:'translateX(6px)'}, {transform:'translateX(0)'}], {duration:300}); avisar('Escolha o que a pessoa vai ver: toque em um dos quatro jeitos.', 'alerta'); return; }
-  Object.assign(e, {nome, email, zap:d.querySelector('#mtZap').value.trim(), turma:d.querySelector('#mtTurma').value.trim(), validade:d.querySelector('#mtValidade').value || '', pend:true});
+  Object.assign(e, {nome, email, produto:d.querySelector('#mtProduto').value, zap:d.querySelector('#mtZap').value.trim(), turma:d.querySelector('#mtTurma').value.trim(), validade:d.querySelector('#mtValidade').value || '', pend:true});
   if (orig){ const i = mtDB().findIndex(m => m.id === orig.id); e.alterado = Date.now(); DB.mentorados[i] = e; }
   else { e.id = uid(); e.criado = Date.now(); e.ativo = true; mtDB().push(e); }
   salvar(); _mtEd = null; _eqEd = null;
@@ -80486,8 +80492,8 @@ function mtSalvar(orig){
   else mtConvite(e.id, true);
 }
 function mtTextoConvite(m){
-  const c = mtCfg(), pn = String(m.nome || '').split(' ')[0];
-  return `Olá, ${pn}! Seu acesso à ${c.nome || 'mentoria'} está liberado.\n\n1. Abra este endereço: ${mtLinkPagina()}\n2. Toque em "Primeiro acesso: criar senha" e use este e-mail: ${m.email}\n3. Confirme o e-mail pelo link que vai chegar e entre com a sua senha.\n\n${m.validade ? `Seu acesso vale até ${mtData(m.validade)}.\n\n` : ''}Qualquer dúvida, é só me chamar aqui.`;
+  const pn = String(m.nome || '').split(' ')[0], ass = mtEhAssinatura(m);
+  return `Olá, ${pn}! ${ass ? 'Sua assinatura da Torre de Controle está liberada.' : `Seu acesso à ${mtProdutoDe(m)} está liberado, com a Torre de Controle de bônus.`}\n\n1. Abra este endereço: ${mtLinkPagina(m)}\n2. Toque em "Primeiro acesso: criar senha" e use este e-mail: ${m.email}\n3. Confirme o e-mail pelo link que vai chegar e entre com a sua senha.\n\n${m.validade ? `Seu acesso vale até ${mtData(m.validade)}.\n\n` : ''}Qualquer dúvida, é só me chamar aqui.`;
 }
 function mtConvite(id, novo){
   const d = document.getElementById('dlgMentoria'), m = mtDB().find(x => x.id === id); if (!d || !m) return;
@@ -80659,18 +80665,21 @@ function mtAbrirMinha(){ abrirPerfil(); }
 /* ── a página de entrada (?mentoria) ──────────────────────────────────────────── */
 function mtVestirEntrada(modo){
   const el = document.getElementById('contaTela'); if (!el || el.classList.contains('mt-bloq')) return;
+  const ass = mtPaginaAssinante();
   el.classList.add('mt-entrada');
   const marca = el.querySelector('.ct-marca');
   if (marca && !marca.querySelector('.mt-selo-entrada')){
-    const h1 = marca.querySelector('h1'); if (h1){ h1.insertAdjacentHTML('beforebegin', '<span class="mt-selo-entrada"><i><svg><use href="#i-bussola"/></svg></i>MENTORIA</span>'); h1.textContent = 'Área do Mentorado'; }
-    const lema = marca.querySelector('.ct-lema'); if (lema) lema.textContent = 'Sua jornada com milhas, com acompanhamento.';
+    const h1 = marca.querySelector('h1'); if (h1){ h1.insertAdjacentHTML('beforebegin', `<span class="mt-selo-entrada"><i><svg><use href="#i-bussola"/></svg></i>${ass ? 'ASSINATURA' : 'MENTORIA'}</span>`); h1.textContent = ass ? 'Área do Assinante' : 'Área do Mentorado'; }
+    const lema = marca.querySelector('.ct-lema'); if (lema) lema.textContent = ass ? 'A sua Torre de Controle de milhas.' : 'Sua jornada com milhas, com acompanhamento.';
     const ul = marca.querySelector('ul');
-    if (ul) ul.innerHTML = `<li><svg><use href="#i-ok"/></svg><span><b>Promoções selecionadas</b> pelo seu mentor, com a conta feita.</span></li>
+    if (ul) ul.innerHTML = `<li><svg><use href="#i-ok"/></svg><span><b>Promoções selecionadas</b> ${ass ? 'por um especialista' : 'pelo seu mentor'}, com a conta feita.</span></li>
       <li><svg><use href="#i-ok"/></svg><span><b>Sua carteira</b>, com saldos e vencimentos só seus.</span></li>
       <li><svg><use href="#i-ok"/></svg><span><b>No celular e no computador</b>, com o mesmo e-mail e senha.</span></li>`;
-    const pe = marca.querySelector('.ct-pe'); if (pe) pe.innerHTML = 'Acesso liberado pelo seu mentor.<br>Use o e-mail que você informou na mentoria.';
+    const pe = marca.querySelector('.ct-pe'); if (pe) pe.innerHTML = ass ? 'Acesso liberado com a sua assinatura.<br>Use o e-mail da compra.' : 'Acesso liberado pelo seu mentor.<br>Use o e-mail que você informou na mentoria.';
   }
-  const T = {entrar:['Entrar na mentoria', 'Use o e-mail cadastrado na mentoria e a sua senha.', 'Entrar'],
+  const T = ass ? {entrar:['Entrar na Torre', 'Use o e-mail da sua assinatura e a sua senha.', 'Entrar'],
+    criar:['Primeiro acesso', 'Use o mesmo e-mail da compra e crie uma senha de pelo menos 6 caracteres. Vamos enviar um link para confirmar o e-mail.', 'Criar minha senha']}
+    : {entrar:['Entrar na mentoria', 'Use o e-mail cadastrado na mentoria e a sua senha.', 'Entrar'],
     criar:['Primeiro acesso', 'Use o mesmo e-mail que você passou para o seu mentor e crie uma senha de pelo menos 6 caracteres. Vamos enviar um link para confirmar o e-mail.', 'Criar minha senha']};
   const t = T[modo];
   if (t){
@@ -81236,7 +81245,7 @@ function mtAbrirBoasVindas(){
   abrirFolha({titulo:'Boas-vindas', largura:'larga', corpo:`<div class="bv-heroi">
       <span class="bv-selo"><i><svg><use href="#i-bussola"/></svg></i>${esc((r.mentoria || 'Mentoria').toUpperCase())}</span>
       <h2>Bem-vindo, ${esc(nome)}.</h2>
-      <p>Esta é a sua Torre de Controle${r.mentor_nome ? ', com o acompanhamento de ' + esc(nomeCurto(r.mentor_nome)) : ''}.</p>
+      <p>Esta é a sua Torre de Controle${r.mentor_nome ? (mtEhAssinatura(r) ? ', com as promoções selecionadas por ' : ', com o acompanhamento de ') + esc(nomeCurto(r.mentor_nome)) : ''}.</p>
       <p>Os seus dados são só seus.</p>${r.validade ? `<p>Acesso até ${mtData(r.validade)}.</p>` : ''}
     </div>
     ${passos.length ? `<div class="bv-tit">Para começar</div><div class="bv-passos">${passos.map((p, i) => `<button type="button" class="bv-passo" data-a="${p[0]}" data-n="${esc(p[1])}"><span class="bv-n">${i + 1}</span><span><b>${esc(p[2])}</b><small>${esc(p[3])}</small></span><svg class="seta"><use href="#i-seta-d"/></svg></button>`).join('')}</div>` : ''}`,
