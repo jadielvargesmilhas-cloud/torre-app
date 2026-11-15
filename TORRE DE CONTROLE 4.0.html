@@ -31118,7 +31118,8 @@ function renderTrechos(p){
   const pCias = [...new Set(pComMercado.map(m => m.cia).filter(Boolean))];
   host.innerHTML = `${tsP.length ? `<div class="ec-faixa">
       <div class="ec-cab"><div class="ec-ico"><svg><use href="#i-aviao"/></svg></div>
-        <div class="ec-tit"><b>Economia da viagem</b><span>${pCab}${pComUp.length ? ` · upgrade ${pComUp.length === tsP.length && tsP.length > 1 ? 'em todos os trechos' : `em ${pComUp.length} ${pComUp.length === 1 ? 'trecho' : 'trechos'}`} por ${[...new Set(pComUp.map(t => (ORIGENS_UPGRADE[t.upgrade.origem] || '').toLowerCase()))].filter(Boolean).join(', ')}` : ''}</span></div></div>
+        <div class="ec-tit"><b>Economia da viagem</b><span>${pCab}</span>${pComUp.length ? (() => { const por = [...new Set(pComUp.map(t => (ORIGENS_UPGRADE[t.upgrade.origem] || '').toLowerCase()))].filter(Boolean).join(', ');
+          return `<span class="ec-up">· upgrade ${pComUp.length === tsP.length && tsP.length > 1 ? 'em todos os trechos' : `em ${pComUp.length} ${pComUp.length === 1 ? 'trecho' : 'trechos'}`}</span>${por ? `<span class="ec-up">(por ${por})</span>` : ''}`; })() : ''}</div></div>
       <div class="ec-nums">
         <div class="ec-n"><span>A viagem custou</span><b>${brl(pCusto)}</b><em>passagens, taxas e milhas ao valor escolhido</em></div>
         <div class="ec-n mesma"><span>Contra a mesma companhia</span><b class="${pEco >= 0 ? 'jade' : 'brasa'}">${pEco >= 0 ? '' : '−'}${brl(Math.abs(pEco))}</b>
@@ -81318,6 +81319,13 @@ function mtComecou(){
 .ec-faixa.ecl{ align-items:stretch; }
 .ecl .ec-esq{ display:flex; flex-direction:column; justify-content:space-between; gap:14px; min-width:0; }
 .ecl .ec-esq .ec-cab{ flex-wrap:nowrap; }
+.ec-tit span{ line-height:1.4; } .ec-tit span.ec-up{ margin-top:-3px; }
+/* selo do avião: aro dourado fino, rota pontilhada e um brilho discreto */
+.ecl .ec-ico{ position:relative; width:52px; height:52px; border:1px solid rgba(230,190,98,.6);
+  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.20), rgba(255,255,255,.04) 64%);
+  box-shadow:0 0 0 5px rgba(230,190,98,.07), 0 10px 24px -12px rgba(230,190,98,.75); }
+.ecl .ec-ico::before{ content:''; position:absolute; inset:7px; border-radius:50%; border:1px dashed rgba(244,197,66,.32); }
+.ecl .ec-ico svg{ position:relative; width:22px; height:22px; stroke:#F4C542; stroke-width:1.5; fill:rgba(244,197,66,.18); }
 .ecl .ec-esq .ptr-bt{ width:100%; justify-content:center; margin:0; color:rgba(255,255,255,.88); border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.06); }
 .ecl .ec-esq .ptr-bt:hover{ background:rgba(255,255,255,.12); color:#fff; }
 .ecl .ec-esq .ptr-bt svg{ stroke:currentColor; }
