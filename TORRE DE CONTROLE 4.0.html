@@ -53401,7 +53401,7 @@ const contaLigada = () => !!(CONTA.url && CONTA.chave);
 function contaSessao(){ try { return JSON.parse(localStorage.getItem(CONTA_SESSAO) || 'null'); } catch(_){ return null; } }
 function contaGuardar(s){ try { localStorage.setItem(CONTA_SESSAO, JSON.stringify(s)); } catch(_){} }
 const contaAtiva = () => contaLigada() && !!(contaSessao() || {}).refresh_token;
-const contaVolta = () => location.origin + location.pathname;
+const contaVolta = () => location.origin + location.pathname + (/[?&]mentoria\b/.test(location.search) ? '?mentoria' : '');
 
 async function contaApi(caminho, {method = 'GET', corpo, token, prefer} = {}){
   const h = {'apikey':CONTA.chave, 'Content-Type':'application/json'};
@@ -61950,7 +61950,9 @@ function eqResumoAreas(c){
   });
   return r;
 }
-function eqAvatar(c, cls = ''){ return `<span class="eq-av ${cls}" style="--pc:${(EQ_PERFIS[c.perfil] || EQ_PERFIS.livre).cor}">${esc(iniciaisDe(c.nome))}</span>`; }
+function eqPessoa(id){ return eqDB().find(x => x.id === id) || (typeof mtDB === 'function' ? mtDB().find(x => x.id === id) : null) || null; }
+function eqPerfilDe(c){ return EQ_PERFIS[c.perfil] || (typeof MT_PERFIS !== 'undefined' && MT_PERFIS[c.perfil]) || EQ_PERFIS.livre; }
+function eqAvatar(c, cls = ''){ return `<span class="eq-av ${cls}" style="--pc:${eqPerfilDe(c).cor}">${esc(iniciaisDe(c.nome))}</span>`; }
 
 function abrirEquipe(){
   const d = _janela('dlgEquipe', 'eq');
@@ -62051,7 +62053,7 @@ function eqDesenharMatriz(manterAbertos){
     p = EQ_ACOES.map(([y]) => y).filter(y => p.includes(y)).join('');
     if (p) e.perms[k] = p; else delete e.perms[k];
   };
-  const mexeu = () => { if (e.perfil !== 'livre'){ e.perfil = 'livre'; document.querySelectorAll('#dlgEquipe .eq-pf').forEach(x => x.classList.toggle('on', x.dataset.pf === 'livre')); } eqDesenharMatriz(true); };
+  const mexeu = () => { if (e.perfil !== 'livre'){ e.perfil = 'livre'; document.querySelectorAll('#dlgEquipe .eq-pf, #dlgMentoria .eq-pf').forEach(x => x.classList.toggle('on', x.dataset.pf === 'livre')); } eqDesenharMatriz(true); };
   box.querySelectorAll('.eq-area').forEach(ar => {
     const a = eqCatalogo().find(z => z.k === ar.dataset.area), keys = a.itens.map(n => a.k + '|' + n);
     ar.querySelectorAll('.eq-seg button').forEach(b => b.onclick = ev => {
@@ -62082,11 +62084,11 @@ function eqSalvar(orig){
 }
 /* ── VER COMO ─────────────────────────────────────────────────────────────── */
 function eqVerComo(id){
-  const c = eqDB().find(x => x.id === id); if (!c) return;
+  const c = eqPessoa(id); if (!c) return;
   _eqVendo = id;
   let f = document.getElementById('eqFaixa');
   if (!f){ f = document.createElement('div'); f.id = 'eqFaixa'; f.className = 'eq-faixa'; document.body.appendChild(f); }
-  const pf = EQ_PERFIS[c.perfil] || EQ_PERFIS.livre;
+  const pf = eqPerfilDe(c);
   f.innerHTML = `${eqAvatar(c)}<span>Vendo como <b>${esc(nomeCurto(c.nome))}</b> · ${esc(pf.n)}</span><button type="button">Sair da visão</button>`;
   f.querySelector('button').onclick = eqSairVisao;
   document.documentElement.classList.add('eq-vendo');
@@ -62107,7 +62109,7 @@ function eqIrPara(p){
 }
 function eqRotulo(el){ return ((el.querySelector('span') || el).textContent || '').trim(); }
 function eqAplicarVisao(){
-  const c = _eqVendo && eqDB().find(x => x.id === _eqVendo); if (!c){ if (_eqVendo) eqSairVisao(); return; }
+  const c = (_eqVendo && eqPessoa(_eqVendo)) || (!_eqVendo && window._mtSou) || null; if (!c){ if (_eqVendo) eqSairVisao(); return; }
   const cat = eqCatalogo();
   const longo = {}; if (typeof CURTO_ITEM !== 'undefined') Object.entries(CURTO_ITEM).forEach(([l, s]) => { longo[s] = longo[s] || []; longo[s].push(l); });
   document.querySelectorAll('.tb[data-area]').forEach(tb => {
@@ -62137,7 +62139,7 @@ function eqAplicarVisao(){
   let bq = document.getElementById('eqBloq');
   if (!pode || (nomeArea && !nomeArea.itens.some(n => eqTem(c, areaOn + '|' + n, 'v')))){
     if (!bq){ bq = document.createElement('div'); bq.id = 'eqBloq'; bq.className = 'eq-bloq'; document.body.appendChild(bq); }
-    const _h = `<div><span class="eq-selo"><svg><use href="#i-olho-fechado"/></svg></span><b>Esta parte não está liberada</b><p>${esc(nomeCurto(c.nome))} não vê <b>${esc(atual || (nomeArea || {}).n || 'esta tela')}</b>. Libere em <b>Equipe</b>, no menu ${esc((nomeArea || {}).n || '')}.</p></div>`;
+    const _h = `<div><span class="eq-selo"><svg><use href="#i-olho-fechado"/></svg></span><b>${c.__eu ? 'Esta parte não faz parte da sua mentoria' : 'Esta parte não está liberada'}</b><p>${c.__eu ? `Se quiser acesso a <b>${esc(atual || (nomeArea || {}).n || 'esta tela')}</b>, fale com o seu mentor.` : `${esc(nomeCurto(c.nome))} não vê <b>${esc(atual || (nomeArea || {}).n || 'esta tela')}</b>. Libere em <b>${typeof mtDB === 'function' && mtDB().some(x => x.id === c.id) ? 'Mentoria' : 'Equipe'}</b>, no menu ${esc((nomeArea || {}).n || '')}.`}</p></div>`;
     if (bq._h !== _h){ bq.innerHTML = _h; bq._h = _h; }
   } else if (bq) bq.remove();
 }
@@ -62151,7 +62153,7 @@ function eqAplicarVisao(){
   let pend = false;
   new MutationObserver(ms => {
     if (pend || !ms.some(m => m.addedNodes.length || m.type === 'attributes')) return;
-    pend = true; queueMicrotask(() => { pend = false; botao(); if (_eqVendo) eqAplicarVisao(); });
+    pend = true; queueMicrotask(() => { pend = false; botao(); if (_eqVendo || window._mtSou) eqAplicarVisao(); });
   }).observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
 })();
 </script>
@@ -80061,5 +80063,592 @@ div.sec-cab.st-cab{ display:block !important; }
   setTimeout(() => { try { aplicar(); } catch(e){} }, 800);
 })();
 </script>
+<style id="mt-css">
+/* ══ MENTORIA: área do mentorado (15/11/2026) ════════════════════════════════════
+   Pedido do Jadiel: "uma página para o cliente de Mentoria configurada como a do
+   colaborador, com login para acessar". Mesmo desenho da Equipe; a cor é o verde
+   da bússola do Método ROTA. */
+.trilho-dir .tb-mt{ margin-top:6px; }
+/* rótulo dos botões da barra da direita no mesmo tamanho dos da esquerda (o de Equipe saía com 16px) */
+.trilho-dir .tb-eq > span, .trilho-dir .tb-mt > span{ font-family:var(--f-b); font-size:calc(11px * var(--esc)); font-weight:500; letter-spacing:0; line-height:1.3; white-space:nowrap; }
+html.eq-vendo:not(.mt-mentorado) .trilho-dir .tb-mt{ display:none !important; }
+.mt .dr-painel::before{ background:linear-gradient(90deg, #10A97A, #0EA5E9, #3D7BF0, #F0A429); }
+.mt .eq-cab::before{ background:radial-gradient(closest-side, color-mix(in srgb, #10A97A 26%, transparent), transparent); }
+.mt .eq-selo{ background:linear-gradient(145deg, #10A97A, #0E8F8A); box-shadow:0 10px 24px -8px #10A97A; }
+.mt .eq-perfis{ grid-template-columns:repeat(4, minmax(0,1fr)); }
+.mt .eq-acoes{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
+.mt .eq-acoes .bt{ min-width:0; padding-left:6px; padding-right:6px; white-space:nowrap; }
+.mt .eq-acoes .bt svg{ flex:none; }
+.mt-pagina{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px 14px; padding:14px 16px; margin-bottom:16px; border-radius:16px;
+  border:1px solid color-mix(in srgb, #10A97A 35%, var(--fio)); background:linear-gradient(135deg, color-mix(in srgb, #10A97A 9%, var(--sup-1)), var(--sup-1)); }
+.mt-pagina b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
+.mt-pagina small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.45; margin-top:2px; }
+.mt-link{ display:block; margin-top:8px; font:600 calc(12.5px * var(--esc)) ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--jade); overflow-wrap:anywhere; }
+.mt-pagina-bts{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.mt-ajustes{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px 12px; grid-column:1 / -1; padding-top:12px; border-top:1px dashed var(--fio); }
+.mt-ajustes .campo{ margin:0; }
+.mt-chave{ grid-column:1 / -1; display:flex; align-items:flex-start; gap:10px; font-size:calc(13px * var(--esc)); color:var(--giz); cursor:pointer; }
+.mt-chave input{ margin-top:3px; accent-color:#10A97A; width:16px; height:16px; flex:none; }
+.mt-chave small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:2px; line-height:1.45; }
+.mt-sit{ display:flex; flex-direction:column; gap:4px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.mt-sit span{ display:flex; align-items:center; gap:7px; }
+.mt-sit span::before{ content:''; width:7px; height:7px; border-radius:50%; flex:none; background:var(--fio-forte); }
+.mt-sit .ok::before{ background:var(--jade); box-shadow:0 0 6px var(--jade); }
+.mt-sit .alerta{ color:var(--ouro); } .mt-sit .alerta::before{ background:var(--ouro); }
+.mt-sit .ruim{ color:var(--rubi, #EF4B3F); } .mt-sit .ruim::before{ background:var(--rubi, #EF4B3F); }
+.mt-pend{ display:inline-flex; align-self:flex-start; gap:6px; align-items:center; font-size:calc(11.5px * var(--esc)); color:var(--ouro); }
+.mt-validade{ display:flex; flex-direction:column; gap:8px; }
+.mt-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+.mt-chips button{ all:unset; cursor:pointer; padding:5px 11px; border-radius:99px; border:1px solid var(--fio); font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.mt-chips button:hover{ color:var(--giz); border-color:color-mix(in srgb, #10A97A 45%, var(--fio)); }
+.mt-chips button.on{ color:var(--jade); border-color:color-mix(in srgb, #10A97A 55%, transparent); background:color-mix(in srgb, #10A97A 12%, transparent); font-weight:600; }
+.mt-convite{ white-space:pre-wrap; margin:0; padding:14px 16px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz);
+  font:calc(13.5px * var(--esc))/1.6 var(--f-b, inherit); }
+.mt-ok{ text-align:center; padding:6px 0 16px; }
+.mt-ok .eq-selo{ width:60px; height:60px; border-radius:18px; margin:0 auto 12px; }
+.mt-ok .eq-selo svg{ width:30px; height:30px; }
+.mt-ok b{ display:block; font-size:calc(17px * var(--esc)); color:var(--giz); }
+.mt-ok p{ margin:6px auto 0; max-width:460px; color:var(--grafite); font-size:calc(13.5px * var(--esc)); line-height:1.5; }
+@media (max-width:760px){ .mt .eq-perfis{ grid-template-columns:repeat(2, minmax(0,1fr)); } .mt-ajustes{ grid-template-columns:minmax(0,1fr); } }
+@media (max-width:620px){ .mt-pagina{ grid-template-columns:minmax(0,1fr); } .mt-pagina-bts{ justify-content:stretch; } .mt-pagina-bts .bt{ flex:1 1 auto; justify-content:center; } }
+
+/* o mentorado: cartão "Minha mentoria" no topo do Meu perfil */
+.mt-meu{ display:grid; grid-template-columns:46px minmax(0,1fr); gap:12px 14px; align-items:center; padding:16px; margin-bottom:18px; border-radius:16px;
+  border:1px solid color-mix(in srgb, #10A97A 40%, var(--fio)); background:linear-gradient(135deg, color-mix(in srgb, #10A97A 11%, var(--sup-1)), var(--sup-1)); }
+.mt-meu .eq-selo{ background:linear-gradient(145deg, #10A97A, #0E8F8A); box-shadow:0 10px 24px -8px #10A97A; }
+.mt-meu b{ display:block; color:var(--giz); font-size:calc(15px * var(--esc)); }
+.mt-meu small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:2px; line-height:1.45; }
+.mt-meu-bts{ grid-column:1 / -1; display:flex; gap:8px; flex-wrap:wrap; }
+.mt-meu-bts .bt{ flex:1 1 180px; justify-content:center; }
+
+/* a página de entrada do mentorado (mesma tela de entrar, outra roupa) */
+#contaTela.mt-entrada .ct-marca{ background:linear-gradient(160deg, color-mix(in srgb, #10A97A 22%, var(--sup-1)), var(--sup-1) 70%); }
+#contaTela.mt-entrada .ct-marca h1{ letter-spacing:-.01em; }
+#contaTela.mt-entrada .ct-marca li svg{ stroke:var(--jade); }
+.mt-selo-entrada{ display:inline-flex; align-items:center; gap:8px; margin-bottom:12px; padding:5px 12px 5px 6px; border-radius:99px; font-size:calc(12px * var(--esc)); font-weight:700; letter-spacing:.04em;
+  color:var(--jade); background:color-mix(in srgb, #10A97A 13%, transparent); border:1px solid color-mix(in srgb, #10A97A 40%, transparent); }
+.mt-selo-entrada i{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(145deg, #10A97A, #0E8F8A); }
+.mt-selo-entrada svg{ width:13px; height:13px; fill:none; stroke:#fff; stroke-width:2.2; }
+.mt-bloq-ic{ width:56px; height:56px; border-radius:18px; display:grid; place-items:center; margin-bottom:14px; background:color-mix(in srgb, var(--ouro) 15%, transparent); }
+.mt-bloq-ic svg{ width:28px; height:28px; fill:none; stroke:var(--ouro); stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.mt-bloq-bts{ display:flex; flex-direction:column; gap:10px; margin-top:18px; }
+.mt-bloq-bts .bt{ justify-content:center; }
+</style>
+<script id="mt-js">
+/* ══ MENTORIA: área do mentorado (15/11/2026) ═════════════════════════════════════
+   O mentor (dono da Torre) cadastra cada mentorado pelo e-mail e escolhe o que
+   ele vê, menu por menu, igual à Equipe. O cadastro sobe para o servidor
+   (tabela torre_mentoria). O mentorado entra pela página da mentoria
+   (endereço da Torre com ?mentoria), cria a própria senha e passa a usar a
+   Torre com os PRÓPRIOS dados, só nas partes liberadas. As promoções do mentor
+   chegam numa vitrine (tabela torre_vitrine) que só mentorado ativo e dentro da
+   validade consegue ler: quem garante isso são as regras do banco, não a tela. */
+(function(){
+  const sp = document.getElementById('i-chave'); if (!sp || document.getElementById('i-bussola')) return;
+  sp.parentNode.insertAdjacentHTML('beforeend', '<symbol id="i-bussola" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></symbol>');
+})();
+const MT_PERFIS = {
+  completa:{n:'Mentoria completa', d:'Cuida da própria carteira, acúmulo, cartões e viagens. Vê as suas promoções.', ic:'#i-bussola', cor:'#10A97A',
+    r:{'inicio|*':'viea', 'carteira|*':'viea', 'acumular|*':'viea', 'viagens|*':'viea', 'cartoes|*':'viea', 'promocoes|*':'v', 'promocoes|Lista de desejos':'viea'}},
+  carteira:{n:'Carteira e promoções', d:'Registra contas e saldos e acompanha as promoções.', ic:'#i-carteira', cor:'#F0A429',
+    r:{'inicio|Painel de bordo':'v', 'carteira|*':'viea', 'promocoes|*':'v'}},
+  promocoes:{n:'Só promoções', d:'Vê as promoções que você selecionou. Não registra nada.', ic:'#i-fogo', cor:'#EF4B3F',
+    r:{'promocoes|*':'v'}},
+  livre:{n:'Personalizado', d:'Você escolhe, parte por parte, na lista abaixo.', ic:'#i-ajustes', cor:'#E5488F', r:{}}
+};
+const MT_CACHE = 'torre-mentoria-acesso';
+let _mtEd = null, _mtServ = {estado:null, erro:'', acessos:{}};
+window._mtSou = null;
+function mtDB(){ if (!Array.isArray(DB.mentorados)) DB.mentorados = []; return DB.mentorados; }
+function mtCfg(){
+  DB.cfg = DB.cfg || {};
+  if (!DB.cfg.mentoria || typeof DB.cfg.mentoria !== 'object') DB.cfg.mentoria = {};
+  const c = DB.cfg.mentoria;
+  if (c.nome == null) c.nome = 'Mentoria ROTA';
+  if (c.vitMural == null) c.vitMural = true;
+  if (!Array.isArray(c.apagar)) c.apagar = [];
+  return c;
+}
+function mtNomeMentor(){ const c = mtCfg(); if (c.mentorNome) return c.mentorNome; const p = (DB.cfg && DB.cfg.perfil) || {}; if (p.nome) return p.nome; const d = typeof contaDoDono === 'function' ? contaDoDono() : null; return d ? d.nome : ''; }
+function mtHoje(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function mtData(iso){ if (!iso) return ''; const [a, m, d] = String(iso).slice(0, 10).split('-'); return `${d}/${m}/${a}`; }
+function mtSituacao(m){ if (!m || m.ativo === false) return 'pausado'; if (m.validade && String(m.validade).slice(0, 10) < mtHoje()) return 'vencido'; return 'ativo'; }
+function mtSomaMeses(n){ const d = new Date(); d.setMonth(d.getMonth() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function mtPermsDoPerfil(pk){
+  const p = MT_PERFIS[pk] || MT_PERFIS.livre, P = {};
+  eqCatalogo().forEach(a => a.itens.forEach(n => { const r = p.r[a.k + '|' + n] != null ? p.r[a.k + '|' + n] : p.r[a.k + '|*']; if (r) P[a.k + '|' + n] = r; }));
+  return P;
+}
+function mtPaginaMentoria(){ return /[?&]mentoria\b/.test(location.search); }
+function mtLinkPagina(){ return location.origin + location.pathname + '?mentoria'; }
+function mtZapDigitos(z){ let d = String(z || '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; return d.length >= 12 ? d : ''; }
+function mtAcessoTexto(iso){
+  if (!iso) return '';
+  const d = new Date(iso); if (isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+function mtSemTabela(r){ return r && (r.status === 404 || /PGRST205|PGRST202|42P01|42883|does not exist|schema cache/i.test(JSON.stringify(r.j || ''))); }
+
+/* ── servidor: o mentor envia o cadastro ──────────────────────────────────────── */
+function mtLinha(m){
+  const c = mtCfg(), s = contaSessao();
+  return {mentor_id:s.user.id, email:m.email, nome:m.nome, zap:m.zap || null, turma:m.turma || null, perfil:m.perfil || null, perms:m.perms || {},
+          ativo:m.ativo !== false, validade:m.validade || null, mentoria:c.nome || 'Mentoria', mentor_nome:mtNomeMentor() || null, mentor_zap:c.zap || null};
+}
+let _mtEnviando = null;
+function mtEnviarPendentes(){
+  if (_mtEnviando) return _mtEnviando;
+  _mtEnviando = (async () => {
+    if (!contaAtiva() || window._mtSou) return false;
+    const c = mtCfg(); let mudou = false;
+    if (_mtServ.estado === 'falta' || _mtServ.estado === 'semrede') _mtServ.estado = null;
+    try {
+      for (const em of c.apagar.slice()){
+        const r = await contaRest('DELETE', `/rest/v1/torre_mentoria?mentor_id=eq.${contaSessao().user.id}&email=eq.${encodeURIComponent(em)}`);
+        if (r.ok){ c.apagar = c.apagar.filter(x => x !== em); mudou = true; }
+        else if (mtSemTabela(r)){ _mtServ.estado = 'falta'; break; }
+      }
+      for (const m of mtDB().filter(x => x.pend)){
+        if (_mtServ.estado === 'falta') break;
+        if (m.emailServ && m.emailServ !== m.email && !c.apagar.includes(m.emailServ)){
+          await contaRest('DELETE', `/rest/v1/torre_mentoria?mentor_id=eq.${contaSessao().user.id}&email=eq.${encodeURIComponent(m.emailServ)}`);
+        }
+        const r = await contaRest('POST', '/rest/v1/torre_mentoria?on_conflict=mentor_id,email', mtLinha(m), 'resolution=merge-duplicates,return=minimal');
+        if (r.ok){ m.pend = false; m.emailServ = m.email; mudou = true; _mtServ.estado = 'ok'; _mtServ.erro = ''; }
+        else if (mtSemTabela(r)){ _mtServ.estado = 'falta'; break; }
+        else { _mtServ.estado = 'erro'; _mtServ.erro = contaTraduz(r); }
+      }
+    } catch(e){ _mtServ.estado = e.semRede ? 'semrede' : 'erro'; _mtServ.erro = e.message || ''; }
+    if (mudou) salvar();
+    return mudou;
+  })();
+  return _mtEnviando.finally(() => { _mtEnviando = null; });
+}
+async function mtBuscarAcessos(){
+  if (!contaAtiva() || window._mtSou) return;
+  try {
+    const r = await contaRest('GET', `/rest/v1/torre_mentoria?select=email,ultimo_acesso&mentor_id=eq.${contaSessao().user.id}`);
+    if (r.ok){ _mtServ.acessos = {}; (r.j || []).forEach(x => _mtServ.acessos[x.email] = x.ultimo_acesso || ''); if (_mtServ.estado !== 'erro') _mtServ.estado = 'ok'; }
+    else if (mtSemTabela(r)) _mtServ.estado = 'falta';
+  } catch(e){ if (e.semRede) _mtServ.estado = 'semrede'; }
+}
+
+/* ── servidor: a vitrine de promoções que os mentorados leem ──────────────────── */
+const MT_PESSOAL = ['carrinho', 'obs', 'nota', 'notas', 'semPrazoConf', 'semPrazoConferida', 'lida', 'voto', 'contaId', 'contas', 'feito', 'usei'];
+function mtVitrineDados(){
+  const c = mtCfg(), limpa = o => { const x = Object.assign({}, o); MT_PESSOAL.forEach(k => delete x[k]); return x; };
+  return {v:1, campanhas:(DB.campanhas || []).map(limpa), mural:c.vitMural === false ? [] : (DB.mural || []).map(limpa), lojas:(DB.lojas || []).map(limpa)};
+}
+function mtMarca(t){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return t.length + ':' + h; }
+let _mtVitT = null;
+async function mtVitrineEnviar(forcar){
+  if (!contaAtiva() || window._mtSou) return false;
+  if (!mtDB().some(m => mtSituacao(m) === 'ativo')) return false;
+  const dados = JSON.stringify(mtVitrineDados()), marca = mtMarca(dados), k = 'torre-vitrine-marca-' + contaSessao().user.id;
+  if (!forcar){ try { if (localStorage.getItem(k) === marca) return false; } catch(_){} }
+  try {
+    const r = await contaRest('POST', '/rest/v1/torre_vitrine?on_conflict=mentor_id', {mentor_id:contaSessao().user.id, dados}, 'resolution=merge-duplicates,return=minimal');
+    if (r.ok){ try { localStorage.setItem(k, marca); } catch(_){} return true; }
+    if (mtSemTabela(r)) _mtServ.estado = 'falta';
+  } catch(_){}
+  return false;
+}
+(function(){
+  const _s = salvar;
+  salvar = function(){
+    const v = _s.apply(this, arguments);
+    try {
+      if (!window._mtSou && contaAtiva() && Array.isArray(DB.mentorados) && DB.mentorados.length){
+        if (!_mtVitT) _mtVitT = setTimeout(() => { _mtVitT = null; mtEnviarPendentes(); mtVitrineEnviar(); }, 5000);
+      }
+    } catch(_){}
+    return v;
+  };
+})();
+
+/* ── a janela do mentor ───────────────────────────────────────────────────────── */
+function mtAvatar(m, cls = ''){ return `<span class="eq-av ${cls}" style="--pc:${(MT_PERFIS[m.perfil] || MT_PERFIS.livre).cor}">${esc(iniciaisDe(m.nome))}</span>`; }
+function abrirMentoria(){
+  const d = _janela('dlgMentoria', 'eq mt');
+  _mtEd = null; mtDesenharLista(d);
+  if (!d.open){ d.showModal(); travarFundo(true); }
+  if (contaAtiva()) Promise.all([mtEnviarPendentes(), mtBuscarAcessos()]).then(() => { if (d.open && !_mtEd) mtDesenharLista(d, true); });
+}
+function mtCab(tit, sub){
+  const ms = mtDB(), at = ms.filter(m => mtSituacao(m) === 'ativo').length, entraram = ms.filter(m => _mtServ.acessos[m.email]).length;
+  return `<div class="eq-cab"><div class="eq-cab-l"><span class="eq-selo"><svg><use href="#i-bussola"/></svg></span>
+      <div><h2>${tit}</h2><p>${sub}</p></div></div>
+    <div class="eq-stats"><span class="eq-stat"><b>${ms.length}</b>${ms.length === 1 ? 'mentorado' : 'mentorados'}</span><span class="eq-stat"><b>${at}</b>${at === 1 ? 'com acesso' : 'com acesso'}</span>${ms.length ? `<span class="eq-stat"><b>${entraram}</b>${entraram === 1 ? 'já entrou' : 'já entraram'}</span>` : ''}</div></div>`;
+}
+function mtNotaServidor(){
+  if (!contaLigada() || !contaAtiva()) return `<div class="eq-nota"><svg><use href="#i-info"/></svg><span><b>Falta conectar a Torre à sua conta.</b> Os cadastros ficam guardados aqui, mas o mentorado só consegue entrar depois que você entrar com e-mail e senha.</span></div>`;
+  if (_mtServ.estado === 'falta') return `<div class="eq-nota"><svg><use href="#i-alerta"/></svg><span><b>O servidor ainda não tem a parte da mentoria.</b> Os cadastros ficam guardados aqui e sobem sozinhos assim que ela for ligada. Até lá, o mentorado ainda não consegue entrar.</span></div>`;
+  if (_mtServ.estado === 'erro') return `<div class="eq-nota"><svg><use href="#i-alerta"/></svg><span><b>Não deu para enviar ao servidor agora.</b> ${esc(_mtServ.erro || '')} A Torre tenta de novo sozinha.</span></div>`;
+  if (_mtServ.estado === 'semrede') return `<div class="eq-nota"><svg><use href="#i-alerta"/></svg><span><b>Sem internet agora.</b> Os cadastros sobem sozinhos quando a conexão voltar.</span></div>`;
+  return `<div class="eq-nota"><svg><use href="#i-info"/></svg><span><b>Como funciona:</b> cada mentorado entra pela página da mentoria com o e-mail cadastrado aqui e cria a própria senha. Os dados dele são só dele; as suas promoções chegam até ele sozinhas. O botão <span class="eq-bt-falso" aria-hidden="true"><svg><use href="#i-olho"/></svg>Ver Como</span> mostra a Torre exatamente como ele vê.</span></div>`;
+}
+function mtDesenharLista(d, semAnimar){
+  d = d || document.getElementById('dlgMentoria'); if (!d) return;
+  const ms = mtDB().slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR')), c = mtCfg();
+  const sit = m => {
+    const s = mtSituacao(m), ac = _mtServ.acessos[m.email];
+    const l1 = s === 'pausado' ? '<span class="ruim">Acesso pausado</span>' : s === 'vencido' ? `<span class="ruim">Acesso terminou em ${mtData(m.validade)}</span>`
+      : m.validade ? `<span class="ok">Acesso até ${mtData(m.validade)}</span>` : '<span class="ok">Acesso sem data para terminar</span>';
+    const l2 = ac ? `<span class="ok">Último acesso ${esc(mtAcessoTexto(ac))}</span>` : (_mtServ.estado === 'ok' && !m.pend ? '<span class="alerta">Ainda não entrou</span>' : '');
+    return `<div class="mt-sit">${l1}${l2}</div>${m.pend ? '<span class="mt-pend"><svg style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-relogio"/></svg>Aguardando envio ao servidor</span>' : ''}`;
+  };
+  d.innerHTML = `<div class="dr-painel">${mtCab('Mentoria', 'Seus mentorados, o que cada um vê e a página por onde eles entram.')}
+    <div class="dr-corpo"><div class="${semAnimar ? '' : 'eq-vista'}">
+    <div class="mt-pagina">
+      <div><b>Página de entrada dos mentorados</b><small>Mande este endereço para o mentorado. Ele entra com o e-mail cadastrado aqui.</small><span class="mt-link" id="mtLink">${esc(mtLinkPagina())}</span></div>
+      <div class="mt-pagina-bts"><button type="button" class="bt p fantasma" id="mtCopiarLink"><svg><use href="#i-copiar"/></svg>Copiar o endereço</button></div>
+      <div class="mt-ajustes">
+        <div class="campo"><label>Nome da mentoria</label><input type="text" id="mtNomeMent" value="${esc(c.nome || '')}" placeholder="ex.: Mentoria ROTA"></div>
+        <div class="campo"><label>Seu nome <span class="fraco">como o mentorado vê</span></label><input type="text" id="mtNomeMentor" value="${esc(c.mentorNome || '')}" placeholder="${esc(mtNomeMentor() || 'Seu nome')}"></div>
+        <div class="campo"><label>Seu WhatsApp <span class="fraco">para ele falar com você</span></label><input type="text" inputmode="tel" id="mtZapMentor" value="${esc(c.zap || '')}" placeholder="(71) 9 9999-9999"></div>
+        <label class="mt-chave"><input type="checkbox" id="mtVitMural"${c.vitMural !== false ? ' checked' : ''}><span>Mostrar também o Mural de ofertas aos mentorados
+          <small>As campanhas sempre vão. O Mural leva os anúncios que você grava; desligue se eles vierem de grupos pagos que não permitem repassar.</small></span></label>
+      </div>
+    </div>
+    ${ms.length ? `<div class="eq-grade">${ms.map(m => {
+      const pf = MT_PERFIS[m.perfil] || MT_PERFIS.livre, ar = eqResumoAreas(m);
+      return `<div class="eq-card${mtSituacao(m) !== 'ativo' ? ' pausado' : ''}" style="--pc:${pf.cor}" data-id="${esc(m.id)}">
+        <div class="eq-quem">${mtAvatar(m)}<div><b>${esc(m.nome)}</b><small>${esc(m.email)}${m.turma ? ' · ' + esc(m.turma) : ''}</small></div></div>
+        <span class="eq-perfil"><svg><use href="${pf.ic}"/></svg>${esc(pf.n)}</span>
+        ${sit(m)}
+        <div class="eq-areas">${ar.length ? ar.map(x => `<span>${esc(x)}</span>`).join('') : '<span class="nada">Ainda sem acesso a nenhum menu</span>'}</div>
+        <div class="eq-acoes"><button type="button" class="bt p fantasma" data-mt="editar"><svg><use href="#i-lapis"/></svg>Editar</button>
+          <button type="button" class="bt p fantasma" data-mt="convite"><svg><use href="#i-link"/></svg>Convite</button>
+          <button type="button" class="bt p fantasma" data-mt="vercomo"><svg><use href="#i-olho"/></svg>Ver Como</button></div></div>`; }).join('')}</div>`
+    : `<div class="eq-vazio"><span class="eq-selo"><svg><use href="#i-bussola"/></svg></span><b>Sua mentoria começa aqui</b>
+        <p>Cadastre cada mentorado com o e-mail dele. Em um toque você escolhe o que ele vê; depois manda o convite pelo WhatsApp com o endereço da página de entrada.</p>
+        <button type="button" class="bt primario" data-mt="novo"><svg><use href="#i-mais"/></svg>Cadastrar o primeiro mentorado</button></div>`}
+    ${mtNotaServidor()}
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo sair" onclick="document.getElementById('dlgMentoria').close()">Fechar</button><span class="esticar"></span>
+      ${ms.length ? `<button type="button" class="bt primario" data-mt="novo"><svg><use href="#i-mais"/></svg>Novo mentorado</button>` : ''}</footer></div>`;
+  d.querySelectorAll('[data-mt="novo"]').forEach(b => b.onclick = () => mtEditar(null));
+  d.querySelectorAll('.eq-card').forEach(card => {
+    const id = card.dataset.id;
+    card.querySelector('[data-mt="editar"]').onclick = () => mtEditar(id);
+    card.querySelector('[data-mt="convite"]').onclick = () => mtConvite(id);
+    card.querySelector('[data-mt="vercomo"]').onclick = () => { d.close(); eqVerComo(id); };
+  });
+  d.querySelector('#mtCopiarLink').onclick = () => mtCopiar(mtLinkPagina(), 'Endereço copiado.');
+  const marcarTodos = () => { mtDB().forEach(m => m.pend = true); salvar(); };
+  d.querySelector('#mtNomeMent').onchange = e => { c.nome = e.target.value.trim() || 'Mentoria'; marcarTodos(); };
+  d.querySelector('#mtNomeMentor').onchange = e => { c.mentorNome = e.target.value.trim(); marcarTodos(); };
+  d.querySelector('#mtZapMentor').onchange = e => { c.zap = e.target.value.trim(); marcarTodos(); };
+  d.querySelector('#mtVitMural').onchange = e => { c.vitMural = e.target.checked; salvar(); };
+}
+async function mtCopiar(t, msg){
+  try { await navigator.clipboard.writeText(t); avisar(msg, 'ok'); }
+  catch(_){ const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); avisar(msg, 'ok'); } catch(e){} a.remove(); }
+}
+function mtEditar(id){
+  const d = document.getElementById('dlgMentoria'); if (!d) return;
+  const orig = id ? mtDB().find(m => m.id === id) : null;
+  _mtEd = orig ? JSON.parse(JSON.stringify(orig)) : {id:'', nome:'', email:'', zap:'', turma:'', perfil:'', ativo:true, validade:mtSomaMeses(6), perms:{}};
+  const e = _mtEd; _eqEd = e;
+  const chip = (k, t) => `<button type="button" data-val="${k}">${t}</button>`;
+  d.innerHTML = `<div class="dr-painel">${mtCab(orig ? 'Editar mentorado' : 'Novo mentorado', orig ? esc(orig.nome) : 'Três passos: quem é a pessoa, até quando entra e o que ela vê.')}
+    <div class="dr-corpo"><div class="eq-vista">
+      <div class="eq-tit">1 · Quem é</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Nome completo</label><input type="text" id="mtNome" value="${esc(e.nome)}" placeholder="ex.: Ana Paula Souza" autocomplete="off"></div>
+        <div class="campo"><label>E-mail <span class="fraco">é com ele que a pessoa entra</span></label><input type="text" inputmode="email" autocapitalize="off" spellcheck="false" id="mtEmail" value="${esc(e.email)}" placeholder="ana@email.com" autocomplete="off"></div>
+        <div class="campo"><label>WhatsApp <span class="fraco">para mandar o convite</span></label><input type="text" inputmode="tel" id="mtZap" value="${esc(e.zap || '')}" placeholder="(71) 9 9999-9999"></div>
+        <div class="campo"><label>Turma ou plano <span class="fraco">opcional</span></label><input type="text" id="mtTurma" value="${esc(e.turma || '')}" placeholder="ex.: Turma de março"></div>
+      </div>
+      <div class="eq-tit">2 · Até quando entra</div>
+      <div class="mt-validade">
+        <div class="mt-chips" id="mtChips">${chip('3', '3 meses')}${chip('6', '6 meses')}${chip('12', '1 ano')}${chip('', 'Sem data para terminar')}</div>
+        <div class="eq-campos"><div class="campo"><label>Último dia de acesso</label><input type="date" id="mtValidade" value="${esc(e.validade || '')}"></div></div>
+      </div>
+      <div class="eq-tit">3 · O que vê</div>
+      <div class="eq-perfis">${Object.entries(MT_PERFIS).map(([k, p]) => `<button type="button" class="eq-pf${e.perfil === k ? ' on' : ''}" data-pf="${k}" style="--pc:${p.cor}">
+        <span class="ic"><svg><use href="${p.ic}"/></svg></span><b>${p.n}</b><small>${p.d}</small></button>`).join('')}</div>
+      <div class="eq-tit">Menu por menu <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:500">· toque para ligar ou desligar</span></div>
+      <div class="eq-matriz" id="eqMatriz"></div>
+      ${orig ? `<div class="eq-tit">Situação</div><div class="eq-seg" id="mtAtivo"><button type="button" data-n="tudo" data-at="1" class="${e.ativo !== false ? 'on' : ''}">Ativo</button><button type="button" data-n="nada" data-at="0" class="${e.ativo === false ? 'on' : ''}">Pausado</button></div>` : ''}
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="mtVoltar">Fechar</button>
+      ${orig ? `<button type="button" class="bt vermelho-solido" id="mtExcluir"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}<span class="esticar"></span>
+      <button type="button" class="bt primario" id="mtSalvar"><svg><use href="#i-ok"/></svg>${orig ? 'Salvar' : 'Cadastrar'}</button></footer></div>`;
+  eqDesenharMatriz();
+  const val = d.querySelector('#mtValidade'), chips = d.querySelector('#mtChips');
+  const marcaChip = () => chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.val === '' ? !val.value : false));
+  chips.querySelectorAll('button').forEach(b => b.onclick = () => { val.value = b.dataset.val ? mtSomaMeses(Number(b.dataset.val)) : ''; marcaChip(); });
+  val.oninput = marcaChip; marcaChip();
+  d.querySelectorAll('.eq-pf').forEach(b => b.onclick = () => {
+    e.perfil = b.dataset.pf; d.querySelectorAll('.eq-pf').forEach(x => x.classList.toggle('on', x === b));
+    if (e.perfil !== 'livre') e.perms = mtPermsDoPerfil(e.perfil);
+    eqDesenharMatriz(true);
+  });
+  const at = d.querySelector('#mtAtivo');
+  if (at) at.querySelectorAll('button').forEach(b => b.onclick = () => { e.ativo = b.dataset.at === '1'; at.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
+  d.querySelector('#mtVoltar').onclick = () => { _mtEd = null; mtDesenharLista(d); };
+  d.querySelector('#mtSalvar').onclick = () => mtSalvar(orig);
+  const ex = d.querySelector('#mtExcluir');
+  if (ex) ex.onclick = () => { d.close(); confirmar(`Excluir ${orig.nome} da mentoria?`, `${esc(orig.nome)} deixa de entrar na página da mentoria. Os dados que ele guardou continuam na conta dele.`, () => {
+    const c = mtCfg(); if (orig.emailServ && !c.apagar.includes(orig.emailServ)) c.apagar.push(orig.emailServ);
+    DB.mentorados = mtDB().filter(m => m.id !== orig.id); salvar(); if (_eqVendo === orig.id) eqSairVisao();
+    avisar(`${esc(orig.nome)} saiu da mentoria.`, 'ok'); mtEnviarPendentes(); abrirMentoria(); }, 'Excluir', true); };
+  setTimeout(() => { const n = d.querySelector('#mtNome'); if (n && !orig) n.focus(); }, 60);
+}
+function mtSalvar(orig){
+  const d = document.getElementById('dlgMentoria'), e = _mtEd;
+  const nome = d.querySelector('#mtNome').value.trim().replace(/\s+/g, ' '), email = d.querySelector('#mtEmail').value.trim().toLowerCase();
+  if (nome.length < 3) return erroNoCampo(d.querySelector('#mtNome'), 'Escreva o nome da pessoa.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return erroNoCampo(d.querySelector('#mtEmail'), 'Escreva um e-mail válido: é por ele que a pessoa vai entrar.');
+  if (mtDB().some(m => m.id !== (orig && orig.id) && String(m.email).toLowerCase() === email)) return erroNoCampo(d.querySelector('#mtEmail'), 'Já existe um mentorado com este e-mail.');
+  const meu = contaAtiva() ? String((contaSessao().user || {}).email || '').toLowerCase() : '';
+  if (meu && email === meu) return erroNoCampo(d.querySelector('#mtEmail'), 'Este é o e-mail da sua própria conta. Use o e-mail do mentorado.');
+  if (!e.perfil){ const pf = d.querySelector('.eq-perfis'); pf.scrollIntoView({block:'center', behavior:'smooth'}); pf.animate([{transform:'translateX(0)'}, {transform:'translateX(-6px)'}, {transform:'translateX(6px)'}, {transform:'translateX(0)'}], {duration:300}); avisar('Escolha o que a pessoa vai ver: toque em um dos quatro jeitos.', 'alerta'); return; }
+  Object.assign(e, {nome, email, zap:d.querySelector('#mtZap').value.trim(), turma:d.querySelector('#mtTurma').value.trim(), validade:d.querySelector('#mtValidade').value || '', pend:true});
+  if (orig){ const i = mtDB().findIndex(m => m.id === orig.id); e.alterado = Date.now(); DB.mentorados[i] = e; }
+  else { e.id = uid(); e.criado = Date.now(); e.ativo = true; mtDB().push(e); }
+  salvar(); _mtEd = null; _eqEd = null;
+  mtEnviarPendentes().then(() => { const dd = document.getElementById('dlgMentoria'); if (dd && dd.open && !_mtEd && !dd.querySelector('.mt-convite')) mtDesenharLista(dd, true); });
+  if (_eqVendo === e.id) eqAplicarVisao();
+  if (orig){ avisar(`${esc(nome)}: acesso atualizado.`, 'ok', 4500); mtDesenharLista(d); }
+  else mtConvite(e.id, true);
+}
+function mtTextoConvite(m){
+  const c = mtCfg(), pn = String(m.nome || '').split(' ')[0];
+  return `Olá, ${pn}! Seu acesso à ${c.nome || 'mentoria'} está liberado.\n\n1. Abra este endereço: ${mtLinkPagina()}\n2. Toque em "Primeiro acesso: criar senha" e use este e-mail: ${m.email}\n3. Confirme o e-mail pelo link que vai chegar e entre com a sua senha.\n\n${m.validade ? `Seu acesso vale até ${mtData(m.validade)}.\n\n` : ''}Qualquer dúvida, é só me chamar aqui.`;
+}
+function mtConvite(id, novo){
+  const d = document.getElementById('dlgMentoria'), m = mtDB().find(x => x.id === id); if (!d || !m) return;
+  const txt = mtTextoConvite(m), z = mtZapDigitos(m.zap);
+  d.innerHTML = `<div class="dr-painel">${mtCab('Convite', esc(m.nome))}
+    <div class="dr-corpo"><div class="eq-vista">
+      ${novo ? `<div class="mt-ok"><span class="eq-selo"><svg><use href="#i-ok"/></svg></span><b>${esc(nomeCurto(m.nome))} entrou na mentoria</b><p>Agora mande o convite. Ele explica onde entrar e qual e-mail usar.</p></div>` : ''}
+      <div class="eq-tit">A mensagem</div>
+      <pre class="mt-convite" id="mtConviteTxt">${esc(txt)}</pre>
+      ${z ? '' : `<div class="eq-nota"><svg><use href="#i-info"/></svg><span>Sem WhatsApp no cadastro: copie a mensagem e mande por onde preferir.</span></div>`}
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="mtConvVoltar">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt fantasma" id="mtConvCopiar"><svg><use href="#i-copiar"/></svg>Copiar a mensagem</button>
+      ${z ? `<a class="bt primario" id="mtConvZap" href="https://wa.me/${z}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir no WhatsApp</a>` : ''}</footer></div>`;
+  d.querySelector('#mtConvVoltar').onclick = () => mtDesenharLista(d);
+  d.querySelector('#mtConvCopiar').onclick = () => mtCopiar(txt, 'Mensagem copiada.');
+}
+/* botão na barra fixa da direita, logo abaixo da Equipe */
+(function(){
+  function botao(){
+    const nav = document.querySelector('.trilho-dir .trilho-nav'); if (!nav || nav.querySelector('.tb-mt')) return;
+    const eq = nav.querySelector('.tb-eq');
+    const h = `<button type="button" class="tb tb-mt" onclick="window._mtSou ? mtAbrirMinha() : abrirMentoria()" data-dica="Mentoria: seus mentorados e a página por onde eles entram" data-dica-lado="esquerda" aria-label="Mentoria"><svg><use href="#i-bussola"/></svg><span>Mentoria</span></button>`;
+    if (eq) eq.insertAdjacentHTML('afterend', h); else nav.insertAdjacentHTML('afterbegin', h);
+  }
+  botao();
+  let pend = false;
+  new MutationObserver(ms => {
+    if (pend || !ms.some(m => m.addedNodes.length)) return;
+    pend = true; queueMicrotask(() => { pend = false; botao(); });
+  }).observe(document.documentElement, {childList:true, subtree:true});
+})();
+
+/* ── o mentorado ──────────────────────────────────────────────────────────────── */
+function mtCacheLer(){ try { return JSON.parse(localStorage.getItem(MT_CACHE) || 'null'); } catch(_){ return null; } }
+function mtCacheGravar(uid, row){ try { localStorage.setItem(MT_CACHE, JSON.stringify({uid, row, quando:Date.now()})); } catch(_){} }
+function mtCacheApagar(){ try { localStorage.removeItem(MT_CACHE); } catch(_){} }
+let _mtVerif = null;
+function mtVerificar(){
+  if (_mtVerif) return _mtVerif;
+  _mtVerif = (async () => {
+    if (!contaLigada() || !contaAtiva()) return;
+    const s = contaSessao(), email = String(s.user.email || '').toLowerCase();
+    let row = null, falta = false, semRede = false;
+    try {
+      const r = await contaRest('GET', `/rest/v1/torre_mentoria?select=*&email=eq.${encodeURIComponent(email)}`);
+      if (r.ok) row = (r.j || []).find(x => x.mentor_id !== s.user.id) || null;
+      else if (mtSemTabela(r)) falta = true;
+      else semRede = true;
+    } catch(e){ if (e.saiu) return; semRede = true; }
+    if (semRede){
+      const c = mtCacheLer(); row = c && c.uid === s.user.id ? c.row : null;
+      if (row) mtAplicarLinha(row);
+      return;
+    }
+    if (row) mtCacheGravar(s.user.id, row); else mtCacheApagar();
+    mtAplicarLinha(row, falta);
+    if (row && mtSituacao(row) === 'ativo'){
+      contaRest('POST', '/rest/v1/rpc/torre_mentoria_entrei', {}).catch(() => {});
+      mtVitrineBaixar();
+    }
+  })();
+  return _mtVerif.finally(() => { _mtVerif = null; });
+}
+function mtAplicarLinha(row, falta){
+  if (!row){
+    if (window._mtSou) mtSairModo();
+    if (mtPaginaMentoria()) mtTelaBloqueio(falta ? 'preparando' : 'naoliberado');
+    return;
+  }
+  const sit = mtSituacao(row);
+  if (sit !== 'ativo'){ mtSairModo(true); mtTelaBloqueio(sit, row); return; }
+  const tela = document.getElementById('contaTela'); if (tela && tela.classList.contains('mt-bloq')) contaFecharTela();
+  mtEntrarModo(row);
+}
+function mtEntrarModo(row){
+  const ja = !!window._mtSou;
+  window._mtSou = {id:'__mentorado', __eu:true, nome:row.nome, email:row.email, perfil:row.perfil || 'livre', perms:row.perms || {}, row};
+  try { DB.cfg = DB.cfg || {}; const p = DB.cfg.perfil || {}; if (!p.nome){ DB.cfg.perfil = Object.assign({}, p, {nome:row.nome, email:p.email || row.email}); salvar(); if (typeof pintarAvatar === 'function') pintarAvatar(); } } catch(_){}
+  document.documentElement.classList.add('eq-vendo', 'mt-mentorado');
+  const tb = document.querySelector('.trilho-dir .tb-mt'); if (tb) tb.dataset.dica = 'Minha mentoria: seu acesso e o contato do seu mentor';
+  if (typeof eqAplicarVisao === 'function') eqAplicarVisao();
+  if (!ja){
+    const p = window._eqParte, pode = !p || !p.key || eqTem(window._mtSou, p.key, 'v');
+    const bq = document.getElementById('eqBloq');
+    if (!pode || bq){ const pri = eqPrimeiraParte(window._mtSou); if (pri) eqIrPara(pri); }
+  }
+}
+function mtSairModo(manterTela){
+  if (!window._mtSou) return;
+  window._mtSou = null;
+  document.documentElement.classList.remove('mt-mentorado');
+  if (!_eqVendo){
+    document.documentElement.classList.remove('eq-vendo', 'eq-sem-i', 'eq-sem-e', 'eq-sem-a');
+    document.querySelectorAll('.eq-oculto').forEach(x => x.classList.remove('eq-oculto'));
+    const bq = document.getElementById('eqBloq'); if (bq) bq.remove();
+  }
+}
+/* traz as promoções do mentor: as que vieram dele trocam pelas novas; as que o
+   mentorado guardou por conta própria ficam. Lido/votado do mentorado continua. */
+async function mtVitrineBaixar(){
+  if (!window._mtSou || !contaAtiva()) return false;
+  const row = window._mtSou.row;
+  try {
+    const r = await contaRest('GET', `/rest/v1/torre_vitrine?select=dados,atualizado&mentor_id=eq.${encodeURIComponent(row.mentor_id)}`);
+    if (!r.ok || !r.j || !r.j.length) return false;
+    const k = 'torre-vitrine-lida-' + contaSessao().user.id;
+    let ult = null; try { ult = localStorage.getItem(k); } catch(_){}
+    if (ult === String(r.j[0].atualizado)) return false;
+    const v = contaDesembrulha(r.j[0].dados) || {};
+    ['campanhas', 'mural', 'lojas'].forEach(col => {
+      const deles = Array.isArray(v[col]) ? v[col] : [], meus = (DB[col] || []).filter(x => !x._mt), antes = {};
+      (DB[col] || []).filter(x => x._mt).forEach(x => antes[x.id] = x);
+      const ids = new Set(meus.map(x => String(x.id)));
+      DB[col] = meus.concat(deles.map(x => {
+        const n = Object.assign({}, x, {_mt:1}); if (ids.has(String(n.id))) n.id = 'mt-' + n.id;
+        const a = antes[n.id]; if (a) ['lida', 'voto', 'carrinho', 'semPrazoConf'].forEach(p => { if (a[p] != null) n[p] = a[p]; });
+        return n;
+      }));
+    });
+    salvar();
+    try { localStorage.setItem(k, String(r.j[0].atualizado)); } catch(_){}
+    try { aplicarTudo(); } catch(_){}
+    return true;
+  } catch(_){ return false; }
+}
+setInterval(() => { if (window._mtSou && document.visibilityState !== 'hidden') mtVitrineBaixar(); }, 10 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (window._mtSou && document.visibilityState === 'visible') mtVitrineBaixar(); });
+
+/* "Minha mentoria": no topo do Meu perfil e no botão da barra da direita */
+function mtMeuCartao(){
+  const r = (window._mtSou || {}).row; if (!r) return '';
+  const z = mtZapDigitos(r.mentor_zap);
+  return `<div class="mt-meu"><span class="eq-selo"><svg><use href="#i-bussola"/></svg></span>
+    <div><b>${esc(r.mentoria || 'Mentoria')}</b><small>${r.mentor_nome ? 'Com ' + esc(r.mentor_nome) + ' · ' : ''}${r.validade ? 'Acesso até ' + mtData(r.validade) : 'Acesso sem data para terminar'}${r.turma ? ' · ' + esc(r.turma) : ''}</small></div>
+    <div class="mt-meu-bts">${z ? `<a class="bt fantasma p" href="https://wa.me/${z}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Falar com ${esc(nomeCurto(r.mentor_nome || 'o mentor'))}</a>` : ''}
+      <button type="button" class="bt fantasma p" onclick="fecharFolha(); contaTrocarSenha()"><svg><use href="#i-chave"/></svg>Trocar a senha</button></div></div>`;
+}
+function mtAbrirMinha(){ abrirPerfil(); }
+(function(){
+  const _o = abrirPerfil;
+  abrirPerfil = function(){
+    const v = _o.apply(this, arguments);
+    if (window._mtSou){ const t = document.querySelector('.perfil-topo'); if (t && !t.parentElement.querySelector('.mt-meu')) t.insertAdjacentHTML('beforebegin', mtMeuCartao()); }
+    return v;
+  };
+})();
+
+/* ── a página de entrada (?mentoria) ──────────────────────────────────────────── */
+function mtVestirEntrada(modo){
+  const el = document.getElementById('contaTela'); if (!el || el.classList.contains('mt-bloq')) return;
+  el.classList.add('mt-entrada');
+  const marca = el.querySelector('.ct-marca');
+  if (marca && !marca.querySelector('.mt-selo-entrada')){
+    const h1 = marca.querySelector('h1'); if (h1){ h1.insertAdjacentHTML('beforebegin', '<span class="mt-selo-entrada"><i><svg><use href="#i-bussola"/></svg></i>MENTORIA</span>'); h1.textContent = 'Área do Mentorado'; }
+    const lema = marca.querySelector('.ct-lema'); if (lema) lema.textContent = 'Sua jornada com milhas, com acompanhamento.';
+    const ul = marca.querySelector('ul');
+    if (ul) ul.innerHTML = `<li><svg><use href="#i-ok"/></svg><span><b>Promoções selecionadas</b> pelo seu mentor, com a conta feita.</span></li>
+      <li><svg><use href="#i-ok"/></svg><span><b>Sua carteira</b>, com saldos e vencimentos só seus.</span></li>
+      <li><svg><use href="#i-ok"/></svg><span><b>No celular e no computador</b>, com o mesmo e-mail e senha.</span></li>`;
+    const pe = marca.querySelector('.ct-pe'); if (pe) pe.innerHTML = 'Acesso liberado pelo seu mentor.<br>Use o e-mail que você informou na mentoria.';
+  }
+  const T = {entrar:['Entrar na mentoria', 'Use o e-mail cadastrado na mentoria e a sua senha.', 'Entrar'],
+    criar:['Primeiro acesso', 'Use o mesmo e-mail que você passou para o seu mentor e crie uma senha de pelo menos 6 caracteres. Vamos enviar um link para confirmar o e-mail.', 'Criar minha senha']};
+  const t = T[modo];
+  if (t){
+    const h2 = el.querySelector('.ct-form h2'), sub = el.querySelector('.ct-sub'), bt = el.querySelector('#ctBotao');
+    if (h2) h2.textContent = t[0]; if (sub) sub.textContent = t[1];
+    if (bt){ bt.textContent = t[2]; const o = new MutationObserver(() => { if (!bt.disabled && bt.textContent !== t[2]) bt.textContent = t[2]; }); o.observe(bt, {attributes:true, attributeFilter:['disabled']}); }
+  }
+  el.querySelectorAll('.ct-link[data-ir="criar"]').forEach(b => b.textContent = 'Primeiro acesso: criar senha');
+}
+(function(){
+  const _ct = contaTela;
+  contaTela = function(modo){
+    const v = _ct.apply(this, arguments);
+    const el = document.getElementById('contaTela'); if (el) el.classList.remove('mt-bloq', 'mt-entrada');
+    if (mtPaginaMentoria()) mtVestirEntrada(modo || 'entrar');
+    return v;
+  };
+})();
+/* sem acesso: a mesma tela de entrar, com o motivo e o caminho */
+function mtTelaBloqueio(tipo, row){
+  let el = document.getElementById('contaTela');
+  if (!el){ el = document.createElement('div'); el.id = 'contaTela'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
+  document.documentElement.classList.add('conta-fora');
+  el.classList.add('mt-bloq', 'mt-entrada');
+  const s = contaSessao() || {user:{}}, z = row ? mtZapDigitos(row.mentor_zap) : '', quem = row && row.mentor_nome ? nomeCurto(row.mentor_nome) : 'o seu mentor';
+  const M = {
+    naoliberado:['Seu e-mail ainda não está liberado', `Você entrou com <b>${esc(s.user.email || '')}</b>, mas este e-mail não está na lista da mentoria. Confira se é o mesmo e-mail que você passou para o seu mentor, ou peça para ele liberar.`],
+    pausado:['Seu acesso está pausado', `O acesso à ${esc((row && row.mentoria) || 'mentoria')} foi pausado. Fale com ${esc(quem)} para reativar.`],
+    vencido:['Seu acesso terminou', `O acesso à ${esc((row && row.mentoria) || 'mentoria')} terminou em <b>${row ? mtData(row.validade) : ''}</b>. Fale com ${esc(quem)} para renovar.`],
+    preparando:['A área da mentoria ainda está sendo preparada', 'Seu mentor ainda está ligando esta parte. Tente de novo mais tarde.']
+  };
+  const m = M[tipo] || M.naoliberado;
+  el.innerHTML = `<div class="ct-caixa">
+    <div class="ct-marca">${contaLogoVem() ? `<div class="ct-vem">${contaLogoVem()}</div>` : `<div class="ct-logo"><svg><use href="#i-escudo"/></svg></div>`}
+      <span class="mt-selo-entrada"><i><svg><use href="#i-bussola"/></svg></i>MENTORIA</span><h1>Área do Mentorado</h1><p class="ct-lema">Sua jornada com milhas, com acompanhamento.</p></div>
+    <div class="ct-form" id="mtBloq" data-tipo="${tipo}">
+      <span class="mt-bloq-ic"><svg><use href="#i-${tipo === 'preparando' ? 'relogio' : 'alerta'}"/></svg></span>
+      <h2>${m[0]}</h2><p class="ct-sub">${m[1]}</p>
+      <div class="mt-bloq-bts">
+        ${z ? `<a class="bt primario" href="https://wa.me/${z}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Falar com ${esc(quem)}</a>` : ''}
+        <button type="button" class="bt ${z ? 'fantasma' : 'primario'}" id="mtBloqDeNovo"><svg><use href="#i-atualizar"/></svg>Tentar de novo</button>
+        <button type="button" class="bt fantasma" id="mtBloqSair"><svg><use href="#i-sair"/></svg>Sair e entrar com outro e-mail</button>
+      </div></div></div>`;
+  el.querySelector('#mtBloqDeNovo').onclick = async ev => { ev.currentTarget.disabled = true; await mtVerificar(); const b = document.getElementById('mtBloqDeNovo'); if (b) b.disabled = false; };
+  el.querySelector('#mtBloqSair').onclick = () => mtSairJa();
+}
+/* sair sem a pergunta (a pergunta fica escondida atrás desta tela) */
+async function mtSairJa(){
+  try { if (nuvemCfg().marca !== assinaturaDados(DB) && nuvemCfg().sha) await nuvemSincronizar(false); } catch(_){}
+  window.__contaSaindo = true;
+  try { clearTimeout(salvarPendente); } catch(_){}
+  try { await contaApi('/auth/v1/logout?scope=local', {method:'POST', token:(contaSessao() || {}).access_token}); } catch(_){}
+  ['torre-cofre-lembrar', CONTA_SESSAO, CONTA_DONO, CONTA_TRAZER, CHAVE, MT_CACHE].forEach(k => { try { localStorage.removeItem(k); } catch(_){} });
+  location.reload();
+}
+
+/* ── ligações com o resto da Torre ────────────────────────────────────────────── */
+(function(){
+  const _p = contaPronta;
+  contaPronta = function(){ const v = _p.apply(this, arguments); setTimeout(() => { mtVerificar(); mtEnviarPendentes(); }, 0); return v; };
+  /* aparelho já conectado: aplica o que estava guardado antes mesmo da internet responder */
+  const ir = () => {
+    if (!contaLigada() || !contaAtiva()) return;
+    const c = mtCacheLer(), s = contaSessao();
+    if (c && c.row && s && c.uid === s.user.id) mtAplicarLinha(c.row);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ir); else ir();
+})();
+</script>
+
 </body>
 </html>
