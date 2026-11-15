@@ -76069,6 +76069,7 @@ function abrirMudarPlano(id){
 .prv-tira{ position:absolute; top:-6px; right:-6px; height:22px; min-width:22px; padding:0 6px; border-radius:11px; border:none; background:#c8364b; color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.4); }
 .prv-tira svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; }
 .prv-ausente{ opacity:.65; }
+.prv-herdado small{ color:var(--ouro, #c9a227); font-weight:600; }
 .prv-limpar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--fraco, #8a94a6); }
 .prv-limpar .bt{ margin-left:auto; }
 .prv-pop .dck-pop-corpo{ display:flex; align-items:center; justify-content:center; padding:12px; }
@@ -76245,15 +76246,19 @@ function abrirMudarPlano(id){
     desenharGrade(box);
   }
   const itensDe = dono => dono.indexOf('tmp:') === 0 ? (TMP[dono] || []) : ((DB.provas || {})[dono] || []);
+  /* prints que vêm de outro lugar (ex.: a Prova da viagem mostra os prints dos trechos, 15/11/2026):
+     aparecem na caixa, mas só se apagam lá na origem */
+  const extrasDe = dono => { try { return typeof window.prvExtras === 'function' ? (window.prvExtras(dono) || []) : []; } catch(e){ return []; } };
+  const todosDe = dono => { const proprios = itensDe(dono), v = new Set(proprios.map(x => x.id)); return extrasDe(dono).filter(x => !v.has(x.id)).concat(proprios); };
 
   async function desenharGrade(box){
-    const dono = box.dataset.prv, its = itensDe(dono), g = box.querySelector('.prv-grade');
+    const dono = box.dataset.prv, its = todosDe(dono), g = box.querySelector('.prv-grade');
     const n = box.querySelector('.prv-n'); n.textContent = its.length; n.hidden = !its.length;
-    g.innerHTML = its.map(it => `<div class="prv-it" data-id="${esc(it.id)}">
+    g.innerHTML = its.map(it => `<div class="prv-it${it._de ? ' prv-herdado' : ''}" data-id="${esc(it.id)}">
       <button type="button" class="prv-ver" data-prv-ver="${esc(it.id)}" aria-label="Ver ${esc(it.n)}" title="${esc(it.n)}">
         <span class="prv-ic">${it.t === 'link' ? ELO + esc(plataforma(it.url)) : it.t === 'vid' ? FILME + 'Vídeo' : CLIPE + 'Print'}</span></button>
-      <button type="button" class="prv-tira" data-prv-tira="${esc(it.id)}" aria-label="Apagar esta prova" title="Apagar esta prova">${X}</button>
-      <small>${esc(it.t === 'link' ? plataforma(it.url) : it.kb ? kb(it.kb * 1024) : '')}</small></div>`).join('');
+      ${it._de ? '' : `<button type="button" class="prv-tira" data-prv-tira="${esc(it.id)}" aria-label="Apagar esta prova" title="Apagar esta prova">${X}</button>`}
+      <small${it._de ? ` title="Vem da Prova do trecho ${esc(it._de)}. Para apagar, abra a prova desse trecho."` : ''}>${esc(it._de ? it._de : it.t === 'link' ? plataforma(it.url) : it.kb ? kb(it.kb * 1024) : '')}</small></div>`).join('');
     for (const it of its){
       if (it.t === 'link') continue;
       const el = g.querySelector(`[data-prv-ver="${CSS.escape(it.id)}"]`); if (!el) continue;
@@ -76267,7 +76272,7 @@ function abrirMudarPlano(id){
   function removerItem(box, id){
     const dono = box.dataset.prv;
     if (dono.indexOf('tmp:') === 0) TMP[dono] = (TMP[dono] || []).filter(x => x.id !== id);
-    else { const l = lista(dono); const i = l.findIndex(x => x.id === id); if (i >= 0) l.splice(i, 1); if (!l.length) delete DB.provas[dono]; salvar(); atualizarFora(); }
+    else { const l = lista(dono); const i = l.findIndex(x => x.id === id); if (i < 0) return; l.splice(i, 1); if (!l.length) delete DB.provas[dono]; salvar(); atualizarFora(); }
     arqApaga(id).catch(() => {});
     desenharGrade(box);
   }
@@ -76276,7 +76281,7 @@ function abrirMudarPlano(id){
   let pop = null, fundo = null, urlAberta = '';
   const fecharVer = () => { if (pop){ pop.remove(); pop = null; } if (fundo){ fundo.remove(); fundo = null; } if (urlAberta){ URL.revokeObjectURL(urlAberta); urlAberta = ''; } };
   async function ver(box, id){
-    const it = itensDe(box.dataset.prv).find(x => x.id === id); if (!it) return;
+    const it = todosDe(box.dataset.prv).find(x => x.id === id); if (!it) return;
     if (it.t === 'link'){ window.open(it.url, '_blank', 'noopener'); return; }
     let rec = null; try{ rec = await arqPor(id); }catch(e){}
     if (!rec){ avisar('Esta prova foi guardada em outro aparelho. Abra a Torre nele para ver.', 'alerta', 5000); return; }
@@ -76446,7 +76451,7 @@ function abrirMudarPlano(id){
     });
   }
   window.prvAtualizarFora = atualizarFora;
-  window.prvRedesenhar = box => desenharGrade(box);
+  window.prvRedesenhar = box => box ? desenharGrade(box) : document.querySelectorAll('.prv').forEach(b => desenharGrade(b));
   /* guardar arquivos direto numa lista de provas, sem caixa na tela (prints
      lidos por um leitor da Torre) */
   window.prvGuardar = async function(dono, files){
@@ -76715,6 +76720,15 @@ function abrirMudarPlano(id){
   const CFG = (p, tid) => tid ? ((p.provaT = p.provaT || {})[tid] = p.provaT[tid] || {}) : (p.prova = p.prova || {});
   const chaveP = (pid, tid) => tid ? pid + ':' + tid : pid;
   const acharP = pid => (DB.planos || []).find(x => x.id === pid);
+  /* Prova da viagem = os prints dos trechos escolhidos + os anexados na própria viagem (15/11/2026) */
+  const doTrecho = (pid, k) => { const p = acharP(pid); if (!p || typeof trechosPainel !== 'function') return [];
+    const out = [], v = new Set();
+    trechosPainel(p).forEach(t => ((DB.provas || {})['prova:' + pid + ':' + t.id + ':' + k] || []).forEach(it => { if (!v.has(it.id)){ v.add(it.id); out.push(Object.assign({}, it, {_de:rotuloTrecho(t)})); } }));
+    return out; };
+  const listaEtapa = (pid, tid, k) => { const proprio = (DB.provas || {})['prova:' + chaveP(pid, tid) + ':' + k] || [];
+    if (tid) return proprio;
+    const v = new Set(proprio.map(x => x.id)); return doTrecho(pid, k).filter(x => !v.has(x.id)).concat(proprio); };
+  window.prvExtras = dono => { const m = /^prova:([^:]+):(compra|espelho|upgrade|mercado)$/.exec(dono || ''); return m ? doTrecho(m[1], m[2]) : []; };
 
   /* ── os números ── */
   function provaDados(p, tid){
@@ -77064,7 +77078,7 @@ ${caps.map(c => c.h).join('\n')}
     const out = {};
     for (const [k] of ETAPAS){
       out[k] = [];
-      for (const it of ((DB.provas || {})['prova:' + chaveP(pid, tid) + ':' + k] || [])){
+      for (const it of listaEtapa(pid, tid, k)){
         if (it.t !== 'img') continue;
         try { const r = typeof prvArq === 'function' ? await prvArq(it.id) : null; if (r && r.blob) out[k].push(await new Promise((ok, n) => { const f = new FileReader(); f.onload = () => ok(String(f.result)); f.onerror = n; f.readAsDataURL(r.blob); })); } catch(e){}
       }
@@ -77183,7 +77197,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
      arquivos ficam no aparelho onde foram anexados; só a lista vai para a nuvem */
   async function ausentesDe(pid, tid){
     let n = 0;
-    for (const [k] of ETAPAS) for (const it of ((DB.provas || {})['prova:' + chaveP(pid, tid) + ':' + k] || [])){
+    for (const [k] of ETAPAS) for (const it of listaEtapa(pid, tid, k)){
       if (it.t === 'link') continue;
       let r = null; try { r = typeof prvArq === 'function' ? await prvArq(it.id) : null; } catch(e){}
       if (!r || !r.blob) n++;
@@ -77267,7 +77281,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
             <div class="campo"><label>Em quantos meses</label><input type="number" min="1" max="36" id="pvMU" value="${mt.upgrade.meses || ''}" placeholder="opcional"></div></div></div>` : ''}
           ${D.ben.total > 0.004 ? `<label class="pv-chave"><input type="checkbox" id="pvMostrar"${mt.mostrar ? ' checked' : ''}><span><b>Mostrar o valor das metas</b><small>Mostra quanto foi gasto no cartão e quanto voltou a cada R$ 100. Desligado, a prova diz só que a meta foi batida.</small></span></label>` : '<p class="fraco" style="margin:0;font-size:13px">Nenhum trecho marca a cortesia ou o upgrade como vindos do cartão. Ajuste em cada trecho ("Como veio").</p>'}
         </div></div>
-      <div class="pv-sec"><h4>Os prints de cada etapa</h4><p class="fraco">Arraste os prints: entram na etapa certa e no capítulo final.</p><div class="nota aviso pv-ausentes" id="pvAusentes" hidden></div>
+      <div class="pv-sec"><h4>Os prints de cada etapa</h4><p class="fraco">${tid ? 'Arraste os prints: entram na etapa certa e no capítulo final.' : 'Os prints das provas dos trechos escolhidos já aparecem aqui, com o nome do trecho. Para apagar um deles, abra a prova do trecho. Se quiser, arraste outros prints só da viagem.'}</p><div class="nota aviso pv-ausentes" id="pvAusentes" hidden></div>
         <div class="pv-provas" id="pvProvas"></div>
         <p class="pv-aviso">Os prints vão como estão. Antes de publicar, confira se não aparecem CPF, e-mail ou localizador.</p></div>`,
       pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>
@@ -77293,6 +77307,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
       const num = s => { const e = document.querySelector(s); return e ? (/data-moeda/.test(e.outerHTML) ? moedaNum(e.value) : Number(e.value) || 0) : 0; };
       cf.metas = {espelho:{gasto:num('#pvGE'), meses:num('#pvME')}, upgrade:{gasto:num('#pvGU'), meses:num('#pvMU')}, mostrar:!!(document.getElementById('pvMostrar') || {}).checked};
       salvar(); resumo();
+      if (!tid){ try { window.prvRedesenhar(); provaAvisarAusentes(p.id, tid); } catch(e){} }
     };
     corpo.addEventListener('change', e => {
       const t = e.target.closest('[data-pv-t]');
@@ -81149,6 +81164,8 @@ async function rcComparar(d, lista, i, cab, pe){
 .ptr-it b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
 .ptr-it small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:2px; }
 .ptr-it .etq{ white-space:nowrap; }
+.ptr-todos{ background:transparent; border-style:dashed; padding:10px 14px; }
+.ptr-todos .ptr-cont{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); font-weight:600; white-space:nowrap; }
 .ptr-nota{ margin:14px 0 0; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.5; }
 </style>
 <script id="ptr-js">
@@ -81168,13 +81185,16 @@ function abrirTrechosPainel(pid){
   const p = (DB.planos || []).find(x => x.id === pid); if (!p) return;
   const todos = ordenarTrechos(trechosDe(p)), sel = new Set(trechosPainel(p).map(t => t.id));
   abrirFolha({titulo:'Trechos no painel', corpo:`<p class="fraco" style="margin:0 0 14px">Escolha os voos que contam a história da economia. Os outros continuam na viagem e na tabela de trechos.</p>
-    <div class="ptr-lista">${todos.map(t => { const e = economiaTrecho(t); return `<label class="ptr-it"><input type="checkbox" data-ptr="${esc(t.id)}"${sel.has(t.id) ? ' checked' : ''}>
+    <div class="ptr-lista"><label class="ptr-it ptr-todos"><input type="checkbox" id="ptrTodos"${sel.size === todos.length ? ' checked' : ''}><span><b>Todos os trechos</b><small>Marca ou desmarca a viagem inteira</small></span><span class="ptr-cont" id="ptrCont">${sel.size} de ${todos.length}</span></label>${todos.map(t => { const e = economiaTrecho(t); return `<label class="ptr-it"><input type="checkbox" data-ptr="${esc(t.id)}"${sel.has(t.id) ? ' checked' : ''}>
       <span><b>${esc(rotuloTrecho(t))}</b><small>${t.data ? dataBR(t.data) : 'sem data'}${t.forma === 'dinheiro' ? ' · Na Pagante' : ' · ' + esc(prog(t.prog).n)}</small></span>
       <span class="etq ${e.valor != null && e.valor >= 0 ? 'jade' : ''}">${e.valor == null ? 'a medir' : (e.valor < 0 ? '−' : '') + brl(Math.abs(e.valor))}</span></label>`; }).join('')}</div>
     <p class="ptr-nota">A mesma escolha vale para a Prova da viagem (link, apresentação, PDF e Instagram).</p>`,
-    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt fantasma" id="ptrTodos">Todos</button><button type="button" class="bt primario" id="ptrOk"><svg><use href="#i-ok"/></svg>Mostrar estes</button>`});
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt primario" id="ptrOk"><svg><use href="#i-ok"/></svg>Mostrar estes</button>`});
   const caixas = () => [...document.querySelectorAll('[data-ptr]')];
-  document.getElementById('ptrTodos').onclick = () => caixas().forEach(c => c.checked = true);
+  const tg = document.getElementById('ptrTodos');
+  const sinc = () => { const n = caixas().filter(c => c.checked).length; tg.checked = n === todos.length; tg.indeterminate = n > 0 && n < todos.length; document.getElementById('ptrCont').textContent = `${n} de ${todos.length}`; };
+  tg.onchange = () => { caixas().forEach(c => c.checked = tg.checked); sinc(); };
+  caixas().forEach(c => c.addEventListener('change', sinc)); sinc();
   document.getElementById('ptrOk').onclick = () => {
     const ids = caixas().filter(c => c.checked).map(c => c.dataset.ptr);
     if (!ids.length) return avisar('Escolha pelo menos um trecho.', 'alerta');
