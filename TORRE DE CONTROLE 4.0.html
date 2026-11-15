@@ -31104,18 +31104,29 @@ function renderTrechos(p){
   const faltaMercado = ts.length - comMercado.length;
   const cabVoo = [...new Set(ts.map(t => CABINES_TRECHO[t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica')]))].join(' e ');
   const ciasMercado = [...new Set(comMercado.map(m => m.cia).filter(Boolean))];
-  host.innerHTML = `${ts.length ? `<div class="ec-faixa">
+    /* o painel da economia mostra só os trechos escolhidos (os mesmos da Prova da viagem) */
+  const tsP = typeof trechosPainel === 'function' ? trechosPainel(p) : ts;
+  const pEco = soma(tsP.map(t => economiaTrecho(t).valor).filter(v => v != null));
+  const pComUp = tsP.filter(t => t.upgrade);
+  const pEcoAntes = soma(tsP.map(t => economiaTrechoBase(t).valor).filter(v => v != null));
+  const pCusto = soma(tsP.map(t => (custoTrechoReais(t) || 0) + (t.upgrade ? custoUpgradeReais(t) || 0 : 0)));
+  const pComMercado = tsP.map(economiaMercado).filter(Boolean);
+  const pEcoMercado = soma(pComMercado.map(m => m.valor));
+  const pFalta = tsP.length - pComMercado.length;
+  const pCab = [...new Set(tsP.map(t => CABINES_TRECHO[t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica')]))].join(' e ');
+  const pCias = [...new Set(pComMercado.map(m => m.cia).filter(Boolean))];
+  host.innerHTML = `${tsP.length ? `<div class="ec-faixa">
       <div class="ec-cab"><div class="ec-ico"><svg><use href="#i-aviao"/></svg></div>
-        <div class="ec-tit"><b>Economia da viagem</b><span>${cabVoo}${comUp.length ? ` · upgrade ${comUp.length === ts.length && ts.length > 1 ? 'em todos os trechos' : `em ${comUp.length} ${comUp.length === 1 ? 'trecho' : 'trechos'}`} por ${[...new Set(comUp.map(t => (ORIGENS_UPGRADE[t.upgrade.origem] || '').toLowerCase()))].filter(Boolean).join(', ')}` : ''}</span></div></div>
+        <div class="ec-tit"><b>Economia da viagem</b><span>${pCab}${pComUp.length ? ` · upgrade ${pComUp.length === tsP.length && tsP.length > 1 ? 'em todos os trechos' : `em ${pComUp.length} ${pComUp.length === 1 ? 'trecho' : 'trechos'}`} por ${[...new Set(pComUp.map(t => (ORIGENS_UPGRADE[t.upgrade.origem] || '').toLowerCase()))].filter(Boolean).join(', ')}` : ''}</span></div></div>
       <div class="ec-nums">
-        <div class="ec-n"><span>A viagem custou</span><b>${brl(custoTotal)}</b><em>passagens, taxas e milhas ao valor escolhido</em></div>
-        <div class="ec-n mesma"><span>Contra a mesma companhia</span><b class="${eco >= 0 ? 'jade' : 'brasa'}">${eco >= 0 ? '' : '−'}${brl(Math.abs(eco))}</b>
-          <em>${comUp.length ? `antes do upgrade ${brl(ecoAntes)} · o upgrade rendeu ${eco - ecoAntes >= 0 ? '+' : '−'}${brl(Math.abs(eco - ecoAntes))}` : 'o mesmo voo, pago em dinheiro'}</em></div>
+        <div class="ec-n"><span>A viagem custou</span><b>${brl(pCusto)}</b><em>passagens, taxas e milhas ao valor escolhido</em></div>
+        <div class="ec-n mesma"><span>Contra a mesma companhia</span><b class="${pEco >= 0 ? 'jade' : 'brasa'}">${pEco >= 0 ? '' : '−'}${brl(Math.abs(pEco))}</b>
+          <em>${pComUp.length ? `antes do upgrade ${brl(pEcoAntes)} · o upgrade rendeu ${pEco - pEcoAntes >= 0 ? '+' : '−'}${brl(Math.abs(pEco - pEcoAntes))}` : 'o mesmo voo, pago em dinheiro'}</em></div>
         <div class="ec-n mercado"><span>Contra o menor preço do mercado</span>
-          ${comMercado.length ? `<b class="${ecoMercado >= 0 ? 'jade' : 'brasa'}">${ecoMercado >= 0 ? '' : '−'}${brl(Math.abs(ecoMercado))}</b>
-            <em>${ciasMercado.length ? 'mais barata: ' + ciasMercado.join(', ') : 'Google Flights'}${faltaMercado ? ` · falta pesquisar ${faltaMercado} ${faltaMercado === 1 ? 'trecho' : 'trechos'}` : ''}</em>`
+          ${pComMercado.length ? `<b class="${pEcoMercado >= 0 ? 'jade' : 'brasa'}">${pEcoMercado >= 0 ? '' : '−'}${brl(Math.abs(pEcoMercado))}</b>
+            <em>${pCias.length ? 'mais barata: ' + pCias.join(', ') : 'Google Flights'}${pFalta ? ` · falta pesquisar ${pFalta} ${pFalta === 1 ? 'trecho' : 'trechos'}` : ''}</em>`
           : `<b class="ec-vazio">a pesquisar</b><em>toque na lupa de cada trecho</em>`}</div>
-      </div></div>${escadaEconomiaHTML(ts)}` : ''}<div class="cartao" style="padding:0;overflow:hidden">
+      </div></div>${escadaEconomiaHTML(tsP)}` : ''}<div class="cartao" style="padding:0;overflow:hidden">
     <div class="cartao-cab" style="padding:17px 20px 13px;margin:0;border-bottom:1px solid var(--fio-suave)">
       <h3 style="color:var(--anil-claro)">Trechos da viagem<div class="sub">Cada voo, com o que foi usado para pagar.<br>Chegar por uma cidade e voltar por outra, voos internos, e o trecho que saiu mais barato na pagante: tudo entra na conta.</div></h3>
       <button class="bt primario" onclick="editarTrecho()"><svg><use href="#i-mais"/></svg>Novo Trecho</button>
@@ -77367,10 +77378,11 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
     const r = o.apply(this, arguments);
     try {
       const host = document.getElementById('rtPlano'); if (!host || !p) return r;
-      const ts = ordenarTrechos(trechosDe(p)); if (!ts.length) return r;
+      const ts = typeof trechosPainel === 'function' ? trechosPainel(p) : ordenarTrechos(trechosDe(p)); if (!ts.length) return r;
+      const parte = ts.length < ordenarTrechos(trechosDe(p)).length;
       const E = etapasEconomia(ts);
       const html = `<div class="cartao tat" id="tatCx"><div class="tat-cab"><div><div class="olho anil" style="margin:0">Trecho a trecho</div><p>A economia de cada voo, separada. Somados, dão a economia da viagem.</p></div>
-        <span class="tat-soma">Viagem inteira <b>${E.total < 0 ? '−' : ''}${R(E.total)}</b></span></div>
+        <span class="tat-soma">${parte ? 'Trechos escolhidos' : 'Viagem inteira'} <b>${E.total < 0 ? '−' : ''}${R(E.total)}</b></span></div>
         <div class="tat-grade">${E.linhas.map((l, i) => cartaoTrecho(p, l, i)).join('')}</div></div>`;
       const ref = host.querySelector('.cartao.ee') || host.querySelector('.ec-faixa');
       if (ref) ref.insertAdjacentHTML('afterend', html);
@@ -81052,6 +81064,72 @@ async function rcComparar(d, lista, i, cab, pe){
     const v = _j.apply(this, arguments);
     try { const n = clubeTirarRepetidos(); if (n){ salvar(); try { aplicarTudo(); } catch(_){} if (assinaturaDados(DB) !== nuvemCfg().marca) setTimeout(() => { try { nuvemSincronizar(false); } catch(_){} }, 600); } } catch(_){}
     return v;
+  };
+})();
+</script>
+
+<style id="ptr-css">
+/* ══ TRECHOS DO PAINEL DA ECONOMIA (15/11/2026) ══ */
+.ec-cab .ptr-bt{ width:100%; justify-content:center; margin-top:10px; color:rgba(255,255,255,.88); border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.06); }
+.ec-cab .ptr-bt:hover{ background:rgba(255,255,255,.12); color:#fff; }
+.ec-cab .ptr-bt svg{ stroke:currentColor; }
+.ptr-lista{ display:flex; flex-direction:column; gap:8px; }
+.ptr-it{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); cursor:pointer; }
+.ptr-it input{ width:17px; height:17px; accent-color:var(--jade); }
+.ptr-it b{ display:block; color:var(--giz); font-size:calc(14px * var(--esc)); }
+.ptr-it small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:2px; }
+.ptr-it .etq{ white-space:nowrap; }
+.ptr-nota{ margin:14px 0 0; color:var(--grafite); font-size:calc(12.5px * var(--esc)); line-height:1.5; }
+</style>
+<script id="ptr-js">
+/* ══ TRECHOS DO PAINEL DA ECONOMIA (15/11/2026) ══════════════════════════════════
+   Pedido do Jadiel: no painel da economia (os números, a escada e o trecho a
+   trecho) mostrar só a ida e a volta, sem os voos internos. A escolha é a mesma
+   do "O que entra" da Prova da viagem: mudou num lugar, vale nos dois. A tabela
+   "Trechos da viagem" continua com todos, porque é onde a viagem é cuidada. */
+function trechosPainel(p){
+  const todos = ordenarTrechos(trechosDe(p));
+  const sel = p && p.prova && Array.isArray(p.prova.trechos) && p.prova.trechos.length ? p.prova.trechos : null;
+  if (!sel) return todos;
+  const f = todos.filter(t => sel.includes(t.id));
+  return f.length ? f : todos;
+}
+function abrirTrechosPainel(pid){
+  const p = (DB.planos || []).find(x => x.id === pid); if (!p) return;
+  const todos = ordenarTrechos(trechosDe(p)), sel = new Set(trechosPainel(p).map(t => t.id));
+  abrirFolha({titulo:'Trechos no painel', corpo:`<p class="fraco" style="margin:0 0 14px">Escolha os voos que contam a história da economia. Os outros continuam na viagem e na tabela de trechos.</p>
+    <div class="ptr-lista">${todos.map(t => { const e = economiaTrecho(t); return `<label class="ptr-it"><input type="checkbox" data-ptr="${esc(t.id)}"${sel.has(t.id) ? ' checked' : ''}>
+      <span><b>${esc(rotuloTrecho(t))}</b><small>${t.data ? dataBR(t.data) : 'sem data'}${t.forma === 'dinheiro' ? ' · Na Pagante' : ' · ' + esc(prog(t.prog).n)}</small></span>
+      <span class="etq ${e.valor != null && e.valor >= 0 ? 'jade' : ''}">${e.valor == null ? 'a medir' : (e.valor < 0 ? '−' : '') + brl(Math.abs(e.valor))}</span></label>`; }).join('')}</div>
+    <p class="ptr-nota">A mesma escolha vale para a Prova da viagem (link, apresentação, PDF e Instagram).</p>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt fantasma" id="ptrTodos">Todos</button><button type="button" class="bt primario" id="ptrOk"><svg><use href="#i-ok"/></svg>Mostrar estes</button>`});
+  const caixas = () => [...document.querySelectorAll('[data-ptr]')];
+  document.getElementById('ptrTodos').onclick = () => caixas().forEach(c => c.checked = true);
+  document.getElementById('ptrOk').onclick = () => {
+    const ids = caixas().filter(c => c.checked).map(c => c.dataset.ptr);
+    if (!ids.length) return avisar('Escolha pelo menos um trecho.', 'alerta');
+    p.prova = p.prova || {}; p.prova.trechos = ids.length === todos.length ? null : ids;
+    salvar(); fecharFolha();
+    try { renderPlano(); } catch(_){ try { renderTrechos(p); } catch(e){} }
+    avisar(ids.length === todos.length ? 'O painel mostra a viagem inteira.' : `O painel mostra ${ids.length} de ${todos.length} trechos.`, 'ok');
+  };
+}
+(function(){
+  const o = renderTrechos;
+  renderTrechos = function(p){
+    const r = o.apply(this, arguments);
+    try {
+      const cab = document.querySelector('#rtPlano .ec-cab'); if (!cab || !p) return r;
+      const n = ordenarTrechos(trechosDe(p)).length, k = trechosPainel(p).length;
+      if (n > 1 && !cab.querySelector('.ptr-bt')){
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'bt p fantasma ptr-bt';
+        b.innerHTML = `<svg><use href="#i-ajustes"/></svg>${k < n ? `Trechos no painel: ${k} de ${n}` : 'Trechos no painel: todos'}`;
+        b.setAttribute('data-dica', 'Escolher os trechos que aparecem no painel e na Prova da viagem');
+        b.onclick = () => abrirTrechosPainel(p.id);
+        const pv = cab.querySelector('.pv-bt-abrir'); if (pv) pv.after(b); else cab.appendChild(b);
+      }
+    } catch(e){ console.error(e); }
+    return r;
   };
 })();
 </script>
