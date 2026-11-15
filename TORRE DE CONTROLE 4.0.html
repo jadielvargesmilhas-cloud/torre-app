@@ -51787,13 +51787,14 @@ function vereditoHTML(m, compacto){
    vez por dia (dá para desligar no rodapé) e fica no botão "Resumo do dia" do
    Painel. Os avisos dele são os mesmos do Painel, com Já aproveitei, Lembrar
    depois e Não me interessa. */
-/* nome da saudação: o primeiro nome de quem usa a Torre (Meu perfil), senão o
-   titular, senão a primeira conta; com a primeira letra maiúscula e o resto minúsculo */
+/* nome da saudação: o de quem usa a Torre (Meu perfil), senão o titular, senão a
+   primeira conta; abreviado pela regra do sistema (nomeCurto) e escrito como foi
+   cadastrado (pedido do Jadiel, 15/11: "Normand Freire", "JADIEL VARGES") */
 function nomeSaudacao(){
   const pf = ((DB.cfg || {}).perfil || {}).nome;
   const t = (DB.contas || []).find(c => /^titular/i.test(c.papel || '')) || (DB.contas || [])[0];
-  const n = String(pf || (t && t.nome) || '').trim().split(/\s+/)[0] || '';
-  return n ? n.charAt(0).toLocaleUpperCase('pt-BR') + n.slice(1).toLocaleLowerCase('pt-BR') : '';
+  const n = String(pf || (t && t.nome) || '').trim();
+  return n ? nomeCurto(n) : '';
 }
 function rsNome(){ return nomeSaudacao(); }
 function rsMelhorOportunidade(){
@@ -80632,7 +80633,7 @@ function mtMeuCartao(){
   const r = (window._mtSou || {}).row; if (!r) return '';
   const z = mtZapDigitos(r.mentor_zap);
   return `<div class="mt-meu"><span class="eq-selo"><svg><use href="#i-bussola"/></svg></span>
-    <div><b>${esc(r.mentoria || 'Mentoria')}</b><small>${r.mentor_nome ? 'Com ' + esc(r.mentor_nome) + ' · ' : ''}${r.validade ? 'Acesso até ' + mtData(r.validade) : 'Acesso sem data para terminar'}${r.turma ? ' · ' + esc(r.turma) : ''}</small></div>
+    <div><b>${esc(r.mentoria || 'Mentoria')}</b><small>${r.mentor_nome ? 'Com ' + esc(nomeCurto(r.mentor_nome)) + ' · ' : ''}${r.validade ? 'Acesso até ' + mtData(r.validade) : 'Acesso sem data para terminar'}${r.turma ? ' · ' + esc(r.turma) : ''}</small></div>
     <div class="mt-meu-bts">${z ? `<a class="bt fantasma p" href="https://wa.me/${z}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Falar com ${esc(nomeCurto(r.mentor_nome || 'o mentor'))}</a>` : ''}
       <button type="button" class="bt fantasma p" onclick="fecharFolha(); contaTrocarSenha()"><svg><use href="#i-chave"/></svg>Trocar a senha</button></div></div>`;
 }
@@ -81192,6 +81193,7 @@ function abrirTrechosPainel(pid){
 .bv-selo i{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(145deg, #10A97A, #0E8F8A); }
 .bv-selo svg{ width:13px; height:13px; fill:none; stroke:#fff; stroke-width:2.2; }
 .bv-heroi h2{ margin:14px 0 6px; font-size:calc(26px * var(--esc)); letter-spacing:-.01em; }
+.bv-heroi p + p{ margin-top:4px; }
 .bv-heroi p{ margin:0; color:rgba(255,255,255,.78); font-size:calc(14px * var(--esc)); line-height:1.5; }
 .bv-tit{ margin:22px 0 10px; font-size:calc(12px * var(--esc)); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
 .bv-passos{ display:flex; flex-direction:column; gap:10px; }
@@ -81220,12 +81222,13 @@ function mtPassosBoasVindas(){
 }
 function mtAbrirBoasVindas(){
   const c = window._mtSou; if (!c) return;
-  const r = c.row || {}, nome = (typeof nomeSaudacao === 'function' && nomeSaudacao()) || String(c.nome || '').split(' ')[0];
+  const r = c.row || {}, nome = nomeCurto(c.nome || (typeof nomeSaudacao === 'function' && nomeSaudacao()) || '');
   const passos = mtPassosBoasVindas();
-  abrirFolha({titulo:'Boas-vindas', largura:'media', corpo:`<div class="bv-heroi">
+  abrirFolha({titulo:'Boas-vindas', largura:'larga', corpo:`<div class="bv-heroi">
       <span class="bv-selo"><i><svg><use href="#i-bussola"/></svg></i>${esc((r.mentoria || 'Mentoria').toUpperCase())}</span>
       <h2>Bem-vindo, ${esc(nome)}.</h2>
-      <p>Esta é a sua Torre de Controle${r.mentor_nome ? ', com o acompanhamento de ' + esc(r.mentor_nome) : ''}. Os seus dados são só seus.${r.validade ? ' Acesso até ' + mtData(r.validade) + '.' : ''}</p>
+      <p>Esta é a sua Torre de Controle${r.mentor_nome ? ', com o acompanhamento de ' + esc(nomeCurto(r.mentor_nome)) : ''}.</p>
+      <p>Os seus dados são só seus.${r.validade ? ' Acesso até ' + mtData(r.validade) + '.' : ''}</p>
     </div>
     ${passos.length ? `<div class="bv-tit">Para começar</div><div class="bv-passos">${passos.map((p, i) => `<button type="button" class="bv-passo" data-a="${p[0]}" data-n="${esc(p[1])}"><span class="bv-n">${i + 1}</span><span><b>${esc(p[2])}</b><small>${esc(p[3])}</small></span><svg class="seta"><use href="#i-seta-d"/></svg></button>`).join('')}</div>` : ''}`,
     pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>${passos.length ? '<button type="button" class="bt primario" id="bvComecar"><svg><use href="#i-ok"/></svg>Começar pelo passo 1</button>' : ''}`});
