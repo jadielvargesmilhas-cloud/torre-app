@@ -30807,9 +30807,17 @@ function milheiroDaBase(base, programa, outro){
   if (base === 'outro') return Math.max(Number(outro) || 0, custo || 0) || null;
   return custo != null ? custo : null;
 }
+/* REGRA DO SISTEMA PARA DINHEIRO (15/11/2026, pedido do Jadiel):
+   1) todo valor em reais é arredondado para centavos no momento em que nasce (por trecho, por item),
+      meio centavo para cima (0,005 vira 0,01), com a função centavos();
+   2) todo total é a soma dos valores JÁ arredondados, e nunca o arredondamento de uma soma de frações;
+   3) diferença = valor arredondado menos valor arredondado.
+   Assim qualquer soma conferida na tela, na calculadora ou por outra IA fecha no centavo.
+   Teste fixo: t515.py. */
+const centavos = v => v == null || !isFinite(v) ? v : Math.round((Number(v) + (v >= 0 ? 1 : -1) * 1e-9) * 100) / 100;
 function custoMilhasTrecho(milhas, programa){
   const c = (cpmPorPrograma() || {})[programa];
-  return c != null ? c * (Number(milhas) || 0) / 1000 : null;
+  return c != null ? centavos(c * (Number(milhas) || 0) / 1000) : null;
 }
 /* ── UPGRADE ──────────────────────────────────────────────────────────────────
    O trecho guarda os dois momentos. ANTES: a cabine comprada e a economia
@@ -30826,14 +30834,14 @@ function custoTrechoReais(t){
   if (t.forma === 'dinheiro') return pago;
   const mil = milheiroDaBase(t.baseMilheiro || 'custo', t.prog, t.milheiroOutro);
   if (mil == null) return null;
-  return pago + taxas + (Number(t.milhas) || 0) / 1000 * mil;
+  return centavos(pago + taxas + centavos((Number(t.milhas) || 0) / 1000 * mil));
 }
 function custoUpgradeReais(t){
   const u = t.upgrade || {}; const pg = u.prog || t.prog || t.altProg;
   const milhas = Number(u.milhas) || 0;
   const mil = milhas ? milheiroDaBase(t.baseMilheiro || 'custo', pg, t.milheiroOutro) : 0;
   if (milhas && mil == null) return null;
-  return (Number(u.dinheiro) || 0) + milhas / 1000 * (mil || 0);
+  return centavos((Number(u.dinheiro) || 0) + centavos(milhas / 1000 * (mil || 0)));
 }
 function economiaTrecho(t){
   if (!t.upgrade) return economiaTrechoBase(t);
@@ -30841,7 +30849,7 @@ function economiaTrecho(t){
   if (!(vistaUp > 0)) return {valor:null, nota:`Informe o preço da ${(CABINES_TRECHO[t.upgrade.cabine] || 'nova cabine').toLowerCase()} na pagante`};
   const c = custoTrechoReais(t), cu = custoUpgradeReais(t);
   if (c == null || cu == null) return {valor:null, nota:'Sem custo lançado no programa'};
-  return {valor:vistaUp - c - cu, nota:`${CABINES_TRECHO[t.upgrade.cabine] || 'Upgrade'}, com upgrade`};
+  return {valor:centavos(vistaUp - c - cu), nota:`${CABINES_TRECHO[t.upgrade.cabine] || 'Upgrade'}, com upgrade`};
 }
 /* Cortesia: passagem dada pelo benefício do cartão. Os preços das telas já vêm
    com ela descontada (paga-se uma, voam duas), então a economia da compra não
@@ -30879,7 +30887,7 @@ function economiaMercado(t){
   if (!m || !(Number(m.preco) > 0)) return null;
   const c = custoTrechoReais(t), cu = t.upgrade ? custoUpgradeReais(t) : 0;
   if (c == null || cu == null) return null;
-  return {valor:Number(m.preco) - c - cu, cia:m.cia || '', preco:Number(m.preco), cabine:voouCab};
+  return {valor:centavos(Number(m.preco) - c - cu), cia:m.cia || '', preco:Number(m.preco), cabine:voouCab};
 }
 /* Quanto a cortesia cobriu. Se o valor por pessoa foi informado (a tarifa do
    resumo da compra), vale ele. Se não, a Torre calcula pelo que os pagantes
@@ -30898,15 +30906,15 @@ function cortesiaCalculada(t, paxInformado){
     if (mil != null) porPessoa += (Number(t.milhas) || 0) / pagantes / 1000 * mil;
   }
   if (t.forma !== 'milhas') porPessoa += (Number(t.pago) || 0) / pagantes;
-  return qtd * porPessoa;
+  return centavos(qtd * centavos(porPessoa));
 }
-const cortesiaTrecho = t => (Number(t.cortesiaValor) || 0) > 0 ? (Number(t.cortesiaQtd) || 0) * Number(t.cortesiaValor) : cortesiaCalculada(t);
+const cortesiaTrecho = t => centavos((Number(t.cortesiaValor) || 0) > 0 ? (Number(t.cortesiaQtd) || 0) * Number(t.cortesiaValor) : cortesiaCalculada(t));
 function economiaTrechoBase(t){
   const e = economiaTrechoCompra(t);
   const c = cortesiaTrecho(t);
   if (!c || e.valor == null) return e;
   const como = {meta_cartao:'meta do cartão', beneficio_cartao:'benefício do cartão', companhia:'promoção da companhia'}[t.cortesiaOrigem] || '';
-  return {valor:e.valor + c, nota:`${e.nota} + cortesia${como ? ' (' + como + ')' : ''} ${brl(c)}`, cortesia:c};
+  return {valor:centavos(e.valor + c), nota:`${e.nota} + cortesia${como ? ' (' + como + ')' : ''} ${brl(c)}`, cortesia:c};
 }
 function economiaTrechoCompra(t){
   const pago = Number(t.pago) || 0, taxas = Number(t.taxas) || 0, vista = Number(t.vista) || 0;
@@ -30915,14 +30923,14 @@ function economiaTrechoCompra(t){
     if (!(Number(t.altMilhas) > 0)) return {valor:null, nota:'Informe quanto custaria em milhas para medir a economia'};
     const mil = milheiroDaBase(t.baseMilheiro || 'custo', t.altProg, t.milheiroOutro);
     if (mil == null) return {valor:null, nota:'Sem custo lançado no programa da alternativa'};
-    const cm = (Number(t.altMilhas) || 0) / 1000 * mil;
-    return {valor:cm + (Number(t.altTaxas) || 0) - pago, nota:'Na pagante'};
+    const cm = centavos((Number(t.altMilhas) || 0) / 1000 * mil);
+    return {valor:centavos(cm + (Number(t.altTaxas) || 0) - pago), nota:'Na pagante'};
   }
   if (!(vista > 0)) return {valor:null, nota:'Informe o preço do mesmo voo na pagante'};
   const milB = milheiroDaBase(t.baseMilheiro || 'custo', t.prog, t.milheiroOutro);
-  const cm = milB != null ? (Number(t.milhas) || 0) / 1000 * milB : null;
+  const cm = milB != null ? centavos((Number(t.milhas) || 0) / 1000 * milB) : null;
   if (cm == null) return {valor:null, nota:'Sem custo lançado no programa'};
-  return {valor:vista - taxas - pago - cm, nota:t.forma === 'misto' ? 'Milhas + valor pago' : 'Com milhas'};
+  return {valor:centavos(vista - taxas - pago - cm), nota:t.forma === 'misto' ? 'Milhas + valor pago' : 'Com milhas'};
 }
 function economiaJornada(p, antes){
   const ts = trechosDe(p);
@@ -31042,22 +31050,22 @@ function gastoDaViagem(ts){
     const e = porProg[pg] = porProg[pg] || {milhas:0, custo:0, semCusto:false};
     const mil = milheiroDaBase('custo', pg);
     e.milhas += qtd;
-    if (mil == null){ e.semCusto = true; if (!semCusto.includes(pg)) semCusto.push(pg); } else e.custo += qtd / 1000 * mil;
+    if (mil == null){ e.semCusto = true; if (!semCusto.includes(pg)) semCusto.push(pg); } else e.custo = centavos(e.custo + centavos(qtd / 1000 * mil));
   };
   comprados.forEach(t => {
     if (t.forma === 'dinheiro'){
       const tx = taxasDoTrechoDinheiro(t).v;
-      passagens += (Number(t.pago) || 0) - tx; taxas += tx;
+      passagens = centavos(passagens + (Number(t.pago) || 0) - tx); taxas = centavos(taxas + tx);
     } else {
       somaMilhas(t.prog, Number(t.milhas) || 0);
-      taxas += Number(t.taxas) || 0;
-      if (t.forma === 'misto') passagens += Number(t.pago) || 0;
+      taxas = centavos(taxas + (Number(t.taxas) || 0));
+      if (t.forma === 'misto') passagens = centavos(passagens + (Number(t.pago) || 0));
     }
-    if (t.upgrade){ passagens += Number(t.upgrade.dinheiro) || 0; somaMilhas(t.upgrade.prog || t.prog, Number(t.upgrade.milhas) || 0); }
+    if (t.upgrade){ passagens = centavos(passagens + (Number(t.upgrade.dinheiro) || 0)); somaMilhas(t.upgrade.prog || t.prog, Number(t.upgrade.milhas) || 0); }
   });
-  const milhasCusto = soma(Object.values(porProg).map(e => e.custo));
+  const milhasCusto = centavos(soma(Object.values(porProg).map(e => e.custo)));
   return {comprados:comprados.length, planejados:ts.length - comprados.length, porProg, passagens, taxas, milhasCusto,
-    total:milhasCusto + passagens + taxas, semCusto};
+    total:centavos(milhasCusto + passagens + taxas), semCusto};
 }
 function gastoAteAgoraHTML(p, ts){
   const G = gastoDaViagem(ts);
@@ -31358,15 +31366,15 @@ function etapasEconomia(ts){
     const cort = cortesiaTrecho(t) || 0;
     const antes = economiaTrechoBase(t).valor;
     const depois = economiaTrecho(t).valor;
-    const up = t.upgrade && antes != null && depois != null ? depois - antes : 0;
+    const up = t.upgrade && antes != null && depois != null ? centavos(depois - antes) : 0;
     const merc = economiaMercado(t);
     return {t, compra, cort, up, total:depois, merc};
   });
   const ok = l => l.compra != null && l.total != null;
   const val = linhas.filter(ok);
   return {linhas, completo:val.length === linhas.length,
-    compra:soma(val.map(l => l.compra)), cortesia:soma(val.map(l => l.cort)), upgrade:soma(val.map(l => l.up)), total:soma(val.map(l => l.total)),
-    mercado:linhas.every(l => l.merc) ? soma(linhas.map(l => l.merc.valor)) : null, mercadoParcial:linhas.filter(l => l.merc).length};
+    compra:centavos(soma(val.map(l => l.compra))), cortesia:centavos(soma(val.map(l => l.cort))), upgrade:centavos(soma(val.map(l => l.up))), total:centavos(soma(val.map(l => l.total))),
+    mercado:linhas.every(l => l.merc) ? centavos(soma(linhas.map(l => l.merc.valor))) : null, mercadoParcial:linhas.filter(l => l.merc).length};
 }
 function escadaEconomiaHTML(ts){
   const E = etapasEconomia(ts);
@@ -76744,7 +76752,7 @@ function abrirMudarPlano(id){
     const cabs = [...new Set(ts.map(t => t.upgrade ? t.upgrade.cabine : (t.cabine || 'economica')))];
     const vit = cfg.vitrine !== false;
     const linhas = E.linhas.map(l => {
-      const t = l.t, cm = t.forma === 'dinheiro' && Number(t.altMilhas) > 0 ? (() => { const m = milheiroDaBase(t.baseMilheiro || 'custo', t.altProg, t.milheiroOutro); return m == null ? null : Number(t.altMilhas) / 1000 * m + (Number(t.altTaxas) || 0); })() : null;
+      const t = l.t, cm = t.forma === 'dinheiro' && Number(t.altMilhas) > 0 ? (() => { const m = milheiroDaBase(t.baseMilheiro || 'custo', t.altProg, t.milheiroOutro); return m == null ? null : centavos(centavos(Number(t.altMilhas) / 1000 * m) + (Number(t.altTaxas) || 0)); })() : null;
       const custoMil = t.forma !== 'dinheiro' ? custoTrechoReais(t) : null;
       return {id:t.id, rota:rotuloTrecho(t), de:cidade(t.origem), para:cidade(t.destino), data:t.data, cia:String(t.cia || '').split(' · ')[0].trim(), loc:vit ? '' : (t.loc || ''),
         forma:t.forma, pago:Number(t.pago) || 0, milhas:Number(t.milhas) || 0, taxas:Number(t.taxas) || 0, prog:t.prog ? prog(t.prog).n : '', vista:Number(t.vista) || 0,
