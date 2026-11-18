@@ -11849,7 +11849,13 @@ const BUILD = '2026-11-05 23:10';
    A chave de gravação é própria desta cópia e não conversa com a de nenhuma
    versão anterior — abrir este arquivo num navegador que já rodou a versão de
    demonstração não traz nada de lá. */
-const CHAVE = 'torre-controle-limpa-v1';
+/* Carteira de cliente da gestão (18/11/2026): com ?carteira=<id> a Torre abre a
+   carteira separada daquele cliente, com chave de gravação própria. */
+const GC_CARTEIRA = (() => { try { const v = new URLSearchParams(location.search).get('carteira') || ''; return /^[0-9a-f-]{36}$/i.test(v) ? v.toLowerCase() : ''; } catch(e){ return ''; } })();
+const CHAVE = GC_CARTEIRA ? 'torre-carteira-' + GC_CARTEIRA : 'torre-controle-limpa-v1';
+/* a página do cliente (?cliente): ele só lê a carteira dele; nada fica guardado no aparelho */
+const GC_CLIENTE = /[?&]cliente\b/.test(location.search);
+if (GC_CLIENTE && GC_CARTEIRA){ try { localStorage.removeItem(CHAVE); } catch(e){} }
 
 /* ── programas ────────────────────────────────────────────────────────────────
    faixas : otimo / alvo / teto do razoável, em reais por milheiro.
@@ -44697,6 +44703,7 @@ async function varrerPromocoes(silencioso){
   /* Nos horários marcados, a Torre lembra; quem pesquisa é o Claude, quando o
      Jadiel tocar em Varrer agora (de graça, pela assinatura). */
   if (silencioso && window._mtSou) return;   /* mentorado não varre: as promoções vêm do mentor */
+  if (silencioso && (GC_CARTEIRA || GC_CLIENTE)) return;   /* carteira de cliente: as promoções vêm da Torre do gestor */
   if (silencioso && typeof contaLigada === 'function' && contaLigada() && !contaAtiva()) return;   /* ainda na tela de entrar */
   /* com conta, espera saber quem entrou (o mentorado só é reconhecido depois do login) */
   if (silencioso && !varrerPromocoes._esperou && typeof contaAtiva === 'function' && contaAtiva()){ varrerPromocoes._esperou = true; setTimeout(() => { varrerPromocoes(true); varrerPromocoes._esperou = false; }, 5000); return; }
@@ -81374,5 +81381,602 @@ function mtComecou(){
   };
 })();
 </script>
+<style id="gc-css">
+/* ══ GESTÃO DE CLIENTES (concierge) · 18/11/2026 ══ */
+.gc .dr-painel::before{ background:linear-gradient(90deg, #C9A227, #F0A429, #E07B39, #3D7BF0); }
+.gc .eq-cab::before{ background:radial-gradient(closest-side, color-mix(in srgb, #C9A227 26%, transparent), transparent); }
+.gc .eq-selo{ background:linear-gradient(145deg, #C9A227, #A77A12); box-shadow:0 10px 24px -8px #C9A227; }
+.gc .eq-grade{ grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+.gc .eq-acoes{ display:grid; grid-template-columns:minmax(0,1.35fr) repeat(2, minmax(0,1fr)); gap:6px; }
+.gc .eq-acoes .bt{ min-width:0; padding-left:6px; padding-right:6px; white-space:nowrap; }
+.gc-obj{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+.gc-obj b{ color:var(--giz); font-weight:600; }
+.gc-sinais{ display:flex; flex-direction:column; gap:5px; }
+.gc-sinal{ display:flex; align-items:flex-start; gap:8px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.4; }
+.gc-sinal::before{ content:''; width:7px; height:7px; border-radius:50%; flex:none; margin-top:6px; background:var(--jade); box-shadow:0 0 6px var(--jade); }
+.gc-sinal.alerta{ color:var(--ouro); } .gc-sinal.alerta::before{ background:var(--ouro); box-shadow:0 0 6px var(--ouro); }
+.gc-sinal.ruim{ color:var(--rubi, #EF4B3F); } .gc-sinal.ruim::before{ background:var(--rubi, #EF4B3F); box-shadow:0 0 6px var(--rubi, #EF4B3F); }
+.gc-saldos{ display:flex; flex-wrap:wrap; gap:5px; }
+.gc-saldos span{ font-size:calc(11.5px * var(--esc)); color:var(--giz); padding:2px 8px; border-radius:6px; background:var(--sup-2); font-variant-numeric:tabular-nums; }
+.gc-saldos span small{ color:var(--grafite); margin-left:4px; font-size:inherit; }
+.gc-saldos .nada{ font-style:italic; background:none; padding-left:0; color:var(--grafite); }
+.gc-lista{ display:flex; flex-direction:column; gap:8px; }
+.gc-linha{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; align-items:center; padding:10px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); }
+.gc-linha b{ color:var(--giz); font-size:calc(13.5px * var(--esc)); }
+.gc-linha small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.45; }
+.gc-linha .gc-bts{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.gc-cofre{ display:grid; grid-template-columns:minmax(150px, .8fr) minmax(0, 2fr) auto; gap:8px; align-items:end; }
+.gc-cofre .campo{ margin:0; }
+.gc-aviso{ display:grid; grid-template-columns:18px minmax(0,1fr); gap:9px; padding:11px 13px; border-radius:12px; font-size:calc(12.5px * var(--esc)); line-height:1.5; color:var(--grafite);
+  background:color-mix(in srgb, var(--ouro, #C9A227) 9%, var(--sup-1)); border:1px solid color-mix(in srgb, var(--ouro, #C9A227) 35%, var(--fio)); }
+.gc-aviso svg{ width:17px; height:17px; fill:none; stroke:var(--ouro, #C9A227); stroke-width:2; margin-top:1px; }
+.gc-aviso b{ color:var(--giz); }
+.gc-chk{ display:flex; align-items:flex-start; gap:10px; font-size:calc(13px * var(--esc)); color:var(--giz); cursor:pointer; line-height:1.45; }
+.gc-chk input{ margin-top:3px; accent-color:#C9A227; width:16px; height:16px; flex:none; }
+.gc-chk small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:2px; }
+.gc-progs{ display:flex; gap:6px; flex-wrap:wrap; }
+.gc-progs button{ all:unset; cursor:pointer; padding:5px 11px; border-radius:99px; border:1px solid var(--fio); font-size:calc(12px * var(--esc)); color:var(--grafite); }
+.gc-progs button.on{ color:#B8901A; border-color:color-mix(in srgb, #C9A227 60%, transparent); background:color-mix(in srgb, #C9A227 13%, transparent); font-weight:600; }
+html[data-tema="breu"] .gc-progs button.on, html.escuro .gc-progs button.on{ color:#E8C35A; }
+.gc-msg{ white-space:pre-wrap; margin:0; padding:14px 16px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font:calc(13.5px * var(--esc))/1.6 var(--f-b, inherit); }
+@media (max-width:760px){ .gc-cofre{ grid-template-columns:minmax(0,1fr); } .gc .eq-acoes{ grid-template-columns:minmax(0,1fr); } }
+
+/* a faixa da carteira do cliente: o mesmo formato da faixa do "Ver Como", em dourado */
+.gc-faixa{ background:linear-gradient(135deg, #B8901A, #7A5A0C); box-shadow:0 12px 30px -10px #B8901A; }
+.gc-faixa .gc-faixa-ic{ width:26px; height:26px; border-radius:50%; flex:none; display:grid; place-items:center; background:rgba(255,255,255,.18); box-shadow:0 0 0 2px rgba(255,255,255,.7); }
+.gc-faixa .gc-faixa-ic svg{ width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+html.mt-mentorado .trilho-dir .tb-gc, html.gc-carteira .tb[data-area="negocio"], html.gc-carteira .trilho-dir .tb-mt, html.gc-carteira .trilho-dir .tb-eq, html.gc-carteira .trilho-dir .tb-gc{ display:none !important; }
+</style>
+<script id="gc-js">
+/* ══════════════════════════════════════════════════════════════════════════════
+   GESTÃO DE CLIENTES (concierge) · 18/11/2026
+   ──────────────────────────────────────────────────────────────────────────────
+   Decisão do Jadiel: a VEM é concierge (administra as milhas do próprio cliente).
+   Cada cliente tem uma CARTEIRA SEPARADA, como uma Torre só dele, guardada na
+   tabela torre_carteiras do servidor. Assim os lotes do cliente nunca entram no
+   custo do milheiro do gestor, e todos os módulos (saldos, clubes, vencimentos,
+   Controle de CPF, Jornadas, Prova) funcionam para o cliente sem retrabalho.
+
+   Na Torre do gestor ficam só os dados da GESTÃO de cada cliente: contato,
+   objetivo, regras, cofre de acesso (nunca a senha), termo e aprovações.
+   A carteira abre na mesma Torre com ?carteira=<id>: a chave de gravação e a
+   sincronização passam a ser as da carteira, e as promoções vêm da Torre do gestor.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const GC_CABINES = ['Econômica', 'Premium Economy', 'Executiva', 'Primeira classe'];
+const GC_TIPOS_APROV = {compra:'Compra de pontos ou milhas', transferencia:'Transferência com bônus', emissao:'Emissão de passagem', hotel:'Hospedagem ou experiência', outro:'Outro gasto'};
+const GC_CORES = ['#C9A227', '#10A97A', '#3D7BF0', '#8B5CF6', '#E07B39', '#0EA5E9', '#D9467A', '#4C9A2A'];
+const _gcServ = {estado:'', erro:'', linhas:null, lidoEm:0};
+let _gcEd = null;
+
+function gcDB(){ if (!Array.isArray(DB.clientesGestao)) DB.clientesGestao = []; return DB.clientesGestao; }
+function gcCor(c){ let h = 0; const t = String(c.id || c.nome || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return GC_CORES[Math.abs(h) % GC_CORES.length]; }
+function gcPrimeiro(n){ return String(n || '').trim().split(/\s+/)[0] || ''; }
+function gcHoraTxt(ts){ if (!ts) return ''; const d = new Date(ts); return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); }
+function gcDataTxt(iso){ if (!iso) return ''; const [a, m, d] = String(iso).slice(0, 10).split('-'); return `${d}/${m}/${a}`; }
+function gcMesTxt(ym){ if (!ym) return ''; const [a, m] = String(ym).split('-'); const n = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][Number(m) - 1]; return n ? `${n} de ${a}` : ym; }
+function gcReais(v){ const n = Number(v) || 0; return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function gcNumTxt(v){ return (Number(v) || 0).toLocaleString('pt-BR'); }
+function gcLerReais(t){ const s = String(t || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'); const n = parseFloat(s); return isFinite(n) ? Math.round(n * 100) / 100 : 0; }
+function gcSemTabela(r){ return r && (r.status === 404 || /PGRST205|42P01|does not exist|schema cache/i.test(JSON.stringify(r.j || r.texto || ''))); }
+function gcPendentes(c){ return (c.aprovacoes || []).filter(a => a.status === 'pendente'); }
+function gcAvatar(c){ return `<span class="eq-av" style="--pc:${gcCor(c)}">${esc(iniciaisDe(c.nome))}</span>`; }
+
+/* ── servidor ─────────────────────────────────────────────────────────────── */
+async function gcLerServidor(){
+  if (!contaAtiva()){ _gcServ.estado = 'semconta'; return null; }
+  try {
+    const r = await contaRest('GET', `/rest/v1/torre_carteiras?select=id,nome,cliente_email,ativo,versao,atualizado,dados&gestor_id=eq.${contaSessao().user.id}`);
+    if (!r.ok){ _gcServ.estado = gcSemTabela(r) ? 'falta' : 'erro'; _gcServ.erro = gcSemTabela(r) ? '' : contaTraduz(r); return null; }
+    _gcServ.estado = 'ok'; _gcServ.linhas = r.j || []; _gcServ.lidoEm = Date.now();
+    return _gcServ.linhas;
+  } catch(e){ _gcServ.estado = e && e.semRede ? 'semrede' : 'erro'; _gcServ.erro = (e && e.message) || ''; return null; }
+}
+function gcDadosIniciais(c){
+  const v = bancoVazio();
+  v.cfg = Object.assign({}, v.cfg, {perfil:{nome:c.nome}, perfilEditado:true, carteiraDe:c.nome});
+  v.contas = [{id:uid(), nome:c.nome, papel:'Titular', cpf:'', email:'', obs:'', niveis:{}}];
+  return v;
+}
+async function gcCriarCarteira(c){
+  const r = await contaRest('POST', '/rest/v1/torre_carteiras', {nome:c.nome, cliente_email:(c.email || '').toLowerCase(), ativo:c.ativo !== false, dados:JSON.stringify(gcDadosIniciais(c))}, 'return=representation');
+  if (!r.ok){ if (gcSemTabela(r)) _gcServ.estado = 'falta'; throw new Error(gcSemTabela(r) ? 'O servidor ainda não tem a parte das carteiras de clientes.' : contaTraduz(r)); }
+  c.carteiraId = r.j[0].id; c.pend = false; salvar();
+  return c.carteiraId;
+}
+/* nome, e-mail e situação do cliente vão para a linha da carteira (é por eles que o cliente lê a dele) */
+async function gcEnviarPendentes(){
+  if (!contaAtiva() || window._mtSou || GC_CARTEIRA) return;
+  for (const c of gcDB().filter(x => x.pend)){
+    try {
+      if (!c.carteiraId){ await gcCriarCarteira(c); continue; }
+      const r = await contaRest('PATCH', `/rest/v1/torre_carteiras?id=eq.${encodeURIComponent(c.carteiraId)}`, {nome:c.nome, cliente_email:(c.email || '').toLowerCase(), ativo:c.ativo !== false}, 'return=minimal');
+      if (r.ok){ c.pend = false; salvar(); } else if (gcSemTabela(r)){ _gcServ.estado = 'falta'; return; }
+    } catch(e){ if (e && /servidor ainda não/.test(e.message)) return; }
+  }
+}
+
+/* ── o retrato de cada carteira (lido do servidor, sem misturar com a Torre do gestor) ── */
+function gcResumo(dadosTxt){
+  let dados = null; try { dados = contaDesembrulha(dadosTxt); } catch(_){}
+  const out = {milhas:0, pontos:0, porProg:[], vence90:0, cpf:[], contas:0, viagens:0};
+  if (!dados || typeof dados !== 'object') return out;
+  const salvo = DB;
+  try {
+    const v = bancoVazio(); DB = Object.assign({}, v, dados); DB.cfg = Object.assign({}, v.cfg, dados.cfg || {});
+    const sal = saldoPorPrograma();
+    Object.keys(sal).filter(p => sal[p] > 0).sort((a, b) => sal[b] - sal[a]).forEach(p => {
+      const t = (prog(p) || {}).tipo; if (t === 'milhas') out.milhas += sal[p]; else out.pontos += sal[p];
+      out.porProg.push({p, n:(prog(p) || {}).n || p, q:sal[p], tipo:t});
+    });
+    out.vence90 = soma(lotesEmRisco(90).map(l => Number(l.qtd) || 0));
+    out.contas = (DB.contas || []).length;
+    out.viagens = (DB.planos || []).length;
+    (DB.contas || []).forEach(ct => PROG_IDS.forEach(p => {
+      const pol = politicaCPF(p); if (!pol || !pol.limite) return;
+      const u = cpfsUsados(ct.id, p).length;
+      if (u >= pol.limite - 1) out.cpf.push({conta:ct.nome, p, n:(prog(p) || {}).n || p, u, lim:pol.limite});
+    }));
+  } catch(e){ console.error('gcResumo', e); }
+  finally { DB = salvo; }
+  return out;
+}
+function gcLinhaServ(c){ return c.carteiraId && Array.isArray(_gcServ.linhas) ? _gcServ.linhas.find(l => l.id === c.carteiraId) : null; }
+
+/* ── a janela da gestão ─────────────────────────────────────────────────────── */
+function abrirGestaoClientes(){
+  const d = _janela('dlgGestao', 'eq gc');
+  _gcEd = null; gcDesenharLista(d);
+  if (!d.open){ d.showModal(); travarFundo(true); }
+  if (contaAtiva()) gcEnviarPendentes().then(gcLerServidor).then(() => { if (d.open && !_gcEd) gcDesenharLista(d, true); });
+}
+function gcCab(tit, sub){
+  const cs = gcDB(), at = cs.filter(c => c.ativo !== false).length;
+  const res = cs.map(c => { const l = gcLinhaServ(c); return l ? gcResumo(l.dados) : null; }).filter(Boolean);
+  const mil = soma(res.map(r => r.milhas)), pen = soma(cs.map(c => gcPendentes(c).length));
+  return `<div class="eq-cab"><div class="eq-cab-l"><span class="eq-selo"><svg><use href="#i-usuarios"/></svg></span>
+      <div><h2>${tit}</h2><p>${sub}</p></div></div>
+    <div class="eq-stats"><span class="eq-stat"><b>${at}</b>${at === 1 ? 'cliente ativo' : 'clientes ativos'}</span>${res.length ? `<span class="eq-stat"><b>${gcNumTxt(mil)}</b>milhas sob gestão</span>` : ''}<span class="eq-stat"><b>${pen}</b>${pen === 1 ? 'aprovação esperando' : 'aprovações esperando'}</span></div></div>`;
+}
+function gcNotaServidor(){
+  if (!contaAtiva()) return `<div class="eq-nota"><svg><use href="#i-info"/></svg><span><b>Falta entrar na sua conta.</b> As carteiras dos clientes ficam no servidor; entre com e-mail e senha para abrir cada uma.</span></div>`;
+  if (_gcServ.estado === 'falta') return `<div class="eq-nota"><svg><use href="#i-alerta"/></svg><span><b>O servidor ainda não tem a parte das carteiras.</b> Os cadastros ficam guardados aqui e as carteiras são criadas sozinhas assim que ela for ligada.</span></div>`;
+  if (_gcServ.estado === 'semrede') return `<div class="eq-nota"><svg><use href="#i-alerta"/></svg><span><b>Sem internet agora.</b> Os números de cada carteira aparecem quando a conexão voltar.</span></div>`;
+  if (_gcServ.estado === 'erro') return `<div class="eq-nota"><svg><use href="#i-alerta"/></svg><span><b>Não deu para ler as carteiras agora.</b> ${esc(_gcServ.erro || '')}</span></div>`;
+  return `<div class="eq-nota"><svg><use href="#i-info"/></svg><span><b>Como funciona:</b> cada cliente tem uma carteira separada, como uma Torre só dele. O custo do milheiro dele nunca se mistura com o seu, e as suas promoções aparecem na carteira dele com a conta feita para o saldo dele.</span></div>`;
+}
+function gcSinais(c){
+  const l = gcLinhaServ(c), out = [];
+  const pen = gcPendentes(c);
+  if (pen.length) out.push(`<span class="gc-sinal alerta">${pen.length === 1 ? '1 aprovação esperando resposta' : pen.length + ' aprovações esperando resposta'}</span>`);
+  if (!c.carteiraId) out.push(`<span class="gc-sinal alerta">Carteira ainda não criada no servidor</span>`);
+  if (l){
+    const r = gcResumo(l.dados);
+    if (r.vence90 > 0) out.push(`<span class="gc-sinal ruim">${gcNumTxt(r.vence90)} vencem nos próximos 90 dias</span>`);
+    r.cpf.forEach(x => out.push(`<span class="gc-sinal ${x.u >= x.lim ? 'ruim' : 'alerta'}">${esc(x.n)}: ${x.u} de ${x.lim} vagas de CPF usadas</span>`));
+    if (!r.vence90 && !r.cpf.length && !pen.length) out.push(`<span class="gc-sinal">Nada pedindo atenção hoje</span>`);
+  }
+  if (!c.termo || !c.termo.data) out.push(`<span class="gc-sinal alerta">Falta registrar o termo de gestão</span>`);
+  return `<div class="gc-sinais">${out.join('')}</div>`;
+}
+function gcSaldos(c){
+  const l = gcLinhaServ(c); if (!l) return '';
+  const r = gcResumo(l.dados);
+  return `<div class="gc-saldos">${r.porProg.length ? r.porProg.slice(0, 4).map(x => `<span>${esc(x.n)}<small>${gcNumTxt(x.q)}</small></span>`).join('') : '<span class="nada">Nenhum saldo lançado ainda</span>'}</div>`;
+}
+function gcObjetivo(c){
+  const o = c.objetivo || {};
+  if (!o.destino) return '<div class="gc-obj">Sem objetivo cadastrado</div>';
+  return `<div class="gc-obj">Objetivo: <b>${esc(o.destino)}</b>${o.cabine ? ' em ' + esc(o.cabine.toLowerCase()) : ''}${o.mes ? ', ' + esc(gcMesTxt(o.mes)) : ''}${o.pax ? ' · ' + o.pax + (Number(o.pax) === 1 ? ' pessoa' : ' pessoas') : ''}</div>`;
+}
+function gcDesenharLista(d, semAnimar){
+  d = d || document.getElementById('dlgGestao'); if (!d) return;
+  const cs = gcDB().slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  d.innerHTML = `<div class="dr-painel">${gcCab('Clientes da gestão', 'A carteira de cada cliente, o objetivo dele e o que espera a sua ação.')}
+    <div class="dr-corpo"><div class="${semAnimar ? '' : 'eq-vista'}">
+    ${cs.length ? `<div class="eq-grade">${cs.map(c => `<div class="eq-card${c.ativo === false ? ' pausado' : ''}" style="--pc:${gcCor(c)}" data-id="${esc(c.id)}">
+        <div class="eq-quem">${gcAvatar(c)}<div><b>${esc(c.nome)}</b><small>${esc([c.zap, c.email].filter(Boolean).join(' · ') || 'Sem contato cadastrado')}${c.ativo === false ? ' · gestão pausada' : ''}</small></div></div>
+        ${gcObjetivo(c)}
+        ${gcSaldos(c)}
+        ${gcSinais(c)}
+        <div class="eq-acoes"><button type="button" class="bt p primario" data-gc="abrir"${c.carteiraId ? '' : ' disabled'}><svg><use href="#i-carteira"/></svg>Abrir carteira</button>
+          <button type="button" class="bt p fantasma" data-gc="ficha"><svg><use href="#i-lapis"/></svg>Ficha</button>
+          <button type="button" class="bt p fantasma" data-gc="aprovar"><svg><use href="#i-ok"/></svg>Aprovação</button></div></div>`).join('')}</div>`
+    : `<div class="eq-vazio"><span class="eq-selo"><svg><use href="#i-usuarios"/></svg></span><b>A gestão de clientes começa aqui</b>
+        <p>Cadastre cada cliente com o objetivo dele. A Torre cria uma carteira separada, como uma Torre só dele, e mostra aqui o que pede a sua atenção.</p>
+        <button type="button" class="bt primario" data-gc="novo"><svg><use href="#i-mais"/></svg>Cadastrar o primeiro cliente</button></div>`}
+    ${gcNotaServidor()}
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo sair" onclick="document.getElementById('dlgGestao').close()">Fechar</button><span class="esticar"></span>
+      ${cs.length ? `<button type="button" class="bt primario" data-gc="novo"><svg><use href="#i-mais"/></svg>Novo cliente</button>` : ''}</footer></div>`;
+  d.querySelectorAll('[data-gc="novo"]').forEach(b => b.onclick = () => gcEditar(null));
+  d.querySelectorAll('.eq-card').forEach(card => {
+    const id = card.dataset.id;
+    card.querySelector('[data-gc="abrir"]').onclick = () => gcAbrirCarteira(id);
+    card.querySelector('[data-gc="ficha"]').onclick = () => gcEditar(id);
+    card.querySelector('[data-gc="aprovar"]').onclick = () => gcAprovacoes(id);
+  });
+}
+
+/* ── a ficha do cliente ─────────────────────────────────────────────────────── */
+function gcEditar(id){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const orig = id ? gcDB().find(c => c.id === id) : null;
+  _gcEd = orig ? JSON.parse(JSON.stringify(orig)) : {id:'', nome:'', zap:'', email:'', ativo:true, objetivo:{}, regras:{programas:[]}, cofre:[], acessos:[], termo:{}, aprovacoes:[]};
+  const e = _gcEd; e.objetivo = e.objetivo || {}; e.regras = e.regras || {programas:[]}; e.cofre = e.cofre || []; e.acessos = e.acessos || []; e.termo = e.termo || {};
+  const progsMilhas = PROG_IDS.filter(p => ['milhas', 'pontos'].includes((PROGRAMAS[p] || {}).tipo));
+  const o = e.objetivo, rg = e.regras;
+  d.innerHTML = `<div class="dr-painel">${gcCab(orig ? 'Ficha do cliente' : 'Novo cliente', orig ? esc(orig.nome) : 'Quem é, o que quer, as regras da gestão e onde estão os acessos.')}
+    <div class="dr-corpo"><div class="eq-vista">
+      <div class="eq-tit">1 · Quem é</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Nome completo</label><input type="text" id="gcNome" value="${esc(e.nome)}" placeholder="ex.: Carla Menezes Rocha" autocomplete="off"></div>
+        <div class="campo"><label>WhatsApp <span class="fraco">para os pedidos de aprovação</span></label><input type="text" inputmode="tel" id="gcZap" value="${esc(e.zap || '')}" placeholder="(71) 9 9999-9999"></div>
+        <div class="campo"><label>E-mail <span class="fraco">opcional · é com ele que o cliente vê a página dele</span></label><input type="text" inputmode="email" autocapitalize="off" spellcheck="false" id="gcEmail" value="${esc(e.email || '')}" placeholder="carla@email.com" autocomplete="off"></div>
+      </div>
+      <div class="eq-tit">2 · Objetivo</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Destino</label><input type="text" id="gcDestino" value="${esc(o.destino || '')}" placeholder="ex.: Europa (Lisboa e Paris)"></div>
+        <div class="campo"><label>Cabine</label><select id="gcCabine" data-ordem="natural"><option value="">escolha</option>${GC_CABINES.map(x => `<option${o.cabine === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
+        <div class="campo"><label>Mês da viagem</label><div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:8px">
+          <select id="gcMesM" data-ordem="natural"><option value="">mês</option>${['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'].map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}"${String(o.mes || '').slice(5, 7) === String(i + 1).padStart(2, '0') ? ' selected' : ''}>${n}</option>`).join('')}</select>
+          <select id="gcMesA" data-ordem="natural"><option value="">ano</option>${Array.from({length:5}, (_, i) => new Date().getFullYear() + i).concat(String(o.mes || '').slice(0, 4) ? [Number(String(o.mes).slice(0, 4))] : []).filter((x, i, l) => x && l.indexOf(x) === i).sort().map(y => `<option${String(o.mes || '').slice(0, 4) === String(y) ? ' selected' : ''}>${y}</option>`).join('')}</select></div></div>
+        <div class="campo"><label>Quantas pessoas</label><input type="text" inputmode="numeric" id="gcPax" value="${esc(o.pax || '')}" placeholder="2"></div>
+      </div>
+      <div class="eq-tit">3 · Regras da gestão</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Orçamento por mês <span class="fraco">para comprar pontos e milhas</span></label><input type="text" inputmode="decimal" data-moeda id="gcOrc" value="${rg.orcamento ? moedaTxt(rg.orcamento) : ''}" placeholder="500,00"></div>
+        <div class="campo"><label>Pode gastar sem pedir aprovação até</label><input type="text" inputmode="decimal" data-moeda id="gcLim" value="${rg.limite ? moedaTxt(rg.limite) : ''}" placeholder="200,00"></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Programas preferidos <span class="fraco">toque para marcar</span></label><div class="gc-progs" id="gcProgs">${progsMilhas.map(p => `<button type="button" data-p="${p}" class="${(rg.programas || []).includes(p) ? 'on' : ''}">${esc(prog(p).n)}</button>`).join('')}</div></div>
+      <div class="eq-tit">4 · Cofre de acesso</div>
+      <div class="gc-aviso"><svg><use href="#i-escudo"/></svg><span><b>A Torre não guarda senha.</b> Anote só onde a credencial está (ex.: "Bitwarden, cofre VEM, item Smiles da Carla"). Guardar senha de cliente é proibido pelos regulamentos dos programas e um risco se vazar.</span></div>
+      <div class="gc-lista" id="gcCofreLista" style="margin-top:10px"></div>
+      <div class="gc-cofre" style="margin-top:8px">
+        <div class="campo"><label>Programa</label><select id="gcCofreProg" data-ordem="natural"><option value="">escolha</option>${progsMilhas.map(p => `<option value="${p}">${esc(prog(p).n)}</option>`).join('')}</select></div>
+        <div class="campo"><label>Onde está a credencial</label><input type="text" id="gcCofreOnde" placeholder="ex.: Bitwarden, cofre VEM, item Smiles da Carla" autocomplete="off"></div>
+        <button type="button" class="bt fantasma" id="gcCofreAdd"><svg><use href="#i-mais"/></svg>Incluir</button>
+      </div>
+      <div class="eq-tit">5 · Termo de gestão</div>
+      <label class="gc-chk"><input type="checkbox" id="gcTermo"${e.termo.data ? ' checked' : ''}><span>O cliente aceitou a gestão das contas dele e o uso dos dados pessoais para isso
+        <small>${e.termo.data ? 'Registrado em ' + gcDataTxt(e.termo.data) + '.' : 'Marque quando o cliente aceitar (por escrito ou pelo WhatsApp). A data fica registrada.'}</small></span></label>
+      ${orig ? `<div class="eq-tit">Situação</div><div class="eq-seg" id="gcAtivo"><button type="button" data-n="tudo" data-at="1" class="${e.ativo !== false ? 'on' : ''}">Gestão ativa</button><button type="button" data-n="nada" data-at="0" class="${e.ativo === false ? 'on' : ''}">Gestão pausada</button></div>` : ''}
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="gcVoltar">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt primario" id="gcSalvar"><svg><use href="#i-ok"/></svg>${orig ? 'Salvar' : 'Cadastrar'}</button></footer></div>`;
+  const pintaCofre = () => {
+    const box = d.querySelector('#gcCofreLista');
+    box.innerHTML = e.cofre.length ? e.cofre.map(x => {
+      const ult = e.acessos.filter(a => a.cofreId === x.id).sort((a, b) => b.em - a.em)[0];
+      return `<div class="gc-linha" data-id="${esc(x.id)}"><div><b>${esc(prog(x.prog).n)}</b><small>${esc(x.onde)}</small><small>${ult ? 'Último acesso registrado em ' + gcHoraTxt(ult.em) : 'Nenhum acesso registrado'}</small></div>
+        <div class="gc-bts"><button type="button" class="bt p fantasma" data-c="acesso"><svg><use href="#i-chave"/></svg>Registrar acesso</button><button type="button" class="bt p fantasma" data-c="tirar" aria-label="Tirar do cofre"><svg><use href="#i-x"/></svg></button></div></div>`; }).join('')
+      : '<p class="fraco" style="margin:0">Nenhum acesso anotado ainda.</p>';
+    box.querySelectorAll('.gc-linha').forEach(li => {
+      const cid = li.dataset.id;
+      li.querySelector('[data-c="acesso"]').onclick = () => { e.acessos.push({id:uid(), cofreId:cid, em:Date.now()}); pintaCofre(); avisar('Acesso registrado. Salve a ficha para guardar.', 'ok'); };
+      li.querySelector('[data-c="tirar"]').onclick = () => { e.cofre = e.cofre.filter(x => x.id !== cid); pintaCofre(); };
+    });
+  };
+  pintaCofre();
+  d.querySelector('#gcCofreAdd').onclick = () => {
+    const p = d.querySelector('#gcCofreProg').value, onde = d.querySelector('#gcCofreOnde').value.trim();
+    if (!p) return erroNoCampo(d.querySelector('#gcCofreProg'), 'Escolha o programa.');
+    if (onde.length < 3) return erroNoCampo(d.querySelector('#gcCofreOnde'), 'Escreva onde a credencial está guardada.');
+    if (/senha\s*[:=]|password\s*[:=]/i.test(onde)) return erroNoCampo(d.querySelector('#gcCofreOnde'), 'Não escreva a senha aqui: anote só onde ela está guardada.');
+    if (e.cofre.some(x => x.prog === p)) return erroNoCampo(d.querySelector('#gcCofreProg'), 'Este programa já está no cofre. Tire o anterior para trocar.');
+    e.cofre.push({id:uid(), prog:p, onde}); d.querySelector('#gcCofreOnde').value = ''; d.querySelector('#gcCofreProg').value = ''; pintaCofre();
+  };
+  d.querySelectorAll('#gcProgs button').forEach(b => b.onclick = () => { b.classList.toggle('on'); });
+  const at = d.querySelector('#gcAtivo');
+  if (at) at.querySelectorAll('button').forEach(b => b.onclick = () => { e.ativo = b.dataset.at === '1'; at.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
+  d.querySelector('#gcVoltar').onclick = () => { _gcEd = null; gcDesenharLista(d); };
+  d.querySelector('#gcSalvar').onclick = () => gcSalvar(orig);
+  setTimeout(() => { const n = d.querySelector('#gcNome'); if (n && !orig) n.focus(); }, 60);
+}
+function gcSalvar(orig){
+  const d = document.getElementById('dlgGestao'), e = _gcEd;
+  const nome = d.querySelector('#gcNome').value.trim().replace(/\s+/g, ' '), email = d.querySelector('#gcEmail').value.trim().toLowerCase();
+  if (nome.length < 3) return erroNoCampo(d.querySelector('#gcNome'), 'Escreva o nome do cliente.');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return erroNoCampo(d.querySelector('#gcEmail'), 'Escreva um e-mail válido, ou deixe em branco.');
+  const meu = contaAtiva() ? String((contaSessao().user || {}).email || '').toLowerCase() : '';
+  if (meu && email === meu) return erroNoCampo(d.querySelector('#gcEmail'), 'Este é o e-mail da sua própria conta. Use o e-mail do cliente.');
+  const outros = gcDB().filter(c => c.id !== (orig && orig.id));
+  if (outros.some(c => String(c.nome).toLowerCase() === nome.toLowerCase())) return erroNoCampo(d.querySelector('#gcNome'), 'Já existe um cliente com este nome.');
+  if (email && outros.some(c => String(c.email || '').toLowerCase() === email)) return erroNoCampo(d.querySelector('#gcEmail'), 'Já existe um cliente com este e-mail.');
+  const pax = parseInt(d.querySelector('#gcPax').value, 10);
+  const mudouServ = !orig || orig.nome !== nome || String(orig.email || '') !== email || (orig.ativo !== false) !== (e.ativo !== false);
+  Object.assign(e, {nome, email, zap:d.querySelector('#gcZap').value.trim()});
+  const mM = d.querySelector('#gcMesM').value, mA = d.querySelector('#gcMesA').value;
+  if (!!mM !== !!mA) return erroNoCampo(d.querySelector(mM ? '#gcMesA' : '#gcMesM'), 'Escolha o mês e o ano, ou deixe os dois em branco.');
+  e.objetivo = {destino:d.querySelector('#gcDestino').value.trim(), cabine:d.querySelector('#gcCabine').value, mes:mM && mA ? mA + '-' + mM : '', pax:pax > 0 ? pax : ''};
+  e.regras = {orcamento:moedaNum(d.querySelector('#gcOrc').value) || 0, limite:moedaNum(d.querySelector('#gcLim').value) || 0, programas:[...d.querySelectorAll('#gcProgs button.on')].map(b => b.dataset.p)};
+  const termo = d.querySelector('#gcTermo').checked;
+  e.termo = termo ? (e.termo && e.termo.data ? e.termo : {data:hojeISO(), em:Date.now()}) : {};
+  if (mudouServ) e.pend = true;
+  if (orig){ const i = gcDB().findIndex(c => c.id === orig.id); e.alterado = Date.now(); DB.clientesGestao[i] = e; }
+  else { e.id = uid(); e.criado = Date.now(); e.ativo = true; gcDB().push(e); }
+  salvar(); _gcEd = null;
+  avisar(orig ? `${esc(nome)}: ficha atualizada.` : `${esc(nome)} entrou na gestão.`, 'ok', 4200);
+  gcDesenharLista(d);
+  gcEnviarPendentes().then(gcLerServidor).then(() => { const dd = document.getElementById('dlgGestao'); if (dd && dd.open && !_gcEd) gcDesenharLista(dd, true); });
+}
+
+/* ── aprovação pelo WhatsApp (a Torre monta, você envia) ─────────────────────── */
+function gcTextoAprov(c, a){
+  const pn = gcPrimeiro(c.nome);
+  return `Olá, ${pn}! Aqui é da VEM.\n\nPara o seu objetivo${(c.objetivo || {}).destino ? ' (' + c.objetivo.destino + ')' : ''}, encontrei esta oportunidade:\n\n${GC_TIPOS_APROV[a.tipo] || 'Gasto'}: ${a.desc}\nValor: ${gcReais(a.valor)}\n\nPosso seguir? Responda SIM ou NÃO.`;
+}
+function gcAprovacoes(id){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const c = gcDB().find(x => x.id === id); if (!c) return;
+  c.aprovacoes = c.aprovacoes || [];
+  const lim = Number((c.regras || {}).limite) || 0;
+  const hist = c.aprovacoes.slice().sort((a, b) => b.criado - a.criado);
+  const z = mtZapDigitos(c.zap);
+  d.innerHTML = `<div class="dr-painel">${gcCab('Pedir aprovação', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista">
+      <div class="eq-tit">Novo pedido</div>
+      <div class="eq-campos">
+        <div class="campo"><label>O que é</label><select id="gcApTipo" data-ordem="natural">${Object.entries(GC_TIPOS_APROV).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+        <div class="campo"><label>Valor</label><input type="text" inputmode="decimal" data-moeda id="gcApValor" placeholder="0,00"></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Descrição <span class="fraco">o cliente lê isto</span></label><input type="text" id="gcApDesc" placeholder="ex.: 50.000 pontos Livelo com 40% de desconto, para transferir à Smiles com 100% de bônus"></div>
+      <div id="gcApLim" style="margin-top:10px"></div>
+      <div class="eq-tit">Pedidos</div>
+      <div class="gc-lista">${hist.length ? hist.map(a => `<div class="gc-linha" data-id="${esc(a.id)}"><div><b>${esc(GC_TIPOS_APROV[a.tipo] || 'Gasto')} · ${gcReais(a.valor)}</b><small>${esc(a.desc)}</small>
+          <small>${a.status === 'pendente' ? 'Pedido em ' + gcHoraTxt(a.criado) + ', esperando resposta' : (a.status === 'aprovada' ? 'Aprovado' : 'Recusado') + ' em ' + gcHoraTxt(a.respondido)}</small></div>
+          <div class="gc-bts">${a.status === 'pendente' ? `<button type="button" class="bt p fantasma" data-a="sim"><svg><use href="#i-ok"/></svg>Aprovou</button><button type="button" class="bt p fantasma" data-a="nao"><svg><use href="#i-x"/></svg>Recusou</button>` : ''}</div></div>`).join('')
+        : '<p class="fraco" style="margin:0">Nenhum pedido ainda.</p>'}</div>
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="gcApVoltar">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt primario" id="gcApMontar"><svg><use href="#i-link"/></svg>Montar a mensagem</button></footer></div>`;
+  const val = d.querySelector('#gcApValor'), aviso = d.querySelector('#gcApLim');
+  const pintaLim = () => {
+    const v = moedaNum(val.value) || 0;
+    aviso.innerHTML = !lim ? `<div class="gc-aviso"><svg><use href="#i-info"/></svg><span>Sem limite combinado: todo gasto pede aprovação. Defina o limite na ficha do cliente.</span></div>`
+      : v && v <= lim ? `<div class="eq-nota" style="margin:0"><svg><use href="#i-ok"/></svg><span><b>Dentro do limite combinado (${gcReais(lim)}).</b> Pode seguir sem pedir; se quiser, registre o pedido mesmo assim.</span></div>`
+      : `<div class="gc-aviso"><svg><use href="#i-alerta"/></svg><span><b>Acima de ${gcReais(lim)}:</b> precisa da aprovação do cliente antes de gastar.</span></div>`;
+  };
+  val.addEventListener('input', pintaLim); pintaLim();
+  d.querySelectorAll('.gc-linha[data-id]').forEach(li => {
+    const a = c.aprovacoes.find(x => x.id === li.dataset.id); if (!a) return;
+    const resp = st => { a.status = st; a.respondido = Date.now(); salvar(); avisar(st === 'aprovada' ? 'Aprovação registrada.' : 'Recusa registrada.', 'ok'); gcAprovacoes(id); };
+    const s = li.querySelector('[data-a="sim"]'), n = li.querySelector('[data-a="nao"]');
+    if (s) s.onclick = () => resp('aprovada'); if (n) n.onclick = () => resp('recusada');
+  });
+  d.querySelector('#gcApVoltar').onclick = () => gcDesenharLista(d);
+  d.querySelector('#gcApMontar').onclick = () => {
+    const tipo = d.querySelector('#gcApTipo').value, desc = d.querySelector('#gcApDesc').value.trim(), valor = moedaNum(val.value) || 0;
+    if (desc.length < 6) return erroNoCampo(d.querySelector('#gcApDesc'), 'Descreva o que é, do jeito que o cliente vai ler.');
+    if (!(valor > 0)) return erroNoCampo(val, 'Escreva o valor.');
+    const dup = c.aprovacoes.find(x => x.status === 'pendente' && x.tipo === tipo && x.desc === desc && Number(x.valor) === valor);
+    const a = dup || {id:uid(), tipo, desc, valor, status:'pendente', criado:Date.now()};
+    if (!dup){ c.aprovacoes.push(a); salvar(); }
+    const txt = gcTextoAprov(c, a);
+    d.innerHTML = `<div class="dr-painel">${gcCab('Mensagem pronta', esc(c.nome))}
+      <div class="dr-corpo"><div class="eq-vista"><p class="fraco" style="margin:0 0 10px">${dup ? 'Este pedido já estava registrado; a mensagem é a mesma.' : 'Pedido registrado.'} Envie pelo WhatsApp e, quando o cliente responder, marque "Aprovou" ou "Recusou".</p>
+        <pre class="gc-msg">${esc(txt)}</pre></div></div>
+      <footer class="dr-pe"><button type="button" class="bt perigo" id="gcMsgVoltar">Fechar</button><span class="esticar"></span>
+        <button type="button" class="bt fantasma" id="gcMsgCopiar"><svg><use href="#i-copiar"/></svg>Copiar</button>
+        ${z ? `<a class="bt primario" href="https://wa.me/${z}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir no WhatsApp</a>` : ''}</footer></div>`;
+    d.querySelector('#gcMsgVoltar').onclick = () => gcAprovacoes(id);
+    d.querySelector('#gcMsgCopiar').onclick = () => mtCopiar(txt, 'Mensagem copiada.');
+  };
+}
+
+/* ── abrir a carteira ───────────────────────────────────────────────────────── */
+function gcAbrirCarteira(id){
+  const c = gcDB().find(x => x.id === id); if (!c || !c.carteiraId) return;
+  if (!contaAtiva()) return avisar('Entre na sua conta para abrir a carteira do cliente.', 'alerta', 5200);
+  location.href = location.pathname + '?carteira=' + encodeURIComponent(c.carteiraId);
+}
+
+/* botão na barra fixa da direita, logo abaixo da Mentoria */
+(function(){
+  function botao(){
+    if (window._mtSou || GC_CARTEIRA) return;
+    const nav = document.querySelector('.trilho-dir .trilho-nav'); if (!nav || nav.querySelector('.tb-gc')) return;
+    const ref = nav.querySelector('.tb-mt') || nav.querySelector('.tb-eq');
+    const h = `<button type="button" class="tb tb-gc" onclick="abrirGestaoClientes()" data-dica="Clientes da gestão: a carteira de cada cliente e o que espera a sua ação" data-dica-lado="esquerda" aria-label="Clientes"><svg><use href="#i-usuarios"/></svg><span>Clientes</span></button>`;
+    if (ref) ref.insertAdjacentHTML('afterend', h); else nav.insertAdjacentHTML('afterbegin', h);
+  }
+  botao();
+  let pend = false;
+  new MutationObserver(ms => {
+    if (pend || !ms.some(m => m.addedNodes.length)) return;
+    pend = true; queueMicrotask(() => { pend = false; botao(); });
+  }).observe(document.documentElement, {childList:true, subtree:true});
+})();
+
+/* ══ O MODO CARTEIRA (?carteira=<id>) ═══════════════════════════════════════════
+   A mesma Torre, com a chave de gravação e a sincronização da carteira do
+   cliente. As promoções e dados de mercado vêm da Torre do gestor. */
+if (GC_CARTEIRA){
+  window._gcCarteira = {id:GC_CARTEIRA, nome:''};
+  document.documentElement.classList.add('gc-carteira');
+  const urlC = () => `/rest/v1/torre_carteiras?id=eq.${encodeURIComponent(GC_CARTEIRA)}`;
+  contaLer = async function(){
+    const r = await contaRest('GET', urlC() + '&select=nome,dados,versao');
+    if (!r.ok) throw new Error(gcSemTabela(r) ? 'O servidor ainda não tem a parte das carteiras de clientes.' : contaTraduz(r));
+    if (!r.j || !r.j.length) throw new Error('Esta carteira não existe ou você não tem acesso a ela.');
+    window._gcCarteira.nome = r.j[0].nome || ''; gcPintarFaixa();
+    return {vazio:false, sha:String(r.j[0].versao), dados:contaDesembrulha(r.j[0].dados)};
+  };
+  contaGravar = async function(sha){
+    if (!sha) throw new Error('Esta carteira não existe ou você não tem acesso a ela.');
+    const dados = JSON.stringify(contaDadosParaEnviar());
+    const r = await contaRest('PATCH', urlC() + `&versao=eq.${encodeURIComponent(sha)}`, {dados}, 'return=representation');
+    if (!r.ok) throw new Error(contaTraduz(r));
+    if (!r.j || !r.j.length) return {conflito:true};
+    return {conflito:false, sha:String(r.j[0].versao)};
+  };
+  contaVersaoRemota = async function(){
+    const r = await contaRest('GET', urlC() + '&select=versao');
+    if (!r.ok) throw new Error(contaTraduz(r));
+    return r.j && r.j.length ? String(r.j[0].versao) : null;
+  };
+  rcCopias = async function(){
+    const r = await contaRest('GET', `/rest/v1/torre_carteiras_historico?select=id,versao,criado&carteira_id=eq.${encodeURIComponent(GC_CARTEIRA)}&order=criado.desc`);
+    if (!r.ok) throw new Error(contaTraduz(r));
+    return r.j || [];
+  };
+  rcCopia = async function(id){
+    const r = await contaRest('GET', `/rest/v1/torre_carteiras_historico?select=dados,criado&id=eq.${encodeURIComponent(id)}`);
+    if (!r.ok || !r.j || !r.j.length) throw new Error('Não deu para abrir esta cópia.');
+    return contaDesembrulha(r.j[0].dados);
+  };
+  /* as promoções e dados de mercado: os mesmos da Torre do gestor (como no mentorado) */
+  window.gcBaixarComuns = async function(){
+    if (!contaAtiva()) return false;
+    try {
+      const r = await contaRest('GET', `/rest/v1/torre_dados?select=dados,versao&user_id=eq.${contaSessao().user.id}`);
+      if (!r.ok || !r.j || !r.j.length) return false;
+      const k = 'torre-carteira-comuns-' + GC_CARTEIRA;
+      let ult = null; try { ult = localStorage.getItem(k); } catch(_){}
+      if (ult === String(r.j[0].versao)) return false;
+      const v = contaDesembrulha(r.j[0].dados) || {};
+      MT_COMUNS_LISTAS.forEach(col => {
+        if (!Array.isArray(v[col])) return;
+        const antes = {}; (DB[col] || []).forEach(x => { antes[String(x.id)] = x; });
+        DB[col] = v[col].map(x => {
+          const n = Object.assign({}, x); MT_PESSOAL.forEach(p => delete n[p]); delete n._mt;
+          const a = antes[String(n.id)]; if (a) ['lida', 'voto', 'carrinho', 'semPrazoConf'].forEach(p => { if (a[p] != null) n[p] = a[p]; });
+          return n;
+        });
+      });
+      MT_COMUNS_MAPAS.forEach(m => { if (v[m] != null) DB[m] = v[m]; });
+      salvar();
+      try { localStorage.setItem(k, String(r.j[0].versao)); } catch(_){}
+      try { aplicarTudo(); } catch(_){}
+      return true;
+    } catch(_){ return false; }
+  };
+  setTimeout(() => gcBaixarComuns(), 2500);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') gcBaixarComuns(); });
+}
+function gcPintarFaixa(){
+  if (!GC_CARTEIRA) return;
+  let f = document.getElementById('gcFaixa');
+  if (!f){
+    f = document.createElement('div'); f.id = 'gcFaixa'; f.className = 'eq-faixa gc-faixa';
+    document.body.appendChild(f);
+  }
+  const nome = (window._gcCarteira || {}).nome || '';
+  const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>Carteira de <b>${esc(nome ? nomeCurto(nome) : 'cliente')}</b></span><button type="button" id="gcFaixaVoltar">Voltar à minha Torre</button>`;
+  if (f._html !== html){ f.innerHTML = html; f._html = html; f.querySelector('#gcFaixaVoltar').onclick = () => { location.href = location.pathname; }; }
+  if (nome) document.title = 'Carteira de ' + nomeCurto(nome) + ' · Torre de Controle';
+}
+if (GC_CARTEIRA) gcPintarFaixa();
+/* na carteira do cliente não há venda de milhas (a VEM é concierge): a Prateleira sai do menu */
+if (GC_CARTEIRA){ try { const ini = AREAS.find(a => a.k === 'inicio'); if (ini) ini.menu = ini.menu.filter(g => !(g.itens || []).some(it => it[1] === 'ms-vender')); } catch(_){} }
+/* a saudação continua sendo para o gestor, que é quem está usando a Torre */
+(function(){
+  const K = 'torre-gestor-saudacao';
+  if (!GC_CARTEIRA){ setTimeout(() => { try { if (contaAtiva() && typeof nomeSaudacao === 'function') localStorage.setItem(K, nomeSaudacao() || ''); } catch(_){} }, 3000); return; }
+  if (typeof nomeSaudacao !== 'function') return;
+  const _n = nomeSaudacao;
+  nomeSaudacao = function(){ let g = ''; try { g = localStorage.getItem(K) || ''; } catch(_){} return g || _n.apply(this, arguments); };
+})();
+</script>
+
+
+<style id="gcc-css">
+/* ══ PÁGINA DO CLIENTE (?cliente) · 18/11/2026 ══ */
+html.gc-cliente .tb[data-area="ajustes"], html.gc-cliente .tb[data-area="negocio"], html.gc-cliente .trilho-dir .tb-eq, html.gc-cliente .trilho-dir .tb-mt, html.gc-cliente .trilho-dir .tb-gc{ display:none !important; }
+.gc-link{ display:block; margin-top:6px; font:600 calc(12.5px * var(--esc)) ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--jade); overflow-wrap:anywhere; }
+</style>
+<script id="gcc-js">
+/* A página do cliente (?cliente), decidida com o Jadiel em 18/11/2026:
+   o cliente entra com e-mail e senha e SÓ LÊ a carteira dele (saldos, vencimentos,
+   viagens e a Prova). A Torre usa a mesma tela de entrada da mentoria, com os
+   textos do cliente; achada a carteira dele, abre com ?cliente&carteira=<id>. */
+function gcPaginaCliente(){ return GC_CLIENTE; }
+function gcLinkCliente(){ return location.origin + location.pathname + '?cliente'; }
+(function(){
+  const _pm = mtPaginaMentoria;
+  mtPaginaMentoria = function(){ return GC_CLIENTE || _pm.apply(this, arguments); };
+  const _ve = mtVestirEntrada;
+  mtVestirEntrada = function(modo){
+    const v = _ve.apply(this, arguments);
+    if (!GC_CLIENTE) return v;
+    const el = document.getElementById('contaTela'); if (!el || el.classList.contains('mt-bloq')) return v;
+    const marca = el.querySelector('.ct-marca');
+    if (marca){
+      const selo = marca.querySelector('.mt-selo-entrada'); if (selo) selo.innerHTML = '<i><svg><use href="#i-carteira"/></svg></i>CLIENTE VEM';
+      const h1 = marca.querySelector('h1'); if (h1) h1.textContent = 'Área do Cliente';
+      const lema = marca.querySelector('.ct-lema'); if (lema) lema.textContent = 'Suas milhas, cuidadas pela VEM.';
+      const ul = marca.querySelector('ul');
+      if (ul) ul.innerHTML = `<li><svg><use href="#i-ok"/></svg><span><b>Seus saldos e vencimentos</b>, atualizados pela VEM.</span></li>
+        <li><svg><use href="#i-ok"/></svg><span><b>Suas viagens</b> e a economia de cada uma.</span></li>
+        <li><svg><use href="#i-ok"/></svg><span><b>No celular e no computador</b>, com o mesmo e-mail e senha.</span></li>`;
+      const pe = marca.querySelector('.ct-pe'); if (pe) pe.innerHTML = 'Acesso liberado pela VEM.<br>Use o e-mail que você passou para a VEM.';
+    }
+    const T = {entrar:['Entrar na sua carteira', 'Use o e-mail que você passou para a VEM e a sua senha.'],
+      criar:['Primeiro acesso', 'Use o mesmo e-mail que você passou para a VEM e crie uma senha de pelo menos 6 caracteres. Vamos enviar um link para confirmar o e-mail.']};
+    const t = T[modo]; if (t){ const h2 = el.querySelector('.ct-form h2'), sub = el.querySelector('.ct-sub'); if (h2) h2.textContent = t[0]; if (sub) sub.textContent = t[1]; }
+    return v;
+  };
+  function bloqueio(){
+    mtTelaBloqueio('naoliberado');
+    const el = document.getElementById('contaTela'); if (!el) return;
+    const s = contaSessao() || {user:{}};
+    const selo = el.querySelector('.mt-selo-entrada'); if (selo) selo.innerHTML = '<i><svg><use href="#i-carteira"/></svg></i>CLIENTE VEM';
+    const h1 = el.querySelector('.ct-marca h1'); if (h1) h1.textContent = 'Área do Cliente';
+    const lema = el.querySelector('.ct-lema'); if (lema) lema.textContent = 'Suas milhas, cuidadas pela VEM.';
+    const sub = el.querySelector('#mtBloq .ct-sub'); if (sub) sub.innerHTML = `Você entrou com <b>${esc(s.user.email || '')}</b>, mas não há carteira liberada para este e-mail. Confira se é o mesmo e-mail que você passou para a VEM.`;
+  }
+  const _mv = mtVerificar;
+  mtVerificar = async function(){
+    if (!GC_CLIENTE) return _mv.apply(this, arguments);
+    if (!contaLigada() || !contaAtiva()) return;
+    try {
+      const filtro = GC_CARTEIRA ? `&id=eq.${encodeURIComponent(GC_CARTEIRA)}` : '';
+      const r = await contaRest('GET', `/rest/v1/torre_carteiras?select=id,nome&ativo=eq.true${filtro}`);
+      const lin = r.ok ? (r.j || []) : [];
+      if (!lin.length){ bloqueio(); return; }
+      if (!GC_CARTEIRA){ location.replace(location.pathname + '?cliente&carteira=' + encodeURIComponent(lin[0].id)); return; }
+      window._gcCarteira.nome = lin[0].nome || ''; gcPintarFaixa();
+      const tela = document.getElementById('contaTela'); if (tela && tela.classList.contains('mt-bloq')) contaFecharTela();
+    } catch(e){ if (!(e && e.saiu)) avisar('Sem conexão agora. Tente de novo em instantes.', 'alerta', 5200); }
+  };
+})();
+/* na página do cliente nada é gravado no servidor: nem a Torre própria (ele não tem), nem a carteira */
+if (GC_CLIENTE){ contaGravar = async function(sha){ return {conflito:false, sha}; }; }
+if (GC_CLIENTE && GC_CARTEIRA){
+  /* só leitura: o cliente não grava na carteira (o servidor também recusa) */
+  document.documentElement.classList.add('gc-cliente', 'eq-vendo', 'eq-sem-i', 'eq-sem-e', 'eq-sem-a');
+  contaGravar = async function(sha){ return {conflito:false, sha}; };
+  window.gcBaixarComuns = async function(){ return false; };
+  const _pf = gcPintarFaixa;
+  gcPintarFaixa = function(){
+    const v = _pf.apply(this, arguments);
+    const f = document.getElementById('gcFaixa'); if (!f) return v;
+    const nome = (window._gcCarteira || {}).nome || '';
+    const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>Olá, <b>${esc(gcPrimeiro(nome) || 'cliente')}</b> · sua carteira na VEM</span><button type="button" id="gcFaixaSair">Sair</button>`;
+    if (f._html !== html){ f.innerHTML = html; f._html = html; f.querySelector('#gcFaixaSair').onclick = () => { try { mtSairJa(); } catch(_){ contaSair(); } }; }
+    if (nome) document.title = 'Carteira de ' + nomeCurto(nome) + ' · VEM';
+    return v;
+  };
+  gcPintarFaixa();
+  setTimeout(() => mtVerificar(), 400);
+}
+/* na ficha: o endereço da página do cliente e o convite pronto */
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'), c = id ? gcDB().find(x => x.id === id) : null;
+    if (!d || !c || !c.email) return v;
+    const ref = d.querySelector('.gc-chk'); if (!ref) return v;
+    const txt = `Olá, ${gcPrimeiro(c.nome)}! A sua carteira de milhas na VEM está pronta.\n\nEntre por este endereço com o e-mail ${c.email}. No primeiro acesso, toque em "Primeiro acesso: criar senha":\n${gcLinkCliente()}\n\nLá você acompanha seus saldos, vencimentos e a economia de cada viagem.`;
+    ref.insertAdjacentHTML('afterend', `<div class="eq-tit">6 · Página do cliente</div>
+      <div class="mt-pagina" style="margin:0"><div><b>${esc(gcPrimeiro(c.nome))} acompanha a carteira por aqui</b><small>Só leitura: saldos, vencimentos, viagens e a Prova. Entra com ${esc(c.email)}.</small><span class="gc-link">${esc(gcLinkCliente())}</span></div>
+        <div class="mt-pagina-bts"><button type="button" class="bt p fantasma" id="gcCopiarConvite"><svg><use href="#i-copiar"/></svg>Copiar o convite</button>
+        ${mtZapDigitos(c.zap) ? `<a class="bt p primario" href="https://wa.me/${mtZapDigitos(c.zap)}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Enviar pelo WhatsApp</a>` : ''}</div></div>`);
+    d.querySelector('#gcCopiarConvite').onclick = () => mtCopiar(txt, 'Convite copiado.');
+    return v;
+  };
+})();
+</script>
+
 </body>
 </html>
