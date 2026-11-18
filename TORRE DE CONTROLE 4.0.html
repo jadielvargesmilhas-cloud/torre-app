@@ -81418,7 +81418,7 @@ function mtComecou(){
 .gc-progs button{ all:unset; cursor:pointer; padding:5px 11px; border-radius:99px; border:1px solid var(--fio); font-size:calc(12px * var(--esc)); color:var(--grafite); }
 .gc-progs button.on{ color:#B8901A; border-color:color-mix(in srgb, #C9A227 60%, transparent); background:color-mix(in srgb, #C9A227 13%, transparent); font-weight:600; }
 html[data-tema="breu"] .gc-progs button.on, html.escuro .gc-progs button.on{ color:#E8C35A; }
-.gc-msg{ white-space:pre-wrap; margin:0; padding:14px 16px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font:calc(13.5px * var(--esc))/1.6 var(--f-b, inherit); }
+.gc-msg{ overflow-wrap:anywhere; white-space:pre-wrap; margin:0; padding:14px 16px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); font:calc(13.5px * var(--esc))/1.6 var(--f-b, inherit); }
 @media (max-width:760px){ .gc-cofre{ grid-template-columns:minmax(0,1fr); } .gc .eq-acoes{ grid-template-columns:minmax(0,1fr); } }
 
 /* a faixa da carteira do cliente: o mesmo formato da faixa do "Ver Como", em dourado */
@@ -81860,8 +81860,8 @@ function gcPintarFaixa(){
     f = document.createElement('div'); f.id = 'gcFaixa'; f.className = 'eq-faixa gc-faixa';
     document.body.appendChild(f);
   }
-  const nome = (window._gcCarteira || {}).nome || '';
-  const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>Carteira de <b>${esc(nome ? nomeCurto(nome) : 'cliente')}</b></span><button type="button" id="gcFaixaVoltar">Voltar à minha Torre</button>`;
+  const nome = (window._gcCarteira || {}).nome || '', estreita = matchMedia('(max-width:760px)').matches;
+  const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>${estreita ? '' : 'Carteira de '}<b>${esc(nome ? nomeCurto(nome) : 'cliente')}</b></span><button type="button" id="gcFaixaVoltar">${estreita ? 'Voltar' : 'Voltar à minha Torre'}</button>`;
   if (f._html !== html){ f.innerHTML = html; f._html = html; f.querySelector('#gcFaixaVoltar').onclick = () => { location.href = location.pathname; }; }
   if (nome) document.title = 'Carteira de ' + nomeCurto(nome) + ' · Torre de Controle';
 }
@@ -82250,6 +82250,305 @@ function mtjLigarAba(d){
     });
   }
 }
+</script>
+
+<style id="rel-css">
+/* ══ RELATÓRIO MENSAL DO CLIENTE E COBRANÇA DA GESTÃO · 18/11/2026 ══ */
+.rel{ --rl-ouro:#B8901A; --rl-tinta:#1C2230; --rl-cinza:#5B6474; --rl-fio:#E6E1D6; --rl-fundo:#FFFDF8;
+  background:var(--rl-fundo); color:var(--rl-tinta); border-radius:18px; border:1px solid var(--rl-fio); padding:26px 28px; font-family:var(--f-b, Inter, system-ui, sans-serif); }
+.rel *{ box-sizing:border-box; }
+.rel-cab{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding-bottom:16px; border-bottom:2px solid var(--rl-ouro); }
+.rel-marca{ display:flex; align-items:center; gap:12px; }
+.rel-marca img{ height:44px; width:auto; }
+.rel-marca span{ display:none; }
+.rel-marca b{ display:block; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--rl-ouro); }
+.rel-marca small{ display:block; font-size:12px; color:var(--rl-cinza); }
+.rel-tit{ text-align:right; }
+.rel-tit h2{ margin:0; font-size:22px; letter-spacing:-.01em; color:var(--rl-tinta); }
+.rel-tit p{ margin:2px 0 0; font-size:13px; color:var(--rl-cinza); }
+.rel-nums{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin:18px 0 6px; }
+.rel-num{ padding:12px 14px; border-radius:14px; border:1px solid var(--rl-fio); background:#fff; text-align:center; }
+.rel-num b{ display:block; font-size:20px; color:var(--rl-tinta); font-variant-numeric:tabular-nums; }
+.rel-num small{ display:block; font-size:11.5px; color:var(--rl-cinza); margin-top:2px; line-height:1.35; }
+.rel-num.ouro b{ color:var(--rl-ouro); }
+.rel h3{ margin:20px 0 8px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--rl-ouro); }
+.rel table{ width:100%; border-collapse:collapse; font-size:13px; }
+.rel th{ text-align:left; font-size:11.5px; color:var(--rl-cinza); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--rl-fio); }
+.rel td{ padding:7px 8px; border-bottom:1px solid var(--rl-fio); vertical-align:top; }
+.rel td.n, .rel th.n{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rel td.pos{ color:#0E8A5F; } .rel td.neg{ color:#B4413A; }
+.rel .rel-vazio{ font-size:13px; color:var(--rl-cinza); margin:0; }
+.rel-pe{ margin-top:22px; padding-top:12px; border-top:1px solid var(--rl-fio); font-size:11.5px; color:var(--rl-cinza); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.rel-sel{ display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.rel-sel .campo{ margin:0; min-width:220px; }
+@media (max-width:760px){ .rel{ padding:18px 14px; } .rel-nums{ grid-template-columns:repeat(2, minmax(0,1fr)); } .rel-tit{ text-align:left; } .rel table{ font-size:12px; } }
+/* cobrança */
+.cob-linhas{ display:flex; flex-direction:column; gap:8px; }
+.cob-l{ display:grid; grid-template-columns:minmax(0,1fr) 120px 130px; gap:10px; align-items:end; }
+.cob-l .campo{ margin:0; }
+.cob-l .v{ text-align:right; font-variant-numeric:tabular-nums; color:var(--giz); font-weight:600; padding-bottom:10px; }
+.cob-total{ display:flex; justify-content:space-between; align-items:baseline; margin-top:10px; padding-top:10px; border-top:1px solid var(--fio); }
+.cob-total b{ font-size:calc(22px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.cob-pix{ display:grid; grid-template-columns:150px minmax(0,1fr); gap:14px; align-items:center; margin-top:12px; padding:14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); }
+.cob-pix svg{ width:150px; height:150px; background:#fff; padding:8px; border-radius:10px; }
+.cob-pix code{ display:block; font-size:11px; overflow-wrap:anywhere; color:var(--grafite); margin-top:6px; }
+.gc-acoes2{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px; margin-top:-6px; }
+.gc-acoes2 .bt{ justify-content:center; min-width:0; }
+@media (max-width:760px){ .cob-l{ grid-template-columns:minmax(0,1fr) 90px; } .cob-l .v{ grid-column:1 / -1; text-align:left; padding:0; } .cob-pix{ grid-template-columns:minmax(0,1fr); justify-items:center; } }
+</style>
+<script id="rel-js">
+/* ══════════════════════════════════════════════════════════════════════════════
+   RELATÓRIO MENSAL DO CLIENTE E COBRANÇA DA GESTÃO · 18/11/2026 (Onda 2)
+   O relatório é a peça que mostra ao cliente, todo mês, o valor da gestão:
+   o que entrou, as campanhas aproveitadas, o que vence e a economia das viagens.
+   Funciona na carteira aberta, na página do cliente e direto do cartão do
+   cliente na janela Clientes (lido da carteira dele no servidor).
+   A cobrança junta mensalidade, taxa por emissão e percentual da economia,
+   guarda uma por mês por cliente e monta a mensagem com o PIX.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const REL_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function relMesTxt(ym){ const [a, m] = String(ym).split('-'); return (REL_MESES[Number(m) - 1] || '') + ' de ' + a; }
+function relMesAtual(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function relMesAnterior(){ const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function relUltimosMeses(n){ const out = [], d = new Date(); d.setDate(1); for (let i = 0; i < n; i++){ out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); d.setMonth(d.getMonth() - 1); } return out; }
+function relComDados(dados, fn){
+  if (!dados) return fn();
+  const salvo = DB;
+  try { const v = bancoVazio(); DB = Object.assign({}, v, dados); DB.cfg = Object.assign({}, v.cfg, dados.cfg || {}); return fn(); }
+  finally { DB = salvo; }
+}
+function relReais(v){ return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function relQtd(v){ return (Number(v) || 0).toLocaleString('pt-BR'); }
+/* os números do mês, sempre da carteira que está em DB */
+function relMes(ym){
+  const lan = (DB.lancamentos || []).filter(l => String(l.data || '').startsWith(ym));
+  const nomeTipo = t => (TIPOS_LANC[TIPOS_LANC_ANTIGOS[t] || t]) || 'Movimento';
+  const entrou = soma(lan.filter(l => Number(l.qtd) > 0).map(l => Number(l.qtd)));
+  const saiu = -soma(lan.filter(l => Number(l.qtd) < 0).map(l => Number(l.qtd)));
+  const camp = lan.filter(l => ['compra', 'bonificada'].includes(l.tipo) || (l.tipo === 'transferencia' && Number(l.qtd) > 0));
+  const investido = centavos(soma(camp.filter(l => Number(l.custo) > 0).map(l => Number(l.custo))));
+  const ops = lan.slice().sort((a, b) => String(a.data).localeCompare(String(b.data)) || (a.criadoEm || 0) - (b.criadoEm || 0))
+    .map(l => ({data:l.data, tipo:nomeTipo(l.tipo), prog:(prog(l.prog) || {}).n || l.prog || '', qtd:Number(l.qtd) || 0, nota:l.nota || ''}));
+  const sal = saldoPorPrograma(), saldos = Object.keys(sal).filter(p => sal[p] > 0).sort((a, b) => sal[b] - sal[a]).map(p => ({n:prog(p).n, q:sal[p], tipo:prog(p).tipo}));
+  const vence = lotesEmRisco(90).map(l => ({n:prog(l.prog).n, q:Number(l.qtd) || 0, vence:l.vence})).sort((a, b) => String(a.vence).localeCompare(String(b.vence)));
+  const viagens = (DB.planos || []).map(p => {
+    const em = (p.trechos || []).filter(t => t.situacao === 'emitido');
+    let econ = 0; em.forEach(t => { try { econ = centavos(econ + (Number((economiaTrecho(t) || {}).valor) || 0)); } catch(_){} });
+    return {nome:p.nome || p.destino || 'Viagem', emitidos:em.length, trechos:(p.trechos || []).length, econ};
+  }).filter(v => v.trechos);
+  const emissoesMes = (DB.reservas || []).filter(r => String(r.data || r.criada || '').startsWith(ym) && r.status !== 'cancelada').length + lan.filter(l => l.tipo === 'resgatePass').length;
+  const economiaTotal = centavos(soma(viagens.map(v => v.econ)));
+  return {ym, entrou, saiu, investido, camp, ops, saldos, vence, viagens, economiaTotal, emissoesMes,
+    milhas:soma(saldos.filter(s => s.tipo === 'milhas').map(s => s.q)), pontos:soma(saldos.filter(s => s.tipo !== 'milhas').map(s => s.q))};
+}
+function relHTML(ym, nome){
+  const r = relMes(ym), logo = contaLogoVem();
+  return `<article class="rel">
+    <header class="rel-cab"><div class="rel-marca">${logo || ''}<div><b>Relatório de gestão</b><small>VEM · Viagens &amp; Experiências com Milhas</small></div></div>
+      <div class="rel-tit"><h2>${esc(relMesTxt(ym).replace(/^./, c => c.toUpperCase()))}</h2><p>Carteira de ${esc(nome || 'cliente')}</p></div></header>
+    <div class="rel-nums">
+      <div class="rel-num"><b>${relQtd(r.entrou)}</b><small>pontos e milhas que entraram no mês</small></div>
+      <div class="rel-num"><b>${relQtd(r.milhas)}</b><small>milhas na carteira hoje</small></div>
+      <div class="rel-num"><b>${relQtd(r.pontos)}</b><small>pontos de banco na carteira hoje</small></div>
+      <div class="rel-num ouro"><b>${relReais(r.economiaTotal)}</b><small>economia comprovada nas viagens emitidas</small></div>
+    </div>
+    <h3>O que aconteceu no mês</h3>
+    ${r.ops.length ? `<table><thead><tr><th>Dia</th><th>Movimento</th><th>Programa</th><th class="n">Quantidade</th></tr></thead><tbody>${r.ops.map(o => `<tr><td>${esc(dataBR(o.data).slice(0, 5))}</td><td>${esc(o.tipo)}${o.nota ? `<br><span style="color:var(--rl-cinza);font-size:11.5px">${esc(o.nota)}</span>` : ''}</td><td>${esc(o.prog)}</td><td class="n ${o.qtd >= 0 ? 'pos' : 'neg'}">${o.qtd >= 0 ? '+' : '−'}${relQtd(Math.abs(o.qtd))}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="rel-vazio">Nenhum movimento registrado neste mês.</p>'}
+    ${r.camp.length ? `<p class="rel-vazio" style="margin-top:8px">${r.camp.length === 1 ? '1 campanha aproveitada' : r.camp.length + ' campanhas aproveitadas'} no mês${r.investido ? `, com ${relReais(r.investido)} investidos` : ''}.</p>` : ''}
+    <h3>Saldos de hoje</h3>
+    ${r.saldos.length ? `<table><thead><tr><th>Programa</th><th class="n">Saldo</th></tr></thead><tbody>${r.saldos.map(s => `<tr><td>${esc(s.n)}</td><td class="n">${relQtd(s.q)}</td></tr>`).join('')}</tbody></table>` : '<p class="rel-vazio">Nenhum saldo lançado.</p>'}
+    <h3>Vencimentos nos próximos 90 dias</h3>
+    ${r.vence.length ? `<table><thead><tr><th>Programa</th><th>Vence em</th><th class="n">Quantidade</th></tr></thead><tbody>${r.vence.map(v => `<tr><td>${esc(v.n)}</td><td>${esc(dataBR(v.vence))}</td><td class="n">${relQtd(v.q)}</td></tr>`).join('')}</tbody></table>` : '<p class="rel-vazio">Nada vence nos próximos 90 dias.</p>'}
+    <h3>Viagens</h3>
+    ${r.viagens.length ? `<table><thead><tr><th>Viagem</th><th>Trechos emitidos</th><th class="n">Economia</th></tr></thead><tbody>${r.viagens.map(v => `<tr><td>${esc(v.nome)}</td><td>${v.emitidos} de ${v.trechos}</td><td class="n">${v.econ ? relReais(v.econ) : 'n/d'}</td></tr>`).join('')}</tbody></table>` : '<p class="rel-vazio">Nenhuma viagem lançada.</p>'}
+    <footer class="rel-pe"><span>Gerado pela Torre de Controle em ${esc(new Date().toLocaleDateString('pt-BR'))}.</span><span>Economia contada só nos trechos já emitidos, contra a mesma companhia na pagante.</span></footer>
+  </article>`;
+}
+function relTextoZap(ym, nome){
+  const r = relMes(ym), pn = String(nome || '').split(' ')[0] || '';
+  return `Olá${pn ? ', ' + pn : ''}! Aqui está o resumo de ${relMesTxt(ym)} da sua carteira na VEM:\n\n`
+    + `• Entraram ${relQtd(r.entrou)} pontos e milhas\n• Você tem hoje ${relQtd(r.milhas)} milhas e ${relQtd(r.pontos)} pontos de banco\n`
+    + (r.vence.length ? `• Atenção: ${relQtd(soma(r.vence.map(v => v.q)))} vencem nos próximos 90 dias\n` : '• Nada vence nos próximos 90 dias\n')
+    + (r.economiaTotal ? `• Economia comprovada nas viagens emitidas: ${relReais(r.economiaTotal)}\n` : '')
+    + `\nO relatório completo vai em anexo.`;
+}
+function relCSSTexto(){ const s = document.getElementById('rel-css'); return s ? s.textContent : ''; }
+function relImprimir(html, titulo){
+  const w = window.open('', '_blank'); if (!w){ avisar('O navegador bloqueou a janela. Permita janelas deste site e tente de novo.', 'alerta', 6000); return; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>${relCSSTexto()} body{margin:0;padding:24px;background:#fff;} .rel{max-width:820px;margin:0 auto;border:none;padding:0;} @media print{ body{padding:0;} }</style></head><body>${html}<script>setTimeout(function(){ window.print(); }, 400);<\/script></body></html>`);
+  w.document.close();
+}
+/* abre o relatório: dados = null usa a carteira aberta; senão, a carteira lida do servidor */
+function abrirRelatorio(dados, nome, ym){
+  ym = ym || relMesAnterior();
+  nome = nome || (window._gcCarteira || {}).nome || nomeSaudacao() || '';
+  const meses = relUltimosMeses(12);
+  const corpo = relComDados(dados, () => relHTML(ym, nome));
+  abrirFolha({titulo:'Relatório do mês', largura:'larga',
+    corpo:`<div class="rel-sel"><div class="campo"><label>Mês</label><select id="relMes" data-ordem="natural">${meses.map(m => `<option value="${m}"${m === ym ? ' selected' : ''}>${relMesTxt(m)}</option>`).join('')}</select></div></div>${corpo}`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt fantasma" id="relZap"><svg><use href="#i-copiar"/></svg>Copiar o resumo</button><button type="button" class="bt primario" id="relPdf"><svg><use href="#i-baixar"/></svg>Imprimir ou salvar em PDF</button>`});
+  document.getElementById('relMes').onchange = e => abrirRelatorio(dados, nome, e.target.value);
+  document.getElementById('relZap').onclick = () => mtCopiar(relComDados(dados, () => relTextoZap(ym, nome)), 'Resumo copiado. Cole no WhatsApp do cliente.');
+  document.getElementById('relPdf').onclick = () => relImprimir(corpo, `Relatório ${relMesTxt(ym)} · ${nome}`);
+}
+
+/* ── cobrança da gestão ─────────────────────────────────────────────────────── */
+function cobModelo(c){ const m = (c && c.cobranca) || {}; return {mensal:Number(m.mensal) || 0, porEmissao:Number(m.porEmissao) || 0, pct:Number(m.pct) || 0}; }
+function cobCalc(c, ym, dados, emissoes, economia){
+  const m = cobModelo(c);
+  const r = relComDados(dados, () => relMes(ym));
+  const nE = emissoes != null ? emissoes : r.emissoesMes, ec = economia != null ? economia : 0;
+  const itens = [];
+  if (m.mensal) itens.push({k:'mensal', n:'Mensalidade da gestão', q:1, v:centavos(m.mensal)});
+  if (m.porEmissao) itens.push({k:'emissao', n:`Emissões (${relReais(m.porEmissao)} cada)`, q:nE, v:centavos(nE * m.porEmissao)});
+  if (m.pct) itens.push({k:'economia', n:`${String(m.pct).replace('.', ',')}% da economia comprovada no mês`, q:ec, v:centavos(ec * m.pct / 100)});
+  return {itens, total:centavos(soma(itens.map(i => i.v))), emissoes:nE, economia:ec, economiaTotal:r.economiaTotal};
+}
+function cobPix(valor, txid){
+  try { if (typeof pxConfigOk !== 'function' || !pxConfigOk()) return ''; const c = vemCfg(); return pxPayload({chave:c.pixChave, nome:c.pixNome, cidade:c.pixCidade || 'Salvador', valor, txid}); } catch(_){ return ''; }
+}
+function cobTexto(c, cb, pix){
+  const pn = String(c.nome || '').split(' ')[0];
+  return `Olá, ${pn}! Segue a cobrança da gestão da sua carteira de ${relMesTxt(cb.mes)}:\n\n${cb.itens.map(i => `• ${i.n}: ${relReais(i.v)}`).join('\n')}\n\nTotal: ${relReais(cb.total)}${pix ? `\n\nPIX copia e cola:\n${pix}` : ''}\n\nObrigado pela confiança!`;
+}
+function cobRecibo(c, cb){
+  const logo = contaLogoVem(), c2 = (typeof vemCfg === 'function' ? vemCfg() : {}) || {};
+  return `<article class="rel"><header class="rel-cab"><div class="rel-marca">${logo || ''}<div><b>Recibo</b><small>VEM · Viagens &amp; Experiências com Milhas</small></div></div>
+    <div class="rel-tit"><h2>${relReais(cb.total)}</h2><p>Pago em ${esc(new Date(cb.pagoEm).toLocaleDateString('pt-BR'))}</p></div></header>
+    <p style="margin:18px 0 6px;font-size:14px;line-height:1.6">Recebi de <b>${esc(c.nome)}</b> a quantia de <b>${relReais(cb.total)}</b>, referente à gestão da carteira de pontos e milhas de ${esc(relMesTxt(cb.mes))}:</p>
+    <table><thead><tr><th>Item</th><th class="n">Valor</th></tr></thead><tbody>${cb.itens.map(i => `<tr><td>${esc(i.n)}</td><td class="n">${relReais(i.v)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="n"><b>${relReais(cb.total)}</b></td></tr></tbody></table>
+    <footer class="rel-pe"><span>${esc(c2.pixNome || 'VEM · Viagens & Experiências com Milhas')}</span><span>Emitido pela Torre de Controle em ${esc(new Date().toLocaleDateString('pt-BR'))}.</span></footer></article>`;
+}
+function cobAbrir(id, ym){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const c = gcDB().find(x => x.id === id); if (!c) return;
+  c.cobrancas = c.cobrancas || [];
+  ym = ym || relMesAnterior();
+  const l = gcLinhaServ(c), dados = l ? contaDesembrulha(l.dados) : null;
+  const m = cobModelo(c), ja = c.cobrancas.find(x => x.mes === ym);
+  const base = cobCalc(c, ym, dados);
+  const hist = c.cobrancas.slice().sort((a, b) => b.mes.localeCompare(a.mes));
+  const semModelo = !m.mensal && !m.porEmissao && !m.pct;
+  d.innerHTML = `<div class="dr-painel">${gcCab('Cobrança da gestão', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista">
+      ${semModelo ? `<div class="gc-aviso"><svg><use href="#i-alerta"/></svg><span><b>Falta o modelo de cobrança.</b> Abra a Ficha do cliente e preencha a parte 7 (mensalidade, taxa por emissão ou percentual da economia).</span></div>` : `
+      <div class="rel-sel"><div class="campo"><label>Mês</label><select id="cobMes" data-ordem="natural">${relUltimosMeses(12).map(x => `<option value="${x}"${x === ym ? ' selected' : ''}>${relMesTxt(x)}</option>`).join('')}</select></div></div>
+      ${ja ? `<div class="eq-nota" style="margin:0 0 12px"><svg><use href="#i-info"/></svg><span><b>${esc(relMesTxt(ym))} já foi cobrado</b> (${relReais(ja.total)}, ${ja.status === 'pago' ? 'pago em ' + esc(new Date(ja.pagoEm).toLocaleDateString('pt-BR')) : 'esperando o pagamento'}). Cada mês é cobrado uma vez só.</span></div>` : `
+      <div class="cob-linhas">
+        ${m.mensal ? `<div class="cob-l"><span>Mensalidade da gestão</span><span></span><span class="v">${relReais(m.mensal)}</span></div>` : ''}
+        ${m.porEmissao ? `<div class="cob-l"><span>Emissões no mês <span class="fraco">(${relReais(m.porEmissao)} cada)</span></span><div class="campo"><label>Quantas</label><input type="text" inputmode="numeric" id="cobEm" value="${base.emissoes}"></div><span class="v" id="cobEmV"></span></div>` : ''}
+        ${m.pct ? `<div class="cob-l"><span>${String(m.pct).replace('.', ',')}% da economia comprovada no mês <span class="fraco">(na carteira: ${relReais(base.economiaTotal)} em todas as viagens)</span></span><div class="campo"><label>Economia do mês</label><input type="text" inputmode="decimal" data-moeda id="cobEc" value="0,00"></div><span class="v" id="cobEcV"></span></div>` : ''}
+      </div>
+      <div class="cob-total"><span>Total de ${esc(relMesTxt(ym))}</span><b id="cobTot"></b></div>`}`}
+      <div class="eq-tit">Cobranças</div>
+      <div class="gc-lista">${hist.length ? hist.map(x => `<div class="gc-linha" data-id="${esc(x.id)}"><div><b>${esc(relMesTxt(x.mes).replace(/^./, s => s.toUpperCase()))} · ${relReais(x.total)}</b><small>${x.status === 'pago' ? 'Pago em ' + esc(new Date(x.pagoEm).toLocaleDateString('pt-BR')) : 'Esperando o pagamento desde ' + esc(new Date(x.criado).toLocaleDateString('pt-BR'))}</small></div>
+          <div class="gc-bts">${x.status === 'pago' ? `<button type="button" class="bt p fantasma" data-cb="recibo"><svg><use href="#i-documento"/></svg>Recibo</button>` : `<button type="button" class="bt p fantasma" data-cb="msg"><svg><use href="#i-link"/></svg>Mensagem</button><button type="button" class="bt p primario" data-cb="pago"><svg><use href="#i-ok"/></svg>Recebi</button>`}</div></div>`).join('')
+        : '<p class="fraco" style="margin:0">Nenhuma cobrança ainda.</p>'}</div>
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="cobVoltar">Fechar</button><span class="esticar"></span>
+      ${!semModelo && !ja ? `<button type="button" class="bt primario" id="cobGerar"><svg><use href="#i-dinheiro"/></svg>Registrar a cobrança</button>` : ''}</footer></div>`;
+  const calc = () => {
+    const em = d.querySelector('#cobEm'), ec = d.querySelector('#cobEc');
+    const r = cobCalc(c, ym, dados, em ? Math.max(0, parseInt(em.value, 10) || 0) : 0, ec ? (moedaNum(ec.value) || 0) : 0);
+    const ev = d.querySelector('#cobEmV'), cv = d.querySelector('#cobEcV'), t = d.querySelector('#cobTot');
+    if (ev) ev.textContent = relReais((r.itens.find(i => i.k === 'emissao') || {}).v || 0);
+    if (cv) cv.textContent = relReais((r.itens.find(i => i.k === 'economia') || {}).v || 0);
+    if (t) t.textContent = relReais(r.total);
+    return r;
+  };
+  d.querySelectorAll('#cobEm, #cobEc').forEach(x => x.addEventListener('input', calc)); if (!semModelo && !ja) calc();
+  const sel = d.querySelector('#cobMes'); if (sel) sel.onchange = () => cobAbrir(id, sel.value);
+  d.querySelector('#cobVoltar').onclick = () => gcDesenharLista(d);
+  const g = d.querySelector('#cobGerar');
+  if (g) g.onclick = () => {
+    const r = calc();
+    if (!(r.total > 0)) return avisar('O total está zerado: confira as emissões e a economia do mês.', 'alerta', 5200);
+    if (c.cobrancas.some(x => x.mes === ym)) return avisar('Este mês já foi cobrado.', 'alerta');
+    const cb = {id:uid(), mes:ym, itens:r.itens.filter(i => i.v > 0), total:r.total, status:'pendente', criado:Date.now()};
+    c.cobrancas.push(cb); salvar(); cobMensagem(id, cb.id);
+  };
+  d.querySelectorAll('.gc-linha[data-id]').forEach(li => {
+    const cb = c.cobrancas.find(x => x.id === li.dataset.id); if (!cb) return;
+    const b1 = li.querySelector('[data-cb="msg"]'), b2 = li.querySelector('[data-cb="pago"]'), b3 = li.querySelector('[data-cb="recibo"]');
+    if (b1) b1.onclick = () => cobMensagem(id, cb.id);
+    if (b2) b2.onclick = () => { cb.status = 'pago'; cb.pagoEm = Date.now(); salvar(); avisar('Pagamento registrado. O recibo está pronto.', 'ok'); cobAbrir(id, ym); };
+    if (b3) b3.onclick = () => relImprimir(cobRecibo(c, cb), `Recibo ${relMesTxt(cb.mes)} · ${c.nome}`);
+  });
+}
+function cobMensagem(id, cbId){
+  const d = document.getElementById('dlgGestao'); const c = gcDB().find(x => x.id === id); if (!d || !c) return;
+  const cb = (c.cobrancas || []).find(x => x.id === cbId); if (!cb) return;
+  const pix = cobPix(cb.total, 'VEMGESTAO' + cb.mes.replace('-', ''));
+  const txt = cobTexto(c, cb, pix), z = mtZapDigitos(c.zap);
+  d.innerHTML = `<div class="dr-painel">${gcCab('Cobrança pronta', esc(c.nome) + ' · ' + esc(relMesTxt(cb.mes)))}
+    <div class="dr-corpo"><div class="eq-vista">
+      <pre class="gc-msg">${esc(txt)}</pre>
+      ${pix ? `<div class="cob-pix">${pxQRSvg(pix)}<div><b style="color:var(--giz)">PIX de ${relReais(cb.total)}</b><p class="fraco" style="margin:4px 0 0">O cliente pode ler o código ou copiar o PIX copia e cola da mensagem.</p><code>${esc(pix)}</code></div></div>`
+        : `<div class="gc-aviso" style="margin-top:12px"><svg><use href="#i-alerta"/></svg><span><b>Sem a chave PIX cadastrada</b>, a mensagem vai sem o PIX copia e cola. Cadastre em Negócio › Orçamento › página VEM (chave e nome do recebedor).</span></div>`}
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="cobMsgVoltar">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt fantasma" id="cobMsgCopiar"><svg><use href="#i-copiar"/></svg>Copiar</button>
+      ${z ? `<a class="bt primario" href="https://wa.me/${z}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir no WhatsApp</a>` : ''}</footer></div>`;
+  d.querySelector('#cobMsgVoltar').onclick = () => cobAbrir(id, cb.mes);
+  d.querySelector('#cobMsgCopiar').onclick = () => mtCopiar(txt, 'Mensagem copiada.');
+}
+
+/* ── ligações: ficha (modelo de cobrança), cartão (Relatório e Cobrança), faixa da carteira ── */
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'), e = _gcEd; if (!d || !e) return v;
+    const m = cobModelo(e), ref = d.querySelector('#gcAtivo') ? d.querySelector('#gcAtivo').previousElementSibling : null;
+    const html = `<div class="eq-tit">7 · Cobrança do serviço</div>
+      <div class="eq-campos" style="grid-template-columns:repeat(3, minmax(0,1fr))">
+        <div class="campo"><label>Mensalidade</label><input type="text" inputmode="decimal" data-moeda id="cobMensal" value="${m.mensal ? moedaTxt(m.mensal) : ''}" placeholder="0,00"></div>
+        <div class="campo"><label>Taxa por emissão</label><input type="text" inputmode="decimal" data-moeda id="cobPorEm" value="${m.porEmissao ? moedaTxt(m.porEmissao) : ''}" placeholder="0,00"></div>
+        <div class="campo"><label>% da economia comprovada</label><input type="text" inputmode="decimal" id="cobPct" value="${m.pct ? String(m.pct).replace('.', ',') : ''}" placeholder="ex.: 10"></div>
+      </div><p class="fraco" style="margin:6px 0 0;font-size:calc(12px * var(--esc))">Preencha só o que você cobra. Pode combinar os três.</p>`;
+    if (ref) ref.insertAdjacentHTML('beforebegin', html); else d.querySelector('.dr-corpo .eq-vista').insertAdjacentHTML('beforeend', html);
+    return v;
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(orig){
+    const d = document.getElementById('dlgGestao');
+    if (d && _gcEd && d.querySelector('#cobMensal')){
+      const pct = parseFloat(String(d.querySelector('#cobPct').value || '').replace(',', '.')) || 0;
+      if (pct < 0 || pct > 100) return erroNoCampo(d.querySelector('#cobPct'), 'O percentual vai de 0 a 100.');
+      _gcEd.cobranca = {mensal:moedaNum(d.querySelector('#cobMensal').value) || 0, porEmissao:moedaNum(d.querySelector('#cobPorEm').value) || 0, pct};
+    }
+    return _sv.apply(this, arguments);
+  };
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(d, semAnimar){
+    const v = _dl.apply(this, arguments);
+    d = d || document.getElementById('dlgGestao'); if (!d) return v;
+    d.querySelectorAll('.eq-card[data-id]').forEach(card => {
+      const c = gcDB().find(x => x.id === card.dataset.id); if (!c) return;
+      const pend = (c.cobrancas || []).filter(x => x.status !== 'pago');
+      if (pend.length){ const s = card.querySelector('.gc-sinais'); if (s) s.insertAdjacentHTML('afterbegin', `<span class="gc-sinal alerta">${pend.length === 1 ? 'Cobrança de ' + esc(relMesTxt(pend[0].mes)) + ' esperando o pagamento' : pend.length + ' cobranças esperando o pagamento'}</span>`); }
+      const ac = card.querySelector('.eq-acoes');
+      if (ac) ac.insertAdjacentHTML('afterend', `<div class="gc-acoes2"><button type="button" class="bt p fantasma" data-gc="relatorio"${c.carteiraId && gcLinhaServ(c) ? '' : ' disabled'}><svg><use href="#i-documento"/></svg>Relatório</button><button type="button" class="bt p fantasma" data-gc="cobrar"><svg><use href="#i-dinheiro"/></svg>Cobrança</button></div>`);
+      const br = card.querySelector('[data-gc="relatorio"]'); if (br) br.onclick = () => { const l = gcLinhaServ(c); if (l){ d.close(); abrirRelatorio(contaDesembrulha(l.dados), c.nome); } };
+      const bc = card.querySelector('[data-gc="cobrar"]'); if (bc) bc.onclick = () => cobAbrir(c.id);
+    });
+    return v;
+  };
+  if (GC_CARTEIRA){
+    const _pf = gcPintarFaixa;
+    gcPintarFaixa = function(){
+      const v = _pf.apply(this, arguments);
+      const f = document.getElementById('gcFaixa'); if (!f || f.querySelector('#gcFaixaRel')) return v;
+      const b = document.createElement('button'); b.type = 'button'; b.id = 'gcFaixaRel'; b.textContent = matchMedia('(max-width:760px)').matches ? 'Relatório' : 'Relatório do mês';
+      b.onclick = () => abrirRelatorio(null, (window._gcCarteira || {}).nome || '');
+      const ult = f.querySelector('button'); if (ult) f.insertBefore(b, ult); else f.appendChild(b);
+      f._html = null;
+      return v;
+    };
+    gcPintarFaixa();
+  }
+})();
 </script>
 
 </body>
