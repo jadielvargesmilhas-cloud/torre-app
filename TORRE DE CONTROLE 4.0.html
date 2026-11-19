@@ -82752,6 +82752,7 @@ function askResponder(q){
 .gq-chip::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--gq, var(--jade)); box-shadow:0 0 6px var(--gq, var(--jade)); }
 .gq-chip.on{ border-color:var(--gq, var(--jade)); background:color-mix(in srgb, var(--gq, var(--jade)) 12%, transparent); }
 .gq-chip.ok{ cursor:default; }
+.mq-fila{ margin-top:14px; }
 .gq-vazio{ padding:18px; text-align:center; color:var(--grafite); }
 @media (max-width:760px){ .gq-fila{ padding:10px; } .gq-chip{ font-size:calc(12.5px * var(--esc)); } }
 </style>
@@ -82793,6 +82794,51 @@ function gqContar(c){
     cards.map((el, i) => ({el, i, p:(cont[el.dataset.id] || {}).peso || 0})).sort((a, b) => b.p - a.p || a.i - b.i).forEach(x => grade.appendChild(x.el));
     cards.forEach(el => { el.hidden = !!_gqFiltro && !((cont[el.dataset.id] || {})[_gqFiltro] > 0); });
     d.querySelectorAll('[data-gq]').forEach(b => b.onclick = () => { _gqFiltro = _gqFiltro === b.dataset.gq ? '' : b.dataset.gq; gcDesenharLista(d, true); });
+    return v;
+  };
+})();
+</script>
+<script id="mq-js">
+/* Mentoria: a mesma fila "Hoje" da gestão, para o mentor (18/11/2026). Mostra quem
+   ainda não entrou, quem sumiu (sem entrar há 14 dias ou mais) e de quem o acesso
+   termina em 30 dias (hora de oferecer a Assinatura da Torre). Cada item filtra a
+   lista; quem pede atenção vem primeiro. Pausado e vencido não entram na conta. */
+let _mqFiltro = '';
+const MQ_DIAS_SUMIDO = 14;
+const MQ_TIPOS = [
+  {k:'nunca',  cor:'var(--ouro)', um:'ainda não entrou',                 v:'ainda não entraram'},
+  {k:'sumido', cor:'#FF8A6B',     um:`sem entrar há ${MQ_DIAS_SUMIDO} dias ou mais`, v:`sem entrar há ${MQ_DIAS_SUMIDO} dias ou mais`},
+  {k:'acaba',  cor:'#6FB7FF',     um:'com acesso terminando em 30 dias', v:'com acesso terminando em 30 dias'}
+];
+function mqContar(m){
+  const o = {nunca:0, sumido:0, acaba:0, peso:0};
+  if (mtSituacao(m) !== 'ativo') return o;
+  const ac = _mtServ.acessos ? _mtServ.acessos[m.email] : '';
+  if (_mtServ.estado === 'ok' && !m.pend && !ac) o.nunca = 1;
+  if (ac){ const dd = Math.floor((Date.now() - new Date(ac).getTime()) / 864e5); if (dd >= MQ_DIAS_SUMIDO) o.sumido = 1; }
+  if (m.validade){ const d = diasAte(String(m.validade).slice(0, 10)); if (d !== null && d >= 0 && d <= 30) o.acaba = 1; }
+  o.peso = o.sumido * 3 + o.nunca * 2 + o.acaba;
+  return o;
+}
+(function(){
+  const _d = mtDesenharLista;
+  mtDesenharLista = function(d, semAnimar){
+    const v = _d.apply(this, arguments);
+    d = d || document.getElementById('dlgMentoria'); if (!d || (typeof _mtAba !== 'undefined' && _mtAba !== 'lista')) return v;
+    const grade = d.querySelector('.eq-grade'); if (!grade) return v;
+    const ms = mtDB(), cont = {}; ms.forEach(m => { cont[m.id] = mqContar(m); });
+    const tot = {}; MQ_TIPOS.forEach(t => { tot[t.k] = soma(ms.map(m => cont[m.id][t.k])); });
+    if (_mqFiltro && !tot[_mqFiltro]) _mqFiltro = '';
+    const at = MQ_TIPOS.filter(t => tot[t.k] > 0);
+    const ab = d.querySelector('.mt-abas');   /* logo abaixo das abas: o bloco de ajustes da página é longo e escondia a fila no celular */
+    (ab || grade).insertAdjacentHTML(ab ? 'afterend' : 'beforebegin', `<div class="gq-fila mq-fila" role="group" aria-label="O que espera você hoje"><span class="gq-tit">Hoje</span>${at.length
+      ? at.map(t => `<button type="button" class="gq-chip${_mqFiltro === t.k ? ' on' : ''}" style="--gq:${t.cor}" data-mq="${t.k}"><b>${tot[t.k]}</b>${tot[t.k] === 1 ? t.um : t.v}</button>`).join('')
+        + (_mqFiltro ? `<button type="button" class="gq-chip" data-mq="">Ver todos</button>` : '')
+      : `<span class="gq-chip ok">Nenhum mentorado pedindo atenção hoje</span>`}</div>`);
+    const cards = [...grade.querySelectorAll('.eq-card[data-id]')];
+    cards.map((el, i) => ({el, i, p:(cont[el.dataset.id] || {}).peso || 0})).sort((a, b) => b.p - a.p || a.i - b.i).forEach(x => grade.appendChild(x.el));
+    cards.forEach(el => { el.hidden = !!_mqFiltro && !((cont[el.dataset.id] || {})[_mqFiltro] > 0); });
+    d.querySelectorAll('[data-mq]').forEach(b => b.onclick = () => { _mqFiltro = _mqFiltro === b.dataset.mq ? '' : b.dataset.mq; mtDesenharLista(d, true); const g = _mqFiltro && d.querySelector('.eq-grade'); if (g) g.scrollIntoView({block:'start', behavior:'smooth'}); });   /* os cartões ficam abaixo dos ajustes: rola até eles */
     return v;
   };
 })();
