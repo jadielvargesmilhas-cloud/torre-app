@@ -50417,10 +50417,11 @@ function rvMilheiro(r){
 function rvValorPontos(r){
   if (!(Number(r.pontos) > 0) || !r.prog) return Number(r.compl) || 0;
   const {m} = rvMilheiro(r);
-  return Number(r.pontos) / 1000 * m + (Number(r.compl) || 0);
+  return centavos(centavos(Number(r.pontos) / 1000 * m) + (Number(r.compl) || 0));
 }
-const rvPagante = r => (Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1);
-const rvEconomia = r => r.pagamento === 'pontos' && r.situacao !== 'cancelado' && rvPagante(r) > 0 && Number(r.pontos) > 0 ? rvPagante(r) - rvValorPontos(r) : null;
+/* regra do dinheiro (18/11/2026): cada valor nasce em centavos */
+const rvPagante = r => centavos((Number(r.valor) || 0) * (r.moeda && r.moeda !== 'BRL' ? (Number(r.cambio) || 0) : 1));
+const rvEconomia = r => r.pagamento === 'pontos' && r.situacao !== 'cancelado' && rvPagante(r) > 0 && Number(r.pontos) > 0 ? centavos(rvPagante(r) - rvValorPontos(r)) : null;
 const rvNoites = r => r.ini && r.fim ? Math.max(0, Math.round((new Date(r.fim + 'T12:00:00') - new Date(r.ini + 'T12:00:00')) / 864e5)) : 0;
 const rvFmtMoeda = (v, m) => (Number(v) || 0).toLocaleString('pt-BR', {style:'currency', currency:m || 'BRL'});
 
@@ -81342,6 +81343,8 @@ function mtComecou(){
 .ecl .ec-esq .ptr-bt:hover{ background:rgba(255,255,255,.12); color:#fff; }
 .ecl .ec-esq .ptr-bt svg{ stroke:currentColor; }
 .ecl .ec-dir{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+.ecl .ec-extra{ display:flex; justify-content:space-between; gap:6px 16px; flex-wrap:wrap; padding:9px 14px; border-radius:12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); color:rgba(255,255,255,.82); font-size:calc(13px * var(--esc)); }
+.ecl .ec-extra b{ color:#7EE2B8; }
 .ecl .ec-topo{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
 .ecl .ec-topo .pv-bt-abrir{ grid-column:1; width:100%; margin:0; justify-content:center; white-space:nowrap; }
 @media (max-width:700px){ .ecl .ec-topo{ grid-template-columns:1fr; } .ecl .ec-topo .pv-bt-abrir{ grid-column:1; } }
@@ -81373,6 +81376,14 @@ function mtComecou(){
       const pv = cab.querySelector('.pv-bt-abrir'); if (pv){ topo.appendChild(pv); dir.appendChild(topo); }
       dir.appendChild(nums);
       f.classList.add('ecl');
+      /* hospedagem, carro e passeios pagos com pontos (18/11/2026): a viagem inteira, não só os voos */
+      try {
+        const rs = (p && p.reservas || []).map(rvEconomia).filter(x => x != null && x > 0);
+        if (rs.length){
+          const ex = centavos(soma(rs)), voos = etapasEconomia(trechosPainel(p)).total || 0;
+          dir.insertAdjacentHTML('beforeend', `<div class="ec-extra"><span>Mais <b>${brl(ex)}</b> em hospedagem e passeios pagos com pontos</span><span>Viagem inteira: <b>${brl(centavos(voos + ex))}</b></span></div>`);
+        }
+      } catch(e){ console.error(e); }
     } catch(e){ console.error(e); }
     return r;
   };
@@ -81422,6 +81433,8 @@ html[data-tema="breu"] .gc-progs button.on, html.escuro .gc-progs button.on{ col
 .gc-faixa{ background:linear-gradient(135deg, #B8901A, #7A5A0C); box-shadow:0 12px 30px -10px #B8901A; }
 .gc-faixa .gc-faixa-ic{ width:26px; height:26px; border-radius:50%; flex:none; display:grid; place-items:center; background:rgba(255,255,255,.18); box-shadow:0 0 0 2px rgba(255,255,255,.7); }
 .gc-faixa .gc-faixa-ic svg{ width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.trilho-dir .tb-gc{ margin-top:6px; }
+.trilho-dir .tb-gc > span{ font-family:var(--f-b); font-size:calc(11px * var(--esc)); font-weight:500; letter-spacing:0; line-height:1.3; white-space:nowrap; }
 html.mt-mentorado .trilho-dir .tb-gc, html.gc-carteira .tb[data-area="negocio"], html.gc-carteira .trilho-dir .tb-mt, html.gc-carteira .trilho-dir .tb-eq, html.gc-carteira .trilho-dir .tb-gc{ display:none !important; }
 </style>
 <script id="gc-js">
@@ -82331,8 +82344,9 @@ function relMes(ym){
   const viagens = (DB.planos || []).map(p => {
     const em = (p.trechos || []).filter(t => t.situacao === 'emitido');
     let econ = 0; em.forEach(t => { try { econ = centavos(econ + (Number((economiaTrecho(t) || {}).valor) || 0)); } catch(_){} });
-    return {nome:p.nome || p.destino || 'Viagem', emitidos:em.length, trechos:(p.trechos || []).length, econ};
-  }).filter(v => v.trechos);
+    let estadia = 0; (p.reservas || []).forEach(r => { try { const e = rvEconomia(r); if (e != null && e > 0) estadia = centavos(estadia + e); } catch(_){} });
+    return {nome:p.nome || p.destino || 'Viagem', emitidos:em.length, trechos:(p.trechos || []).length, voos:econ, estadia, econ:centavos(econ + estadia)};
+  }).filter(v => v.trechos || v.estadia);
   const emissoesMes = (DB.reservas || []).filter(r => String(r.data || r.criada || '').startsWith(ym) && r.status !== 'cancelada').length + lan.filter(l => l.tipo === 'resgatePass').length;
   const economiaTotal = centavos(soma(viagens.map(v => v.econ)));
   return {ym, entrou, saiu, investido, camp, ops, saldos, vence, viagens, economiaTotal, emissoesMes,
@@ -82358,8 +82372,8 @@ function relHTML(ym, nome){
     <h3>Vencimentos nos próximos 90 dias</h3>
     ${r.vence.length ? `<table><thead><tr><th>Programa</th><th>Vence em</th><th class="n">Quantidade</th></tr></thead><tbody>${r.vence.map(v => `<tr><td>${esc(v.n)}</td><td>${esc(dataBR(v.vence))}</td><td class="n">${relQtd(v.q)}</td></tr>`).join('')}</tbody></table>` : '<p class="rel-vazio">Nada vence nos próximos 90 dias.</p>'}
     <h3>Viagens</h3>
-    ${r.viagens.length ? `<table><thead><tr><th>Viagem</th><th>Trechos emitidos</th><th class="n">Economia</th></tr></thead><tbody>${r.viagens.map(v => `<tr><td>${esc(v.nome)}</td><td>${v.emitidos} de ${v.trechos}</td><td class="n">${v.econ ? relReais(v.econ) : 'n/d'}</td></tr>`).join('')}</tbody></table>` : '<p class="rel-vazio">Nenhuma viagem lançada.</p>'}
-    <footer class="rel-pe"><span>Gerado pela Torre de Controle em ${esc(new Date().toLocaleDateString('pt-BR'))}.</span><span>Economia contada só nos trechos já emitidos, contra a mesma companhia na pagante.</span></footer>
+    ${r.viagens.length ? `<table><thead><tr><th>Viagem</th><th>Trechos emitidos</th><th class="n">Economia</th></tr></thead><tbody>${r.viagens.map(v => `<tr><td>${esc(v.nome)}</td><td>${v.emitidos} de ${v.trechos}</td><td class="n">${v.econ ? relReais(v.econ) : 'n/d'}${v.estadia ? `<br><span style="color:var(--rl-cinza);font-size:11.5px">${relReais(v.estadia)} em hospedagem e passeios</span>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="rel-vazio">Nenhuma viagem lançada.</p>'}
+    <footer class="rel-pe"><span>Gerado pela Torre de Controle em ${esc(new Date().toLocaleDateString('pt-BR'))}.</span><span>Economia: voos já emitidos contra a mesma companhia na pagante, e hospedagem e passeios pagos com pontos contra o preço em dinheiro.</span></footer>
   </article>`;
 }
 function relTextoZap(ym, nome){
