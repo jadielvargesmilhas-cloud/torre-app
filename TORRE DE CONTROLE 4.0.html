@@ -14414,26 +14414,23 @@ function nomeCurto(nomeCompleto){
   const cheias = partes.map((p, i) => ({p, i})).filter(x => !PARTICULAS.has(x.p.toLowerCase()));
   if (cheias.length < 2) return bruto;
 
-  /* Regra do Jadiel (09/10/2026):
+  /* Regra do Jadiel (18/11/2026, troca da regra de 09/10/2026):
      · o primeiro nome próprio, sempre;
-     · o segundo nome próprio fica de fora: com quatro ou mais nomes ("Pedro
-       Henrique Ferraz Varges"), ou com três e uma partícula logo depois dele
-       ("Ana Maria da Silva"), o segundo é nome, não sobrenome;
-     · dos sobrenomes, o menor (no empate, o primeiro);
+     · e o ÚLTIMO sobrenome ("Normand Viana Freire" vira "Normand Freire");
+     · Filho, Júnior, Neto, Sobrinho não contam como último sobrenome: vêm junto
+       do sobrenome de antes ("João Silva Filho");
      · "de", "da", "do"... só entram quando o primeiro nome é curtinho, de até
        três letras ("Ana da Silva"); fora disso saem ("Jadiel Souza"). */
   const nome = cheias[0];
-  let sobrenomes = cheias.slice(1);
-  const segundoEhNome = sobrenomes.length >= 2 && (cheias.length >= 4
-    || (cheias.length === 3 && partes.slice(sobrenomes[0].i + 1, sobrenomes[1].i).some(x => PARTICULAS.has(x.toLowerCase())))
-    /* com três nomes e sem partícula, o do meio é nome quando é um nome próprio comum ("Nestegite Maria Varges") */
-    || NOMES_PROPRIOS.has(semAcento(sobrenomes[0].p.toLowerCase())));
-  if (segundoEhNome) sobrenomes = sobrenomes.slice(1);
-  const sobrenome = sobrenomes.reduce((a, b) => (b.p.length < a.p.length ? b : a));
+  const SUFIXOS = new Set(['filho', 'filha', 'junior', 'júnior', 'jr', 'jr.', 'neto', 'neta', 'sobrinho', 'sobrinha', 'segundo', 'terceiro']);
+  const sobrenomes = cheias.slice(1);
+  let ult = sobrenomes[sobrenomes.length - 1], sufixo = '';
+  if (SUFIXOS.has(ult.p.toLowerCase()) && sobrenomes.length >= 2){ sufixo = ' ' + ult.p; ult = sobrenomes[sobrenomes.length - 2]; }
+  const sobrenome = ult;
   const antes = partes[sobrenome.i - 1];
   const prefixo = (nome.p.length <= 3 && antes && PARTICULAS.has(antes.toLowerCase()) && sobrenome.i - 1 > nome.i)
     ? antes + ' ' : '';
-  return nome.p + ' ' + prefixo + sobrenome.p;
+  return nome.p + ' ' + prefixo + sobrenome.p + sufixo;
 }
 
 const nomeCurtoConta = id => nomeCurto(nomeConta(id));
