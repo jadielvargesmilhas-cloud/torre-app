@@ -81508,7 +81508,7 @@ async function gcEnviarPendentes(){
 /* ── o retrato de cada carteira (lido do servidor, sem misturar com a Torre do gestor) ── */
 function gcResumo(dadosTxt){
   let dados = null; try { dados = contaDesembrulha(dadosTxt); } catch(_){}
-  const out = {milhas:0, pontos:0, porProg:[], vence90:0, cpf:[], contas:0, viagens:0};
+  const out = {milhas:0, pontos:0, porProg:[], vence90:0, vence30:0, cpf:[], contas:0, viagens:0};
   if (!dados || typeof dados !== 'object') return out;
   const salvo = DB;
   try {
@@ -81519,6 +81519,7 @@ function gcResumo(dadosTxt){
       out.porProg.push({p, n:(prog(p) || {}).n || p, q:sal[p], tipo:t});
     });
     out.vence90 = soma(lotesEmRisco(90).map(l => Number(l.qtd) || 0));
+    out.vence30 = soma(lotesEmRisco(30).map(l => Number(l.qtd) || 0));
     out.contas = (DB.contas || []).length;
     out.viagens = (DB.planos || []).length;
     (DB.contas || []).forEach(ct => PROG_IDS.forEach(p => {
@@ -81542,7 +81543,7 @@ function abrirGestaoClientes(){
 function gcCab(tit, sub){
   const cs = gcDB(), at = cs.filter(c => c.ativo !== false).length;
   const res = cs.map(c => { const l = gcLinhaServ(c); return l ? gcResumo(l.dados) : null; }).filter(Boolean);
-  const mil = soma(res.map(r => r.milhas)), pen = soma(cs.map(c => gcPendentes(c).length));
+  const mil = soma(res.map(r => r.milhas)), pen = soma(cs.filter(c => c.ativo !== false).map(c => gcPendentes(c).length));   /* gestão pausada não pede aprovação (18/11/2026) */
   return `<div class="eq-cab"><div class="eq-cab-l"><span class="eq-selo"><svg><use href="#i-usuarios"/></svg></span>
       <div><h2>${tit}</h2><p>${sub}</p></div></div>
     <div class="eq-stats"><span class="eq-stat"><b>${at}</b>${at === 1 ? 'cliente ativo' : 'clientes ativos'}</span>${res.length ? `<span class="eq-stat"><b>${gcNumTxt(mil)}</b>milhas sob gestão</span>` : ''}<span class="eq-stat"><b>${pen}</b>${pen === 1 ? 'aprovação esperando' : 'aprovações esperando'}</span></div></div>`;
@@ -82740,6 +82741,60 @@ function askResponder(q){
     return v;
   };
   const e = document.getElementById('paletaEntrada'); if (e) e.placeholder = 'Ir para, criar, calcular ou perguntar: "quanto vence este mês?"';
+})();
+</script>
+<style id="gq-css">
+/* ══ GESTÃO: fila do dia (o que espera o gestor, em todas as carteiras) · 18/11/2026 ══ */
+.gq-fila{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 14px; padding:12px 14px; border-radius:16px; border:1px solid var(--fio); background:color-mix(in srgb, var(--sup-1) 85%, transparent); }
+.gq-fila .gq-tit{ font-size:calc(12px * var(--esc)); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); margin-right:4px; }
+.gq-chip{ display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:99px; border:1px solid var(--fio); background:transparent; color:var(--giz); font:inherit; font-size:calc(13px * var(--esc)); cursor:pointer; text-align:left; }
+.gq-chip b{ font-variant-numeric:tabular-nums; }
+.gq-chip::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--gq, var(--jade)); box-shadow:0 0 6px var(--gq, var(--jade)); }
+.gq-chip.on{ border-color:var(--gq, var(--jade)); background:color-mix(in srgb, var(--gq, var(--jade)) 12%, transparent); }
+.gq-chip.ok{ cursor:default; }
+.gq-vazio{ padding:18px; text-align:center; color:var(--grafite); }
+@media (max-width:760px){ .gq-fila{ padding:10px; } .gq-chip{ font-size:calc(12.5px * var(--esc)); } }
+</style>
+<script id="gq-js">
+/* Com 10, 20 clientes, a lista em ordem alfabética escondia quem precisa de você.
+   Agora o topo diz o que espera o gestor HOJE, somando todas as carteiras
+   (aprovações, milhas vencendo em 30 dias, cobranças em aberto, CPF no limite,
+   termo faltando); cada item filtra a lista, e quem tem pendência vem primeiro. */
+let _gqFiltro = '';
+const GQ_TIPOS = [
+  {k:'apr',  cor:'var(--ouro)', um:'aprovação esperando',       v:'aprovações esperando',        n:c => gcPendentes(c).length},
+  {k:'venc', cor:'#FF8A6B',     um:'com milhas vencendo em 30 dias', v:'com milhas vencendo em 30 dias', n:(c, r) => r && r.vence30 > 0 ? 1 : 0},
+  {k:'cob',  cor:'var(--ouro)', um:'cobrança em aberto',        v:'cobranças em aberto',         n:c => (c.cobrancas || []).filter(x => x.status !== 'pago').length},
+  {k:'cpf',  cor:'#FF8A6B',     um:'com CPF no limite', v:'com CPF no limite',  n:(c, r) => r && r.cpf.some(x => x.u >= x.lim) ? 1 : 0},
+  {k:'termo',cor:'var(--ouro)', um:'sem termo de gestão',       v:'sem termo de gestão',          n:c => !c.termo || !c.termo.data ? 1 : 0}
+];
+function gqContar(c){
+  const l = gcLinhaServ(c), r = l ? gcResumo(l.dados) : null, o = {};
+  GQ_TIPOS.forEach(t => { o[t.k] = c.ativo === false ? 0 : t.n(c, r); });
+  o.peso = o.apr * 5 + o.venc * 4 + o.cpf * 3 + o.cob * 2 + o.termo;
+  return o;
+}
+(function(){
+  const _d = gcDesenharLista;
+  gcDesenharLista = function(d, semAnimar){
+    const v = _d.apply(this, arguments);
+    d = d || document.getElementById('dlgGestao'); if (!d) return v;
+    const grade = d.querySelector('.eq-grade'); if (!grade) return v;
+    const cs = gcDB(), cont = {}; cs.forEach(c => { cont[c.id] = gqContar(c); });
+    const tot = {}; GQ_TIPOS.forEach(t => { tot[t.k] = soma(cs.map(c => cont[c.id][t.k])); });
+    if (_gqFiltro && !tot[_gqFiltro]) _gqFiltro = '';
+    const ativos = GQ_TIPOS.filter(t => tot[t.k] > 0);
+    grade.insertAdjacentHTML('beforebegin', `<div class="gq-fila" role="group" aria-label="O que espera você hoje"><span class="gq-tit">Hoje</span>${ativos.length
+      ? ativos.map(t => `<button type="button" class="gq-chip${_gqFiltro === t.k ? ' on' : ''}" style="--gq:${t.cor}" data-gq="${t.k}"><b>${tot[t.k]}</b>${tot[t.k] === 1 ? t.um : t.v}</button>`).join('')
+        + (_gqFiltro ? `<button type="button" class="gq-chip" data-gq="">Ver todos</button>` : '')
+      : `<span class="gq-chip ok">Nenhum cliente pedindo atenção hoje</span>`}</div>`);
+    /* quem tem pendência vem primeiro; empate fica em ordem alfabética (a original) */
+    const cards = [...grade.querySelectorAll('.eq-card')];
+    cards.map((el, i) => ({el, i, p:(cont[el.dataset.id] || {}).peso || 0})).sort((a, b) => b.p - a.p || a.i - b.i).forEach(x => grade.appendChild(x.el));
+    cards.forEach(el => { el.hidden = !!_gqFiltro && !((cont[el.dataset.id] || {})[_gqFiltro] > 0); });
+    d.querySelectorAll('[data-gq]').forEach(b => b.onclick = () => { _gqFiltro = _gqFiltro === b.dataset.gq ? '' : b.dataset.gq; gcDesenharLista(d, true); });
+    return v;
+  };
 })();
 </script>
 </body>
