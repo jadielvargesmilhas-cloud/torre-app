@@ -82868,5 +82868,68 @@ function mqContar(m){
 }
 b, strong, td, th, .ljh-num b, .gq-chip b{ font-variant-numeric:tabular-nums; }
 </style>
+<style id="dz2-css">
+/* ══ ACABAMENTO PREMIUM, rodada 2 (18/11/2026): hierarquia dos cartões e movimento ══
+   Cartão de cliente e de mentorado: nome com mais peso; objetivo em destaque com o
+   avião; saldos como mini placar (número grande, programa pequeno); só o sinal mais
+   urgente à vista, com "+N" para abrir os outros. Ao filtrar ou redesenhar, os
+   cartões entram com um deslize curto e escalonado (desligado para quem pede
+   menos movimento no aparelho). */
+.gc .eq-quem b, .mt .eq-quem b{ font-size:calc(16px * var(--esc)); font-weight:650; letter-spacing:-.005em; }
+.gc .eq-av, .mt .eq-av{ box-shadow:0 0 0 3px color-mix(in srgb, var(--pc) 22%, transparent), 0 6px 18px -6px color-mix(in srgb, var(--pc) 70%, transparent); }
+.gc-obj.tem{ display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:12px; color:var(--giz);
+  background:linear-gradient(120deg, color-mix(in srgb, var(--pc) 14%, transparent), color-mix(in srgb, var(--pc) 4%, transparent));
+  border:1px solid color-mix(in srgb, var(--pc) 26%, transparent); }
+.gc-obj.tem svg{ width:16px; height:16px; flex:none; fill:none; stroke:var(--pc); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.gc-obj:not(.tem){ font-style:italic; opacity:.8; }
+.gc-saldos{ display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:6px; }
+.gc-saldos span{ display:flex; flex-direction:column-reverse; gap:1px; padding:8px 10px; border-radius:10px; background:color-mix(in srgb, var(--sup-2) 70%, transparent);
+  border:1px solid var(--fio); color:var(--grafite); font-size:calc(11px * var(--esc)); line-height:1.25; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gc-saldos span small{ margin:0; color:var(--giz); font-size:calc(15px * var(--esc)); font-weight:700; letter-spacing:-.01em; }
+.gc-saldos .nada{ grid-column:1 / -1; display:block; border:0; background:none; padding:0; font-style:italic; }
+.gc-sinais .gc-sinal.dz-escondido{ display:none; }
+.gc-sinais.dz-aberto .gc-sinal.dz-escondido{ display:flex; }
+.dz-mais{ align-self:flex-start; margin-top:2px; padding:3px 10px; border-radius:99px; border:1px solid var(--fio); background:transparent; color:var(--grafite);
+  font:inherit; font-size:calc(12px * var(--esc)); cursor:pointer; }
+.dz-mais:hover{ color:var(--giz); border-color:color-mix(in srgb, var(--giz) 30%, var(--fio)); }
+@keyframes dzEntra{ from{ opacity:0; transform:translateY(8px) scale(.985); } to{ opacity:1; transform:none; } }
+.eq-grade .eq-card.dz-anim{ animation:dzEntra .26s cubic-bezier(.2,.7,.2,1) both; animation-delay:calc(var(--dz-i, 0) * 35ms); }
+.gq-chip{ transition:background-color .18s, border-color .18s, color .18s; }
+@media (prefers-reduced-motion:reduce){ .eq-grade .eq-card.dz-anim{ animation:none; } }
+</style>
+<script id="dz2-js">
+function dzPolirGrade(d){
+  if (!d) return;
+  const grade = d.querySelector('.eq-grade'); if (!grade) return;
+  let i = 0;
+  grade.querySelectorAll('.eq-card').forEach(card => {
+    const ob = card.querySelector('.gc-obj');
+    if (ob && !ob.classList.contains('dz-ok')){
+      ob.classList.add('dz-ok');
+      if (ob.querySelector('b')){ ob.classList.add('tem'); ob.innerHTML = '<svg aria-hidden="true"><use href="#i-aviao"/></svg><span>' + ob.innerHTML.replace('Objetivo: ', '') + '</span>'; }   /* texto num bloco só: senão o flex separa "Lisboa" do resto */
+    }
+    const si = card.querySelector('.gc-sinais');
+    if (si && !si.dataset.dz){
+      si.dataset.dz = '1';
+      const ss = [...si.querySelectorAll('.gc-sinal')];
+      const nivel = el => el.classList.contains('ruim') ? 0 : el.classList.contains('alerta') ? 1 : 2;
+      ss.sort((a, b) => nivel(a) - nivel(b)).forEach(el => si.appendChild(el));
+      if (ss.length > 1){
+        ss.slice(1).forEach(el => el.classList.add('dz-escondido'));
+        si.insertAdjacentHTML('beforeend', `<button type="button" class="dz-mais" aria-expanded="false">+${ss.length - 1} ${ss.length - 1 === 1 ? 'aviso' : 'avisos'}</button>`);
+        const bt = si.querySelector('.dz-mais');
+        bt.onclick = () => { const ab = si.classList.toggle('dz-aberto'); bt.setAttribute('aria-expanded', ab); bt.textContent = ab ? 'Mostrar menos' : `+${ss.length - 1} ${ss.length - 1 === 1 ? 'aviso' : 'avisos'}`; };
+      }
+    }
+    if (!card.hidden){ card.style.setProperty('--dz-i', Math.min(i++, 8)); card.classList.remove('dz-anim'); void card.offsetWidth; card.classList.add('dz-anim'); }
+  });
+}
+(function(){
+  const _g = gcDesenharLista;
+  gcDesenharLista = function(d){ const v = _g.apply(this, arguments); dzPolirGrade(d || document.getElementById('dlgGestao')); return v; };
+  const _m = mtDesenharLista;
+  mtDesenharLista = function(d){ const v = _m.apply(this, arguments); dzPolirGrade(d || document.getElementById('dlgMentoria')); return v; };
+})();
+</script>
 </body>
 </html>
