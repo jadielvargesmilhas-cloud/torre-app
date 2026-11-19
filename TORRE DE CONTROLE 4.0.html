@@ -82682,7 +82682,7 @@ function askResponder(q){
     P.forEach(p => out.push(cpm[p] > 0
       ? {t:`Seu milheiro ${prog(p).n} custa ${brl2(cpm[p])}`, s:`Média do que você pagou pelos pontos que estão na carteira.${sal[p] ? ' Saldo: ' + nBR(sal[p]) + '.' : ''}`, f:ir('saldo', 'sl-carteira')}
       : {t:`Ainda não há custo lançado para ${prog(p).n}`, s:'Lance a compra, a transferência ou o clube que trouxe esses pontos para a Torre calcular o milheiro.', f:ir('mesa', 'ms-lancamentos')}));
-  } else if (/saldo|quant[ao]s? (pontos|milhas)|tenho/.test(n) || (P.length && !/venc|expir|perder|prazo|econom|viagem|viajo|embarque|proxima|transfer|bonus|promo|campanha/.test(n))){
+  } else if (/saldo|quant[ao]s? (pontos|milhas)|tenho/.test(n) || (P.length && !/venc|expir|perder|prazo|econom|viagem|viajo|embarque|proxima|transfer|bonus|promo|campanha|clube|renov|vale|valor/.test(n))){
     if (P.length) P.forEach(p => out.push({t:`Você tem ${nBR(sal[p] || 0)} ${prog(p).tipo === 'milhas' ? 'milhas' : 'pontos'} ${prog(p).n}`, s:`${(DB.saldos || []).filter(s => s.prog === p && s.qtd > 0).length} ${(DB.saldos || []).filter(s => s.prog === p && s.qtd > 0).length === 1 ? 'conta' : 'contas'} com saldo${cpm[p] > 0 ? ' · milheiro de ' + brl2(cpm[p]) : ''}.`, f:ir('saldo', 'sl-carteira')}));
     else out.push({t:`Você tem ${nBR(saldoTotal('milhas'))} milhas e ${nBR(saldoTotal('pontos'))} pontos de banco`, s:'Milha e ponto não se somam: são unidades diferentes.', f:ir('saldo', 'sl-carteira')});
   }
@@ -82707,6 +82707,18 @@ function askResponder(q){
     const vs = campanhasVivas('transferencia').filter(c => !P.length || P.includes(c.para) || P.includes(c.de)).sort((a, b) => (b.bonus || 0) - (a.bonus || 0));
     out.push(vs.length ? {t:vs.length === 1 ? `1 transferência com bônus no ar: ${vs[0].bonus || 0}% de ${prog(vs[0].de).n} para ${prog(vs[0].para).n}` : `${vs.length} transferências com bônus no ar; a maior: ${vs[0].bonus || 0}% de ${prog(vs[0].de).n} para ${prog(vs[0].para).n}`, s:vs[0].fim ? 'Vai até ' + dataBR(vs[0].fim) + '.' : '', f:() => abrirCampanhasEm('transferencia')}
       : {t:'Nenhuma transferência com bônus no ar agora', s:'A Torre avisa quando entrar uma.', f:() => abrirCampanhasEm('transferencia')});
+  }
+  /* quanto vale a carteira (o mesmo número do cartão da Mesa) e qual clube renova primeiro (19/11/2026) */
+  if (/vale|valor|patrimonio/.test(n) && /carteira|tudo|pontos|milhas|estoque|patrimonio/.test(n)){
+    const tot = centavos(valorEstoque()), pts = centavos(valorEstoquePontos());
+    out.push(tot > 0 ? {t:`Sua carteira vale ${brl(tot)} ao valor-alvo`, s:`Só os pontos de banco, pela melhor transferência: ${brl(pts)}. É quanto custaria repor o estoque hoje.`, f:ir('mesa')}
+      : {t:'Ainda não há saldo para avaliar', s:'Lance os saldos em Carteira › Saldos.', f:ir('saldo', 'sl-carteira')});
+  }
+  if (/clube|renov|assinatura/.test(n)){
+    const as = (DB.assinaturas || []).filter(a => a.status === 'ativa' && a.renova && (!P.length || P.includes(a.prog)) && diasAte(a.renova) !== null && diasAte(a.renova) >= -1)
+      .sort((a, b) => a.renova.localeCompare(b.renova));
+    out.push(as.length ? {t:`Próxima renovação: ${prog(as[0].prog).n}${typeof nomeCurtoConta === 'function' && as[0].contaId ? ' de ' + nomeCurtoConta(as[0].contaId) : ''}, ${renovaTexto(diasAte(as[0].renova))}`, s:`${as.length} ${as.length === 1 ? 'clube ativo' : 'clubes ativos'} com data de renovação${as[1] ? ' · depois: ' + prog(as[1].prog).n + ' em ' + dataBR(as[1].renova) : ''}.`, f:ir('fabrica', 'fb-clubes')}
+      : {t:'Nenhum clube ativo com data de renovação', s:'Cadastre os clubes em Acumular › Meus Clubes.', f:ir('fabrica', 'fb-clubes')});
   }
   return out.map(x => Object.assign({i:'#i-info', g:'resposta', resp:true}, x));
 }
