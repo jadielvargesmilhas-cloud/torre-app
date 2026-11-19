@@ -82562,5 +82562,173 @@ function cobMensagem(id, cbId){
 })();
 </script>
 
+<style id="ljh-css">
+/* ══ HISTÓRICO DA LOJA: gráfico e próxima janela provável · 18/11/2026 ══ */
+.ljh-graf{ width:100%; height:auto; display:block; }
+.ljh-graf .eixo{ stroke:var(--fio); stroke-width:1; }
+.ljh-graf .grade{ stroke:var(--fio); stroke-width:1; stroke-dasharray:3 4; opacity:.7; }
+.ljh-graf text{ fill:var(--grafite); font-size:11px; font-family:var(--f-b, inherit); }
+.ljh-graf .hoje{ stroke:var(--ouro, #C9A227); stroke-width:1.2; stroke-dasharray:4 4; }
+.ljh-leg{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:6px 0 2px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.ljh-leg span{ display:inline-flex; align-items:center; gap:6px; }
+.ljh-leg i{ width:10px; height:10px; border-radius:50%; background:var(--pc); }
+.ljh-nums{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin:14px 0; }
+.ljh-num{ padding:12px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); text-align:center; }
+.ljh-num b{ display:block; font-size:calc(19px * var(--esc)); color:var(--giz); font-variant-numeric:tabular-nums; }
+.ljh-num small{ display:block; font-size:calc(12px * var(--esc)); color:var(--grafite); margin-top:2px; line-height:1.35; }
+@media (max-width:760px){ .ljh-nums{ grid-template-columns:minmax(0,1fr); } }
+</style>
+<script id="ljh-js">
+/* O Meu Milheiro usa o histórico de pontuação por loja como chamariz. A Torre já
+   guardava cada oferta (Arquivo, recorde da loja); faltava ver a curva e saber
+   quando a loja costuma voltar a pagar bem. Pedido em 18/11/2026 (Onda 3). */
+function ljhPontos(l){
+  const k = normLoja(l.n);
+  return (DB.lojas || []).filter(x => normLoja(x.n) === k && (x.fim || x.em))
+    .map(x => ({id:x.id, prog:x.prog, data:String(x.fim || x.em).slice(0, 10), v:Number(tetoLoja(x).promo || tetoLoja(x).base) || 0}))
+    .filter(x => x.v > 0).sort((a, b) => a.data.localeCompare(b.data));
+}
+function ljhPrevisao(pts){
+  if (pts.length < 3) return null;
+  const rec = Math.max(...pts.map(p => p.v));
+  const picos = [...new Set(pts.filter(p => p.v >= rec * 0.8).map(p => p.data))].sort();
+  if (picos.length < 2) return {rec, picos:picos.length};
+  const gaps = []; for (let i = 1; i < picos.length; i++) gaps.push((new Date(picos[i]) - new Date(picos[i - 1])) / 864e5);
+  gaps.sort((a, b) => a - b);
+  const med = Math.round(gaps.length % 2 ? gaps[(gaps.length - 1) / 2] : (gaps[gaps.length / 2 - 1] + gaps[gaps.length / 2]) / 2);
+  let prox = somarDiasISO(picos[picos.length - 1], med); const h = hojeISO();
+  while (prox < h) prox = somarDiasISO(prox, med);
+  return {rec, picos:picos.length, intervalo:med, prox};
+}
+function ljhGrafico(pts){
+  const W = 640, H = 220, ml = 36, mr = 14, mt = 14, mb = 28;
+  const t = d => new Date(d + 'T12:00:00').getTime();
+  const hoje = hojeISO(), xs = pts.map(p => t(p.data)).concat([t(hoje)]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1, vmax = Math.max(...pts.map(p => p.v)) * 1.15 || 1;
+  const X = d => ml + (t(d) - x0) / Math.max(1, x1 - x0) * (W - ml - mr), Y = v => mt + (1 - v / vmax) * (H - mt - mb);
+  const progs = [...new Set(pts.map(p => p.prog))];
+  const passo = vmax > 12 ? 5 : vmax > 6 ? 2 : 1, ticks = []; for (let v = 0; v <= vmax; v += passo) ticks.push(v);
+  const meses = []; const d = new Date(x0); d.setDate(1); d.setMonth(d.getMonth() + 1);
+  while (d.getTime() <= x1){ meses.push(d.toISOString().slice(0, 10)); d.setMonth(d.getMonth() + (x1 - x0 > 400 * 864e5 ? 3 : 1)); }
+  const nomeMes = iso => ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][Number(iso.slice(5, 7)) - 1] + '/' + iso.slice(2, 4);
+  return `<svg class="ljh-graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="Pontos por real ao longo do tempo">
+    ${ticks.map(v => `<line class="grade" x1="${ml}" x2="${W - mr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${ml - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${v}</text>`).join('')}
+    <line class="eixo" x1="${ml}" x2="${W - mr}" y1="${H - mb}" y2="${H - mb}"/>
+    ${meses.map(m => `<text x="${X(m).toFixed(1)}" y="${H - 8}" text-anchor="middle">${nomeMes(m)}</text>`).join('')}
+    <line class="hoje" x1="${X(hoje).toFixed(1)}" x2="${X(hoje).toFixed(1)}" y1="${mt}" y2="${H - mb}"/><text x="${(X(hoje) - 4).toFixed(1)}" y="${mt + 10}" text-anchor="end" style="fill:var(--ouro, #C9A227)">hoje</text>
+    ${progs.map(pg => { const ps = pts.filter(p => p.prog === pg), cor = prog(pg).cor || '#3D7BF0';
+      return `<polyline fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="${ps.map(p => X(p.data).toFixed(1) + ',' + Y(p.v).toFixed(1)).join(' ')}"/>
+        ${ps.map(p => `<circle cx="${X(p.data).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4" fill="${cor}" stroke="var(--sup-0)" stroke-width="1.5"><title>${esc(prog(pg).n)}: ${multTxt(p.v)} por real em ${dataBR(p.data)}</title></circle>`).join('')}`; }).join('')}
+  </svg>`;
+}
+function abrirHistoricoLoja(id){
+  const l = (DB.lojas || []).find(x => x.id === id); if (!l) return;
+  const pts = ljhPontos(l), pr = ljhPrevisao(pts), progs = [...new Set(pts.map(p => p.prog))];
+  const vivo = !l.fim || l.fim >= hojeISO(), atual = Number(tetoLoja(l).promo || tetoLoja(l).base) || 0;
+  const rec = pts.length ? Math.max(...pts.map(p => p.v)) : 0, recP = pts.find(p => p.v === rec);
+  const media = pts.length ? Math.round(soma(pts.map(p => p.v)) / pts.length * 10) / 10 : 0;
+  const pos = vivo && pts.length ? [...new Set(pts.map(p => p.v))].sort((a, b) => b - a).indexOf(atual) + 1 : 0;
+  abrirFolha({titulo:`Histórico · ${esc(l.n)}`, largura:'larga',
+    corpo:pts.length < 2 ? `<p style="margin:0">Ainda há ${pts.length === 1 ? 'só uma oferta' : 'poucas ofertas'} desta loja na Torre. A curva aparece a partir da segunda; cada anúncio colado ou oferta cadastrada entra sozinho aqui.</p>`
+      : `<div class="ljh-nums">
+          <div class="ljh-num"><b>${multTxt(rec)}</b><small>recorde por real${recP ? ', em ' + dataBR(recP.data) : ''}${recP ? ' · ' + esc(prog(recP.prog).n) : ''}</small></div>
+          <div class="ljh-num"><b>${vivo && atual ? multTxt(atual) : multTxt(media)}</b><small>${vivo && atual ? (pos === 1 ? 'hoje: é a melhor já registrada' : `hoje: a ${pos}ª melhor de ${pts.length} registros`) : 'média das ofertas registradas'}</small></div>
+          <div class="ljh-num"><b>${pr && pr.prox ? dataBR(pr.prox).slice(0, 5) : 'n/d'}</b><small>${pr && pr.prox ? `próxima boa janela provável (a loja costuma pagar perto do recorde a cada ${pr.intervalo} dias)` : 'previsão: precisa de pelo menos dois picos registrados'}</small></div>
+        </div>
+        <div class="ljh-leg">${progs.map(p => `<span style="--pc:${prog(p).cor || '#3D7BF0'}"><i></i>${esc(prog(p).n)}</span>`).join('')}</div>
+        ${ljhGrafico(pts)}
+        <p class="fraco" style="margin:8px 0 0">${pts.length} ofertas registradas na Torre. Pico conta como oferta a 80% do recorde ou mais. Previsão é tendência, não garantia: confira sempre no site do programa.</p>`,
+    pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+}
+(function(){
+  const _c = cartaoLoja;
+  cartaoLoja = function(l){
+    const h = _c.apply(this, arguments);
+    if (!l || l.origem === 'bonificada') return h;
+    return h.replace('<span class="esticar"></span>', `<button type="button" class="bt p fantasma icone" onclick="abrirHistoricoLoja('${l.id}')" data-dica="Histórico da loja: a curva de pontos por real e a próxima boa janela"><svg><use href="#i-grafico"/></svg></button><span class="esticar"></span>`);
+  };
+})();
+</script>
+
+<style id="ask-css">
+/* ══ PERGUNTE À TORRE (assistente com os seus dados, sem custo de IA) · 18/11/2026 ══ */
+.paleta-item.resp{ border-left:3px solid var(--jade); background:color-mix(in srgb, var(--jade) 7%, transparent); }
+.paleta-item.resp svg{ stroke:var(--jade); }
+.paleta-item.resp > div > div:first-child{ color:var(--giz); font-weight:600; }
+</style>
+<script id="ask-js">
+/* Pergunte à Torre (Onda 3, 18/11/2026). O Meu Milheiro tem a "Mila", uma IA.
+   Aqui a resposta sai dos números da própria Torre, na hora e sem custo: a mesma
+   caixa de Buscar ou executar entende perguntas como "quanto vence este mês?",
+   "saldo smiles", "quanto custa meu milheiro latam", "quanto economizei",
+   "próxima viagem", "tem transferência com bônus hoje?". Cada resposta leva à tela. */
+const ASK_SINAIS = /\?|^(quanto|quantas?|quantos|qual|quais|quando|tenho|tem|meu|minha|meus|minhas|o que|onde|saldo|milheiro|vence|economi|proxima|próxima)/;
+function askNorm(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+function askProgramas(q){
+  const n = askNorm(q), achados = [];
+  Object.keys(PROGRAMAS).forEach(k => {
+    const nome = askNorm(prog(k).n), pal = nome.split(/\s+/)[0];
+    const apelidos = {smiles:['smiles', 'gol'], latampass:['latam'], azul:['azul', 'tudoazul'], livelo:['livelo'], esfera:['esfera'], tap:['tap'], iberia:['iberia', 'avios'], connect:['copa', 'connectmiles'], flyingblue:['flying blue', 'air france', 'klm'], aadvantage:['aadvantage', 'american']}[k] || [];
+    const tem = w => new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)').test(n);   /* palavra inteira: "tap" não casa com "etapa" */
+    if (tem(askNorm(k)) || (pal.length >= 4 && tem(pal)) || tem(nome) || apelidos.some(tem)) achados.push(k);
+  });
+  return [...new Set(achados)];
+}
+function askResponder(q){
+  const n = askNorm(q), out = [], P = askProgramas(q);
+  const sal = saldoPorPrograma(), cpm = cpmPorPrograma() || {};
+  const ir = (v, a) => () => { irPara(v); if (a) irParaAba(v, a); };
+  if (/milheiro|custa|custo|cpm|paguei/.test(n) && P.length){
+    P.forEach(p => out.push(cpm[p] > 0
+      ? {t:`Seu milheiro ${prog(p).n} custa ${brl2(cpm[p])}`, s:`Média do que você pagou pelos pontos que estão na carteira.${sal[p] ? ' Saldo: ' + nBR(sal[p]) + '.' : ''}`, f:ir('saldo', 'sl-carteira')}
+      : {t:`Ainda não há custo lançado para ${prog(p).n}`, s:'Lance a compra, a transferência ou o clube que trouxe esses pontos para a Torre calcular o milheiro.', f:ir('mesa', 'ms-lancamentos')}));
+  } else if (/saldo|quant[ao]s? (pontos|milhas)|tenho/.test(n) || (P.length && !/venc|expir|perder|prazo|econom|viagem|viajo|embarque|proxima|transfer|bonus|promo|campanha/.test(n))){
+    if (P.length) P.forEach(p => out.push({t:`Você tem ${nBR(sal[p] || 0)} ${prog(p).tipo === 'milhas' ? 'milhas' : 'pontos'} ${prog(p).n}`, s:`${(DB.saldos || []).filter(s => s.prog === p && s.qtd > 0).length} ${(DB.saldos || []).filter(s => s.prog === p && s.qtd > 0).length === 1 ? 'conta' : 'contas'} com saldo${cpm[p] > 0 ? ' · milheiro de ' + brl2(cpm[p]) : ''}.`, f:ir('saldo', 'sl-carteira')}));
+    else out.push({t:`Você tem ${nBR(saldoTotal('milhas'))} milhas e ${nBR(saldoTotal('pontos'))} pontos de banco`, s:'Milha e ponto não se somam: são unidades diferentes.', f:ir('saldo', 'sl-carteira')});
+  }
+  if (/venc|expir|perder|prazo/.test(n)){
+    const dias = /mes|30/.test(n) ? 30 : /semana|7/.test(n) ? 7 : 90;
+    const ls = lotesEmRisco(dias).filter(l => !P.length || P.includes(l.prog));
+    out.push(ls.length
+      ? {t:(() => { const tipos = [...new Set(ls.map(l => prog(l.prog).tipo === 'milhas' ? 'milhas' : 'pontos'))]; return tipos.length === 1 ? `${nBR(soma(ls.map(l => Number(l.qtd) || 0)))} ${tipos[0]} vencem nos próximos ${dias} dias` : tipos.map(u => nBR(soma(ls.filter(l => (prog(l.prog).tipo === 'milhas' ? 'milhas' : 'pontos') === u).map(l => Number(l.qtd) || 0))) + ' ' + u).join(' e ') + ` vencem nos próximos ${dias} dias`; })(), s:ls.slice(0, 3).map(l => `${prog(l.prog).n}: ${nBR(l.qtd)} em ${dataBR(l.vence)}`).join(' · '), f:ir('saldo', 'sl-validade')}
+      : {t:`Nada vence nos próximos ${dias} dias`, s:'Os clubes ativos protegem os lotes do próprio programa.', f:ir('saldo', 'sl-validade')});
+  }
+  if (/econom/.test(n)){
+    let tot = 0, nv = 0;
+    (DB.planos || []).forEach(p => { let e = 0; (p.trechos || []).filter(t => t.situacao === 'emitido').forEach(t => { try { e = centavos(e + (Number((economiaTrecho(t) || {}).valor) || 0)); } catch(_){} }); (p.reservas || []).forEach(r => { try { const x = rvEconomia(r); if (x > 0) e = centavos(e + x); } catch(_){} }); if (e > 0){ tot = centavos(tot + e); nv++; } });
+    out.push(nv ? {t:`Você economizou ${brl(tot)} em ${nv} ${nv === 1 ? 'viagem' : 'viagens'}`, s:'Voos emitidos contra a mesma companhia na pagante, mais hospedagem e passeios pagos com pontos.', f:ir('rota', 'rt-viagens')}
+      : {t:'Ainda não há economia registrada', s:'Ela aparece quando um trecho da Jornada é marcado como emitido.', f:ir('rota', 'rt-plano')});
+  }
+  if (/viagem|viajo|embarque|proxima/.test(n) && !/econom/.test(n)){
+    const h = hojeISO(), px = (DB.planos || []).filter(p => p.inicio && p.inicio >= h).sort((a, b) => a.inicio.localeCompare(b.inicio))[0];
+    out.push(px ? {t:`Próxima viagem: ${px.nome || px.destino} em ${dataBR(px.inicio)}`, s:`Faltam ${diasAte(px.inicio)} dias.`, f:ir('rota', 'rt-plano')} : {t:'Nenhuma viagem marcada à frente', s:'Crie uma Jornada para a Torre acompanhar.', f:ir('rota', 'rt-plano')});
+  }
+  if (/transfer|bonus|bônus|promo|campanha/.test(n)){
+    const vs = campanhasVivas('transferencia').filter(c => !P.length || P.includes(c.para) || P.includes(c.de)).sort((a, b) => (b.bonus || 0) - (a.bonus || 0));
+    out.push(vs.length ? {t:vs.length === 1 ? `1 transferência com bônus no ar: ${vs[0].bonus || 0}% de ${prog(vs[0].de).n} para ${prog(vs[0].para).n}` : `${vs.length} transferências com bônus no ar; a maior: ${vs[0].bonus || 0}% de ${prog(vs[0].de).n} para ${prog(vs[0].para).n}`, s:vs[0].fim ? 'Vai até ' + dataBR(vs[0].fim) + '.' : '', f:() => abrirCampanhasEm('transferencia')}
+      : {t:'Nenhuma transferência com bônus no ar agora', s:'A Torre avisa quando entrar uma.', f:() => abrirCampanhasEm('transferencia')});
+  }
+  return out.map(x => Object.assign({i:'#i-info', g:'resposta', resp:true}, x));
+}
+(function(){
+  const _f = filtrarPaleta;
+  filtrarPaleta = function(q){
+    const v = _f.apply(this, arguments);
+    if (!q || q.trim().length < 4 || !ASK_SINAIS.test(askNorm(q))) return v;
+    let rs = []; try { rs = askResponder(q); } catch(e){ console.error(e); }
+    if (!rs.length) return v;
+    paletaItens = rs.concat(paletaItens); paletaSel = 0;
+    $('#paletaLista').innerHTML = paletaItens.map((c, i) => `<div class="paleta-item${c.resp ? ' resp' : ''}${i === 0 ? ' sel' : ''}" data-i="${i}">
+        <svg><use href="${c.i}"/></svg><div><div>${esc(c.t)}</div>${c.s ? `<div class="fraco" style="font-size:calc(13px * var(--esc))">${esc(c.s)}</div>` : ''}</div>
+        <span class="grupo">${esc(c.g)}</span></div>`).join('');
+    $$('#paletaLista .paleta-item').forEach(el => {
+      el.onclick = () => { fecharPaleta(); paletaItens[Number(el.dataset.i)].f(); };
+      el.onmouseenter = () => { paletaSel = Number(el.dataset.i); marcarPaleta(); };
+    });
+    return v;
+  };
+  const e = document.getElementById('paletaEntrada'); if (e) e.placeholder = 'Ir para, criar, calcular ou perguntar: "quanto vence este mês?"';
+})();
+</script>
 </body>
 </html>
