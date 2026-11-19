@@ -82931,5 +82931,358 @@ function dzPolirGrade(d){
   mtDesenharLista = function(d){ const v = _m.apply(this, arguments); dzPolirGrade(d || document.getElementById('dlgMentoria')); return v; };
 })();
 </script>
+<style id="azp-css">
+/* ══ EMISSÃO NA AZUL: passageiros prontos para o formulário · 18/11/2026 ══ */
+.azp-lista{ display:flex; flex-direction:column; gap:6px; max-height:260px; overflow:auto; padding:2px; }
+.azp-pes{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); cursor:pointer; }
+.azp-pes input{ width:18px; height:18px; accent-color:var(--jade); flex:none; }
+.azp-pes b{ color:var(--giz); font-weight:600; }
+.azp-pes small{ color:var(--grafite); margin-left:auto; text-align:right; }
+.azp-pes.on{ border-color:color-mix(in srgb, var(--jade) 55%, var(--fio)); background:color-mix(in srgb, var(--jade) 8%, var(--sup-1)); }
+.azp-ordem{ display:flex; flex-direction:column; gap:8px; margin:6px 0 0; }
+.azp-pax{ display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; align-items:start; padding:11px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); }
+.azp-num{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-weight:700; color:var(--giz); background:color-mix(in srgb, var(--pc) 22%, transparent); border:1px solid color-mix(in srgb, var(--pc) 50%, transparent); font-variant-numeric:tabular-nums; }
+.azp-pax b{ display:block; color:var(--giz); }
+.azp-pax .azp-det{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.azp-av{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.azp-av span{ font-size:calc(12px * var(--esc)); padding:2px 9px; border-radius:99px; border:1px solid currentColor; }
+.azp-av .ruim{ color:var(--rubi, #EF4B3F); } .azp-av .alerta{ color:var(--ouro); } .azp-av .ok{ color:var(--jade); }
+.azp-fav{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:12px 14px; border-radius:14px; border:1px dashed color-mix(in srgb, var(--ouro) 55%, var(--fio)); background:color-mix(in srgb, var(--ouro) 6%, transparent); }
+.azp-fav a{ display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:10px; background:var(--ouro); color:#12151c; font-weight:700; text-decoration:none; cursor:grab; }
+.azp-fav p{ margin:0; flex:1 1 260px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.pe-mrz{ grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; border:1px dashed var(--fio); }
+.pe-mrz span{ flex:1 1 220px; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.45; }
+</style>
+<script id="azp-js">
+/* Emissão na Azul Pelo Mundo (pedido de 18/11/2026).
+   1. Ficha do passageiro: nacionalidade e país que emitiu o passaporte, e "Ler o
+      passaporte por foto": a Torre lê as duas linhas de letras do pé da página do
+      passaporte (feitas para máquina ler, com dígitos de conferência) e preenche
+      nome, sobrenome, sexo, nascimento, número, validade e países.
+   2. "Preencher passageiros na Azul": escolhe as pessoas e a data do voo, a Torre
+      põe na ordem da companhia (adultos, crianças, bebês), confere passaporte,
+      idade e e-mail, e copia o pacote. Na página de passageiros da Azul, o
+      favorito "Torre → Azul" preenche os campos.
+   O favorito SÓ PREENCHE: não clica em Gravar, Continuar nem em nada do site, não
+   guarda nada e apaga a área de transferência depois de ler. Cartão de crédito
+   fica fora da Torre de propósito: é digitado no site, ou vem do cartão salvo no
+   próprio Chrome. */
+const AZP_PAISES = {BRA:'Brasil', PRT:'Portugal', USA:'Estados Unidos', ARG:'Argentina', CHL:'Chile', URY:'Uruguai', PRY:'Paraguai', BOL:'Bolívia',
+  PER:'Peru', COL:'Colômbia', VEN:'Venezuela', ECU:'Equador', MEX:'México', CAN:'Canadá', PAN:'Panamá', CUB:'Cuba', DOM:'República Dominicana',
+  ESP:'Espanha', ITA:'Itália', FRA:'França', D:'Alemanha', DEU:'Alemanha', GBR:'Reino Unido', IRL:'Irlanda', NLD:'Holanda', BEL:'Bélgica', CHE:'Suíça',
+  AUT:'Áustria', POL:'Polônia', UKR:'Ucrânia', RUS:'Rússia', ISR:'Israel', LBN:'Líbano', JPN:'Japão', CHN:'China', KOR:'Coreia do Sul', IND:'Índia',
+  AUS:'Austrália', ZAF:'África do Sul', AGO:'Angola', MOZ:'Moçambique', CPV:'Cabo Verde'};
+const AZP_PAISES_LISTA = [...new Set(Object.keys(AZP_PAISES).filter(k => k !== 'D'))].sort((a, b) => a === 'BRA' ? -1 : b === 'BRA' ? 1 : AZP_PAISES[a].localeCompare(AZP_PAISES[b], 'pt-BR'));
+const azpPais = c => AZP_PAISES[c] || c || '';
+
+/* ── leitura do passaporte (zona de leitura mecânica, padrão ICAO 9303) ───────── */
+function mrzDigito(s){
+  const P = [7, 3, 1]; let t = 0;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i]; const v = c === '<' ? 0 : /\d/.test(c) ? Number(c) : /[A-Z]/.test(c) ? c.charCodeAt(0) - 55 : 0;
+    t += v * P[i % 3];
+  }
+  return String(t % 10);
+}
+/* troca de letra por número (e o contrário) que o leitor costuma confundir */
+const MRZ_NUM = {O:'0', Q:'0', D:'0', U:'0', I:'1', L:'1', T:'1', Z:'2', S:'5', B:'8', G:'6'};
+const MRZ_LET = {'0':'O', '1':'I', '2':'Z', '5':'S', '8':'B', '6':'G'};
+const MRZ_PARES = {E:'F', F:'E', O:'0', '0':'O', I:'1', '1':'I', S:'5', '5':'S', B:'8', '8':'B', Z:'2', '2':'Z', G:'6', '6':'G', D:'0', Q:'0', M:'N', N:'M', K:'X', X:'K'};
+function mrzSoNum(s){ return s.replace(/[A-Z]/g, c => MRZ_NUM[c] || c); }
+function mrzSoLet(s){ return s.replace(/[0-9]/g, c => MRZ_LET[c] || c); }
+/* número do documento: se o dígito não bate, tenta UMA troca de letra parecida que faça bater */
+function mrzConsertar(campo, dig){
+  if (mrzDigito(campo) === dig) return {v:campo, ok:true, troca:false};
+  const achados = [];
+  for (let i = 0; i < campo.length; i++){
+    const alt = MRZ_PARES[campo[i]]; if (!alt) continue;
+    const c = campo.slice(0, i) + alt + campo.slice(i + 1);
+    if (mrzDigito(c) === dig) achados.push(c);
+  }
+  return achados.length === 1 ? {v:achados[0], ok:true, troca:true} : {v:campo, ok:false, troca:false};
+}
+function mrzData(yymmdd, futuro){
+  if (!/^\d{6}$/.test(yymmdd)) return '';
+  const yy = Number(yymmdd.slice(0, 2)), hojeYY = new Date().getFullYear() % 100;
+  const ano = futuro ? 2000 + yy : (yy > hojeYY ? 1900 + yy : 2000 + yy);
+  const m = yymmdd.slice(2, 4), d = yymmdd.slice(4, 6);
+  if (Number(m) < 1 || Number(m) > 12 || Number(d) < 1 || Number(d) > 31) return '';
+  return `${ano}-${m}-${d}`;
+}
+function lerMRZ(texto){
+  const linhas = String(texto || '').replace(/[a-z]/g, '<').toUpperCase().split(/\n+/)   /* minúscula não existe nesta faixa: é '<' mal lido */
+    .map(l => l.replace(/[«‹＜〈≤]/g, '<').replace(/\s+/g, '').replace(/[^A-Z0-9<]/g, ''))
+    .filter(l => l.length >= 30);
+  let i1 = linhas.findIndex((l, i) => /^P[A-Z<]/.test(l) && l.includes('<<') && linhas[i + 1] && linhas[i + 1].length >= 30);
+  if (i1 < 0) return null;
+  const l1 = (linhas[i1] + '<'.repeat(44)).slice(0, 44), l2 = (linhas[i1 + 1] + '<'.repeat(44)).slice(0, 44);
+  const emissor = mrzSoLet(l1.slice(2, 5)).replace(/</g, '');
+  const nomes = l1.slice(5).split('<<');
+  const sobrenome = mrzSoLet(nomes[0] || '').replace(/</g, ' ').trim();
+  const primeiro = mrzSoLet(nomes.slice(1).join(' ')).replace(/</g, ' ').replace(/\s+/g, ' ').trim();
+  const doc = mrzConsertar(l2.slice(0, 9), mrzSoNum(l2[9]));
+  const nac = mrzSoLet(l2.slice(10, 13)).replace(/</g, '');
+  const nascS = mrzSoNum(l2.slice(13, 19)), nascOk = mrzDigito(nascS) === mrzSoNum(l2[19]);
+  const sexoC = l2[20] === 'F' ? 'F' : l2[20] === 'M' ? 'M' : (l2[20] === 'E' ? 'F' : '');
+  const valS = mrzSoNum(l2.slice(21, 27)), valOk = mrzDigito(valS) === mrzSoNum(l2[27]);
+  const confere = doc.ok && nascOk && valOk;
+  return {sobrenome, primeiro, sexo:sexoC, pass:doc.v.replace(/</g, ''), nasc:mrzData(nascS, false), passVal:mrzData(valS, true),
+    nac:nac || 'BRA', passPais:emissor || nac || 'BRA', confere, trocou:doc.troca,
+    duvidas:[!doc.ok && 'número do passaporte', !nascOk && 'nascimento', !valOk && 'validade', !sexoC && 'sexo'].filter(Boolean)};
+}
+
+/* ── ficha do passageiro: países e leitura por foto ─────────────────────────── */
+(function(){
+  const _ed = editarPessoa;
+  editarPessoa = function(id, semente){
+    /* a ficha nova monta o registro por conta própria; os países entram logo depois
+       de gravar, pelo aoSalvar (chamado nos dois caminhos: direto e "cadastrar assim mesmo") */
+    const paises = {};
+    const s0 = semente || {};
+    const s1 = Object.assign({}, s0, {aoSalvar:n => {
+      if (n && paises.nac){ const r = (DB.pessoas || []).find(x => x.id === n.id) || n; r.nac = paises.nac; r.passPais = paises.passPais; salvar(); }
+      if (s0.aoSalvar) s0.aoSalvar(n);
+    }});
+    const v = _ed.call(this, id, s1);
+    const bt = document.getElementById('btSalvarPessoa');
+    if (bt) bt.addEventListener('click', () => { const a = document.getElementById('peNac'), b2 = document.getElementById('pePassPais'); if (a){ paises.nac = a.value; paises.passPais = b2 ? b2.value : a.value; } }, true);
+    const p = id ? (DB.pessoas || []).find(x => x.id === id) || {} : {};
+    const pv = document.getElementById('pePassVal'); const campo = pv && pv.closest('.campo');
+    const ops = sel => AZP_PAISES_LISTA.map(c => `<option value="${c}"${c === (sel || 'BRA') ? ' selected' : ''}>${esc(AZP_PAISES[c])}</option>`).join('');
+    if (campo && !document.getElementById('peNac')){
+      campo.insertAdjacentHTML('afterend', `<div class="campo"><label>Nacionalidade</label><select id="peNac" data-ordem="natural">${ops(p.nac)}</select></div>
+        <div class="campo"><label>País que emitiu o passaporte</label><select id="pePassPais" data-ordem="natural">${ops(p.passPais)}</select></div>`);
+    }
+    const nm = document.getElementById('peNome'), linha = nm && nm.closest('.grade');   /* a ficha foi reorganizada depois; o topo da grade é o lugar estável */
+    if (linha && !document.getElementById('peMrz')){
+      linha.insertAdjacentHTML('beforebegin', `<div class="pe-mrz" style="margin-bottom:14px"><button type="button" class="bt p fantasma" id="peMrzBt"><svg><use href="#i-imagem"/></svg>Ler o passaporte por foto</button>
+        <span id="peMrzTxt">Foto ou print da página com a foto do passaporte, mostrando as duas linhas de letras do pé. A Torre preenche os campos; você confere antes de salvar.</span>
+        <input type="file" id="peMrz" accept="image/*" hidden></div>`);
+      const inp = document.getElementById('peMrz');
+      document.getElementById('peMrzBt').onclick = () => inp.click();
+      inp.onchange = async () => { const f = inp.files[0]; inp.value = ''; if (f) await azpLerPassaporte(f); };
+    }
+    return v;
+  };
+  const _nr = novoRegistroPessoa;
+  novoRegistroPessoa = function(){
+    const r = _nr.apply(this, arguments);
+    const n = document.getElementById('peNac'), pp = document.getElementById('pePassPais');
+    if (n) r.nac = n.value; if (pp) r.passPais = pp.value;
+    return r;
+  };
+})();
+async function azpLerPassaporte(arquivo){
+  const tx = document.getElementById('peMrzTxt'), bt = document.getElementById('peMrzBt');
+  const diz = h => { if (tx) tx.innerHTML = h; };
+  try {
+    if (bt) bt.disabled = true;
+    diz('Lendo o passaporte. Na primeira vez o leitor é baixado (uns 4 MB). Tudo acontece no seu navegador.');
+    const w = await prepararLeitorOCR();
+    /* só letras maiúsculas, números e '<' (o alfabeto da faixa) e com a imagem
+       endireitada: testado com o mesmo leitor, foto torta de 2,5 graus só foi lida assim */
+    let data;
+    try { await w.setParameters({tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'}); ({data} = await w.recognize(arquivo, {rotateAuto:true})); }
+    finally { try { await w.setParameters({tessedit_char_whitelist:''}); } catch(_){} }
+    const r = lerMRZ(data && data.text);
+    if (!r){ diz('<b style="color:var(--brasa)">Não achei as duas linhas de letras do pé do passaporte.</b> Tire a foto de frente, com boa luz, mostrando a página inteira da foto.'); return; }
+    const por_ = (sel, val) => { const el = document.getElementById(sel); if (el && val){ el.value = val; el.dispatchEvent(new Event('input', {bubbles:true})); el.dispatchEvent(new Event('change', {bubbles:true})); } };
+    por_('peNome', r.primeiro); por_('peSobre', r.sobrenome); por_('peSexo', r.sexo); por_('peNasc', r.nasc);
+    por_('pePass', r.pass); por_('pePassVal', r.passVal); const p3 = c => c === 'D' ? 'DEU' : c; por_('peNac', AZP_PAISES[r.nac] ? p3(r.nac) : ''); por_('pePassPais', AZP_PAISES[r.passPais] ? p3(r.passPais) : '');
+    diz(r.confere
+      ? `<b style="color:var(--jade)">Passaporte lido e conferido pelos dígitos de controle.</b> ${esc(r.primeiro)} ${esc(r.sobrenome)} · nº ${esc(r.pass)} · validade ${esc(dataBR(r.passVal))}.${r.trocou ? ' Uma letra do número foi corrigida pelo dígito de controle: confira.' : ''} Faltam CPF, telefone e e-mail.`
+      : `<b style="color:var(--ouro)">Li o passaporte, mas não consegui conferir: ${esc(r.duvidas.join(', '))}.</b> Confira esses campos com o documento antes de salvar.`);
+  } catch(e){ diz('<b style="color:var(--brasa)">Não deu para ler agora.</b> ' + esc(e.message || String(e))); }
+  finally { if (bt) bt.disabled = false; }
+}
+
+/* ── o pacote para a Azul ──────────────────────────────────────────────────── */
+function azpAvisos(p, voo){
+  const a = [];
+  if (!p.sexo) a.push(['ruim', 'Sem sexo no cadastro']);
+  if (!p.nasc) a.push(['ruim', 'Sem nascimento']);
+  if (!p.email) a.push(['alerta', 'Sem e-mail']);
+  if (!p.pass) a.push(['ruim', 'Sem passaporte']);
+  else if (!p.passVal) a.push(['alerta', 'Passaporte sem validade']);
+  else {
+    const ate = voo || hojeISO();
+    if (p.passVal < ate) a.push(['ruim', `Passaporte vencido em ${dataBR(p.passVal)}`]);
+    else if (p.passVal < somaDiasISO(ate, 183)) a.push(['alerta', `Passaporte vence ${dataBR(p.passVal)}: menos de 6 meses depois do voo`]);
+    else a.push(['ok', `Passaporte até ${dataBR(p.passVal)}`]);
+  }
+  return a;
+}
+function azpOrdem(ids, voo){
+  const ordem = {adulto:0, crianca:1, bebe:2};
+  return ids.map(id => pessoa(id)).filter(Boolean)
+    .map(p => ({p, f:faixaPax(p, voo || hojeISO())}))
+    .sort((a, b) => ordem[a.f] - ordem[b.f]);
+}
+function azpPacote(ids, voo){
+  const br = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '';
+  return {torre:'azul-pax', v:1, criado:new Date().toISOString(), voo:voo || '',
+    pax:azpOrdem(ids, voo).map(({p, f}, i) => {
+      const pt = partirNome(p);
+      return {n:i + 1, faixa:FAIXAS_PAX[f].n, primeiro:(p.primeiro || pt.primeiro || '').toUpperCase(), sobrenome:(p.sobrenome || pt.sobrenome || '').toUpperCase(),
+        sexo:p.sexo === 'F' ? 'Feminino' : p.sexo === 'M' ? 'Masculino' : '', nasc:br(p.nasc), email:p.email || '',
+        pass:(p.pass || '').toUpperCase(), passVal:br(p.passVal), nac:azpPais(p.nac || 'BRA'), passPais:azpPais(p.passPais || p.nac || 'BRA')};
+    })};
+}
+let _azp = null;
+function abrirPreencherAzul(){
+  const cfg = DB.cfg.azulPax || {};
+  _azp = {voo:cfg.voo && cfg.voo >= hojeISO() ? cfg.voo : '', ids:(cfg.ids || []).filter(id => pessoa(id)), busca:''};
+  abrirFolha({titulo:'Preencher passageiros na Azul', largura:'larga', corpo:'<div id="azpCorpo"></div>',
+    pe:`<button type="button" class="bt primario" id="azpCopiar"><svg><use href="#i-copiar"/></svg>Copiar para a Azul</button>`});
+  azpDesenhar();
+  document.getElementById('azpCopiar').onclick = azpCopiar;
+}
+function azpDesenhar(){
+  const c = document.getElementById('azpCorpo'); if (!c || !_azp) return;
+  const t = semAcento(_azp.busca || '').trim();
+  const todas = (DB.pessoas || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    .filter(p => !t || semAcento(p.nome).includes(t) || _azp.ids.includes(p.id));
+  const ord = azpOrdem(_azp.ids, _azp.voo);
+  c.innerHTML = `<div class="grade" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+      <div class="campo" style="margin:0"><label>Data do voo <span class="fraco">a idade conta neste dia</span></label><input type="date" id="azpVoo" value="${esc(_azp.voo)}"></div>
+      <div class="campo" style="margin:0"><label>Buscar passageiro</label><input type="text" id="azpBusca" value="${esc(_azp.busca)}" placeholder="nome ou CPF"></div></div>
+    <div class="azp-lista" style="margin-top:12px">${todas.length ? todas.map(p => `<label class="azp-pes${_azp.ids.includes(p.id) ? ' on' : ''}"><input type="checkbox" data-azp="${esc(p.id)}"${_azp.ids.includes(p.id) ? ' checked' : ''}><b>${esc(p.nome)}</b><small>${esc(FAIXAS_PAX[faixaPax(p, _azp.voo || hojeISO())].n)}${p.pass ? ' · passaporte ' + esc(p.pass) : ' · sem passaporte'}</small></label>`).join('')
+      : '<p class="fraco" style="margin:0">Nenhum passageiro cadastrado com esse nome. Cadastre em Emissões › Passageiros.</p>'}</div>
+    <div class="eq-tit" style="margin-top:16px">Na ordem da Azul${ord.length ? ` · ${ord.length} ${ord.length === 1 ? 'passageiro' : 'passageiros'}` : ''}</div>
+    ${ord.length ? `<div class="azp-ordem">${ord.map(({p, f}, i) => `<div class="azp-pax" style="--pc:${FAIXAS_PAX[f].cor}"><span class="azp-num">${i + 1}</span>
+        <div><b>${esc(p.nome)}</b><div class="azp-det">${esc(FAIXAS_PAX[f].n)}${p.nasc ? ' · nasceu em ' + esc(dataBR(p.nasc)) : ''}${p.email ? ' · ' + esc(p.email) : ''}</div>
+        <div class="azp-av">${azpAvisos(p, _azp.voo).map(([k, s]) => `<span class="${k}">${esc(s)}</span>`).join('')}</div></div></div>`).join('')}</div>`
+      : '<p class="fraco" style="margin:6px 0 0">Marque os passageiros acima.</p>'}
+    <div class="azp-fav" style="margin-top:16px"><a href="${esc(codigoFavoritoAzul())}" onclick="event.preventDefault(); avisar('Arraste: clique, segure e solte na barra de favoritos.', 'ok')"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Torre → Azul</a>
+      <p><b>Como usar:</b> arraste o botão dourado para a barra de favoritos (uma vez só). Na hora de emitir: toque em <b>Copiar para a Azul</b> aqui; na página <b>Passageiros</b> da Azul, toque no favorito <b>Torre → Azul</b>. Ele só preenche: conferir e clicar em <b>Gravar</b> é com você. O cartão você digita no site da Azul (ou usa o cartão salvo no Chrome); a Torre não guarda cartão.</p></div>`;
+  document.getElementById('azpVoo').onchange = e => { _azp.voo = e.target.value; azpDesenhar(); };
+  const b = document.getElementById('azpBusca');
+  b.oninput = e => { _azp.busca = e.target.value; const pos = b.selectionStart; azpDesenhar(); const nb = document.getElementById('azpBusca'); nb.focus(); try { nb.setSelectionRange(pos, pos); } catch(_){} };
+  c.querySelectorAll('[data-azp]').forEach(x => x.onchange = () => {
+    const id = x.dataset.azp; _azp.ids = x.checked ? [...new Set(_azp.ids.concat(id))] : _azp.ids.filter(y => y !== id); azpDesenhar();
+  });
+}
+async function azpCopiar(){
+  if (!_azp || !_azp.ids.length){ avisar('Marque pelo menos um passageiro.', 'alerta'); return; }
+  if (!_azp.voo){ avisar('Informe a data do voo: é por ela que a Azul conta a idade das crianças.', 'alerta'); document.getElementById('azpVoo').focus(); return; }
+  const ruins = azpOrdem(_azp.ids, _azp.voo).filter(({p}) => azpAvisos(p, _azp.voo).some(([k]) => k === 'ruim'));
+  DB.cfg.azulPax = {voo:_azp.voo, ids:_azp.ids}; salvar();
+  const txt = JSON.stringify(azpPacote(_azp.ids, _azp.voo));
+  try { await navigator.clipboard.writeText(txt); }
+  catch(_){ avisar('O navegador não deixou copiar. Tente de novo com a Torre em primeiro plano.', 'alerta'); return; }
+  avisar(ruins.length ? `Copiado. Atenção: ${ruins.length === 1 ? '1 passageiro tem' : ruins.length + ' passageiros têm'} pendência em vermelho; o campo vai em branco na Azul.` : 'Copiado. Agora, na página Passageiros da Azul, toque no favorito Torre → Azul.', ruins.length ? 'alerta' : 'ok', 7000);
+}
+
+/* ── o favorito que roda na página da Azul (não usa nada da Torre) ─────────── */
+function preencherFormAzul(pacote){
+  var norm = function(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); };
+  var visivel = function(el){ var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
+  var rotulo = function(el){
+    var t = [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.name, el.id];
+    if (el.id){ var lb = document.querySelector('label[for="' + el.id.replace(/"/g, '') + '"]'); if (lb) t.unshift(lb.textContent); }
+    var a = el.parentElement;
+    for (var k = 0; k < 4 && a; k++, a = a.parentElement){
+      if (a.querySelectorAll('input:not([type=hidden]), select, textarea, [role="combobox"]').length > 1) break;   /* subiu demais: o rótulo já seria de outro campo */
+      var l = a.querySelector('label, .label, [class*="label"], [class*="Label"]');
+      if (l && !l.contains(el)){ t.unshift(l.textContent); break; }
+    }
+    return norm(t.filter(Boolean).join(' | '));
+  };
+  var CAMPOS = [['passPais', /pais de emiss|pais emissor|emitido|issuing/], ['passVal', /expira|validade|vencimento|expiration/], ['nac', /nacionalidade|nationality/],
+    ['sexo', /genero|sexo|gender/], ['sobrenome', /sobrenome|surname|last ?name/], ['nasc', /nascimento|birth/], ['email', /e-?mail/],
+    ['pass', /passaporte|passport/], ['primeiro', /primeiro nome|first ?name|given|^nome|\| ?nome/]];
+  var titulos = [].slice.call(document.querySelectorAll('h1,h2,h3,h4,h5,legend,p,span,div,strong'))
+    .filter(function(e){ return e.children.length <= 3 && /passageiro\s*\d+/i.test(e.textContent) && e.textContent.length < 90 && visivel(e); })
+    .filter(function(e, i, arr){ return !arr.some(function(o){ return o !== e && e.contains(o); }); });
+  var numDe = function(el){
+    var n = 1;
+    titulos.forEach(function(t){ if (t.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING){ var m = t.textContent.match(/passageiro\s*(\d+)/i); if (m) n = Number(m[1]); } });
+    return n;
+  };
+  var setNativo = function(el, v){
+    var proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    var d = Object.getOwnPropertyDescriptor(proto, 'value'); el.focus();
+    if (d && d.set) d.set.call(el, v); else el.value = v;
+    ['input', 'change', 'keyup', 'blur'].forEach(function(t){ el.dispatchEvent(new Event(t, {bubbles:true})); });
+  };
+  var marcar = function(el, txt){
+    el.style.outline = '3px solid #e8b44f'; el.style.outlineOffset = '2px';
+    var tag = document.createElement('div'); tag.setAttribute('data-torre-azul', '1');
+    tag.textContent = txt; tag.style.cssText = 'font:600 12px/1.3 system-ui,sans-serif;color:#7a5200;background:#fff3d6;border:1px solid #e8b44f;border-radius:6px;padding:3px 7px;margin-top:4px;display:inline-block';
+    (el.parentElement || el).appendChild(tag);
+  };
+  var NOMES = {primeiro:'primeiro nome', sobrenome:'sobrenome', sexo:'gênero', nasc:'nascimento', email:'e-mail', pass:'número do passaporte', passVal:'validade do passaporte', nac:'nacionalidade', passPais:'país do passaporte'};
+  var rel = {feitos:0, escolher:[], pulados:[], faltam:[]};
+  var campos = [].slice.call(document.querySelectorAll('input, select, textarea, [role="combobox"]'))
+    .filter(function(el){ return visivel(el) && !/^(checkbox|radio|hidden|submit|button|search)$/i.test(el.type || ''); });
+  var usados = {};
+  campos.forEach(function(el){
+    var r = rotulo(el), chave = null;
+    for (var i = 0; i < CAMPOS.length; i++){ if (CAMPOS[i][1].test(r)){ chave = CAMPOS[i][0]; break; } }
+    if (!chave) return;
+    var n = numDe(el), p = pacote.pax[n - 1]; if (!p) return;
+    var id = n + ':' + chave; if (usados[id]) return; usados[id] = 1;
+    var v = p[chave];
+    if (!v){ rel.faltam.push('Passageiro ' + n + ': ' + NOMES[chave]); return; }
+    if (el.tagName === 'SELECT'){
+      var alvo = norm(v), op = [].slice.call(el.options).find(function(o){ return norm(o.textContent) === alvo; }) || [].slice.call(el.options).find(function(o){ return norm(o.textContent).indexOf(alvo) === 0; });
+      if (op){ setNativo(el, op.value); rel.feitos++; } else { marcar(el, 'Escolha: ' + v); rel.escolher.push('Passageiro ' + n + ': ' + v); }
+      return;
+    }
+    if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' || el.readOnly || el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup')){
+      marcar(el, 'Escolha: ' + v); rel.escolher.push('Passageiro ' + n + ': ' + v); return;
+    }
+    var atual = String(el.value || '').trim();
+    if (atual && norm(atual) !== norm(v)){ marcar(el, 'Já tinha outro valor; a Torre diz: ' + v); rel.pulados.push('Passageiro ' + n + ': ' + NOMES[chave]); return; }
+    if (el.type === 'date' && /^\d\d\/\d\d\/\d{4}$/.test(v)) v = v.slice(6) + '-' + v.slice(3, 5) + '-' + v.slice(0, 2);
+    setNativo(el, v); rel.feitos++;
+  });
+  return rel;
+}
+function coletorAzul(preencher){
+  var velho = document.querySelector('[data-torre-azul-caixa]'); if (velho) velho.remove();
+  [].slice.call(document.querySelectorAll('[data-torre-azul]')).forEach(function(t){ t.remove(); });
+  var caixa = document.createElement('div'); caixa.setAttribute('data-torre-azul-caixa', '1');
+  caixa.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:2147483647;width:min(380px,calc(100vw - 32px));max-height:70vh;overflow:auto;background:#12151c;color:#e9edf5;border:1px solid #e8b44f;border-radius:14px;padding:14px 16px;font:14px/1.45 system-ui,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.45)';
+  var diz = function(h){ caixa.innerHTML = '<b style="color:#e8b44f">Torre → Azul</b><div style="margin-top:6px">' + h + '</div><button type="button" data-fechar style="margin-top:10px;padding:6px 12px;border-radius:8px;border:1px solid #EF4B3F;background:transparent;color:#EF4B3F;font:inherit;cursor:pointer">Fechar</button>'; caixa.querySelector('[data-fechar]').onclick = function(){ caixa.remove(); }; };
+  document.body.appendChild(caixa);
+  var usar = function(txt){
+    var pac; try { pac = JSON.parse(String(txt || '').trim()); } catch(e){}
+    if (!pac || pac.torre !== 'azul-pax' || !pac.pax){ diz('A área de transferência não tem passageiros da Torre. Na Torre, abra <b>Preencher passageiros na Azul</b> e toque em <b>Copiar para a Azul</b>; depois toque de novo neste favorito.'); return; }
+    if (Date.now() - new Date(pac.criado).getTime() > 6 * 3600e3){ diz('Esta cópia tem mais de 6 horas. Copie de novo na Torre, para levar os dados de hoje.'); return; }
+    var r = preencher(pac);
+    try { navigator.clipboard.writeText(''); } catch(e){}
+    var l = function(a){ return a.length ? '<ul style="margin:4px 0 0 18px;padding:0">' + a.map(function(x){ return '<li>' + x.replace(/</g, '&lt;') + '</li>'; }).join('') + '</ul>' : ''; };
+    diz('<b>' + r.feitos + ' campos preenchidos</b> para ' + pac.pax.length + ' passageiro(s).'
+      + (r.escolher.length ? '<div style="margin-top:8px;color:#e8b44f">Escolha na lista (marcados em dourado):' + l(r.escolher) + '</div>' : '')
+      + (r.pulados.length ? '<div style="margin-top:8px;color:#e8b44f">Já tinham outro valor, não mexi:' + l(r.pulados) + '</div>' : '')
+      + (r.faltam.length ? '<div style="margin-top:8px;color:#ff8a6b">Falta no cadastro da Torre:' + l(r.faltam) + '</div>' : '')
+      + '<div style="margin-top:8px;color:#9aa3b2">Confira tudo e clique em <b>Gravar</b> você mesmo. Se a Azul mostrar um passageiro por vez, depois de gravar copie de novo na Torre e toque outra vez aqui.</div>');
+  };
+  if (navigator.clipboard && navigator.clipboard.readText){
+    navigator.clipboard.readText().then(usar, function(){ colar(); });
+  } else colar();
+  function colar(){
+    diz('O navegador não deixou ler a área de transferência. Cole aqui (Ctrl+V) o que a Torre copiou:<textarea data-cola style="display:block;width:100%;height:70px;margin-top:8px;border-radius:8px;border:1px solid #39404f;background:#1b2029;color:#e9edf5"></textarea>');
+    var ta = caixa.querySelector('[data-cola]'); ta.focus(); ta.oninput = function(){ usar(ta.value); };
+  }
+}
+function codigoFavoritoAzul(){
+  const corpo = `(function(){var preencher=${preencherFormAzul.toString()};
+var coletar=${coletorAzul.toString()};
+coletar(preencher);})()`;
+  return 'javascript:' + encodeURIComponent(corpo.replace(/\n\s*/g, '\n'));
+}
+function azpBotaoPassageiros(){
+  const b = document.getElementById('btNovoCliente'); if (!b || document.getElementById('btAzulPax')) return;
+  b.insertAdjacentHTML('beforebegin', '<button class="bt fantasma" id="btAzulPax" type="button"><svg><use href="#i-aviao"/></svg>Preencher na Azul</button>');
+  document.getElementById('btAzulPax').onclick = () => abrirPreencherAzul();
+}
+azpBotaoPassageiros();
+(function(){
+  const _c = comandos;
+  comandos = function(){ const C = _c.apply(this, arguments); C.push({t:'Preencher passageiros na Azul', s:'Escolher os passageiros e copiar para o formulário da Azul Pelo Mundo', i:'#i-aviao', g:'criar', f:() => abrirPreencherAzul()}); return C; };
+})();
+</script>
 </body>
 </html>
