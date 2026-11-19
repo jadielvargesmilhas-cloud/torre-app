@@ -37819,7 +37819,7 @@ function renderClientes(){
       const i = idadeEm(p.nasc, hojeISO());
       return `<tr>
         <td><b>${esc(p.nome)}</b>${p.obs ? `<div class="fraco" style="font-size:calc(12.5px * var(--esc));margin-top:2px">${esc(p.obs)}</div>` : ''}</td>
-        <td class="fraco">${p.cpf ? esc(p.cpf) : '<span style="color:var(--brasa)">sem CPF</span>'}</td>
+        <td class="fraco">${p.cpf ? esc(p.cpf) : '<span class="etq ouro" data-dica="O cliente ainda não mandou. A cota dos programas que contam CPF só fica certa quando ele entrar.">CPF pendente</span>'}</td>
         <td class="c fraco">${p.nasc ? dataBR(p.nasc) : 'n/d'}</td>
         <td class="c"><span class="etq" style="color:${FAIXAS_PAX[f].cor};border-color:color-mix(in oklab, ${FAIXAS_PAX[f].cor} 38%, transparent)">${FAIXAS_PAX[f].n}${i !== null ? ` · ${i}` : ''}</span></td>
         <!-- Com dois documentos, a coluna mostra o que vence primeiro: é ele que
@@ -57757,7 +57757,7 @@ function cpRenderPassageiros(alvo){
     const f = faixaPax(p), i = idadeEm(p.nasc, hojeISO()), usos = emissoesDoPax(p.id).length, cl = clientesDoPax(p.id);
     return `<div class="cp-linha">
       <button type="button" class="cp-quem" data-cp-ficha="${p.id}">${avPessoa(p)}<span class="cp-nome"><b>${esc(p.nome)}</b>
-        <span class="cp-chips"><span class="etq" style="color:${FAIXAS_PAX[f].cor};border-color:color-mix(in oklab, ${FAIXAS_PAX[f].cor} 38%, transparent)">${FAIXAS_PAX[f].n}${i !== null ? ` · ${i}` : ''}</span>${p.cpf ? '' : '<span class="etq brasa">sem CPF</span>'}</span></span></button>
+        <span class="cp-chips"><span class="etq" style="color:${FAIXAS_PAX[f].cor};border-color:color-mix(in oklab, ${FAIXAS_PAX[f].cor} 38%, transparent)">${FAIXAS_PAX[f].n}${i !== null ? ` · ${i}` : ''}</span>${p.cpf ? '' : '<span class="etq ouro" data-dica="O cliente ainda não mandou. Cobre e complete o cadastro.">CPF pendente</span>'}</span></span></button>
       <div class="cp-col"><small>Documento</small><span>${docChip(p)}</span></div>
       <div class="cp-col"><small>Cliente</small><span style="font-size:calc(13px * var(--esc))">${cl.length ? esc(cl.map(c => c.empresa || c.nome).slice(0, 2).join(', ')) + (cl.length > 2 ? ` +${cl.length - 2}` : '') : (ehCliente(p) ? 'ele mesmo' : 'n/d')}</span></div>
       <div class="cp-col cp-sempre"><b>${usos || 'n/d'}</b><small>${usos === 1 ? 'emissão' : 'emissões'}</small></div>
@@ -57854,7 +57854,7 @@ editarPessoa = function(id, semente){
     <div class="cp-painel" data-cp-p="documentos" hidden>
       <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr))">
         <div class="campo"><label>Sexo*, no documento</label><select id="peSexo" data-ordem="natural">${[['', 'não informado'], ['F', 'Feminino'], ['M', 'Masculino'], ['X', 'Outro / não binário']].map(([v, n]) => `<option value="${v}"${v === (p0.sexo || '') ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
-        <div class="campo"><label>CPF*</label><input type="text" id="peCpf" value="${esc(p0.cpf || '')}" placeholder="000.000.000-00"></div>
+        <div class="campo"><label>CPF <span class="fraco">pode ficar pendente</span></label><input type="text" id="peCpf" value="${esc(p0.cpf || '')}" placeholder="000.000.000-00"></div>
         <div class="campo"><label>Nascimento*</label><input type="date" id="peNasc" value="${esc(p0.nasc || '')}"></div>
         <div class="nota" id="pePrevia" style="grid-column:1/-1;margin:0"></div>
         <div class="campo"><label>RG</label><input type="text" id="peDoc" value="${esc(p0.doc || '')}" placeholder="00.000.000-0"></div>
@@ -57951,7 +57951,9 @@ editarPessoa = function(id, semente){
     if (pax && !n.sobrenome) return erro('basico', '#peSobre', 'Informe o sobrenome, como está no documento.');
     if (cli && !n.fone) return erro('basico', '#peFone', 'Informe o telefone ou WhatsApp do cliente.');
     if (pax && !n.sexo) return erro('documentos', '#peSexo', 'Informe o sexo como está no documento.');
-    if (pax && !n.cpf) return erro('documentos', '#peCpf', 'Informe o CPF do passageiro.');
+    /* CPF pode ficar pendente (18/11/2026): o cliente às vezes ainda não mandou, e a
+       emissão não pode travar por isso. Fica marcado e aparece em "Sem CPF" para cobrar. */
+    n.cpfPendente = !!(pax && !n.cpf);
     if (n.cpf && !cpfValido(n.cpf)) return erro('documentos', '#peCpf', 'CPF inválido. Confira os dígitos.');
     if (pax && !n.nasc) return erro('documentos', '#peNasc', 'Informe a data de nascimento.');
     const mesmoCpf = n.cpf && (DB.pessoas || []).find(x => x.id !== n.id && soDigitos(x.cpf) === soDigitos(n.cpf));
@@ -57961,7 +57963,7 @@ editarPessoa = function(id, semente){
       const k = DB.pessoas.findIndex(x => x.id === n.id);
       if (k >= 0) DB.pessoas[k] = n; else DB.pessoas.push(n);
       salvar(); fecharFolha(); try { renderBalcao(); } catch(_){} try { renderEmissoes(); } catch(_){} renderClientes();
-      avisar(cli && pax ? 'Cadastro salvo como cliente e passageiro.' : cli ? 'Cliente salvo.' : 'Passageiro salvo.', 'ok');
+      avisar((cli && pax ? 'Cadastro salvo como cliente e passageiro.' : cli ? 'Cliente salvo.' : 'Passageiro salvo.') + (n.cpfPendente ? ' CPF ficou pendente: aparece em "Sem CPF" para você cobrar.' : ''), n.cpfPendente ? 'alerta' : 'ok', n.cpfPendente ? 6000 : undefined);
       if (semente.aoSalvar) setTimeout(() => semente.aoSalvar(n), 0);
     };
     const mesmoNome = (DB.pessoas || []).find(x => x.id !== n.id && semAcento(x.nome) === semAcento(n.nome) && !(n.tipo !== 'pessoa' && semAcento(x.empresa || '') !== semAcento(n.empresa || '')));
