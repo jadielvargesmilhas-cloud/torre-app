@@ -83464,12 +83464,12 @@ function svDesenhar(){
     <div class="sv-puxar sv-editar" id="svPuxarCx" hidden></div>
     <div class="sv-cab sv-editar">
       <div class="seg" id="svTipo" role="tablist" aria-label="Tipo de viagem">${[['ida', 'Só ida'], ['iv', 'Ida e volta']].map(([k, n]) => `<button type="button" role="tab" data-sv-tipo="${k}" class="${_sv.tipo === k ? 'on' : ''}" aria-selected="${_sv.tipo === k}">${n}</button>`).join('')}</div>
-      <input type="text" id="svNome" value="${esc(_sv.nome)}" placeholder="Nome da viagem (ex.: Portugal em executiva)" aria-label="Nome da viagem">
+      <input type="text" id="svNome" value="${esc(_sv.nome)}" placeholder="Nome da viagem (ex.: ${_sv.esc === 'int' ? 'Portugal em executiva' : 'Rio de Janeiro em família'})" aria-label="Nome da viagem">
       <label class="sv-pax">Pessoas<input type="number" id="svPax" min="1" max="9" value="${esc(_sv.pax || '')}"></label>
     </div>
     <div class="sv-trechos sv-editar">${svAtivos(_sv).map((t, i) => { const m = svMilheiroDe(t.prog), mudou = centavos(t.milheiro) !== m.v;
       return `<div class="sv-tr" data-sv-i="${i}">
-        <div class="sv-tr-cab"><b>${esc(t.rot)}</b><input type="text" data-k="rota" value="${esc(t.rota)}" placeholder="${i ? 'Lisboa → Salvador' : 'Salvador → Porto'}" aria-label="Trecho">
+        <div class="sv-tr-cab"><b>${esc(t.rot)}</b><input type="text" data-k="rota" value="${esc(t.rota)}" placeholder="${_sv.esc === 'int' ? (i ? 'Lisboa → Salvador' : 'Salvador → Porto') : (i ? 'Rio de Janeiro → Salvador' : 'Salvador → Rio de Janeiro')}" aria-label="Trecho">
           <select data-k="prog" aria-label="Programa das milhas">${progs.map(p => `<option value="${p}"${p === t.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
         <div class="sv-3">
           <div class="campo"><label>Na Pagante <small>já com taxas, todas as pessoas</small></label><input type="text" inputmode="decimal" data-moeda data-k="pagante" value="${t.pagante ? moedaTxt(t.pagante) : ''}" placeholder="0,00"></div>
