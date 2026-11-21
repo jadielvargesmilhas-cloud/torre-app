@@ -78091,14 +78091,15 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
       if (id) return o.apply(this, arguments);
       const ini = somaDiasISO(hojeISO(), 30), fim = somaDiasISO(hojeISO(), 37);
       abrirFolha({titulo:'Nova Jornada', corpo:`<div class="njr">
-          <div class="campo"><label>Para onde?</label><input type="text" id="njDest" placeholder="Lisboa e Porto" autocomplete="off"></div>
+          <!-- ordem pedida em 21/11/2026: primeiro o tipo da viagem, depois para onde -->
+          <div class="campo"><label>Tipo da viagem</label><div class="njr-seg" id="njEsc"><button type="button" class="on" data-v="nac">Nacional</button><button type="button" data-v="int">Internacional</button></div></div>
+          <div class="campo" style="margin-top:12px"><label>Para onde?</label><input type="text" id="njDest" placeholder="Gramado e Canela" autocomplete="off"></div>
           <div class="grade" style="margin-top:12px"><div class="campo"><label>Ida</label><input type="date" id="njIni" value="${ini}"></div><div class="campo"><label>Volta</label><input type="date" id="njFim" value="${fim}"></div></div>
-          <div class="grade" style="margin-top:12px"><div class="campo"><label>Quantas pessoas</label><input type="number" id="njPax" value="2" min="1" max="20"></div>
-            <div class="campo"><label>Tipo</label><div class="njr-seg" id="njEsc"><button type="button" class="on" data-v="nac">Nacional</button><button type="button" data-v="int">Internacional</button></div></div></div>
+          <div class="campo" style="margin-top:12px"><label>Quantas pessoas</label><input type="number" id="njPax" value="2" min="1" max="20"></div>
           <p class="fraco" style="font-size:calc(12.5px * var(--esc, 1));margin:14px 0 0">Orçamento, milhas, câmbio e prazos ficam para depois, quando você quiser. A jornada abre direto em Trechos.</p></div>`,
         pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button><button type="button" class="bt fantasma" id="njMais">Mais detalhes</button><button type="button" class="bt primario" id="njCriar"><svg><use href="#i-ok"/></svg>Criar jornada</button>`});
       const seg = document.getElementById('njEsc');
-      seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+      seg.onclick = e => { const b = e.target.closest('button'); if (!b) return; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); const d = document.getElementById('njDest'); if (d) d.placeholder = b.dataset.v === 'int' ? 'Lisboa e Porto' : 'Gramado e Canela'; };
       const dest = document.getElementById('njDest');
       dest.addEventListener('input', () => { const t = dest.value; if (/(lisboa|porto|paris|londres|madri|roma|europa|miami|orlando|nova york|buenos aires|santiago|lima|cancún|cancun|tóquio|toquio|japão|japao|portugal|espanha|itália|italia|frança|franca|alemanha|eua|estados unidos|canadá|canada|chile|argentina|peru|méxico|mexico|dubai|egito)/i.test(t)) seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === 'int')); });
       setTimeout(() => dest.focus(), 60);
@@ -83296,6 +83297,11 @@ azpBotaoPassageiros();
 .sv-cab input{ flex:1 1 220px; min-width:0; }
 .sv-cab .sv-pax{ flex:0 0 auto; display:flex; align-items:center; gap:8px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
 .sv-cab .sv-pax input{ width:64px; flex:none; text-align:center; }
+.sv-esc{ justify-content:space-between; }
+.sv-puxar{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; align-items:end; padding:14px; border-radius:16px; border:1px dashed color-mix(in srgb, var(--ouro) 50%, var(--fio)); background:color-mix(in srgb, var(--ouro) 6%, transparent); }
+.sv-puxar .campo{ margin:0; }
+.sv-puxar p{ grid-column:1 / -1; margin:0; font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.sv-puxar .sv-px-bts{ grid-column:1 / -1; display:flex; gap:8px; justify-content:flex-end; }
 .sv-salvas{ display:flex; flex-wrap:wrap; gap:6px; }
 .sv-salvas button{ padding:5px 12px; border-radius:99px; border:1px solid var(--fio); background:transparent; color:var(--grafite); font:inherit; font-size:calc(12.5px * var(--esc)); cursor:pointer; }
 .sv-salvas button.on{ color:var(--giz); border-color:color-mix(in srgb, var(--ouro) 55%, var(--fio)); background:color-mix(in srgb, var(--ouro) 10%, transparent); }
@@ -83351,6 +83357,8 @@ azpBotaoPassageiros();
 .sv-gravar .sv-tres b{ font-size:calc(32px * var(--esc)); }
 .sv-gravar .sv-linha{ font-size:calc(15px * var(--esc)); padding:13px 20px; }
 @media (max-width:760px){
+  .sv-puxar{ grid-template-columns:minmax(0,1fr); }
+  .sv-esc{ flex-wrap:wrap; } .sv-esc #svPuxar{ flex:1 1 100%; justify-content:center; }
   [data-sv]{ flex:1 1 100%; justify-content:center; }
   .sv-trechos{ grid-template-columns:minmax(0,1fr); }
   .sv-3{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
@@ -83405,7 +83413,8 @@ function svTotais(s){
 let _sv = null, _svGravar = false;
 function abrirSimularViagem(id){
   const base = id ? (DB.simViagens || []).find(x => x.id === id) : null;
-  _sv = base ? JSON.parse(JSON.stringify(base)) : {id:'', nome:'', tipo:'iv', pax:2, trechos:[svNovoTrecho('Ida'), svNovoTrecho('Volta')]};
+  _sv = base ? JSON.parse(JSON.stringify(base)) : {id:'', nome:'', esc:'nac', tipo:'iv', pax:2, trechos:[svNovoTrecho('Ida'), svNovoTrecho('Volta')]};
+  if (!_sv.esc) _sv.esc = 'nac';
   while (_sv.trechos.length < 2) _sv.trechos.push(svNovoTrecho(_sv.trechos.length ? 'Volta' : 'Ida'));
   _svGravar = false;
   abrirFolha({titulo:'A Conta da Viagem', largura:'larga', corpo:'<div id="svCorpo" class="sv"></div>',
@@ -83429,7 +83438,7 @@ function svPlacarHTML(s){
   const linhas = svAtivos(s).map(t => ({t, c:svCalc(t)})).filter(x => x.c.vence);
   return `<section class="sv-placar" aria-live="polite">
     <h3 class="sv-placar-h">${_svGravar ? 'A Conta da Viagem' : 'Resultado'}</h3>
-    <div class="sv-placar-sub">${esc(s.nome || (s.tipo === 'ida' ? 'Só ida' : 'Ida e volta'))}${s.pax ? ` · ${s.pax} ${Number(s.pax) === 1 ? 'pessoa' : 'pessoas'}` : ''}</div>
+    <div class="sv-placar-sub">${s.esc === 'int' ? 'Internacional' : 'Nacional'} · ${esc(s.nome || (s.tipo === 'ida' ? 'Só ida' : 'Ida e volta'))}${s.pax ? ` · ${s.pax} ${Number(s.pax) === 1 ? 'pessoa' : 'pessoas'}` : ''}</div>
     <div class="sv-tres">
       <div class="riscado"><small>Tudo Na Pagante</small><b>${brl(T.pagante)}</b></div>
       <div><small>Fazendo a conta</small><b>${brl(T.pago)}</b></div>
@@ -83447,6 +83456,12 @@ function svDesenhar(){
   const bt = document.getElementById('svGravarBt');
   if (bt) bt.innerHTML = _svGravar ? '<svg><use href="#i-lapis"/></svg>Voltar a editar' : '<svg><use href="#i-olho"/></svg>Só o resultado';
   c.innerHTML = `${salvas.length ? `<div class="sv-salvas sv-editar"><button type="button" data-sv-abrir=""${!_sv.id ? ' class="on"' : ''}>+ Nova</button>${salvas.map(x => `<button type="button" data-sv-abrir="${esc(x.id)}"${x.id === _sv.id ? ' class="on"' : ''}>${esc(x.nome || 'Sem nome')}</button>`).join('')}</div>` : ''}
+    <!-- primeiro o tipo da viagem (pedido de 21/11/2026), como na Nova Jornada -->
+    <div class="sv-cab sv-editar sv-esc">
+      <div class="seg" id="svEsc" role="tablist" aria-label="Nacional ou internacional">${[['nac', 'Nacional'], ['int', 'Internacional']].map(([k, n]) => `<button type="button" role="tab" data-sv-esc="${k}" class="${_sv.esc === k ? 'on' : ''}" aria-selected="${_sv.esc === k}">${n}</button>`).join('')}</div>
+      ${svJornadasComTrechos().length ? `<button type="button" class="bt fantasma" id="svPuxar"><svg><use href="#i-baixar"/></svg>Puxar de uma Jornada</button>` : ''}
+    </div>
+    <div class="sv-puxar sv-editar" id="svPuxarCx" hidden></div>
     <div class="sv-cab sv-editar">
       <div class="seg" id="svTipo" role="tablist" aria-label="Tipo de viagem">${[['ida', 'Só ida'], ['iv', 'Ida e volta']].map(([k, n]) => `<button type="button" role="tab" data-sv-tipo="${k}" class="${_sv.tipo === k ? 'on' : ''}" aria-selected="${_sv.tipo === k}">${n}</button>`).join('')}</div>
       <input type="text" id="svNome" value="${esc(_sv.nome)}" placeholder="Nome da viagem (ex.: Portugal em executiva)" aria-label="Nome da viagem">
@@ -83461,7 +83476,7 @@ function svDesenhar(){
           <div class="campo"><label>Milhas <small>de todas as pessoas</small></label><input type="text" inputmode="numeric" data-milhar data-k="milhas" value="${t.milhas ? nBR(t.milhas) : ''}" placeholder="0"></div>
           <div class="campo"><label>Taxas <small>da emissão em milhas</small></label><input type="text" inputmode="decimal" data-moeda data-k="taxas" value="${t.taxas ? moedaTxt(t.taxas) : ''}" placeholder="0,00"></div>
         </div>
-        <div class="sv-milheiro">Milheiro <span data-sv-mtxt>${brl2(t.milheiro)} (${mudou ? 'você mudou' : esc(m.de)})</span> · <button type="button" data-sv-mud>mudar</button><input type="text" inputmode="decimal" data-moeda data-k="milheiro" value="${moedaTxt(t.milheiro)}" hidden aria-label="Milheiro"></div>
+        <div class="sv-milheiro">Milheiro <span data-sv-mtxt>${brl2(t.milheiro)} (${mudou ? (t.deProva ? 'da prova da Jornada' : 'você mudou') : esc(m.de)})</span> · <button type="button" data-sv-mud>mudar</button><input type="text" inputmode="decimal" data-moeda data-k="milheiro" value="${moedaTxt(t.milheiro)}" hidden aria-label="Milheiro"></div>
         <div data-sv-ver>${svVeredito(t)}</div>
       </div>`; }).join('')}</div>
     ${svPlacarHTML(_sv)}
@@ -83471,7 +83486,7 @@ function svDesenhar(){
     if (k === 'rota') t.rota = el.value;
     else if (k === 'prog'){ t.prog = el.value; t.milheiro = svMilheiroDe(el.value).v; svDesenhar(); return; }
     else if (k === 'milhas') t.milhas = qtdNum(el.value);
-    else t[k] = centavos(moedaNum(el.value));
+    else { t[k] = centavos(moedaNum(el.value)); if (k === 'milheiro') t.deProva = false; }
     svAtualizar(i);
   };
   c.querySelectorAll('.sv-tr').forEach(box => {
@@ -83480,9 +83495,77 @@ function svDesenhar(){
     box.querySelector('[data-sv-mud]').onclick = e => { const inp = box.querySelector('[data-k="milheiro"]'); inp.hidden = false; e.target.hidden = true; inp.focus(); inp.select(); };
   });
   c.querySelectorAll('[data-sv-abrir]').forEach(b => b.onclick = () => { const id = b.dataset.svAbrir; fecharFolha(); setTimeout(() => abrirSimularViagem(id || null), 60); });
+  c.querySelectorAll('[data-sv-esc]').forEach(b => b.onclick = () => { if (_sv.esc !== b.dataset.svEsc){ _sv.esc = b.dataset.svEsc; svDesenhar(); } });
+  const pux = document.getElementById('svPuxar'); if (pux) pux.onclick = svAbrirPuxar;
   c.querySelectorAll('[data-sv-tipo]').forEach(b => b.onclick = () => { if (_sv.tipo !== b.dataset.svTipo){ _sv.tipo = b.dataset.svTipo; svDesenhar(); } });
   const nm = document.getElementById('svNome'); if (nm) nm.oninput = () => { _sv.nome = nm.value; svAtualizar(-1); };
   const px = document.getElementById('svPax'); if (px) px.oninput = () => { _sv.pax = Math.max(1, Math.min(9, Math.round(Number(px.value) || 0))) || ''; svAtualizar(-1); };
+}
+/* ── Puxar de uma Jornada (21/11/2026): os números já estão na Torre, nas provas
+   dos trechos. Cada trecho vira Na Pagante, milhas e taxas do mesmo jeito que a
+   Prova da economia calcula, para o vídeo mostrar exatamente o que a prova diz:
+   - emitido em milhas (ou milhas + valor): Na Pagante = o preço do mesmo voo
+     (com upgrade, o da cabine em que voou); milhas = as usadas (com as do
+     upgrade, se do mesmo programa); taxas = taxas + o que foi pago em reais
+     (+ o upgrade em reais, ou em milhas de outro programa já convertidas);
+   - pago Na Pagante: Na Pagante = o que foi pago; milhas e taxas = a opção em
+     milhas que foi comparada;
+   - milheiro = o mesmo da prova (a base escolhida no trecho).
+   Cortesia do cartão não entra (é outra conta): a Torre avisa quando houver. */
+function svJornadasComTrechos(){ return (DB.planos || []).filter(p => trechosDe(p).length).sort((a, b) => String(b.inicio || '').localeCompare(String(a.inicio || ''))); }
+function svRotaDe(t){ const cid = c => (AEROPORTOS[String(c || '').toUpperCase()] || {}).c || c || ''; return t.origem && t.destino ? `${cid(t.origem)} → ${cid(t.destino)}` : ''; }
+function svDoTrecho(t){
+  const base = t.baseMilheiro || 'custo';
+  if (t.forma === 'dinheiro'){
+    const pg = t.altProg || t.prog;
+    return {pagante:centavos(Number(t.pago) || 0), prog:pg, milhas:Number(t.altMilhas) || 0, taxas:centavos(Number(t.altTaxas) || 0), milheiro:centavos(milheiroDaBase(base, pg, t.milheiroOutro) || 0)};
+  }
+  const mil = milheiroDaBase(base, t.prog, t.milheiroOutro) || 0;
+  let milhas = Number(t.milhas) || 0, taxas = centavos((Number(t.taxas) || 0) + (Number(t.pago) || 0)), pagante = centavos(Number(t.vista) || 0);
+  const u = t.upgrade;
+  if (u && Number(u.vista) > 0){
+    pagante = centavos(Number(u.vista));
+    taxas = centavos(taxas + (Number(u.dinheiro) || 0));
+    const um = Number(u.milhas) || 0, up = u.prog || t.prog || t.altProg;
+    if (um){ if (up === t.prog) milhas += um; else taxas = centavos(taxas + centavos(um / 1000 * (milheiroDaBase(base, up, t.milheiroOutro) || 0))); }
+  }
+  return {pagante, prog:t.prog, milhas, taxas, milheiro:centavos(mil)};
+}
+function svAbrirPuxar(){
+  const cx = document.getElementById('svPuxarCx'); if (!cx) return;
+  if (!cx.hidden){ cx.hidden = true; return; }
+  const js = svJornadasComTrechos(); if (!js.length) return;
+  const opsT = p => ordenarTrechos(trechosDe(p)).map(t => `<option value="${esc(t.id)}">${esc(svRotaDe(t) || 'Trecho')}${t.data ? ' · ' + esc(dataBR(t.data)) : ''}</option>`).join('');
+  const padrao = p => { const ts = trechosPainel(p); return [ts[0], ts.length > 1 ? ts[ts.length - 1] : null]; };
+  const pintar = id => {
+    const p = js.find(x => x.id === id) || js[0], [a, b] = padrao(p);
+    cx.innerHTML = `<div class="campo"><label>Jornada</label><select id="svPxJ">${js.map(x => `<option value="${esc(x.id)}"${x.id === p.id ? ' selected' : ''}>${esc(x.nome || x.destino || 'Jornada')}</option>`).join('')}</select></div>
+      <div class="campo"><label>Trecho da ida</label><select id="svPxI">${opsT(p)}</select></div>
+      <div class="campo"><label>Trecho da volta</label><select id="svPxV"><option value="">sem volta (só ida)</option>${opsT(p)}</select></div>
+      <p>Vêm os números das provas: o preço Na Pagante, as milhas, as taxas e o milheiro de cada trecho. Já começa com os trechos que estão no painel da viagem.</p>
+      <div class="sv-px-bts"><button type="button" class="bt perigo" id="svPxF">Fechar</button><button type="button" class="bt primario" id="svPxOk"><svg><use href="#i-ok"/></svg>Usar estes números</button></div>`;
+    if (a) cx.querySelector('#svPxI').value = a.id;
+    cx.querySelector('#svPxV').value = b ? b.id : '';
+    cx.querySelector('#svPxJ').onchange = e => pintar(e.target.value);
+    cx.querySelector('#svPxF').onclick = () => { cx.hidden = true; };
+    cx.querySelector('#svPxOk').onclick = () => svPuxar(p, cx.querySelector('#svPxI').value, cx.querySelector('#svPxV').value);
+  };
+  pintar(js[0].id); cx.hidden = false;
+}
+function svPuxar(p, idI, idV){
+  const ts = trechosDe(p), ti = ts.find(t => t.id === idI), tv = idV ? ts.find(t => t.id === idV) : null;
+  if (!ti) return avisar('Escolha o trecho da ida.', 'alerta');
+  const cort = [ti, tv].filter(Boolean).some(t => cortesiaTrecho(t) > 0);
+  const vira = (t, rot) => Object.assign(svNovoTrecho(rot), svDoTrecho(t), {rota:svRotaDe(t), deProva:true});
+  _sv.trechos = [vira(ti, 'Ida'), tv ? vira(tv, 'Volta') : (_sv.trechos[1] || svNovoTrecho('Volta'))];
+  _sv.tipo = tv ? 'iv' : 'ida';
+  _sv.esc = p.escopo === 'int' ? 'int' : p.escopo === 'nac' ? 'nac' : _sv.esc;
+  _sv.pax = Number(p.pax) || _sv.pax;
+  if (!String(_sv.nome || '').trim()) _sv.nome = p.nome || p.destino || '';
+  svDesenhar();
+  const faltam = svAtivos(_sv).filter(t => !svCalc(t).vence).map(t => t.rot);
+  avisar(faltam.length ? `Números da Jornada carregados, mas falta preço Na Pagante ou milhas em: ${faltam.join(', ')}. Confira a prova desse trecho.`
+    : `Números da Jornada carregados${cort ? '. A cortesia do cartão não entra nesta conta (ela aparece só na Prova)' : ''}. Confira e toque em Só o resultado para gravar.`, faltam.length || cort ? 'alerta' : 'ok', 7000);
 }
 /* digitação: só o veredito do trecho e o placar mudam (redesenhar tudo tiraria o cursor do campo) */
 function svAtualizar(i){
@@ -83491,7 +83574,7 @@ function svAtualizar(i){
     const box = c.querySelector(`.sv-tr[data-sv-i="${i}"]`), t = _sv.trechos[i], m = svMilheiroDe(t.prog);
     if (box){
       box.querySelector('[data-sv-ver]').innerHTML = svVeredito(t);
-      box.querySelector('[data-sv-mtxt]').textContent = `${brl2(t.milheiro)} (${centavos(t.milheiro) !== m.v ? 'você mudou' : m.de})`;
+      box.querySelector('[data-sv-mtxt]').textContent = `${brl2(t.milheiro)} (${centavos(t.milheiro) !== m.v ? (t.deProva ? 'da prova da Jornada' : 'você mudou') : m.de})`;
     }
   }
   const pl = c.querySelector('.sv-placar'); if (pl) pl.outerHTML = svPlacarHTML(_sv);
