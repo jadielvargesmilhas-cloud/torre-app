@@ -83306,8 +83306,9 @@ azpBotaoPassageiros();
 .sv-tr-cab input{ flex:1; min-width:0; background:transparent; border:0; border-bottom:1px dashed var(--fio); border-radius:0; padding:4px 2px; color:var(--grafite); font-size:calc(13px * var(--esc)); }
 .sv-tr-cab select{ flex:none; width:auto; max-width:140px; padding:4px 8px; font-size:calc(12.5px * var(--esc)); }
 .sv-3{ display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:10px; }
-.sv-3 .campo{ margin:0; }
+.sv-3 .campo{ margin:0; display:flex; flex-direction:column; justify-content:flex-end; }
 .sv-3 label{ font-size:calc(12px * var(--esc)); }
+.sv-3 label small{ display:block; color:var(--grafite); font-weight:400; font-size:calc(11px * var(--esc)); }
 .sv-3 input{ font-size:calc(16px * var(--esc)); font-weight:650; font-variant-numeric:tabular-nums; }
 .sv-milheiro{ font-size:calc(12px * var(--esc)); color:var(--grafite); }
 .sv-milheiro button{ border:0; background:none; padding:0; color:var(--anil, #6FB7FF); font:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
@@ -83350,6 +83351,7 @@ azpBotaoPassageiros();
 .sv-gravar .sv-tres b{ font-size:calc(32px * var(--esc)); }
 .sv-gravar .sv-linha{ font-size:calc(15px * var(--esc)); padding:13px 20px; }
 @media (max-width:760px){
+  [data-sv]{ flex:1 1 100%; justify-content:center; }
   .sv-trechos{ grid-template-columns:minmax(0,1fr); }
   .sv-3{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
   .sv-3 .campo:first-child{ grid-column:1 / -1; }
@@ -83455,9 +83457,9 @@ function svDesenhar(){
         <div class="sv-tr-cab"><b>${esc(t.rot)}</b><input type="text" data-k="rota" value="${esc(t.rota)}" placeholder="${i ? 'Lisboa → Salvador' : 'Salvador → Porto'}" aria-label="Trecho">
           <select data-k="prog" aria-label="Programa das milhas">${progs.map(p => `<option value="${p}"${p === t.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
         <div class="sv-3">
-          <div class="campo"><label>Na Pagante (R$)</label><input type="text" inputmode="decimal" data-moeda data-k="pagante" value="${t.pagante ? moedaTxt(t.pagante) : ''}" placeholder="0,00"></div>
-          <div class="campo"><label>Milhas</label><input type="text" inputmode="numeric" data-milhar data-k="milhas" value="${t.milhas ? nBR(t.milhas) : ''}" placeholder="0"></div>
-          <div class="campo"><label>Taxas (R$)</label><input type="text" inputmode="decimal" data-moeda data-k="taxas" value="${t.taxas ? moedaTxt(t.taxas) : ''}" placeholder="0,00"></div>
+          <div class="campo"><label>Na Pagante <small>já com taxas, todas as pessoas</small></label><input type="text" inputmode="decimal" data-moeda data-k="pagante" value="${t.pagante ? moedaTxt(t.pagante) : ''}" placeholder="0,00"></div>
+          <div class="campo"><label>Milhas <small>de todas as pessoas</small></label><input type="text" inputmode="numeric" data-milhar data-k="milhas" value="${t.milhas ? nBR(t.milhas) : ''}" placeholder="0"></div>
+          <div class="campo"><label>Taxas <small>da emissão em milhas</small></label><input type="text" inputmode="decimal" data-moeda data-k="taxas" value="${t.taxas ? moedaTxt(t.taxas) : ''}" placeholder="0,00"></div>
         </div>
         <div class="sv-milheiro">Milheiro <span data-sv-mtxt>${brl2(t.milheiro)} (${mudou ? 'você mudou' : esc(m.de)})</span> · <button type="button" data-sv-mud>mudar</button><input type="text" inputmode="decimal" data-moeda data-k="milheiro" value="${moedaTxt(t.milheiro)}" hidden aria-label="Milheiro"></div>
         <div data-sv-ver>${svVeredito(t)}</div>
@@ -83514,11 +83516,24 @@ function svSalvar(){
   abrirFolha = function(){ const ft = document.getElementById('folhaTit'); if (ft) ft.parentElement.style.display = ''; return _af.apply(this, arguments); };
   const _c = comandos;
   comandos = function(){ const C = _c.apply(this, arguments); C.push({t:'A Conta da Minha Viagem', s:'Na Pagante x milhas + taxas: o que vale mais em cada trecho, antes de emitir', i:'#i-dinheiro', g:'calcular', f:() => abrirSimularViagem()}); return C; };
-  document.querySelectorAll('button[onclick="editarPlanoViagem()"]').forEach(b => {
-    if (b.previousElementSibling && b.previousElementSibling.dataset && b.previousElementSibling.dataset.sv) return;
-    b.insertAdjacentHTML('beforebegin', '<button type="button" class="bt fantasma" data-sv="1" onclick="abrirSimularViagem()"><svg><use href="#i-dinheiro"/></svg>A Conta da Viagem</button>');
-  });
+  svBotoes();
+  /* a tela de Viagens é redesenhada (e no celular o cabeçalho muda de lugar):
+     o botão é reposto depois de cada desenho, ao lado de TODO "Nova Jornada" */
+  const _rr = renderRota; renderRota = function(){ const v = _rr.apply(this, arguments); svBotoes(); return v; };
+  const _ip = irPara; irPara = function(){ const v = _ip.apply(this, arguments); setTimeout(svBotoes, 0); return v; };
+  /* partes da tela (a lista de jornadas, o panorama) se redesenham sozinhas: um
+     vigia só na aba Jornadas repõe o botão; inserir de novo não dispara nada,
+     porque o botão já está lá */
+  const aba = document.getElementById('p-rt-plano');
+  if (aba && window.MutationObserver){ let pend = false; new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; svBotoes(); }); }).observe(aba, {childList:true, subtree:true}); }
 })();
+function svBotoes(){
+  document.querySelectorAll('button[onclick="editarPlanoViagem()"]').forEach(b => {
+    const viz = b.nextElementSibling;
+    if (viz && viz.dataset && viz.dataset.sv) return;
+    b.insertAdjacentHTML('afterend', '<button type="button" class="bt fantasma" data-sv="1" onclick="abrirSimularViagem()"><svg><use href="#i-dinheiro"/></svg>A Conta da Minha Viagem</button>');
+  });
+}
 </script>
 </body>
 </html>
