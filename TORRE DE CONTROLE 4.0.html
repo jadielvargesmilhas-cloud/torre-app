@@ -66660,11 +66660,25 @@ function empSitesHTML(progK, r, sel){
   if (parceira) lista = lista.filter(x => x[0] === 'Azul Pelo Mundo').concat(lista.filter(x => x[0] !== 'Azul Pelo Mundo'));
   if (!lista.length) return '';
   const ext = !!document.documentElement.dataset.torreExt, n = (sel.pax || []).length;
+  /* Azul Pelo Mundo aceita a busca pronta no endereço (visto no site em 22/11/2026):
+     /flights/OW/TPA/GIG/-/-/2027-10-17/-/3/2/0/0/0/ALL/F/ECONOMY/-/-/-/-/A/-
+     (só ida, origem, destino, data, adultos, crianças, bebês, econômica). Só usamos
+     o formato que vimos: só ida e econômica. O resto abre a página inicial. */
+  const dl = azulPeloMundoLink(r);
+  if (dl) lista = lista.map(x => x[0] === 'Azul Pelo Mundo' ? [x[0], dl] : x);
   return `<div class="emp-sites"><div class="emp-sites-tit">Emitir no site${parceira ? ' <span class="fraco">· voo de parceira: pela Azul Pelo Mundo</span>' : ''}</div>
     ${lista.map(([nome, u], i) => `<a class="bt ${i === 0 ? 'primario' : 'fantasma'}" href="${u}" target="_blank" rel="noopener" data-emp-site="${esc(nome)}"><svg><use href="#i-link"/></svg>Abrir a ${esc(nome)}</a>`).join('')}
     ${progK === 'azul' && n ? `<button type="button" class="bt fantasma" data-emp-ext><svg><use href="#i-aviao"/></svg>${ext ? (n === 1 ? 'Mandar o passageiro para a extensão' : `Mandar os ${n} passageiros para a extensão`) : (n === 1 ? 'Copiar o passageiro (favorito Torre → Azul)' : `Copiar os ${n} passageiros (favorito Torre → Azul)`)}</button>` : ''}
     ${empBuscaHTML(r)}
   </div>`;
+}
+function azulPeloMundoLink(r){
+  const m = String(r.desc || '').match(/^([A-Z]{3}) → ([A-Z]{3})/);
+  const c = ((cqAtual && cqAtual() || {}).estado || vemEst || {}).comum || {};
+  if (!m || !r.data || r.dataVolta || !/^\d{4}-\d{2}-\d{2}$/.test(r.data)) return '';
+  if (c.cabine && !/econ/i.test(semAcento(String(c.cabine)))) return '';
+  const ad = Math.max(1, Number(c.adultos) || 1), cr = Number(c.criancas) || 0, bb = Number(c.bebes) || 0;
+  return `https://azulpelomundo.voeazul.com.br/flights/OW/${m[1]}/${m[2]}/-/-/${r.data}/-/${ad}/${cr}/${bb}/0/0/ALL/F/ECONOMY/-/-/-/-/A/-`;
 }
 /* o que digitar na busca do site (o link abre a página inicial: a busca é sua) */
 function empBuscaHTML(r){
@@ -66673,6 +66687,7 @@ function empBuscaHTML(r){
   const pax = [[c.adultos, 'adulto', 'adultos'], [c.criancas, 'criança', 'crianças'], [c.bebes, 'bebê', 'bebês']].filter(([v]) => Number(v) > 0).map(([v, a, b]) => `${v} ${Number(v) === 1 ? a : b}`).join(', ');
   const cp = (rot, v) => `<button type="button" class="emp-cp" data-emp-copiar="${esc(v)}" title="Copiar ${rot}"><em>${rot}</em><span>${esc(v)}</span><svg><use href="#i-copiar"/></svg></button>`;
   const cid = k => (AEROPORTOS[k] || {}).c || k;
+  if (azulPeloMundoLink(r) && /azul/i.test(String(r.prog || r._progEscolhido || ''))) return `<div class="emp-busca"><small class="fraco">O botão da Azul Pelo Mundo já abre a busca pronta: ${esc(m[1])} → ${esc(m[2])}, ${esc(dataBR(r.data))}${pax ? ', ' + esc(pax) : ''}.</small></div>`;
   return `<div class="emp-busca"><div class="emp-sites-tit">Na busca do site</div>
     <div class="emp-busca-cps">${cp('Saindo de', `${cid(m[1])} (${m[1]})`)}${cp('Chegando em', `${cid(m[2])} (${m[2]})`)}${r.data ? cp('Ida', dataBR(r.data)) : ''}${r.dataVolta ? cp('Volta', dataBR(r.dataVolta)) : ''}</div>
     <small class="fraco">${r.dataVolta ? 'Ida e volta' : 'Somente ida'}${pax ? ' · ' + esc(pax) : ''}</small></div>`;
