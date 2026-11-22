@@ -66695,7 +66695,7 @@ function empBuscaHTML(r){
 async function empMandarPax(reg){
   const sel = empSel(reg), r = cqRascunhoEmissao(reg) || {};
   if (!(sel.pax || []).length) return avisar('Escolha os passageiros primeiro.', 'alerta');
-  const pac = azpPacote(sel.pax, r.data || hojeISO()), txt = JSON.stringify(pac);
+  const pac = azpPacote(sel.pax, r.data || hojeISO(), r.clienteId), txt = JSON.stringify(pac);
   const ext = !!document.documentElement.dataset.torreExt;
   if (ext) window.postMessage({tipo:'torre-azul-pacote', pacote:pac}, '*');
   try { await navigator.clipboard.writeText(txt); } catch(_){ if (!ext) return avisar('O navegador não deixou copiar. Tente de novo com a Torre em primeiro plano.', 'alerta'); }
@@ -66755,7 +66755,8 @@ function empHTML(reg){
   const paxOk = sel.pax.length === precisa;
   const DADOS = [['nome', 'Nome', p => p.primeiro || String(p.nome || '').split(' ')[0]], ['sobre', 'Sobrenome', p => p.sobrenome || String(p.nome || '').split(' ').slice(1).join(' ')],
     ['nasc', 'Nascimento', p => p.nasc ? dataBR(p.nasc) : ''], ['cpf', 'CPF', p => p.cpf || ''], ['sexo', 'Sexo', p => ({F:'Feminino', M:'Masculino'})[p.sexo] || '']];
-  DADOS.push(['mail', 'E-mail', p => contatoDe(p).email], ['fone', 'Telefone', p => contatoDe(p).fone]);
+  const titEm = r.clienteId ? pessoa(r.clienteId) : null;   /* contato do cliente da emissão para quem não tem o próprio */
+  DADOS.push(['mail', 'E-mail', p => contatoDe(p, titEm).email], ['fone', 'Telefone', p => contatoDe(p, titEm).fone]);
   const faltaAlgo = sel.pax.some(id => { const p = pessoa(id); return DADOS.some(([k, , f]) => EMP_OBRIG.includes(k) && !f(p)); });
   const contasH = contas.length ? contas.slice(0, 6).map(x => `<button type="button" class="emp-conta${x.c.id === sel.contaId ? ' on' : ''}${x.temMilhas ? '' : ' sem'}${x.temVagas ? '' : ' alerta'}" data-emp-conta="${esc(x.c.id)}">
       <span class="emp-r"></span><b>${esc(nomeCurto(x.c.nome))}</b>
@@ -83253,19 +83254,20 @@ function azpAvisos(p, voo){
   }
   return a;
 }
-function azpOrdem(ids, voo){
+function azpOrdem(ids, voo, titularId){
   const ordem = {adulto:0, crianca:1, bebe:2};
   return ids.map(id => pessoa(id)).filter(Boolean)
     .map(p => ({p, f:faixaPax(p, voo || hojeISO())}))
-    .sort((a, b) => ordem[a.f] - ordem[b.f]);
+    .sort((a, b) => ordem[a.f] - ordem[b.f] || (b.p.id === titularId) - (a.p.id === titularId));   /* o titular vem como passageiro 1 */
 }
-function azpPacote(ids, voo){
+function azpPacote(ids, voo, titularId){
+  const tx = titularId ? pessoa(titularId) : null;
   const br = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '';
   return {torre:'azul-pax', v:1, criado:new Date().toISOString(), voo:voo || '',
-    pax:azpOrdem(ids, voo).map(({p, f}, i) => {
+    pax:azpOrdem(ids, voo, titularId).map(({p, f}, i) => {
       const pt = partirNome(p);
       return {n:i + 1, faixa:FAIXAS_PAX[f].n, primeiro:(p.primeiro || pt.primeiro || '').toUpperCase(), sobrenome:(p.sobrenome || pt.sobrenome || '').toUpperCase(),
-        sexo:p.sexo === 'F' ? 'Feminino' : p.sexo === 'M' ? 'Masculino' : '', nasc:br(p.nasc), email:contatoDe(p).email,
+        sexo:p.sexo === 'F' ? 'Feminino' : p.sexo === 'M' ? 'Masculino' : '', nasc:br(p.nasc), email:contatoDe(p, tx).email, fone:contatoDe(p, tx).fone,
         pass:(p.pass || '').toUpperCase(), passVal:br(p.passVal), nac:azpPais(p.nac || 'BRA'), passPais:azpPais(p.passPais || p.nac || 'BRA')};
     })};
 }
@@ -83320,14 +83322,22 @@ async function azpCopiar(){
 
 /* ── o favorito que roda na página da Azul (não usa nada da Torre) ─────────── */
 function preencherFormAzul(pacote){
+  /* 22/11/2026, na página real da Azul Pelo Mundo: só os campos OBRIGATÓRIOS
+     (nome, último sobrenome, gênero, nascimento e e-mail). Passaporte, nacionalidade
+     e país o passageiro preenche no check-in. "Último Sobrenome" é só a última
+     palavra do sobrenome (o campo tem limite de letras e cortava "MOTTA VAZ D"). */
+  var OBRIG = {primeiro:1, sobrenome:1, sexo:1, nasc:1, email:1};
   var norm = function(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); };
   var visivel = function(el){ var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
+  [].slice.call(document.querySelectorAll('[data-torre-azul]')).forEach(function(t){ t.remove(); });
+  [].slice.call(document.querySelectorAll('[data-torre-azul-marcado]')).forEach(function(e){ e.style.outline = ''; e.style.outlineOffset = ''; e.removeAttribute('data-torre-azul-marcado'); });
+  var deVerdade = function(e){ if (e.tagName !== 'SELECT') return true; var r = e.getBoundingClientRect(), cs = getComputedStyle(e); return !(r.width <= 2 || r.height <= 2 || cs.opacity === '0' || cs.display === 'none'); };
   var rotulo = function(el){
     var t = [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.name, el.id];
     if (el.id){ var lb = document.querySelector('label[for="' + el.id.replace(/"/g, '') + '"]'); if (lb) t.unshift(lb.textContent); }
     var a = el.parentElement;
     for (var k = 0; k < 4 && a; k++, a = a.parentElement){
-      if (a.querySelectorAll('input:not([type=hidden]), select, textarea, [role="combobox"]').length > 1) break;   /* subiu demais: o rótulo já seria de outro campo */
+      if ([].filter.call(a.querySelectorAll('input:not([type=hidden]), select, textarea, [role="combobox"]'), deVerdade).length > 1) break;   /* subiu demais: o rótulo já seria de outro campo (a lista comum escondida atrás de uma lista do site não conta) */
       var l = a.querySelector('label, .label, [class*="label"], [class*="Label"]');
       if (l && !l.contains(el)){ t.unshift(l.textContent); break; }
     }
@@ -83346,39 +83356,55 @@ function preencherFormAzul(pacote){
   };
   var setNativo = function(el, v){
     var proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-    var d = Object.getOwnPropertyDescriptor(proto, 'value'); el.focus();
+    var d = Object.getOwnPropertyDescriptor(proto, 'value'); try { el.focus(); } catch(e){}
     if (d && d.set) d.set.call(el, v); else el.value = v;
     ['input', 'change', 'keyup', 'blur'].forEach(function(t){ el.dispatchEvent(new Event(t, {bubbles:true})); });
   };
   var marcar = function(el, txt){
-    el.style.outline = '3px solid #e8b44f'; el.style.outlineOffset = '2px';
+    el.style.outline = '3px solid #e8b44f'; el.style.outlineOffset = '2px'; el.setAttribute('data-torre-azul-marcado', '1');
     var tag = document.createElement('div'); tag.setAttribute('data-torre-azul', '1');
     tag.textContent = txt; tag.style.cssText = 'font:600 12px/1.3 system-ui,sans-serif;color:#7a5200;background:#fff3d6;border:1px solid #e8b44f;border-radius:6px;padding:3px 7px;margin-top:4px;display:inline-block';
     (el.parentElement || el).appendChild(tag);
   };
-  var NOMES = {primeiro:'primeiro nome', sobrenome:'sobrenome', sexo:'gênero', nasc:'nascimento', email:'e-mail', pass:'número do passaporte', passVal:'validade do passaporte', nac:'nacionalidade', passPais:'país do passaporte'};
+  var opcao = function(sel, v){ var alvo = norm(v), ops = [].slice.call(sel.options); return ops.find(function(o){ return norm(o.textContent) === alvo; }) || ops.find(function(o){ return norm(o.textContent).indexOf(alvo) === 0; }); };
+  var NOMES = {primeiro:'primeiro nome', sobrenome:'sobrenome', sexo:'gênero', nasc:'nascimento', email:'e-mail'};
   var rel = {feitos:0, escolher:[], pulados:[], faltam:[]};
   var campos = [].slice.call(document.querySelectorAll('input, select, textarea, [role="combobox"]'))
-    .filter(function(el){ return visivel(el) && !/^(checkbox|radio|hidden|submit|button|search)$/i.test(el.type || ''); });
+    .filter(function(el){ return visivel(el) && deVerdade(el) && !/^(checkbox|radio|hidden|submit|button|search)$/i.test(el.type || '') && !el.closest('[data-torre-azul-caixa],#torre-azul-painel'); });
   var usados = {};
   campos.forEach(function(el){
     var r = rotulo(el), chave = null;
     for (var i = 0; i < CAMPOS.length; i++){ if (CAMPOS[i][1].test(r)){ chave = CAMPOS[i][0]; break; } }
-    if (!chave) return;
+    if (!chave || !OBRIG[chave]) return;   /* não obrigatório: fica para o check-in */
     var n = numDe(el), p = pacote.pax[n - 1]; if (!p) return;
     var id = n + ':' + chave; if (usados[id]) return; usados[id] = 1;
     var v = p[chave];
     if (!v){ rel.faltam.push('Passageiro ' + n + ': ' + NOMES[chave]); return; }
+    var max = el.maxLength > 0 ? el.maxLength : 0;
+    if (chave === 'sobrenome' && (/ultimo/.test(r) || (max && v.length > max))) v = String(v).trim().split(/\s+/).pop();
+    if (chave === 'primeiro' && max && v.length > max) v = String(v).trim().split(/\s+/)[0];
     if (el.tagName === 'SELECT'){
-      var alvo = norm(v), op = [].slice.call(el.options).find(function(o){ return norm(o.textContent) === alvo; }) || [].slice.call(el.options).find(function(o){ return norm(o.textContent).indexOf(alvo) === 0; });
+      var op = opcao(el, v);
       if (op){ setNativo(el, op.value); rel.feitos++; } else { marcar(el, 'Escolha: ' + v); rel.escolher.push('Passageiro ' + n + ': ' + v); }
       return;
     }
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' || el.readOnly || el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup')){
-      marcar(el, 'Escolha: ' + v); rel.escolher.push('Passageiro ' + n + ': ' + v); return;
+      /* lista especial do site: às vezes há uma lista comum escondida por trás dela */
+      var a = el.parentElement, esc = null;
+      for (var k = 0; k < 3 && a && !esc; k++, a = a.parentElement) esc = a.querySelector('select');
+      var op2 = esc && opcao(esc, v);
+      if (op2){
+        setNativo(esc, op2.value);
+        var mostra = String(el.value || el.textContent || '').trim();
+        if (mostra && !/^selecion/i.test(mostra)){ rel.feitos++; return; }   /* a tela mostra o valor: pronto */
+      }
+      /* a lista do site só muda clicando: a Torre não clica, então marca para você escolher */
+      marcar(el, 'Escolha: ' + v); rel.escolher.push('Passageiro ' + n + ': ' + NOMES[chave] + ' ' + v); return;
     }
     var atual = String(el.value || '').trim();
-    if (atual && norm(atual) !== norm(v)){ marcar(el, 'Já tinha outro valor; a Torre diz: ' + v); rel.pulados.push('Passageiro ' + n + ': ' + NOMES[chave]); return; }
+    var igual = function(a, b){ return norm(a).replace(/\s/g, '') === norm(b).replace(/\s/g, ''); };
+    if (atual && !igual(atual, v) && !(max && igual(atual, String(v).slice(0, max)))){ marcar(el, 'Já tinha outro valor; a Torre diz: ' + v); rel.pulados.push('Passageiro ' + n + ': ' + NOMES[chave]); return; }
+    if (atual && igual(atual, v)){ rel.feitos++; return; }
     if (el.type === 'date' && /^\d\d\/\d\d\/\d{4}$/.test(v)) v = v.slice(6) + '-' + v.slice(3, 5) + '-' + v.slice(0, 2);
     setNativo(el, v); rel.feitos++;
   });
@@ -83906,10 +83932,15 @@ function titularDe(p){
   if (t && t.id !== p.id) return t;
   return clientesDoPax(p.id)[0] || null;
 }
-function contatoDe(p){
+function contatoDe(p, titularExtra){
   if (!p) return {email:'', fone:''};
   const t = p.contatoDoTitular ? titularDe(p) : null;
-  return t ? {email:t.email || '', fone:t.fone || '', titular:t} : {email:p.email || '', fone:p.fone || ''};
+  if (t) return {email:t.email || '', fone:t.fone || '', titular:t};
+  /* sem e-mail ou telefone próprio: usa o do titular (o cliente da família, ou o
+     cliente da emissão). Pedido de 22/11/2026: dependentes não passam contato e a
+     Azul pede e-mail de cada passageiro; manualmente usa-se o do titular. */
+  const tt = (!p.email || !p.fone) ? (titularDe(p) || (titularExtra && titularExtra.id !== p.id ? titularExtra : null)) : null;
+  return {email:p.email || (tt && tt.email) || '', fone:p.fone || (tt && tt.fone) || '', titular:(!p.email && tt && tt.email) ? tt : null};
 }
 (function(){
   const _ed = editarPessoa;
