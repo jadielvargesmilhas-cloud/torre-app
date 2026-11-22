@@ -48836,6 +48836,8 @@ function vemParaDados(st){
       regras: String(o.regras || '').split('\n').map(x => x.trim()).filter(Boolean)});
   });
   if (st.ops.length > 1){
+    const assinatura = o => JSON.stringify({m:o.milhas, p:o.milheiro, t:o.taxa, v:!!o.temVolta, i:(o.ida || []).map(x => [x.cia, x.numero, x.de, x.para, x.pData, x.pHora]), r:(o.temVolta ? o.volta || [] : []).map(x => [x.cia, x.numero, x.de, x.para, x.pData, x.pHora]), b:o.bag});
+    st.ops.forEach((o, i) => { const j = st.ops.findIndex(x => assinatura(x) === assinatura(o)); if (j < i) erros.push(`A Opção ${i + 1} está igual à Opção ${j + 1}. Troque o voo ou o preço dela, ou exclua a cópia.`); });
     const tipos = new Set(st.ops.map(o => !!o.temVolta));
     if (tipos.size > 1) erros.push('Na comparação, todas as opções precisam ser iguais: todas só de ida, ou todas de ida e volta.');
   }
@@ -48904,10 +48906,11 @@ function vemHtmlOpcao(o, oi){
   const n = vemEst.ops.length;
   const trechos = sentido => o[sentido].map((t, j) => vemHtmlTrecho(oi, sentido, j, t, o[sentido].length)).join('')
     + `<button type="button" class="bt p fantasma" data-vem-acao="mais-voo" data-k="${oi}.${sentido}"><svg><use href="#i-mais"/></svg>Somar voo (conexão)</button>`;
-  return `<div class="cartao vem-opcao">
+  return `<div class="cartao vem-opcao" id="vemOp${oi}">
     <div class="cartao-cab">
       <h3 style="color:var(--anil-claro)">${n > 1 ? `Opção ${oi + 1}` : 'O voo e o preço'}<div class="sub">Os dados do print da emissão. A duração de cada voo é calculada sozinha, no fuso de cada aeroporto.</div></h3>
-      ${n > 1 ? `<button type="button" class="bt p vermelho-solido" data-vem-acao="tirar-opcao" data-k="${oi}"><svg><use href="#i-lixo"/></svg>Excluir opção</button>` : ''}
+      <div class="vem-op-bts"><button type="button" class="bt p fantasma" data-vem-acao="duplicar-opcao" data-k="${oi}"><svg><use href="#i-copiar"/></svg>Duplicar</button>
+      ${n > 1 ? `<button type="button" class="bt p vermelho-solido" data-vem-acao="tirar-opcao" data-k="${oi}"><svg><use href="#i-lixo"/></svg>Excluir opção</button>` : ''}</div>
     </div>
     <div class="grade vem-grade-preco">
       ${vemCampo('Milhas (total da emissão)', `<input type="text" inputmode="numeric" data-milhar ${vemAttr(`ops.${oi}.milhas`, o.milhas)} placeholder="61.400">`)}
@@ -49003,7 +49006,8 @@ function vemRenderConf(){
     let calc = null; try { if (Number(d.milhas) > 0 && moedaNum(d.milheiro) > 0) calc = V.calcular(d); } catch (_) {}
     if (!calc) return;
     const recebe = calc.pix - calc.base;
-    linhas.push(`<tr>${r.lista.length > 1 ? `<th>Opção ${i + 1}</th>` : ''}
+    linhas.push(`<tr>${r.lista.length > 1 ? `<th class="vem-conf-op"><button type="button" class="vem-conf-nome" data-vem-acao="ir-opcao" data-k="${i}" title="Ir até a Opção ${i + 1} para alterar">Opção ${i + 1}</button>
+        <span class="vem-conf-bts"><button type="button" class="bt p fantasma icone" data-vem-acao="ir-opcao" data-k="${i}" data-dica="Alterar a Opção ${i + 1}" aria-label="Alterar a Opção ${i + 1}"><svg><use href="#i-lapis"/></svg></button><button type="button" class="bt p vermelho-solido icone" data-vem-acao="tirar-opcao" data-k="${i}" data-dica="Excluir a Opção ${i + 1}" aria-label="Excluir a Opção ${i + 1}"><svg><use href="#i-lixo"/></svg></button></span></th>` : ''}
       <td>${V.milhar(d.milhas)} × ${V.brl(BigInt(Math.round(moedaNum(d.milheiro) * 100)))} = ${V.brl(calc.milhas_valor)}</td>
       <td>${V.brl(calc.taxa)}</td><td><b>${V.brl(calc.base)}</b></td>
       <td class="vem-pix"><b>${V.brl(calc.pix)}</b></td><td>${V.brl(calc.cheio)}</td>
@@ -49360,12 +49364,20 @@ function vemLigar(){
     } else if (a === 'tirar-voo'){
       const [oi, sentido, j] = k.split('.');
       confirmar('Excluir este voo da opção?', 'O trecho sai desta opção da cotação.', () => { vemEst.ops[+oi][sentido].splice(+j, 1); vemGuardarRascunho(); renderVem(); }, 'Excluir');
-    } else if (a === 'mais-opcao'){
-      const base = JSON.parse(JSON.stringify(vemEst.ops[vemEst.ops.length - 1]));
-      vemEst.ops.push(base); vemGuardarRascunho(); renderVem();
-      avisar('Nova opção criada como cópia da anterior: troque o que muda.', 'info');
+    } else if (a === 'mais-opcao' || a === 'duplicar-opcao'){
+      /* 22/11/2026: "Somar" cria uma opção NOVA, em branco (só o milheiro vem da anterior).
+         Copiar igualzinho fica no botão "Duplicar" de cada opção, para quando só muda um detalhe. */
+      const ref = a === 'duplicar-opcao' ? vemEst.ops[+k] : vemEst.ops[vemEst.ops.length - 1];
+      let nova;
+      if (a === 'duplicar-opcao') nova = JSON.parse(JSON.stringify(ref));
+      else { nova = vemNovaOpcao(); if (ref && String(ref.milheiro || '').trim()) nova.milheiro = ref.milheiro; }
+      const pos = a === 'duplicar-opcao' ? +k + 1 : vemEst.ops.length;
+      vemEst.ops.splice(pos, 0, nova); vemGuardarRascunho(); renderVem();
+      if (typeof cqSalvarAgora === 'function') cqSalvarAgora();
+      vemIrOpcao(pos, true);
+      avisar(a === 'duplicar-opcao' ? `Opção ${pos + 1} criada como cópia da Opção ${+k + 1}: troque o que muda.` : `Opção ${pos + 1} criada em branco: preencha as milhas, as taxas e os voos (ou arraste o print dela).`, 'info', 6000);
     } else if (a === 'tirar-opcao'){
-      confirmar('Excluir esta opção?', `A Opção ${+k + 1} sai da comparação. As outras continuam.`, () => { vemEst.ops.splice(+k, 1); vemGuardarRascunho(); renderVem(); }, 'Excluir');
+      confirmar('Excluir esta opção?', `A Opção ${+k + 1} sai da comparação. As outras continuam.`, () => { vemEst.ops.splice(+k, 1); vemGuardarRascunho(); renderVem(); if (typeof cqSalvarAgora === 'function') cqSalvarAgora(); avisar(`Opção ${+k + 1} excluída.`, 'ok'); }, 'Excluir');
     } else if (a === 'nova'){
       confirmar('Começar uma cotação nova?', 'O formulário volta a ficar vazio. As páginas já geradas continuam guardadas na lista abaixo.', () => { vemEst = vemNovoEstado(); vemGuardarRascunho(); renderVem(); }, 'Começar nova');
     } else if (a === 'importar') vemImportar();
@@ -49374,6 +49386,7 @@ function vemLigar(){
       copiarParaAreaDeTransferencia(JSON.stringify(r.lista.length > 1 ? r.lista : r.lista[0], null, 2))
         .then(ok => avisar(ok ? 'Dados copiados.' : 'Não deu para copiar.', ok ? 'ok' : 'erro'));
     }
+    else if (a === 'ir-opcao') vemIrOpcao(+k, false);
     else if (a === 'ver') vemVer();
     else if (a === 'baixar') vemBaixar();
     else if (a === 'cq-seguir') cqIrPasso(3);
@@ -84119,6 +84132,31 @@ if (typeof cqRenderP5 === 'function'){
       const k = pixcConta(); if (k) avisar(`Cobrado no PIX agora: ${window.VEM.brl(k.c.pix)}.`, 'ok');
     });
   };
+}
+</script>
+
+<style id="vemop-css">
+/* 22/11/2026 · opções da cotação: Duplicar/Excluir no topo de cada uma; Alterar/Excluir na Conferência */
+.vem-op-bts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.vem-conf-op{text-align:left!important}
+.vem-conf-nome{all:unset;cursor:pointer;color:var(--anil-claro);font-weight:600;display:block}
+.vem-conf-nome:hover{text-decoration:underline}
+.vem-conf-bts{display:flex;gap:6px;margin-top:6px}
+.vem-conf-bts{gap:4px}
+.vem-conf-bts .bt.icone{width:28px;height:28px;min-height:0;padding:0;display:inline-grid;place-items:center}
+.vem-conf-bts .bt.icone svg{width:14px;height:14px}
+.vem-tab th, .vem-tab td{padding-left:8px;padding-right:8px}
+.vem-opcao{scroll-margin-top:96px}
+.vem-opcao.vem-op-nova{animation:vemOpNova 2.2s ease-out}
+@keyframes vemOpNova{0%,35%{box-shadow:0 0 0 3px var(--ouro)}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.vem-opcao.vem-op-nova{animation:none;outline:3px solid var(--ouro)}}
+</style>
+<script id="vemop-js">
+function vemIrOpcao(i, nova){
+  const el = document.getElementById('vemOp' + i); if (!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  el.classList.remove('vem-op-nova'); void el.offsetWidth; el.classList.add('vem-op-nova');
+  setTimeout(() => { const f = el.querySelector(`[data-vk="ops.${i}.milhas"]`); if (f) try { f.focus({preventScroll:true}); } catch (_) {} }, 450);
 }
 </script>
 </body>
