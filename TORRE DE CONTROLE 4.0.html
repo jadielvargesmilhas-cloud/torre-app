@@ -48831,7 +48831,7 @@ function vemParaDados(st){
       .map(k => ({tipo: k, texto: vemTextoBag(k, o.bag[k]), incluida: o.bag[k].estado === 'inc'}));
     if (!bagagem.length) erros.push(N + 'marque ao menos um item de bagagem.');
     lista.push({cliente: String(c.cliente || '').trim(), whatsapp: zap, milheiro: vemNumTxt(o.milheiro), milhas: String(milhas),
-      taxa_embarque: vemNumTxt(o.taxa), desconto_pix: vemNumTxt(cfg.pix), taxa_cartao_1x: vemNumTxt(cfg.t1), taxa_cartao_12x: vemNumTxt(cfg.t12),
+      taxa_embarque: vemNumTxt(o.taxa), desconto_pix: vemNumTxt(c.pixModo === 'cheio' ? cfg.t1 : cfg.pix), taxa_cartao_1x: vemNumTxt(cfg.t1), taxa_cartao_12x: vemNumTxt(cfg.t12),
       passageiros, cabine: c.cabine || 'Econômica', rodape: c.rodape ?? cfg.rodape, viagens, bagagem,
       regras: String(o.regras || '').split('\n').map(x => x.trim()).filter(Boolean)});
   });
@@ -48953,6 +48953,7 @@ function renderVem(){
         ${vemCampo('Cabine', `<select data-vk="comum.cabine" data-ordem="natural">${['Econômica', 'Premium Economy', 'Executiva', 'Primeira classe'].map(x => `<option${x === c.cabine ? ' selected' : ''}>${x}</option>`).join('')}</select>`)}
       </div>
       ${vemCampo('Rodapé', `<input type="text" ${vemAttr('comum.rodape', c.rodape)}>`, ' style="margin-top:12px"')}
+      ${typeof pixcBloco === 'function' ? pixcBloco(c) : ''}
     </div>
     ${vemEst.ops.map(vemHtmlOpcao).join('')}
     <div class="linha" style="gap:9px;flex-wrap:wrap">
@@ -84013,6 +84014,112 @@ function contatoDe(p, titularExtra){
     }}), 0);
   };
 })();
+</script>
+
+<style id="pixc-css">
+/* 22/11/2026 · Preço no PIX por cotação: com o desconto (chamariz) ou cheio (o milheiro combinado) */
+.pixc{margin-top:14px;padding:14px 16px;border:1px solid var(--fio);border-radius:14px;background:var(--sup-1)}
+.pixc-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pixc-cab b{font-size:14px}
+.pixc .seg button{white-space:nowrap}
+.pixc-info{margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--giz-2)}
+.pixc-info b{font-variant-numeric:tabular-nums}
+.pixc-lembra{display:block;margin-top:6px;font-size:12px;color:var(--ouro)}
+.cq-pix-modo{margin:0 0 14px}
+@media (max-width:640px){ .pixc .pixc-cab{flex-direction:column;align-items:stretch} .pixc .seg{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr;height:auto!important} .pixc .seg button{white-space:normal!important;line-height:1.25;padding:9px 8px!important;height:auto!important;min-width:0!important;overflow:visible!important;text-overflow:clip!important} }
+</style>
+<script id="pixc-js">
+/* Cliente direto paga no PIX exatamente milhas × milheiro + taxas (o milheiro já é o combinado).
+   O desconto do PIX fica como chamariz para cliente novo ou para quem pagaria no cartão.
+   "Sem desconto" faz o desconto do PIX igual à taxa do cartão à vista: o PIX volta a ser
+   exatamente a base, sem mexer no cartão à vista nem no 12x (conta exata, ver pixcBase). */
+function pixcPessoa(nome){
+  const t = semAcento(String(nome || '').trim().toLowerCase()); if (!t) return null;
+  return (DB.pessoas || []).find(p => semAcento(String(p.nome || '').toLowerCase()) === t) || null;
+}
+function pixcConta(st){
+  st = st || vemEst; if (!st) return null;
+  let r; try { r = vemParaDados(st); } catch (_) { return null; }
+  const d = r.lista[0], o = (st.ops || [])[0] || {}; if (!d) return null;
+  let c = null; try { if (Number(d.milhas) > 0 && moedaNum(d.milheiro) > 0) c = window.VEM.calcular(d); } catch (_) {}
+  if (!c) return null;
+  return {c, milhas:qtdNum(o.milhas), milheiro:moedaNum(o.milheiro), taxa:moedaNum(o.taxa), varias:(st.ops || []).length > 1};
+}
+function pixcTexto(st){
+  st = st || vemEst; const cfg = vemCfg(), cheio = (st.comum || {}).pixModo === 'cheio', k = pixcConta(st);
+  const B = x => window.VEM.brl(x);
+  let t;
+  if (!k) t = cheio ? 'No PIX o cliente paga as milhas pelo milheiro desta cotação mais as taxas, sem desconto. O cartão continua com os acréscimos de sempre.'
+                    : `No PIX entra o desconto de ${esc(cfg.pix)}% das Condições de venda (o chamariz para pagar à vista).`;
+  else if (cheio) t = `${k.varias ? 'Opção 1: ' : ''}PIX <b>${B(k.c.pix)}</b> = ${nBR(k.milhas)} milhas × ${brl(k.milheiro)} + ${brl(k.taxa)} de taxas, sem desconto. Cartão: ${B(k.c.cheio)} à vista ou 12x de ${B(k.c.parcela)}.`;
+  else t = `${k.varias ? 'Opção 1: ' : ''}PIX <b>${B(k.c.pix)}</b>, com ${esc(cfg.pix)}% de desconto sobre o cartão à vista (${B(k.c.cheio)}). Sem o desconto seria ${B(k.c.base)}.`;
+  const p = pixcPessoa((st.comum || {}).cliente);
+  const lembra = p && p.pixModo ? `<span class="pixc-lembra">${p.pixModo === 'cheio' ? 'Lembrado: para ' + esc(nomeCurto(p.nome)) + ' a Torre já começa sem desconto.' : ''}</span>` : '';
+  return t + lembra;
+}
+function pixcSeg(modo, attr){
+  return `<div class="seg" ${attr}>
+    <button type="button" class="${modo !== 'cheio' ? 'on' : ''}" data-v="desconto">Com desconto (chamariz)</button>
+    <button type="button" class="${modo === 'cheio' ? 'on' : ''}" data-v="cheio">Sem desconto: milheiro combinado</button></div>`;
+}
+function pixcBloco(c){
+  return `<div class="pixc" id="vemPixc"><div class="pixc-cab"><b>Preço no PIX</b>${pixcSeg(c.pixModo, 'data-vem-seg="comum.pixModo"')}</div>
+    <p class="pixc-info" id="vemPixInfo">${pixcTexto()}</p></div>`;
+}
+function pixcLembrar(nome, modo){
+  const p = pixcPessoa(nome); if (!p) return;
+  if (modo === 'cheio') p.pixModo = 'cheio'; else delete p.pixModo;
+  salvar();
+}
+function pixcAtualizarInfo(){ const i = document.getElementById('vemPixInfo'); if (i && vemEst) i.innerHTML = pixcTexto(); }
+/* escolha no passo Montar: grava na cotação e lembra no cadastro do cliente */
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-vem-seg="comum.pixModo"] button'); if (!b || !vemEst) return;
+  vemEst.comum.pixEscolhido = true;
+  pixcLembrar(vemEst.comum.cliente, b.dataset.v);
+  setTimeout(() => { if (typeof cqSalvarAgora === 'function') cqSalvarAgora(); }, 0);
+}, true);
+/* cliente digitado: se ele tem preferência guardada e esta cotação ainda não escolheu, aplica */
+let _pixcT = null;
+document.addEventListener('input', ev => {
+  if (!ev.target.closest || !ev.target.closest('#vemRaiz')) return;
+  clearTimeout(_pixcT);
+  _pixcT = setTimeout(() => {
+    if (!vemEst) return;
+    if (ev.target.dataset.vk === 'comum.cliente' && !vemEst.comum.pixEscolhido){
+      const p = pixcPessoa(vemEst.comum.cliente), quer = p && p.pixModo === 'cheio' ? 'cheio' : 'desconto';
+      if ((vemEst.comum.pixModo || 'desconto') !== quer){
+        vemEst.comum.pixModo = quer; vemGuardarRascunho();
+        document.querySelectorAll('[data-vem-seg="comum.pixModo"] button').forEach(x => x.classList.toggle('on', x.dataset.v === quer));
+        if (typeof vemAgendarConf === 'function') vemAgendarConf();
+      }
+    }
+    pixcAtualizarInfo();
+  }, 250);
+});
+/* passo Emitir: dá para acertar antes de registrar (ex.: cliente direto que paga o milheiro cheio no PIX) */
+if (typeof cqRenderP5 === 'function'){
+  const _p5 = cqRenderP5;
+  cqRenderP5 = function(){
+    _p5.apply(this, arguments);
+    const cx = document.getElementById('cqP5'); if (!cx || cx.hidden || !vemEst) return;
+    const reg = cqAtual(); if (!reg || cqStatus(reg) !== 'aprovada') return;
+    const cab = cx.querySelector('.cq-passo-cab'); if (!cab || cx.querySelector('.cq-pix-modo')) return;
+    const div = document.createElement('div'); div.className = 'pixc cq-pix-modo';
+    div.innerHTML = `<div class="pixc-cab"><b>Preço no PIX desta venda</b>${pixcSeg(vemEst.comum.pixModo, 'data-cq-pix')}</div>
+      <p class="pixc-info">${pixcTexto()}${reg.publicada ? '<span class="pixc-lembra" style="color:inherit;opacity:.75">Muda o valor que a Torre registra. A página que o cliente já recebeu continua com o preço de antes.</span>' : ''}</p>`;
+    cab.after(div);
+    div.querySelectorAll('[data-cq-pix] button').forEach(b => b.onclick = () => {
+      if ((vemEst.comum.pixModo || 'desconto') === b.dataset.v) return;
+      vemEst.comum.pixModo = b.dataset.v; vemEst.comum.pixEscolhido = true;
+      pixcLembrar(vemEst.comum.cliente, b.dataset.v);
+      cqSalvarAgora();
+      if (typeof renderVem === 'function') try { renderVem(); } catch (_) {}
+      cqRenderP5();
+      const k = pixcConta(); if (k) avisar(`Cobrado no PIX agora: ${window.VEM.brl(k.c.pix)}.`, 'ok');
+    });
+  };
+}
 </script>
 </body>
 </html>
