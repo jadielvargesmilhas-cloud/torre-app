@@ -66617,6 +66617,12 @@ function dpQualificados(){
 .emp-troca{ display:flex; gap:9px; align-items:flex-start; margin-top:4px; padding:10px 12px; border-radius:12px; border:1px solid color-mix(in srgb, var(--ouro) 45%, var(--fio)); background:color-mix(in srgb, var(--ouro) 9%, var(--sup-1)); font-size:calc(12px * var(--esc)); line-height:1.45; color:var(--giz); }
 .emp-troca > svg{ width:15px; height:15px; flex:0 0 auto; margin-top:2px; fill:none; stroke:var(--ouro); stroke-width:2; }
 .emp-troca-d{ display:block; margin-top:4px; color:var(--grafite); }
+.emp-sites{ display:flex; flex-direction:column; gap:8px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--fio); }
+.emp-sites-tit{ font-size:calc(12px * var(--esc)); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); }
+.emp-sites-tit .fraco{ text-transform:none; letter-spacing:0; font-weight:400; }
+.emp-sites .bt{ justify-content:center; }
+.emp-busca{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+.emp-busca-cps{ display:flex; flex-wrap:wrap; gap:6px; }
 .emp-pe{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 16px; border-top:1px solid var(--fio); background:var(--sup-0); }
 @media (max-width:760px){ .emp-pe a.bt{ flex:1 1 100%; justify-content:center; } }   /* os 3 links da Azul com a mesma largura no celular */
 .emp-pe .esticar{ flex:1; }
@@ -66642,6 +66648,45 @@ function dpQualificados(){
    Azul Fidelidade também emitem pela Azul Pelo Mundo (voos de parceiras, como a
    Copa) e pela Azul Viagens (pacotes). */
 const EMP_SITES_MAIS = {azul:[['Azul Pelo Mundo', 'https://azulpelomundo.voeazul.com.br/'], ['Azul Viagens', 'https://www.azulviagens.com.br/']]};
+/* Onde emitir, no alto da coluna 3 (22/11/2026: os links ficavam no rodapé, depois
+   dos 5 passageiros, e o Jadiel não os via). Voo de parceira (Copa, por exemplo)
+   com pontos Azul sai pela Azul Pelo Mundo: ela vem primeiro e em destaque. Com os
+   passageiros escolhidos, um botão manda todos para a extensão Torre → Azul (ou
+   copia para o favorito, se a extensão não estiver instalada). */
+function empSitesHTML(progK, r, sel){
+  const base = EMP_SITE[progK] ? [[prog(progK).n, EMP_SITE[progK]]] : [];
+  let lista = base.concat(EMP_SITES_MAIS[progK] || []);
+  const parceira = progK === 'azul' && !/azul/i.test(String(r.desc || '').split(' · ')[1] || '');
+  if (parceira) lista = lista.filter(x => x[0] === 'Azul Pelo Mundo').concat(lista.filter(x => x[0] !== 'Azul Pelo Mundo'));
+  if (!lista.length) return '';
+  const ext = !!document.documentElement.dataset.torreExt, n = (sel.pax || []).length;
+  return `<div class="emp-sites"><div class="emp-sites-tit">Emitir no site${parceira ? ' <span class="fraco">· voo de parceira: pela Azul Pelo Mundo</span>' : ''}</div>
+    ${lista.map(([nome, u], i) => `<a class="bt ${i === 0 ? 'primario' : 'fantasma'}" href="${u}" target="_blank" rel="noopener" data-emp-site="${esc(nome)}"><svg><use href="#i-link"/></svg>Abrir a ${esc(nome)}</a>`).join('')}
+    ${progK === 'azul' && n ? `<button type="button" class="bt fantasma" data-emp-ext><svg><use href="#i-aviao"/></svg>${ext ? (n === 1 ? 'Mandar o passageiro para a extensão' : `Mandar os ${n} passageiros para a extensão`) : (n === 1 ? 'Copiar o passageiro (favorito Torre → Azul)' : `Copiar os ${n} passageiros (favorito Torre → Azul)`)}</button>` : ''}
+    ${empBuscaHTML(r)}
+  </div>`;
+}
+/* o que digitar na busca do site (o link abre a página inicial: a busca é sua) */
+function empBuscaHTML(r){
+  const m = String(r.desc || '').match(/^([A-Z]{3}) → ([A-Z]{3})/); if (!m) return '';
+  const c = ((cqAtual && cqAtual() || {}).estado || vemEst || {}).comum || {};
+  const pax = [[c.adultos, 'adulto', 'adultos'], [c.criancas, 'criança', 'crianças'], [c.bebes, 'bebê', 'bebês']].filter(([v]) => Number(v) > 0).map(([v, a, b]) => `${v} ${Number(v) === 1 ? a : b}`).join(', ');
+  const cp = (rot, v) => `<button type="button" class="emp-cp" data-emp-copiar="${esc(v)}" title="Copiar ${rot}"><em>${rot}</em><span>${esc(v)}</span><svg><use href="#i-copiar"/></svg></button>`;
+  const cid = k => (AEROPORTOS[k] || {}).c || k;
+  return `<div class="emp-busca"><div class="emp-sites-tit">Na busca do site</div>
+    <div class="emp-busca-cps">${cp('Saindo de', `${cid(m[1])} (${m[1]})`)}${cp('Chegando em', `${cid(m[2])} (${m[2]})`)}${r.data ? cp('Ida', dataBR(r.data)) : ''}${r.dataVolta ? cp('Volta', dataBR(r.dataVolta)) : ''}</div>
+    <small class="fraco">${r.dataVolta ? 'Ida e volta' : 'Somente ida'}${pax ? ' · ' + esc(pax) : ''}</small></div>`;
+}
+async function empMandarPax(reg){
+  const sel = empSel(reg), r = cqRascunhoEmissao(reg) || {};
+  if (!(sel.pax || []).length) return avisar('Escolha os passageiros primeiro.', 'alerta');
+  const pac = azpPacote(sel.pax, r.data || hojeISO()), txt = JSON.stringify(pac);
+  const ext = !!document.documentElement.dataset.torreExt;
+  if (ext) window.postMessage({tipo:'torre-azul-pacote', pacote:pac}, '*');
+  try { await navigator.clipboard.writeText(txt); } catch(_){ if (!ext) return avisar('O navegador não deixou copiar. Tente de novo com a Torre em primeiro plano.', 'alerta'); }
+  avisar(ext ? `${pac.pax.length} passageiros enviados para a extensão. Na página Passageiros da Azul Pelo Mundo, toque em "Preencher esta página" no painel dourado.`
+    : `${pac.pax.length} passageiros copiados. Na página Passageiros da Azul, toque no favorito Torre → Azul (ele fica em Passageiros › Preencher na Azul).`, 'ok', 7000);
+}
 const EMP_SITE = {smiles:'https://www.smiles.com.br/', latampass:'https://latampass.latam.com/pt_br/', azul:'https://www.voeazul.com.br/br/pt/home', tap:'https://www.flytap.com/pt-br/', iberia:'https://www.iberia.com/br/', connect:'https://www.copaair.com/pt-br/'};
 /* Obrigatórios na tela de passageiros: nome, sobrenome e nascimento (o nome
    igual ao documento). Os outros aparecem para copiar quando existem; se não
@@ -66716,9 +66761,10 @@ function empHTML(reg){
         <button type="button" class="bt p fantasma" data-emp-pax><svg><use href="#i-usuarios"/></svg>${sel.pax.length ? 'Trocar passageiros' : 'Escolher do cadastro'}</button></div>
       <div class="emp-bl"><div class="emp-bl-tit"><i>3</i>Confira na ${esc(prog(progK).n)}</div>
         <div class="emp-vals"><div class="emp-val"><span>Milhas</span><b>${nBR(Number(r.milhas) || 0)}</b></div><div class="emp-val"><span>Taxas</span><b>${brl(Number(r.taxas) || 0)}</b></div></div>
-        <p class="emp-dica">Se a tela da companhia mostrar outro valor, pare e confira antes de pagar. Login, código e cartão você faz na própria ${esc(prog(progK).n)}.</p></div>
+        <p class="emp-dica">Se a tela da companhia mostrar outro valor, pare e confira antes de pagar. Login, código e cartão você faz na própria ${esc(prog(progK).n)}.</p>
+        ${empSitesHTML(progK, r, sel)}</div>
     </div>
-    <div class="emp-pe">${EMP_SITE[progK] ? `<a class="bt fantasma" href="${EMP_SITE[progK]}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir a ${esc(prog(progK).n)}</a>` : ''}${(EMP_SITES_MAIS[progK] || []).map(([n, u]) => `<a class="bt fantasma" href="${u}" target="_blank" rel="noopener" data-emp-site="${esc(n)}"><svg><use href="#i-link"/></svg>Abrir a ${esc(n)}</a>`).join('')}<div class="esticar"></div>
+    <div class="emp-pe"><div class="esticar"></div>
       <span class="fraco" style="font-size:calc(12px * var(--esc))">Ao registrar, a emissão abre com a conta e os passageiros já escolhidos.</span></div>
   </section>`;
 }
@@ -66760,6 +66806,7 @@ function empHTML(reg){
     if (px){ const reg = cqAtual(); if (!reg) return; const sel = empSel(reg);
       abrirSeletorPax(sel.pax, ids => { sel.pax = (ids || []).slice(); salvar(); try { cqRender(); } catch(_){ cqRenderP5(); } }); return; }
     const pe = e.target.closest('[data-emp-pessoa]'); if (pe){ editarPessoa(pe.dataset.empPessoa); return; }
+    const ex = e.target.closest('[data-emp-ext]'); if (ex){ e.preventDefault(); const reg = cqAtual(); if (reg) empMandarPax(reg); return; }
   });
 })();
 </script>
