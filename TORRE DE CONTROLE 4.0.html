@@ -13718,6 +13718,7 @@ const AEROPORTOS = {
   LIM:{c:'Lima',p:'PE',lat:-12.02,lon:-77.11,z:'America/Lima'},      BOG:{c:'Bogotá',p:'CO',lat:4.70,lon:-74.15,z:'America/Bogota'}, ADZ:{c:'San Andrés',p:'CO',lat:12.58,lon:-81.71,z:'America/Bogota'},
   PTY:{c:'Cidade do Panamá',p:'PA',lat:9.07,lon:-79.38,z:'America/Panama'}, CUN:{c:'Cancún',p:'MX',lat:21.04,lon:-86.87,z:'America/Cancun'},
   MEX:{c:'Cidade do México',p:'MX',lat:19.44,lon:-99.07,z:'America/Mexico_City'}, FTE:{c:'El Calafate',p:'AR',lat:-50.28,lon:-72.05,z:'America/Argentina/Rio_Gallegos'},
+  TPA:{c:'Tampa',p:'US',lat:27.98,lon:-82.53,z:'America/New_York'}, PHL:{c:'Filadélfia',p:'US',lat:39.87,lon:-75.24,z:'America/New_York'}, HAV:{c:'Havana',p:'CU',lat:22.99,lon:-82.41,z:'America/Havana'}, GYE:{c:'Guayaquil',p:'EC',lat:-2.16,lon:-79.88,z:'America/Guayaquil'}, CCS:{c:'Caracas',p:'VE',lat:10.60,lon:-66.99,z:'America/Caracas'}, SDQ:{c:'Santo Domingo',p:'DO',lat:18.43,lon:-69.67,z:'America/Santo_Domingo'}, AUA:{c:'Aruba',p:'AW',lat:12.50,lon:-70.02,z:'America/Aruba'}, CUR:{c:'Curaçao',p:'CW',lat:12.19,lon:-68.96,z:'America/Curacao'},
   MIA:{c:'Miami',p:'US',lat:25.79,lon:-80.29,z:'America/New_York'},      MCO:{c:'Orlando',p:'US',lat:28.43,lon:-81.31,z:'America/New_York'},
   JFK:{c:'Nova York',p:'US',lat:40.64,lon:-73.78,z:'America/New_York'},  EWR:{c:'Nova York',p:'US',lat:40.69,lon:-74.17,z:'America/New_York'},
   LAX:{c:'Los Angeles',p:'US',lat:33.94,lon:-118.41,z:'America/Los_Angeles'}, SFO:{c:'São Francisco',p:'US',lat:37.62,lon:-122.38,z:'America/Los_Angeles'},
@@ -32139,7 +32140,17 @@ function normalizarLeitura(t){
     /* "10:55-Ter", "—18:30": separa o horário do que vem grudado */
     .replace(/(\d{1,2}:\d{2})(?=[-–—][A-Za-zÀ-ú])/g, '$1 ')
     /* código de aeroporto grudado na cidade ("CDGParis", "GIGRiodeJaneiro") */
-    .replace(/\b([A-Z]{3})(?=[A-Z][a-zà-ú])/g, (m, c) => AEROPORTOS[c] ? c + ' ' : m);
+    .replace(/\b([A-Z]{3})(?=[A-Z][a-zà-ú])/g, (m, c) => AEROPORTOS[c] ? c + ' ' : m)
+    /* código de aeroporto mal lido numa linha de horário (22/11/2026, resumo da Azul
+       Pelo Mundo: "17:57 PIY" e "08:00 GlG"): troca UMA letra parecida (I/T/L/1,
+       0/O, 5/S, 8/B) só se der exatamente um aeroporto conhecido */
+    .split('\n').map(l => /\b\d{1,2}:\d{2}\b/.test(l) ? l.replace(/(?<![A-Za-z0-9])([A-Za-z0-9]{3})(?![A-Za-z0-9])/g, (m) => {
+      if (AEROPORTOS[m] || (m.match(/[A-Z]/g) || []).length < 2 || /^\d+$/.test(m)) return m;
+      const PAR = {I:'TL1', T:'I', L:'I', l:'I', '1':'I', i:'I', '0':'O', O:'0Q', Q:'O', '5':'S', S:'5', '8':'B', B:'8'};
+      const achou = new Set();
+      for (let k = 0; k < 3; k++) for (const alt of (PAR[m[k]] || '')){ const c = (m.slice(0, k) + alt + m.slice(k + 1)).toUpperCase(); if (AEROPORTOS[c]) achou.add(c); }
+      return achou.size === 1 ? [...achou][0] : m;
+    }) : l).join('\n');
 }
 /* ── Leitura genérica por proximidade (08/10/2026) ─────────────────────────────
    Não depende de site: cada código de aeroporto pega o horário mais perto dele
@@ -32482,6 +32493,25 @@ function interpretarTextosPrints(textos, ref){
     if (d.pagamento){ d.pagamento.pontos = d.pagamento.pontos || d.milhas.pontos; if (d.pagamento.dinheiro == null) d.pagamento.dinheiro = d.milhas.taxas; }
     else d.pagamento = {pontos:d.milhas.pontos, dinheiro:d.milhas.taxas, forma:'milhas', programa:d.milhas.programa};
     d.avisos = d.avisos.filter(a => !/quantidade de milhas não aparece/.test(a));
+  }
+  /* Resumo da Azul / Azul Pelo Mundo / TudoAzul (22/11/2026): "3 Adultos 252.000 Pts",
+     "2 Crianças 168.000 Pts", "Total de pontos 420.000 pts", "Total de taxas a pagar
+     R$ 1.023,15". São os TOTAIS da emissão para todos os passageiros e mandam sobre
+     qualquer valor por pessoa lido antes (a tela de busca mostra só o do adulto). */
+  {
+    const totP = tudo.match(/Total de pontos\s*:?\s*(\d{1,3}(?:\.\d{3})+|\d+)\s*(?:pts|pontos)/i);
+    const totT = tudo.match(/Total de taxas(?: a pagar)?\s*:?\s*R\$\s*([\d.]+,\d{2})/i) || tudo.match(/Taxas e servi[çc]os\s*:?\s*R\$\s*([\d.]+,\d{2})/i);
+    if (totP){
+      d.milhas = d.milhas || {}; d.milhas.pontos = numBR(totP[1]); d.milhas.total = true;
+      if (totT) d.milhas.taxas = numBR(totT[1]);
+      d.milhas.programa = d.milhas.programa || progDoc || (cia ? cia.pg : '');
+      d.pagamento = Object.assign(d.pagamento || {forma:'milhas', programa:d.milhas.programa}, {pontos:d.milhas.pontos});
+      if (totT) d.pagamento.dinheiro = d.milhas.taxas;
+      d.pagamento.total = true;
+    }
+    const q = re => { const m = tudo.match(re); return m ? Number(m[1]) : 0; };
+    const ad = q(/\b(\d{1,2})\s*Adult(?:o|a)?s?\b/i), cr = q(/\b(\d{1,2})\s*Crian[çc]as?\b/i), bb = q(/\b(\d{1,2})\s*(?:Beb[êe]s?|Colo|Infantes?)\b/i);
+    if (ad && (cr || bb)){ d.paxTipos = {adultos:ad, criancas:cr, bebes:bb}; d.passageiros = Math.max(Number(d.passageiros) || 0, ad + cr + bb); }
   }
   if (d.pagamento && d.pagamento.pontos == null && resgate && d.milhas && d.milhas.pontos) d.pagamento.pontos = d.milhas.pontos;
   /* Resgate sem a quantidade de milhas na tela (a Smiles mostra só o valor
@@ -41934,6 +41964,31 @@ function segmentosDoTexto(textos, ref){
     const linhas = tab.map(x => `${x.voo.replace(/\s/g, '')} ${x.dataS} ${x.de} ${x.para} ${x.dep.replace(':', '')} ${x.arr.replace(':', '')}${x.dataC && x.dataC > x.dataS ? '+1' : ''}`);
     return {linhas, d, horas:tab.flatMap(x => [x.dep, x.arr])};
   }
+  /* Resumo da Azul / Azul Pelo Mundo (22/11/2026): "Voo CM 394" e, na linha de
+     baixo, "15:34 TPA > 17:57 PTY" (saída antes do código, chegada depois do ">"),
+     com "+1 dia" embaixo quando chega no dia seguinte. A leitura por proximidade
+     trocava a saída pela chegada; este formato tem leitura própria. */
+  {
+    const legs = [];
+    textos.forEach(t => {
+      let voo = ''; const L = String(t || '').split('\n');
+      L.forEach((l, k) => {
+        const v = l.match(/\bVoo\s+([A-Z0-9]{2})\s*(\d{2,4})\b/i); if (v) voo = v[1].toUpperCase() + v[2];
+        const m = l.match(/(?<![\d:])(\d{1,2}:\d{2})\s+([A-Z]{3})\s*[>›→»-]+\s*(\d{1,2}:\d{2})\s+([A-Z]{3})\b/);
+        if (m && AEROPORTOS[m[2]] && AEROPORTOS[m[4]]) legs.push({voo, de:m[2], para:m[4], dep:m[1].padStart(5, '0'), arr:m[3].padStart(5, '0'), mais1:/\+\s*1\s*dia/i.test(L[k + 1] || '') || /\+\s*1\s*dia/i.test(l)});
+      });
+    });
+    if (legs.length && d.data){
+      let dia = d.data, antes = null;
+      const linhas = legs.map(x => {
+        if (antes){ dia = antes.chegaDia; if (x.dep < antes.arr) dia = somaDiasISO(dia, 1); }
+        const chegaDia = x.mais1 || x.arr < x.dep ? somaDiasISO(dia, 1) : dia;
+        antes = {arr:x.arr, chegaDia};
+        return `${x.voo || 'XX0'} ${dia} ${x.de} ${x.para} ${x.dep.replace(':', '')} ${x.arr.replace(':', '')}${chegaDia > dia ? '+1' : ''}`;
+      });
+      return {linhas, d, horas:legs.flatMap(x => [x.dep, x.arr])};
+    }
+  }
   /* Cartões de voo completos (cidades e horários de cada voo) mandam: são a
      fonte mais segura que um print de app oferece. */
   const cv = cartoesDeVoo(textos);
@@ -49085,9 +49140,25 @@ function vemCompletarDoLeitor(r, d){
         antes = t;
       });
     });
-    if (vazio(o.milhas) && milhasLidas > 0){ o.milhas = String(milhasLidas); feitos.push(N + 'milhas'); }
-    if (vazio(o.taxa) && taxaLida > 0){ o.taxa = taxaLida.toFixed(2).replace('.', ','); feitos.push(`${N}taxa de embarque (R$ ${taxaLida.toFixed(2).replace('.', ',')})`); }
+    /* total explícito da emissão ("Total de pontos", "Total de taxas a pagar"):
+       troca o que estava (em geral o valor por pessoa da tela de busca) e avisa */
+    const tot = !!(pg.total || mi.total);
+    if (milhasLidas > 0 && (vazio(o.milhas) || (tot && qtdNum(o.milhas) !== milhasLidas))){
+      const antes = vazio(o.milhas) ? '' : o.milhas; o.milhas = qtdTxt(milhasLidas);
+      feitos.push(antes ? `${N}milhas: ${antes} → ${o.milhas} (total da emissão)` : N + 'milhas');
+    }
+    if (taxaLida > 0 && (vazio(o.taxa) || (tot && Math.abs(moedaNum(o.taxa) - taxaLida) > 0.004))){
+      const antes = vazio(o.taxa) ? '' : o.taxa; o.taxa = moedaTxt(taxaLida);
+      feitos.push(antes ? `${N}taxas: R$ ${antes} → R$ ${o.taxa} (total da emissão)` : `${N}taxa de embarque (R$ ${o.taxa})`);
+    }
   });
+  /* passageiros por faixa, quando o resumo mostra (3 adultos, 2 crianças) */
+  const pt = d.paxTipos;
+  if (pt && vemEst.comum){
+    const C = vemEst.comum, nums = [['adultos', pt.adultos, 'adultos'], ['criancas', pt.criancas, 'crianças'], ['bebes', pt.bebes, 'bebês']];
+    const mud = nums.filter(([k, v]) => Number(C[k] || 0) !== Number(v || 0));
+    if (mud.length){ mud.forEach(([k, v]) => { C[k] = Number(v) || 0; }); feitos.push(`passageiros: ${nums.filter(([, v]) => v).map(([, v, n]) => v + ' ' + n).join(', ')}`); }
+  }
   return {feitos, avisos:[...new Set(avisos)]};
 }
 function vemAgendarConf(){ clearTimeout(vemConfTimer); vemConfTimer = setTimeout(vemRenderConf, 220); }
@@ -66547,6 +66618,7 @@ function dpQualificados(){
 .emp-troca > svg{ width:15px; height:15px; flex:0 0 auto; margin-top:2px; fill:none; stroke:var(--ouro); stroke-width:2; }
 .emp-troca-d{ display:block; margin-top:4px; color:var(--grafite); }
 .emp-pe{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 16px; border-top:1px solid var(--fio); background:var(--sup-0); }
+@media (max-width:760px){ .emp-pe a.bt{ flex:1 1 100%; justify-content:center; } }   /* os 3 links da Azul com a mesma largura no celular */
 .emp-pe .esticar{ flex:1; }
 @media (max-width:900px){ .emp-grade{ grid-template-columns:minmax(0,1fr); } }
 @media (max-width:560px){ .emp-cab{ flex-wrap:wrap; } .emp-cab .emp-prog{ margin-left:0; width:100%; } .emp-pe .bt{ flex:1 1 auto; justify-content:center; } }
@@ -66566,6 +66638,10 @@ function dpQualificados(){
    Login, código de acesso e pagamento ficam com você, na própria Smiles: é o que
    protege a conta (regulamento Smiles, cláusula 5.3.1). Ao registrar, a emissão
    já abre com a conta e os passageiros escolhidos. */
+/* Onde mais se emite com os mesmos pontos (22/11/2026, pedido do Jadiel): pontos
+   Azul Fidelidade também emitem pela Azul Pelo Mundo (voos de parceiras, como a
+   Copa) e pela Azul Viagens (pacotes). */
+const EMP_SITES_MAIS = {azul:[['Azul Pelo Mundo', 'https://azulpelomundo.voeazul.com.br/'], ['Azul Viagens', 'https://www.azulviagens.com.br/']]};
 const EMP_SITE = {smiles:'https://www.smiles.com.br/', latampass:'https://latampass.latam.com/pt_br/', azul:'https://www.voeazul.com.br/br/pt/home', tap:'https://www.flytap.com/pt-br/', iberia:'https://www.iberia.com/br/', connect:'https://www.copaair.com/pt-br/'};
 /* Obrigatórios na tela de passageiros: nome, sobrenome e nascimento (o nome
    igual ao documento). Os outros aparecem para copiar quando existem; se não
@@ -66619,7 +66695,7 @@ function empHTML(reg){
   const paxOk = sel.pax.length === precisa;
   const DADOS = [['nome', 'Nome', p => p.primeiro || String(p.nome || '').split(' ')[0]], ['sobre', 'Sobrenome', p => p.sobrenome || String(p.nome || '').split(' ').slice(1).join(' ')],
     ['nasc', 'Nascimento', p => p.nasc ? dataBR(p.nasc) : ''], ['cpf', 'CPF', p => p.cpf || ''], ['sexo', 'Sexo', p => ({F:'Feminino', M:'Masculino'})[p.sexo] || '']];
-  DADOS.push(['mail', 'E-mail', p => p.email || ''], ['fone', 'Telefone', p => p.fone || '']);
+  DADOS.push(['mail', 'E-mail', p => contatoDe(p).email], ['fone', 'Telefone', p => contatoDe(p).fone]);
   const faltaAlgo = sel.pax.some(id => { const p = pessoa(id); return DADOS.some(([k, , f]) => EMP_OBRIG.includes(k) && !f(p)); });
   const contasH = contas.length ? contas.slice(0, 6).map(x => `<button type="button" class="emp-conta${x.c.id === sel.contaId ? ' on' : ''}${x.temMilhas ? '' : ' sem'}${x.temVagas ? '' : ' alerta'}" data-emp-conta="${esc(x.c.id)}">
       <span class="emp-r"></span><b>${esc(nomeCurto(x.c.nome))}</b>
@@ -66642,7 +66718,7 @@ function empHTML(reg){
         <div class="emp-vals"><div class="emp-val"><span>Milhas</span><b>${nBR(Number(r.milhas) || 0)}</b></div><div class="emp-val"><span>Taxas</span><b>${brl(Number(r.taxas) || 0)}</b></div></div>
         <p class="emp-dica">Se a tela da companhia mostrar outro valor, pare e confira antes de pagar. Login, código e cartão você faz na própria ${esc(prog(progK).n)}.</p></div>
     </div>
-    <div class="emp-pe">${EMP_SITE[progK] ? `<a class="bt fantasma" href="${EMP_SITE[progK]}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir a ${esc(prog(progK).n)}</a>` : ''}<div class="esticar"></div>
+    <div class="emp-pe">${EMP_SITE[progK] ? `<a class="bt fantasma" href="${EMP_SITE[progK]}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir a ${esc(prog(progK).n)}</a>` : ''}${(EMP_SITES_MAIS[progK] || []).map(([n, u]) => `<a class="bt fantasma" href="${u}" target="_blank" rel="noopener" data-emp-site="${esc(n)}"><svg><use href="#i-link"/></svg>Abrir a ${esc(n)}</a>`).join('')}<div class="esticar"></div>
       <span class="fraco" style="font-size:calc(12px * var(--esc))">Ao registrar, a emissão abre com a conta e os passageiros já escolhidos.</span></div>
   </section>`;
 }
@@ -83104,7 +83180,7 @@ function azpAvisos(p, voo){
   const a = [];
   if (!p.sexo) a.push(['ruim', 'Sem sexo no cadastro']);
   if (!p.nasc) a.push(['ruim', 'Sem nascimento']);
-  if (!p.email) a.push(['alerta', 'Sem e-mail']);
+  if (!contatoDe(p).email) a.push(['alerta', 'Sem e-mail']);
   if (!p.pass) a.push(['ruim', 'Sem passaporte']);
   else if (!p.passVal) a.push(['alerta', 'Passaporte sem validade']);
   else {
@@ -83127,7 +83203,7 @@ function azpPacote(ids, voo){
     pax:azpOrdem(ids, voo).map(({p, f}, i) => {
       const pt = partirNome(p);
       return {n:i + 1, faixa:FAIXAS_PAX[f].n, primeiro:(p.primeiro || pt.primeiro || '').toUpperCase(), sobrenome:(p.sobrenome || pt.sobrenome || '').toUpperCase(),
-        sexo:p.sexo === 'F' ? 'Feminino' : p.sexo === 'M' ? 'Masculino' : '', nasc:br(p.nasc), email:p.email || '',
+        sexo:p.sexo === 'F' ? 'Feminino' : p.sexo === 'M' ? 'Masculino' : '', nasc:br(p.nasc), email:contatoDe(p).email,
         pass:(p.pass || '').toUpperCase(), passVal:br(p.passVal), nac:azpPais(p.nac || 'BRA'), passPais:azpPais(p.passPais || p.nac || 'BRA')};
     })};
 }
@@ -83628,5 +83704,190 @@ function svBotoes(){
 .tsl{ z-index:10200 !important; }
 .dp{ z-index:10200 !important; }
 </style>
+<style id="fpx-css">
+/* ══ FICHA DO CLIENTE › PASSAGEIROS: quem viaja por ele, editar e incluir · 22/11/2026 ══ */
+.ctt-tit{ grid-column:1 / -1; display:flex; flex-direction:row; align-items:center; gap:12px; margin:2px 0 4px; padding:11px 14px; border-radius:12px; border:1px dashed color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 5%, transparent); cursor:pointer; text-align:left; font-size:calc(13.5px * var(--esc)); color:var(--giz); line-height:1.45; }
+.ctt-tit input{ width:18px; height:18px; flex:none; accent-color:var(--jade); margin:0; }
+.ctt-tit span{ min-width:0; }
+.fpx-cab{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:4px 0 12px; }
+.fpx-cab p{ flex:1 1 240px; margin:0; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.fpx-lista{ display:flex; flex-direction:column; gap:8px; }
+.fpx-pax{ display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:11px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); }
+.fpx-pax b{ display:block; color:var(--giz); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fpx-pax small{ display:block; color:var(--grafite); font-size:calc(12.5px * var(--esc)); margin-top:2px; }
+.fpx-pax .fpx-eu{ display:inline-block; margin-left:6px; padding:1px 8px; border-radius:99px; font-size:calc(11px * var(--esc)); font-weight:700; letter-spacing:.03em; color:var(--ouro); border:1px solid color-mix(in srgb, var(--ouro) 45%, transparent); vertical-align:2px; }
+.fpx-doc{ border:0; background:none; padding:0; cursor:pointer; font:inherit; }
+.fpx-doc.falta{ padding:3px 10px; border-radius:99px; color:var(--brasa, #EF4B3F); border:1px dashed color-mix(in srgb, var(--brasa, #EF4B3F) 55%, transparent); font-size:calc(12px * var(--esc)); font-weight:600; }
+.fpx-doc.falta:hover{ background:color-mix(in srgb, var(--brasa, #EF4B3F) 8%, transparent); }
+.fpx-tb{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; border:1px dashed color-mix(in srgb, var(--ouro) 50%, var(--fio)); background:color-mix(in srgb, var(--ouro) 5%, transparent); }
+.fpx-tb span{ flex:1; min-width:0; font-size:calc(13px * var(--esc)); color:var(--grafite); }
+.fpx-tb span b{ color:var(--giz); }
+.fpx-inc{ margin-top:12px; padding:14px; border-radius:16px; border:1px solid color-mix(in srgb, var(--jade) 40%, var(--fio)); background:color-mix(in srgb, var(--jade) 5%, var(--sup-1)); }
+.fpx-inc-cab{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+.fpx-inc-cab input{ flex:1 1 220px; min-width:0; }
+.fpx-ops{ display:flex; flex-direction:column; gap:6px; max-height:240px; overflow:auto; }
+.fpx-op{ display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-0); color:var(--giz); font:inherit; text-align:left; cursor:pointer; }
+.fpx-op:hover{ border-color:color-mix(in srgb, var(--jade) 55%, var(--fio)); }
+.fpx-op span{ flex:1; min-width:0; }
+.fpx-op small{ color:var(--grafite); }
+@media (max-width:760px){
+  .fpx-pax{ grid-template-columns:auto minmax(0,1fr) auto; }
+  .fpx-pax .fpx-docw{ grid-column:2 / -1; grid-row:2; }
+  .fpx-pax b{ white-space:normal; }
+  .fpx-tb{ flex-wrap:wrap; } .fpx-tb .bt{ flex:1 1 100%; justify-content:center; }
+}
+</style>
+<script id="fpx-js">
+/* Ficha do cliente › Passageiros (pedido de 22/11/2026). Antes era só uma lista
+   de leitura: não dava para completar o documento da esposa nem incluir os filhos,
+   e o próprio cliente que também viaja não aparecia. Agora:
+   - o próprio cliente vem primeiro, com o selo "o cliente" (se ele ainda não é
+     passageiro, um toque o inclui; o cadastro abre para completar);
+   - cada passageiro tem Editar, e "sem documento" vira um botão que abre a ficha
+     para completar (ao salvar, volta para esta aba);
+   - "Incluir passageiro": escolhe alguém já cadastrado ou cadastra um novo, que
+     já entra ligado a este cliente.
+   Nomenclatura: aqui, dentro do cliente, é "Incluir passageiro" (ligar alguém a
+   ele); "Novo passageiro" fica para a lista geral (cadastrar do zero). */
+function fpxVoltar(cliId){ return () => { fecharFolha(); setTimeout(() => abrirFichaPessoa(cliId, 'passageiros'), 60); }; }
+function fpxEditar(cliId, paxId){ fecharFolha(); setTimeout(() => editarPessoa(paxId, {aoSalvar:fpxVoltar(cliId)}), 0); }
+function fpxLigar(cliId, paxId){
+  const c = pessoa(cliId); if (!c || !pessoa(paxId) || paxId === cliId) return;
+  c.vinculos = [...new Set((c.vinculos || []).concat(paxId))]; salvar();
+  avisar(`${nomeCurto(pessoa(paxId).nome)} incluído nos passageiros de ${nomeCurto(c.nome)}.`, 'ok');
+  fpxPintar(cliId);
+}
+function fpxNovo(cliId){
+  fecharFolha();
+  setTimeout(() => editarPessoa(null, {papel:'passageiro', aoSalvar:n => {
+    const c = pessoa(cliId);
+    if (c && n && n.id && pessoa(n.id)){ c.vinculos = [...new Set((c.vinculos || []).concat(n.id))]; salvar(); }
+    fpxVoltar(cliId)();
+  }}), 0);
+}
+function fpxClienteViaja(cliId){
+  const c = pessoa(cliId); if (!c) return;
+  c.papeis = Object.assign({cliente:true}, c.papeis || {}, {passageiro:true}); salvar();
+  /* para voar precisa de sexo, nascimento e documento: abre a ficha para completar */
+  if (!c.sexo || !c.nasc){ avisar(`${nomeCurto(c.nome)} agora também é passageiro. Complete sexo e nascimento.`, 'ok', 5000); fpxEditar(cliId, cliId); return; }
+  avisar(`${nomeCurto(c.nome)} agora também é passageiro.`, 'ok'); fpxPintar(cliId);
+}
+function fpxLinhaHTML(cliId, p, eu){
+  const fx = faixaPax(p), ix = idadeEm(p.nasc, hojeISO());
+  const temDoc = p.docVal || p.passVal || p.pass || p.doc;
+  return `<div class="fpx-pax">${avPessoa(p)}<div><b>${esc(p.nome)}${eu ? '<span class="fpx-eu">O CLIENTE</span>' : ''}</b>
+      <small>${FAIXAS_PAX[fx].n}${ix !== null ? ' · ' + ix + ' anos' : ''} · ${p.cpf ? esc(p.cpf) : 'CPF pendente'}</small></div>
+    <span class="fpx-docw">${temDoc ? `<button type="button" class="fpx-doc" data-fpx-ed="${esc(p.id)}" data-dica="Abrir os documentos">${docChip(p)}</button>`
+      : `<button type="button" class="fpx-doc falta" data-fpx-ed="${esc(p.id)}">Sem documento · incluir</button>`}</span>
+    <button type="button" class="bt p fantasma icone" data-fpx-ed="${esc(p.id)}" data-dica="Editar ${esc(nomeCurto(p.nome))}" aria-label="Editar ${esc(p.nome)}"><svg><use href="#i-lapis"/></svg></button></div>`;
+}
+function fpxPintar(cliId, incluindo){
+  const c = pessoa(cliId), painel = document.querySelector('#folhaCorpo [data-cp-fp="passageiros"]');
+  if (!c || !painel) return;
+  const px = passageirosDoCliente(c).filter(x => x.p.id !== c.id).map(x => x.p);
+  const eu = ehPassageiro(c);
+  const tot = px.length + (eu ? 1 : 0);
+  const aba = document.querySelector('#folhaCorpo [data-cp-fa="passageiros"]'); if (aba) aba.innerHTML = `Passageiros <i>${tot}</i>`;
+  const ligados = new Set(px.map(p => p.id).concat(c.id));
+  const outros = (DB.pessoas || []).filter(p => ehPassageiro(p) && !ligados.has(p.id)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  painel.innerHTML = `<div class="fpx-cab"><p>Quem viaja por <b>${esc(nomeCurto(c.nome))}</b>. Toque no documento para completar; cada um entra na emissão e na cota de CPF.</p>
+      <button type="button" class="bt p primario" id="fpxIncluir"><svg><use href="#i-mais"/></svg>Incluir passageiro</button></div>
+    <div class="fpx-lista">
+      ${eu ? fpxLinhaHTML(cliId, c, true) : `<div class="fpx-tb"><span><b>${esc(nomeCurto(c.nome))}</b> também viaja?</span><button type="button" class="bt p fantasma" id="fpxEu"><svg><use href="#i-aviao"/></svg>Incluir ${esc(nomeCurto(c.nome).split(' ')[0])} como passageiro</button></div>`}
+      ${px.map(p => fpxLinhaHTML(cliId, p, false)).join('')}
+      ${!px.length && eu ? '' : ''}
+    </div>
+    <div class="fpx-inc" id="fpxInc"${incluindo ? '' : ' hidden'}>
+      <div class="fpx-inc-cab"><input type="search" id="fpxBusca" placeholder="Buscar no cadastro (nome ou CPF)" aria-label="Buscar passageiro">
+        <button type="button" class="bt p primario" id="fpxNovo"><svg><use href="#i-mais"/></svg>Cadastrar novo</button></div>
+      <div class="fpx-ops" id="fpxOps"></div>
+    </div>`;
+  const ops = q => {
+    const t = semAcento(String(q || '').toLowerCase()), dg = String(q || '').replace(/\D/g, '');
+    const l = outros.filter(p => !t || semAcento(p.nome.toLowerCase()).includes(t) || (dg.length >= 3 && String(p.cpf || '').replace(/\D/g, '').includes(dg))).slice(0, 30);
+    const cx = document.getElementById('fpxOps'); if (!cx) return;
+    cx.innerHTML = l.length ? l.map(p => `<button type="button" class="fpx-op" data-fpx-lig="${esc(p.id)}">${avPessoa(p, true)}<span>${esc(p.nome)}<br><small>${FAIXAS_PAX[faixaPax(p)].n}${p.cpf ? ' · ' + esc(p.cpf) : ''}</small></span><small>incluir</small></button>`).join('')
+      : `<p class="fraco" style="margin:4px 2px">${outros.length ? 'Ninguém com esse nome no cadastro.' : 'Não há outros passageiros no cadastro.'} Use <b>Cadastrar novo</b>.</p>`;
+    cx.querySelectorAll('[data-fpx-lig]').forEach(b => b.onclick = () => fpxLigar(cliId, b.dataset.fpxLig));
+  };
+  painel.querySelectorAll('[data-fpx-ed]').forEach(b => b.onclick = () => fpxEditar(cliId, b.dataset.fpxEd));
+  const eub = document.getElementById('fpxEu'); if (eub) eub.onclick = () => fpxClienteViaja(cliId);
+  document.getElementById('fpxIncluir').onclick = () => { const inc = document.getElementById('fpxInc'); inc.hidden = !inc.hidden; if (!inc.hidden){ ops(''); const bq = document.getElementById('fpxBusca'); bq.focus(); inc.scrollIntoView({block:'nearest', behavior:'smooth'}); } };
+  document.getElementById('fpxBusca').oninput = e => ops(e.target.value);
+  document.getElementById('fpxNovo').onclick = () => fpxNovo(cliId);
+  if (incluindo) ops('');
+}
+(function(){
+  const _a = abrirFichaPessoa;
+  abrirFichaPessoa = function(id, aba){
+    const v = _a.apply(this, arguments);
+    const p = pessoa(id);
+    if (p && ehCliente(p)) fpxPintar(id);
+    return v;
+  };
+})();
+</script>
+<script id="ctt-js">
+/* Telefone e e-mail do titular (pedido de 22/11/2026). Dependente (esposa, filhos)
+   costuma usar o contato do cliente titular. Na ficha do passageiro ligado a um
+   cliente, uma caixa marca "iguais aos do titular": os campos mostram os do titular
+   e ficam travados. O passageiro guarda só a marca, então se o titular trocar de
+   e-mail, todos os dependentes acompanham. A emissão (conferência e o favorito
+   Torre → Azul) usa o contato efetivo. */
+function titularDe(p){
+  if (!p) return null;
+  const t = p.titularId && pessoa(p.titularId);
+  if (t && t.id !== p.id) return t;
+  return clientesDoPax(p.id)[0] || null;
+}
+function contatoDe(p){
+  if (!p) return {email:'', fone:''};
+  const t = p.contatoDoTitular ? titularDe(p) : null;
+  return t ? {email:t.email || '', fone:t.fone || '', titular:t} : {email:p.email || '', fone:p.fone || ''};
+}
+(function(){
+  const _ed = editarPessoa;
+  editarPessoa = function(id, semente){
+    semente = semente || {};
+    const p = id ? pessoa(id) : null;
+    const tit = semente.titularId ? pessoa(semente.titularId) : (p ? titularDe(p) : null);
+    const estado = {marcado:p ? !!p.contatoDoTitular : !!semente.titularId};
+    const s0 = semente;
+    const s1 = tit ? Object.assign({}, s0, {aoSalvar:n => {
+      const r = n && (pessoa(n.id) || n);
+      if (r){ r.contatoDoTitular = estado.marcado; r.titularId = estado.marcado ? tit.id : (r.titularId || ''); salvar(); }   /* a cópia do contato fica também no próprio cadastro, para o resto do sistema; contatoDe() lê sempre o do titular */
+      if (s0.aoSalvar) s0.aoSalvar(n);
+    }}) : s0;
+    const v = _ed.call(this, id, s1);
+    if (!tit || (p && p.id === tit.id)) return v;
+    const em = document.getElementById('peEmail'), fo = document.getElementById('peFone');
+    if (!em || !fo) return v;
+    const proprio = {email:p ? p.email || '' : em.value, fone:p ? p.fone || '' : fo.value};
+    em.closest('.campo').insertAdjacentHTML('afterend', `<label class="ctt-tit">
+      <input type="checkbox" id="peCttTit"${estado.marcado ? ' checked' : ''}>
+      <span>Telefone e e-mail iguais aos do titular, <b>${esc(nomeCurto(tit.nome))}</b>${tit.email || tit.fone ? ` <span class="fraco">(${esc([tit.fone, tit.email].filter(Boolean).join(' · '))})</span>` : ' <span class="fraco">(o titular ainda não tem contato cadastrado)</span>'}</span></label>`);
+    const cx = document.getElementById('peCttTit');
+    const aplicar = () => {
+      estado.marcado = cx.checked;
+      if (cx.checked){ em.value = tit.email || ''; fo.value = tit.fone || ''; }
+      else { em.value = proprio.email; fo.value = proprio.fone; }
+      em.disabled = fo.disabled = cx.checked;
+      [em, fo].forEach(x => x.dispatchEvent(new Event('input', {bubbles:true})));
+    };
+    cx.onchange = aplicar; aplicar();
+    return v;
+  };
+  /* incluir passageiro novo pela ficha do cliente: já nasce com o contato do titular */
+  const _novo = fpxNovo;
+  fpxNovo = function(cliId){
+    fecharFolha();
+    setTimeout(() => editarPessoa(null, {papel:'passageiro', titularId:cliId, aoSalvar:n => {
+      const c = pessoa(cliId);
+      if (c && n && n.id && pessoa(n.id)){ c.vinculos = [...new Set((c.vinculos || []).concat(n.id))]; salvar(); }
+      fpxVoltar(cliId)();
+    }}), 0);
+  };
+})();
+</script>
 </body>
 </html>
