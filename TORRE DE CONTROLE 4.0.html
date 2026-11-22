@@ -83332,20 +83332,34 @@ function preencherFormAzul(pacote){
   [].slice.call(document.querySelectorAll('[data-torre-azul]')).forEach(function(t){ t.remove(); });
   [].slice.call(document.querySelectorAll('[data-torre-azul-marcado]')).forEach(function(e){ e.style.outline = ''; e.style.outlineOffset = ''; e.removeAttribute('data-torre-azul-marcado'); });
   var deVerdade = function(e){ if (e.tagName !== 'SELECT') return true; var r = e.getBoundingClientRect(), cs = getComputedStyle(e); return !(r.width <= 2 || r.height <= 2 || cs.opacity === '0' || cs.display === 'none'); };
-  var rotulo = function(el){
-    var t = [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.name, el.id];
-    if (el.id){ var lb = document.querySelector('label[for="' + el.id.replace(/"/g, '') + '"]'); if (lb) t.unshift(lb.textContent); }
+  /* 22/11/2026 16:25, página real: o "Primeiro Nome" tem um (i) com dica escondida que fala em passaporte,
+     e a data tem campos auxiliares escondidos. Por isso: (1) o nome do campo vem SÓ do rótulo que aparece
+     na tela (texto visível, sem as dicas escondidas); (2) só contam campos visíveis ao subir na página;
+     (3) se o rótulo não disser, usa o texto de exemplo do campo ("Digite seu nome", "dd/mm/aaaa"). */
+  var txtVisivel = function(e){ return e && visivel(e) ? String(e.innerText || '').trim() : ''; };
+  var campoVisivel = function(e){ return visivel(e) && deVerdade(e) && !/^(hidden)$/i.test(e.type || ''); };
+  var rotuloTela = function(el){
+    if (el.id){ var lb = document.querySelector('label[for="' + el.id.replace(/"/g, '') + '"]'); var tl = txtVisivel(lb); if (tl) return tl; }
+    var lab = el.getAttribute('aria-labelledby'); if (lab){ var tt = lab.split(/\s+/).map(function(x){ return txtVisivel(document.getElementById(x)); }).join(' ').trim(); if (tt) return tt; }
     var a = el.parentElement;
-    for (var k = 0; k < 4 && a; k++, a = a.parentElement){
-      if ([].filter.call(a.querySelectorAll('input:not([type=hidden]), select, textarea, [role="combobox"]'), deVerdade).length > 1) break;   /* subiu demais: o rótulo já seria de outro campo (a lista comum escondida atrás de uma lista do site não conta) */
-      var l = a.querySelector('label, .label, [class*="label"], [class*="Label"]');
-      if (l && !l.contains(el)){ t.unshift(l.textContent); break; }
+    for (var k = 0; k < 5 && a; k++, a = a.parentElement){
+      if ([].filter.call(a.querySelectorAll('input:not([type=hidden]), select, textarea, [role="combobox"]'), campoVisivel).length > 1) break;   /* subiu demais: já seria o rótulo de outro campo */
+      var ls = a.querySelectorAll('label, .label, [class*="label"], [class*="Label"]');
+      for (var q = 0; q < ls.length; q++){ if (ls[q].contains(el)) continue; var tx = txtVisivel(ls[q]); if (tx) return tx; }
     }
-    return norm(t.filter(Boolean).join(' | '));
+    return '';
   };
-  var CAMPOS = [['passPais', /pais de emiss|pais emissor|emitido|issuing/], ['passVal', /expira|validade|vencimento|expiration/], ['nac', /nacionalidade|nationality/],
-    ['sexo', /genero|sexo|gender/], ['sobrenome', /sobrenome|surname|last ?name/], ['nasc', /nascimento|birth/], ['email', /e-?mail/],
-    ['pass', /passaporte|passport/], ['primeiro', /primeiro nome|first ?name|given|^nome|\| ?nome/]];
+  var rotuloResto = function(el){ return [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.name, el.id].filter(Boolean).join(' | '); };
+  var rotulo = function(el){ return norm(rotuloTela(el) + ' | ' + rotuloResto(el)); };
+  var CAMPOS = [['primeiro', /primeiro nome|first ?name/], ['passPais', /pais de emiss|pais emissor|emitido|issuing/], ['passVal', /expira|validade|vencimento|expiration/], ['nac', /nacionalidade|nationality/],
+    ['sexo', /genero|sexo|gender/], ['sobrenome', /sobrenome|surname|last ?name/], ['nasc', /nascimento|birth|dd\/mm\/aaaa/], ['email', /e-?mail/],
+    ['pass', /passaporte|passport/], ['primeiro', /given|^nome|\| ?nome|digite seu nome( \||$)/]];
+  var chaveDe = function(el){
+    var tela = norm(rotuloTela(el)), resto = norm(rotuloResto(el)), i;
+    if (tela) for (i = 0; i < CAMPOS.length; i++){ if (CAMPOS[i][1].test(tela)) return CAMPOS[i][0]; }   /* o que está escrito na tela manda */
+    for (i = 0; i < CAMPOS.length; i++){ if (CAMPOS[i][1].test(resto)) return CAMPOS[i][0]; }
+    return null;
+  };
   var titulos = [].slice.call(document.querySelectorAll('h1,h2,h3,h4,h5,legend,p,span,div,strong'))
     .filter(function(e){ return e.children.length <= 3 && /passageiro\s*\d+/i.test(e.textContent) && e.textContent.length < 90 && visivel(e); })
     .filter(function(e, i, arr){ return !arr.some(function(o){ return o !== e && e.contains(o); }); });
@@ -83361,7 +83375,7 @@ function preencherFormAzul(pacote){
     ['input', 'change', 'keyup', 'blur'].forEach(function(t){ el.dispatchEvent(new Event(t, {bubbles:true})); });
   };
   var marcar = function(el, txt){
-    el.style.outline = '3px solid #e8b44f'; el.style.outlineOffset = '2px'; el.setAttribute('data-torre-azul-marcado', '1');
+    el.style.outline = '3px solid #e8b44f'; el.style.outlineOffset = '2px'; el.setAttribute('data-torre-azul-marcado', /^Escolha/.test(txt) ? 'escolha' : '1');
     var tag = document.createElement('div'); tag.setAttribute('data-torre-azul', '1');
     tag.textContent = txt; tag.style.cssText = 'font:600 12px/1.3 system-ui,sans-serif;color:#7a5200;background:#fff3d6;border:1px solid #e8b44f;border-radius:6px;padding:3px 7px;margin-top:4px;display:inline-block';
     (el.parentElement || el).appendChild(tag);
@@ -83373,8 +83387,7 @@ function preencherFormAzul(pacote){
     .filter(function(el){ return visivel(el) && deVerdade(el) && !/^(checkbox|radio|hidden|submit|button|search)$/i.test(el.type || '') && !el.closest('[data-torre-azul-caixa],#torre-azul-painel'); });
   var usados = {};
   campos.forEach(function(el){
-    var r = rotulo(el), chave = null;
-    for (var i = 0; i < CAMPOS.length; i++){ if (CAMPOS[i][1].test(r)){ chave = CAMPOS[i][0]; break; } }
+    var r = rotulo(el), chave = chaveDe(el);
     if (!chave || !OBRIG[chave]) return;   /* não obrigatório: fica para o check-in */
     var n = numDe(el), p = pacote.pax[n - 1]; if (!p) return;
     var id = n + ':' + chave; if (usados[id]) return; usados[id] = 1;
@@ -83389,7 +83402,9 @@ function preencherFormAzul(pacote){
       return;
     }
     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' || el.readOnly || el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup')){
-      /* lista especial do site: às vezes há uma lista comum escondida por trás dela */
+      /* lista especial do site: se já mostra o valor certo, está feito */
+      if (norm(el.value || el.innerText || '') === norm(v)){ rel.feitos++; return; }
+      /* às vezes há uma lista comum escondida por trás dela */
       var a = el.parentElement, esc = null;
       for (var k = 0; k < 3 && a && !esc; k++, a = a.parentElement) esc = a.querySelector('select');
       var op2 = esc && opcao(esc, v);
@@ -83408,6 +83423,19 @@ function preencherFormAzul(pacote){
     if (el.type === 'date' && /^\d\d\/\d\d\/\d{4}$/.test(v)) v = v.slice(6) + '-' + v.slice(3, 5) + '-' + v.slice(0, 2);
     setNativo(el, v); rel.feitos++;
   });
+  /* quando você escolhe na lista do site (ou o site mostra o valor sozinho), a marca dourada some */
+  var vigia = setInterval(function(){
+    var ms = document.querySelectorAll('[data-torre-azul-marcado="escolha"]');
+    if (!ms.length){ clearInterval(vigia); return; }
+    [].forEach.call(ms, function(e){
+      var m = String(e.value || e.innerText || '').trim();
+      if (m && !/^selecion/i.test(m)){
+        e.style.outline = ''; e.style.outlineOffset = ''; e.removeAttribute('data-torre-azul-marcado');
+        var t = e.parentElement && e.parentElement.querySelector('[data-torre-azul]'); if (t) t.remove();
+      }
+    });
+  }, 500);
+  setTimeout(function(){ clearInterval(vigia); }, 600000);
   return rel;
 }
 function coletorAzul(preencher){
