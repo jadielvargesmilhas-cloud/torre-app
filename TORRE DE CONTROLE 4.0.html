@@ -83233,7 +83233,7 @@ function azpDesenhar(){
         <div class="azp-av">${azpAvisos(p, _azp.voo).map(([k, s]) => `<span class="${k}">${esc(s)}</span>`).join('')}</div></div></div>`).join('')}</div>`
       : '<p class="fraco" style="margin:6px 0 0">Marque os passageiros acima.</p>'}
     <div class="azp-fav" style="margin-top:16px"><a href="${esc(codigoFavoritoAzul())}" onclick="event.preventDefault(); avisar('Arraste: clique, segure e solte na barra de favoritos.', 'ok')"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-aviao"/></svg>Torre → Azul</a>
-      <p><b>Como usar:</b> arraste o botão dourado para a barra de favoritos (uma vez só). Na hora de emitir: toque em <b>Copiar para a Azul</b> aqui; na página <b>Passageiros</b> da Azul, toque no favorito <b>Torre → Azul</b>. Ele só preenche: conferir e clicar em <b>Gravar</b> é com você. O cartão você digita no site da Azul (ou usa o cartão salvo no Chrome); a Torre não guarda cartão.</p></div>`;
+      ${document.documentElement.dataset.torreExt ? '<p style="flex-basis:100%;margin:0 0 4px;color:var(--jade)"><b>Extensão Torre → Azul instalada.</b> Copiar para a Azul manda os passageiros direto para o painel dela no site; o favorito abaixo fica de reserva.</p>' : ''}<p><b>Como usar:</b> arraste o botão dourado para a barra de favoritos (uma vez só). Na hora de emitir: toque em <b>Copiar para a Azul</b> aqui; na página <b>Passageiros</b> da Azul, toque no favorito <b>Torre → Azul</b>. Ele só preenche: conferir e clicar em <b>Gravar</b> é com você. O cartão você digita no site da Azul (ou usa o cartão salvo no Chrome); a Torre não guarda cartão.</p></div>`;
   document.getElementById('azpVoo').onchange = e => { _azp.voo = e.target.value; azpDesenhar(); };
   const b = document.getElementById('azpBusca');
   b.oninput = e => { _azp.busca = e.target.value; const pos = b.selectionStart; azpDesenhar(); const nb = document.getElementById('azpBusca'); nb.focus(); try { nb.setSelectionRange(pos, pos); } catch(_){} };
@@ -83246,9 +83246,13 @@ async function azpCopiar(){
   if (!_azp.voo){ avisar('Informe a data do voo: é por ela que a Azul conta a idade das crianças.', 'alerta'); document.getElementById('azpVoo').focus(); return; }
   const ruins = azpOrdem(_azp.ids, _azp.voo).filter(({p}) => azpAvisos(p, _azp.voo).some(([k]) => k === 'ruim'));
   DB.cfg.azulPax = {voo:_azp.voo, ids:_azp.ids}; salvar();
-  const txt = JSON.stringify(azpPacote(_azp.ids, _azp.voo));
+  const pac = azpPacote(_azp.ids, _azp.voo), txt = JSON.stringify(pac);
+  /* extensão "Torre → Azul Pelo Mundo" instalada: o pacote vai direto para ela */
+  const ext = !!document.documentElement.dataset.torreExt;
+  if (ext) window.postMessage({tipo:'torre-azul-pacote', pacote:pac}, '*');
   try { await navigator.clipboard.writeText(txt); }
-  catch(_){ avisar('O navegador não deixou copiar. Tente de novo com a Torre em primeiro plano.', 'alerta'); return; }
+  catch(_){ if (!ext){ avisar('O navegador não deixou copiar. Tente de novo com a Torre em primeiro plano.', 'alerta'); return; } }
+  if (ext){ avisar(`Enviado para a extensão${ruins.length ? `. Atenção: ${ruins.length === 1 ? '1 passageiro tem' : ruins.length + ' passageiros têm'} pendência em vermelho` : ''}. Na página Passageiros da Azul Pelo Mundo, toque em "Preencher esta página" no painel dourado.`, ruins.length ? 'alerta' : 'ok', 7000); return; }
   avisar(ruins.length ? `Copiado. Atenção: ${ruins.length === 1 ? '1 passageiro tem' : ruins.length + ' passageiros têm'} pendência em vermelho; o campo vai em branco na Azul.` : 'Copiado. Agora, na página Passageiros da Azul, toque no favorito Torre → Azul.', ruins.length ? 'alerta' : 'ok', 7000);
 }
 
