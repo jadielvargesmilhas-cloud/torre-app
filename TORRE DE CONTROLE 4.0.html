@@ -9931,6 +9931,7 @@ html.cofre-trancado body > *:not(#cofreTela):not(script){ visibility:hidden !imp
 }
 @media (max-width:400px){ .ds-acoes .rv-ir > svg, .ds-acoes [onclick^="comprarDesejo"] > svg{ display:none; } }
 </style>
+<script>/* 23/11/2026 · ferramentas desligadas por enquanto (Jadiel). Para religar, tire o nome da lista. */ var TORRE_DESLIGADOS = ['roteador', 'bumerangue'];</script>
 <script id="rvc-js">
 /* "Shopping Polishop" → "Polishop"; cada palavra com inicial maiúscula */
 function lojaCurta(n){
@@ -30202,7 +30203,7 @@ async function buscar(){
       ${linhas.length > 5 ? `<button class="bt fantasma" style="margin-top:12px" onclick="const c=this.closest('.cartao');c.querySelectorAll('tr.oculta').forEach(t=>t.classList.remove('oculta'));this.remove()"><svg><use href="#i-baixo"/></svg>Ver os outros ${linhas.length - 5} programas</button>` : ''}
       <div class="linha" style="margin-top:15px">
         <button class="bt fantasma" onclick="abrirMonitor(null, ${JSON.stringify(p).replace(/"/g, '&quot;')})"><svg><use href="#i-radar"/></svg>Vigiar esta rota</button>
-        <button class="bt fantasma" onclick="abrirRoteador('${melhor.pid}',${melhor.milhas})"><svg><use href="#i-troca"/></svg>Como fabricar essas ${nBR(melhor.milhas)} milhas</button>
+        <button class="bt fantasma usa-roteador" onclick="abrirRoteador('${melhor.pid}',${melhor.milhas})"><svg><use href="#i-troca"/></svg>Como fabricar essas ${nBR(melhor.milhas)} milhas</button>
       </div>
     </div>
 
@@ -41109,7 +41110,8 @@ function pintarResultadoCT(){
      do programa está na tabela à direita. O que sobra aqui é o que nenhum dos
      dois mostra — quanto entra e quanto custa. */
   { const alvoPar = document.getElementById('ctParidade') || (() => { const d = document.createElement('div'); d.id = 'ctParidade'; const c = $('#ctCards'); c.parentElement.insertBefore(d, c); return d; })();
-    alvoPar.innerHTML = r && r.origem ? seloParidade(r.origem, r.prog) : ''; }
+    alvoPar.innerHTML = (r && r.origem ? seloParidade(r.origem, r.prog) : '')
+      + (r && ctTipo === 'transferencia' && ctModo === 'hack' ? `<button type="button" class="bt fantasma ct-resumo-bt" id="btCtResumo" onclick="abrirResumoHack()"><svg><use href="#i-olho"/></svg>Ver resumo</button>` : ''); }
   $('#ctCards').innerHTML = `
     ${metrica('Quanto entra', temConta ? nBR(Math.round(r.qtd)) : 'n/d',
       (() => {
@@ -42529,13 +42531,13 @@ function comandos(){
     {t:'Novo lançamento na fábrica', s:'Registrar pontos que entraram com custo', i:'#i-mais', g:'criar', f:() => { irPara('mesa'); irParaAba('mesa', 'ms-lancamentos'); editarLancamento(); }},
     {t:'Nova Campanha', s:'Cadastrar bônus de transferência ou desconto', i:'#i-fogo', g:'criar', f:() => { abrirCampanhasEm('transferencia'); editarCampanha(); }},
     {t:'Nova assinatura de clube', s:'', i:'#i-etiqueta', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-clubes'); editarAssinatura(); }},
-    {t:'Abrir o bumerangue', s:'Simular a volta dos pontos com bônus nas duas pontas', i:'#i-atualizar', g:'ir', f:abrirBumerangueFolha},
+    ...(typeof TORRE_DESLIGADOS !== 'undefined' && TORRE_DESLIGADOS.includes('bumerangue') ? [] : [{t:'Abrir o bumerangue', s:'Simular a volta dos pontos com bônus nas duas pontas', i:'#i-atualizar', g:'ir', f:abrirBumerangueFolha}]),
     {t:'Registrar Compra Bonificada', s:'', i:'#i-caixa', g:'criar', f:() => { irPara('fabrica'); irParaAba('fabrica', 'fb-compras'); novaCompra(); }},
     {t:'Nova Jornada de Viagem', s:'', i:'#i-alvo', g:'criar', f:() => { irPara('rota'); irParaAba('rota', 'rt-plano'); editarPlanoViagem(); }},
     {t:'Registrar Emissão', s:'Própria ou para cliente', i:'#i-balcao', g:'criar', f:() => { irPara('emitidos'); editarReserva(); }},
     {t:'Lançar saldo', s:'', i:'#i-saldo', g:'criar', f:() => { irPara('saldo'); editarSaldo(); }},
     {t:'Anotar Lote com Prazo', s:'', i:'#i-relogio', g:'criar', f:() => { irPara('saldo'); irParaAba('saldo', 'sl-validade'); editarLote(); }},
-    {t:'Calcular rota mais barata', s:'Roteador de aquisição de milhas', i:'#i-troca', g:'fazer', f:() => abrirRoteadorFolha()},
+    ...(typeof TORRE_DESLIGADOS !== 'undefined' && TORRE_DESLIGADOS.includes('roteador') ? [] : [{t:'Calcular rota mais barata', s:'Roteador de aquisição de milhas', i:'#i-troca', g:'fazer', f:() => abrirRoteadorFolha()}]),
     {t:'Gerar roteiro de viagem', s:'', i:'#i-mapa', g:'fazer', f:() => { irPara('rota'); irParaAba('rota', 'rt-roteiros'); }},
     {t:'Central de Avisos', s:'', i:'#i-sino', g:'fazer', f:abrirAvisos},
     {t:'Alternar tema', s:'Breu e papel', i:'#i-lua', g:'fazer', f:alternarTema},
@@ -84157,6 +84159,73 @@ function vemIrOpcao(i, nova){
   el.scrollIntoView({behavior:'smooth', block:'start'});
   el.classList.remove('vem-op-nova'); void el.offsetWidth; el.classList.add('vem-op-nova');
   setTimeout(() => { const f = el.querySelector(`[data-vk="ops.${i}.milhas"]`); if (f) try { f.focus({preventScroll:true}); } catch (_) {} }, 450);
+}
+</script>
+
+<style id="ctres-css">
+/* 23/11/2026 · Roteador e Bumerangue desligados por enquanto (pedido do Jadiel).
+   Para religar: apagar esta regra (ou trocar TORRE_DESLIGADOS abaixo). */
+body.sem-roteador #btCtRoteador, body.sem-roteador .usa-roteador, body.sem-bumerangue #btCtBumerangue{ display:none !important; }
+/* Resumo do Hack do Carrinho */
+.ct-resumo-bt{ margin-top:10px; }
+.hres{ display:flex; flex-direction:column; gap:14px; }
+.hres-bloco{ border:1px solid var(--fio); border-radius:14px; background:var(--sup-1); padding:12px 16px; }
+.hres-bloco h4{ margin:0 0 6px; font-size:calc(12px * var(--esc)); letter-spacing:.08em; text-transform:uppercase; color:var(--grafite); font-weight:600; }
+.hres-l{ display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:6px 0; border-top:1px solid var(--fio-suave); font-size:calc(14px * var(--esc)); }
+.hres-bloco h4 + .hres-l{ border-top:0; }
+.hres-l span{ color:var(--giz-2); }
+.hres-l b{ font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+.hres-total{ border:1px solid var(--ouro); background:color-mix(in srgb, var(--ouro) 10%, transparent); }
+.hres-total .hres-l b{ font-size:calc(17px * var(--esc)); }
+.hres-total .hres-l.grande b{ font-size:calc(22px * var(--esc)); color:var(--ouro); }
+.hres-nota{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); line-height:1.5; margin:0; }
+</style>
+<script id="ctres-js">
+/* Ferramentas desligadas por enquanto. Para religar uma, tire o nome da lista. */
+/* (a lista TORRE_DESLIGADOS fica no começo do arquivo) */
+(function(){
+  const ligar = () => TORRE_DESLIGADOS.forEach(n => document.body.classList.add('sem-' + n));
+  if (document.body) ligar(); else document.addEventListener('DOMContentLoaded', ligar);
+})();
+
+/* Resumo do Hack do Carrinho (23/11/2026): o que saiu da conta, o que veio do
+   carrinho, quanto custou cada parte e o milheiro geral das duas juntas. */
+function abrirResumoHack(){
+  const r = calcularCT('transferencia', 'hack', ctVals);
+  if (!r) return;
+  const n = x => Number(ctVals[x]) || 0;
+  const usados = r.usados || 0, carr = r.carrinho || 0, total = usados + carr;
+  const valorCarr = n('valorCarrinho'), cpmOrigem = n('cpmOrigem'), custoConta = usados * cpmOrigem / 1000;
+  const custoTotal = valorCarr + custoConta;
+  const mil = (v, q) => q > 0 ? brl(v / q * 1000) : 'n/d';
+  const po = prog(r.origem) || {}, pd = prog(r.prog) || {};
+  const unO = po.tipo === 'milhas' ? 'milhas' : 'pontos', unD = pd.tipo === 'pontos' ? 'pontos' : 'milhas';
+  const L = (a, b, cls) => `<div class="hres-l${cls ? ' ' + cls : ''}"><span>${a}</span><b>${b}</b></div>`;
+  const par = r.paridade && r.paridade !== 1 ? ` (paridade ${textoParidade(r.paridade)})` : '';
+  const corpo = `<div class="hres">
+    <div class="hres-bloco"><h4>Transferência</h4>
+      ${L(`Total de ${unO} transferidos (${esc(po.n || 'origem')})`, nBR(Math.round(total)))}
+      ${L(`Chegam em ${esc(pd.n || 'destino')}${par}${r.bonus > 0 ? ', com o bônus de ' + nBRdec(n('percentual')) + '%' : ''}`, nBR(Math.round(r.qtd)) + ' ' + unD)}
+    </div>
+    <div class="hres-bloco"><h4>Carrinho</h4>
+      ${L(`${unO[0].toUpperCase() + unO.slice(1)} comprados no carrinho`, nBR(Math.round(carr)))}
+      ${L('Valor pago no carrinho', brl(valorCarr))}
+      ${L('Milheiro do carrinho', mil(valorCarr, carr))}
+    </div>
+    <div class="hres-bloco"><h4>Da sua conta</h4>
+      ${L(`${unO[0].toUpperCase() + unO.slice(1)} usados da conta (${nBRdec(n('pctOrganico'))}% de ${nBR(Math.round(n('organicos')))})`, nBR(Math.round(usados)))}
+      ${L('Milheiro desses pontos (o que eles custaram)', cpmOrigem > 0 ? brl(cpmOrigem) : 'R$ 0,00 (vieram de graça)')}
+      ${L('Custo do que saiu da conta', brl(custoConta))}
+    </div>
+    <div class="hres-bloco hres-total"><h4>Total</h4>
+      ${L('Custo total (carrinho + conta)', brl(custoTotal))}
+      ${L(`Milheiro geral dos ${nBR(Math.round(total))} ${unO} transferidos`, mil(custoTotal, total), 'grande')}
+      ${r.qtd > 0 && Math.round(r.qtd) !== Math.round(total) ? L(`Milheiro final em ${esc(pd.n || 'destino')} (${nBR(Math.round(r.qtd))} ${unD}, depois da paridade e do bônus)`, mil(custoTotal, r.qtd)) : ''}
+    </div>
+    <p class="hres-nota">Milheiro geral = custo total ÷ ${unO} transferidos × 1.000. O milheiro final divide o mesmo custo pelo que chega no destino: é o número que a régua ao lado mostra.</p>
+  </div>`;
+  abrirFolha({titulo:'Resumo do Hack do Carrinho', largura:'estreita', corpo,
+    pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
 }
 </script>
 </body>
