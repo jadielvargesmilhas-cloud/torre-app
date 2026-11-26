@@ -84309,24 +84309,43 @@ function abrirResumoHack(){
 </style>
 <script id="ge-js">
 /* ── regras (Ajustes da gestão) ─────────────────────────────────────────────── */
-const GE_REGRAS_PADRAO = {pct:30, minimo:0, taxaB:300, minBTrecho:0, tabela:false, pctAlto:25, limiteAlto:20000, pctUrgente:35, diasUrgente:30, credito:300, creditoMeses:12};
+/* Regra geral de 26/11/2026: taxa VEM = o MAIOR entre R$ 300 por passageiro por
+   trecho e 30% da economia, nunca abaixo do mínimo da viagem (R$ 900 internacional,
+   R$ 400 nacional). Planejamento Anual: R$ 97 x 12; na emissão, 50% das
+   mensalidades pagas saem da taxa, sem passar do mínimo. Filtro de venda do
+   plano: economia estimada de R$ 6.000 ou mais. */
+const GE_REGRAS_PADRAO = {pct:30, taxaB:300, minInt:900, minNac:400, filtro:6000, planMensal:97, planParcelas:12, planDesc:50, credito:300, creditoMeses:12};
 const GE_TIPOS = {
-  A:{n:'A · Dinheiro', d:'O cliente paga a companhia. A VEM cobra % da economia.'},
-  B:{n:'B · Milhas do cliente', d:'Emitida com as milhas dele. Taxa fixa por passageiro por trecho.'},
-  C:{n:'C · Milhas da VEM', d:'Emitida com as suas milhas. Milheiro com margem + % da economia.'}
+  A:{n:'A · Dinheiro', d:'O cliente paga a companhia. Taxa VEM pela regra geral.'},
+  B:{n:'B · Milhas do cliente', d:'Emitida com as milhas dele. Taxa VEM pela regra geral.'},
+  C:{n:'C · Milhas da VEM', d:'Emitida com as suas milhas. Milheiro com margem + taxa VEM.'}
 };
 function geRegras(){ const r = (DB.cfg && DB.cfg.gestaoRegras) || {}; return Object.assign({}, GE_REGRAS_PADRAO, r); }
 function geN(v){ return Number(v) || 0; }
 function gePctTxt(v){ return String(Math.round(geN(v) * 100) / 100).replace('.', ','); }
 
-/* % sugerido: o padrão, ou a tabela flexível quando ligada nos Ajustes. */
-function gePctSugerido(e, c, econ){
+/* % da economia: o da regra geral (a tabela 25/30/35% foi descartada em 26/11/2026). */
+function gePctSugerido(e, c, econ){ return {pct:geRegras().pct, por:'regra geral da VEM'}; }
+
+/* Taxa VEM pela regra geral, para uma emissão ou uma simulação. */
+function geTaxaGeral({pax, trechos, economia, ambito, pct, porPax, semMinimo}){
   const rg = geRegras();
-  if (!rg.tabela) return {pct:rg.pct, por:'padrão da VEM'};
-  const dias = e.dataVoo && e.data ? Math.round((new Date(e.dataVoo + 'T12:00:00') - new Date(e.data + 'T12:00:00')) / 864e5) : null;
-  if (e.complexo || (dias != null && dias >= 0 && dias < rg.diasUrgente)) return {pct:rg.pctUrgente, por:e.complexo ? 'roteiro complexo' : `viagem em menos de ${rg.diasUrgente} dias`};
-  if (econ > rg.limiteAlto || (c && c.anual)) return {pct:rg.pctAlto, por:c && c.anual ? 'cliente de gestão anual' : `economia acima de ${gcReais(rg.limiteAlto)}`};
-  return {pct:rg.pct, por:'padrão da VEM'};
+  pax = Math.max(1, Math.round(geN(pax)) || 1); trechos = Math.max(1, Math.round(geN(trechos)) || 1);
+  const pp = porPax != null && porPax !== '' ? geN(porPax) : geN(rg.taxaB);
+  const pc = pct != null && pct !== '' ? geN(pct) : geN(rg.pct);
+  const porTrecho = centavos(pp * pax * trechos);
+  const pelaPct = geN(economia) > 0 ? centavos(geN(economia) * pc / 100) : 0;
+  const minimo = semMinimo ? 0 : centavos(ambito === 'nac' ? rg.minNac : rg.minInt);
+  let taxa = Math.max(porTrecho, pelaPct), por = pelaPct > porTrecho ? 'pct' : 'trecho';
+  if (taxa < minimo){ taxa = minimo; por = 'minimo'; }
+  return {taxa:centavos(taxa), por, porTrecho, pelaPct, minimo, pax, trechos, porPax:pp, pct:pc};
+}
+/* Planejamento Anual: quanto das mensalidades já pagas vira desconto. */
+function gePlanoCredito(c){
+  if (!c || c.plano !== 'anual') return 0;
+  const rg = geRegras();
+  const mensal = c.planoMensal != null && c.planoMensal !== '' ? geN(c.planoMensal) : geN(rg.planMensal);
+  return centavos(mensal * Math.max(0, Math.round(geN(c.planoPagas))) * geN(rg.planDesc) / 100);
 }
 
 /* A conta inteira, em centavos na origem (cada total é a soma do que aparece). */
@@ -84343,22 +84362,29 @@ function geCalc(e, c){
   } else if (t === 'A'){
     r.pagoCia = centavos(geN(e.pagoCia));
     r.economia = centavos(mercado - r.pagoCia);
+  } else if (t === 'B' && geN(e.milhasCli) > 0 && geN(e.milheiroCli) > 0){
+    r.valorMilhasCli = centavos(geN(e.milhasCli) / 1000 * geN(e.milheiroCli));
+    r.economia = mercado > 0 ? centavos(mercado - r.valorMilhasCli) : 0;
   }
-  if (t === 'A' || t === 'C'){
-    const sug = gePctSugerido(e, c, r.economia);
-    r.pct = e.pct != null && e.pct !== '' ? geN(e.pct) : sug.pct; r.pctPor = e.pct != null && e.pct !== '' ? 'escolhido nesta emissão' : sug.por;
-    const pelaPct = r.economia > 0 ? centavos(r.economia * r.pct / 100) : 0;
-    r.taxa = pelaPct;
-    if (rg.minimo > 0 && pelaPct < rg.minimo){ r.taxa = centavos(rg.minimo); r.minimoAplicado = true; }
-    if (!(mercado > 0)) r.alertas.push('Falta o preço de mercado: sem ele não há economia nem comissão.');
-    else if (r.economia <= 0) r.alertas.push(`Não houve economia: ${t === 'C' ? 'o valor das milhas' : 'o que o cliente pagou'} não ficou abaixo do preço de mercado.`);
-  } else {
-    const porTrecho = centavos(geN(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB) * pax);
-    const minT = centavos(rg.minBTrecho);
-    r.taxaPorTrecho = minT > porTrecho ? minT : porTrecho;
-    r.minimoAplicado = minT > porTrecho;
-    r.taxa = centavos(r.taxaPorTrecho * trechos);
+  r.ambito = e.ambito === 'nac' ? 'nac' : 'int';
+  const usaPct = e.pct != null && e.pct !== '';
+  const tg = geTaxaGeral({pax, trechos, economia:r.economia, ambito:r.ambito, pct:usaPct ? e.pct : null, porPax:e.taxaB, semMinimo:!!e.minJaCobrado});
+  r.pct = tg.pct; r.pctPor = usaPct ? 'escolhido nesta emissão' : 'regra geral da VEM';
+  r.porTrecho = tg.porTrecho; r.pelaPct = tg.pelaPct; r.porPax = tg.porPax; r.minimo = tg.minimo; r.taxaPor = tg.por;
+  r.minimoAplicado = tg.por === 'minimo';
+  r.taxaGeral = tg.taxa; r.taxaPorTrecho = centavos(tg.porPax * pax);
+  /* Planejamento Anual: no formulário, o que há disponível; salva, o que ficou gravado nela */
+  r.descontoPlano = 0;
+  if (c && c.plano === 'anual'){
+    const usado = centavos(soma(geDoCliente(c).filter(x => x.id !== e.id).map(x => geN(x.descontoPlano))));
+    const base = e._editando ? Math.max(0, centavos(gePlanoCredito(c) - usado)) : geN(e.descontoPlano);
+    r.descontoPlano = centavos(Math.max(0, Math.min(base, r.taxaGeral - tg.minimo)));
+  } else if (!e._editando && geN(e.descontoPlano) > 0){
+    r.descontoPlano = centavos(Math.max(0, Math.min(geN(e.descontoPlano), r.taxaGeral - tg.minimo)));
   }
+  r.taxa = centavos(r.taxaGeral - r.descontoPlano);
+  if ((t === 'A' || t === 'C') && !(mercado > 0)) r.alertas.push('Falta o preço de mercado: sem ele a taxa VEM fica só pelos R$ por passageiro por trecho.');
+  else if ((t === 'A' || t === 'C') && r.economia <= 0) r.alertas.push(`Não houve economia: ${t === 'C' ? 'o valor das milhas' : 'o que o cliente pagou'} não ficou abaixo do preço de mercado.`);
   r.precoSemTaxas = centavos(r.valorMilhas + r.taxa);
   r.precoTotal = centavos(r.precoSemTaxas + repasse);
   r.lucroMilha = centavos(r.valorMilhas - r.custo);
@@ -84460,13 +84486,16 @@ function geEditar(cid, eid){
         <div class="campo"><label>Data do voo</label><input type="date" id="geVoo" value="${esc(e.dataVoo || '')}"></div>
         <div class="campo"><label>Classe</label><select id="geClasse" data-ordem="natural"><option value="">escolha</option>${GC_CABINES.map(x => `<option${e.classe === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
         <div class="campo"><label>Passageiros</label><input type="text" inputmode="numeric" id="gePax" value="${esc(e.pax || 1)}"></div>
-        <div class="campo ge-so-b"><label>Trechos <span class="fraco">ida e volta = 2</span></label><input type="text" inputmode="numeric" id="geTrechos" value="${esc(e.trechos || 1)}"></div>
+        <div class="campo"><label>Trechos <span class="fraco">ida e volta = 2</span></label><input type="text" inputmode="numeric" id="geTrechos" value="${esc(e.trechos || 1)}"></div>
+        <div class="campo"><label>Viagem</label><select id="geAmbito" data-ordem="natural"><option value="int"${e.ambito !== 'nac' ? ' selected' : ''}>Internacional</option><option value="nac"${e.ambito === 'nac' ? ' selected' : ''}>Nacional</option></select></div>
         <div class="campo ge-so-bc"><label>Programa de milhas</label><select id="geProg"><option value="">escolha</option>${progs.map(p => `<option value="${p}"${e.prog === p ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
       </div>
-      <div class="ge-so-ac"><div class="eq-tit">3 · Preço de mercado</div>
+      <div><div class="eq-tit">3 · Preço de mercado <span class="fraco ge-so-b" style="text-transform:none;letter-spacing:0;font-weight:400">opcional no tipo B</span></div>
       <div class="eq-campos">
         <div class="campo"><label>Preço de mercado <span class="fraco">todos os passageiros, mesmo voo, classe e bagagem</span></label><input type="text" inputmode="decimal" data-moeda id="geMercado" value="${m(e.mercado)}" placeholder="28.194,00"></div>
         <div class="campo ge-so-a"><label>Quanto o cliente pagou à companhia</label><input type="text" inputmode="decimal" data-moeda id="gePagoCia" value="${m(e.pagoCia)}"></div>
+        <div class="campo ge-so-b"><label>Milhas do cliente usadas</label><input type="text" inputmode="numeric" data-milhar id="geMilhasCli" value="${e.milhasCli ? qtdTxt(e.milhasCli) : ''}" placeholder="120.000"></div>
+        <div class="campo ge-so-b"><label>Valor do milheiro do cliente <span class="fraco">para medir a economia</span></label><input type="text" inputmode="decimal" data-moeda id="geMilheiroCli" value="${m(e.milheiroCli)}" placeholder="30,00"></div>
       </div>
       <div id="gePrintBox"></div></div>
       <div class="ge-so-c"><div class="eq-tit">4 · Milhas da VEM</div>
@@ -84475,13 +84504,12 @@ function geEditar(cid, eid){
         <div class="campo"><label>Custo real do milheiro <span class="fraco" id="geCustoDica"></span></label><input type="text" inputmode="decimal" data-moeda id="geCustoMil" value="${m(e.custoMil)}" placeholder="67,75"></div>
         <div class="campo"><label>Milheiro cobrado</label><input type="text" inputmode="decimal" data-moeda id="geMilheiro" value="${m(e.milheiro)}" placeholder="80,00"></div>
       </div></div>
-      <div class="ge-so-b"><div class="eq-tit">4 · Taxa da gestão</div>
-      <div class="eq-campos"><div class="campo"><label>Taxa por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="geTaxaB" value="${m(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB)}"></div></div></div>
-      <div class="ge-so-ac"><div class="eq-tit">5 · Comissão</div>
+      <div><div class="eq-tit">5 · Taxa VEM <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">o maior entre os dois, nunca abaixo do mínimo da viagem</span></div>
       <div class="eq-campos">
+        <div class="campo"><label>R$ por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="geTaxaB" value="${m(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB)}"></div>
         <div class="campo"><label>% sobre a economia <span class="fraco" id="gePctDica"></span></label><input type="text" inputmode="decimal" id="gePct" value="${e.pct != null && e.pct !== '' ? gePctTxt(e.pct) : ''}" placeholder="${gePctTxt(rg.pct)}"></div>
-        ${rg.tabela ? `<label class="chk" style="align-self:end"><input type="checkbox" id="geComplexo"${e.complexo ? ' checked' : ''}><span>Roteiro complexo</span></label>` : ''}
-      </div></div>
+      </div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="geMinJa"${e.minJaCobrado ? ' checked' : ''}><span>O mínimo desta viagem já foi cobrado em outra emissão (ex.: a ida)</span></label></div>
       <div class="eq-tit">6 · Taxas de repasse <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">embarque e aeroporto, pelo valor real</span></div>
       <div class="eq-campos">
         <div class="campo"><label>Moeda</label><select id="geRepMoeda" data-ordem="natural"><option value="BRL"${e.repMoeda !== 'USD' ? ' selected' : ''}>Reais (R$)</option><option value="USD"${e.repMoeda === 'USD' ? ' selected' : ''}>Dólar (US$)</option></select></div>
@@ -84508,7 +84536,8 @@ function geEditar(cid, eid){
       classe:$g('#geClasse').value, pax:Math.max(1, parseInt($g('#gePax').value, 10) || 1), trechos:Math.max(1, parseInt($g('#geTrechos').value, 10) || 1), prog:$g('#geProg').value,
       mercado:moedaNum($g('#geMercado').value) || 0, pagoCia:moedaNum($g('#gePagoCia').value) || 0,
       milhas:qtdNum($g('#geMilhas').value) || 0, custoMil:moedaNum($g('#geCustoMil').value) || 0, milheiro:moedaNum($g('#geMilheiro').value) || 0,
-      taxaB:moedaNum($g('#geTaxaB').value), pct:pct === '' ? '' : (parseFloat(pct.replace(',', '.')) || 0), complexo:!!($g('#geComplexo') || {}).checked,
+      taxaB:moedaNum($g('#geTaxaB').value), pct:pct === '' ? '' : (parseFloat(pct.replace(',', '.')) || 0), ambito:$g('#geAmbito').value, minJaCobrado:$g('#geMinJa').checked,
+      milhasCli:qtdNum($g('#geMilhasCli').value) || 0, milheiroCli:moedaNum($g('#geMilheiroCli').value) || 0,
       repMoeda:$g('#geRepMoeda').value, repValor:moedaNum($g('#geRepValor').value) || 0, repCambio:parseFloat(String($g('#geRepCambio').value || '').replace(/\./g, '').replace(',', '.')) || 0,
       recebido:moedaNum($g('#geRecebido').value) || 0, recebidoEm:$g('#geRecebidoEm').value,
       usarCredito:$g('#geUsarCred') ? $g('#geUsarCred').checked : !!e.usarCredito});
@@ -84522,26 +84551,27 @@ function geEditar(cid, eid){
     d.querySelectorAll('.ge-so-ac').forEach(x => x.classList.toggle('ge-oculto', t === 'B'));
     d.querySelectorAll('.ge-so-bc').forEach(x => x.classList.toggle('ge-oculto', t === 'A'));
     d.querySelectorAll('.ge-so-usd').forEach(x => x.classList.toggle('ge-oculto', $g('#geRepMoeda').value !== 'USD'));
+    /* numeração das partes sem pular número quando uma some */
+    let k = 0; d.querySelectorAll('#geForm .eq-tit').forEach(ti => { if (ti.closest('.ge-oculto')) return; const tn = ti.firstChild; if (tn && tn.nodeType === 3 && /^\s*\d+\s*·/.test(tn.nodeValue)) tn.nodeValue = tn.nodeValue.replace(/^\s*\d+/, String(++k)); });
   };
   const pintar = () => {
     ler(); mostrar();
     const r = geCalc(e, c);
     const cpm = e.prog && typeof cpmPorPrograma === 'function' ? cpmPorPrograma()[e.prog] : null;
     $g('#geCustoDica').textContent = cpm ? `· na Torre: ${gcReais(cpm)}` : '';
-    $g('#gePctDica').textContent = e.tipo === 'B' ? '' : `· ${gePctTxt(r.pct)}% (${r.pctPor})`;
+    $g('#gePctDica').textContent = `· ${gePctTxt(r.pct)}% (${r.pctPor})`;
     giPintarCampo(c, e, $g('#geCredBox'));
     const L = (a, b, cls, sub) => `<div class="ge-l${cls ? ' ' + cls : ''}"><span>${a}${sub ? `<small>${sub}</small>` : ''}</span><b>${b}</b></div>`;
     let h = '';
     if (e.tipo === 'C'){
       h += L('Valor das milhas', gcReais(r.valorMilhas), '', `${nBR(geN(e.milhas))} ÷ 1.000 × ${gcReais(e.milheiro)}`);
       h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.valorMilhas)}`);
-      h += L(`Comissão VEM (${gePctTxt(r.pct)}%)`, gcReais(r.taxa), '', r.minimoAplicado ? `mínimo por emissão aplicado (${gePctTxt(r.pct)}% daria menos)` : '');
     } else if (e.tipo === 'A'){
       h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.pagoCia)} pagos`);
-      h += L(`Comissão VEM (${gePctTxt(r.pct)}%)`, gcReais(r.taxa), '', r.minimoAplicado ? 'mínimo por emissão aplicado' : '');
-    } else {
-      h += L('Taxa da gestão', gcReais(r.taxa), '', `${gcReais(r.taxaPorTrecho)} por trecho × ${r.trechos}${r.minimoAplicado ? ' (mínimo por trecho aplicado)' : ` (${gcReais(e.taxaB)} × ${r.pax} passageiro${r.pax > 1 ? 's' : ''})`}`);
+    } else if (r.valorMilhasCli){
+      h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.valorMilhasCli)} das milhas do cliente`);
     }
+    h += geTaxaLinhas(r, L);
     if (r.descontoIndicacao > 0) h += L('Desconto por indicação', '− ' + gcReais(r.descontoIndicacao), '', `crédito de indicação abatido da ${e.tipo === 'B' ? 'taxa da gestão' : 'comissão'} (${gcReais(r.taxaBruta)} − ${gcReais(r.descontoIndicacao)})`);
     h += L('Preço ao cliente, sem taxas', gcReais(r.precoSemTaxas), 'forte sep');
     h += L('Taxas de repasse', gcReais(r.repasse), '', e.repMoeda === 'USD' ? `US$ ${moedaTxt(e.repValor)} × ${String(e.repCambio || 0).replace('.', ',')}` : 'pelo valor real');
@@ -84584,6 +84614,7 @@ function geEditar(cid, eid){
     if (faltam.length){ faltam.forEach(f => { const el = d.querySelector(f.sel); if (el) erroNoCampo(el, f.msg); }); return; }
     const lista = geDoClienteCriar(c), i = lista.findIndex(x => x.id === e.id);
     if (i >= 0) lista[i] = e; else lista.push(e);
+    { const dp = geCalc(e, c).descontoPlano || 0; if (dp > 0) e.descontoPlano = dp; else delete e.descontoPlano; }
     giAplicarUso(c, e);
     delete e._editando;
     geSincReserva(c, e);
@@ -84641,20 +84672,33 @@ function geSincReserva(c, e){
   try { if (typeof sincronizarSaidaDaEmissao === 'function') sincronizarSaidaDaEmissao(res); } catch(_){}
 }
 
+/* As linhas da taxa VEM no resultado: de onde ela veio, em uma frase. */
+function geTaxaExplica(r){
+  const pt = `${gcReais(r.porPax)} × ${r.pax} passageiro${r.pax > 1 ? 's' : ''} × ${r.trechos} trecho${r.trechos > 1 ? 's' : ''} = ${gcReais(r.porTrecho)}`;
+  const pc = `${gePctTxt(r.pct)}% da economia = ${gcReais(r.pelaPct)}`;
+  if (r.taxaPor === 'minimo') return `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'} (${pt}; ${pc})`;
+  return r.taxaPor === 'pct' ? `${pc}, maior que ${pt}` : `${pt}, maior que ${pc}`;
+}
+function geTaxaLinhas(r, L){
+  let h = L('Taxa VEM', gcReais(r.taxaGeral), '', geTaxaExplica(r));
+  if (r.descontoPlano > 0) h += L('Desconto do Planejamento Anual', '− ' + gcReais(r.descontoPlano), '', `metade das mensalidades pagas${r.taxaGeral - r.descontoPlano <= r.minimo + 0.004 && r.minimo > 0 ? ', até o mínimo da viagem' : ''}`);
+  return h;
+}
+
 /* ── mensagem clara ao cliente: o que é passagem, o que é comissão, o total ── */
 function geTextoMsg(c, e){
   const r = geCalc(e, c), pn = gcPrimeiro(c.nome);
   const linhas = [`Olá, ${pn}! Segue o resumo da emissão ${e.trecho ? `(${e.trecho}${e.dataVoo ? ', ' + gcDataTxt(e.dataVoo) : ''})` : ''}${e.loc ? `, código ${e.loc}` : ''}:`, ''];
   if (e.tipo === 'C'){
     linhas.push(`• Passagem (${nBR(geN(e.milhas))} milhas): ${gcReais(r.valorMilhas)}`);
-    linhas.push(`• Comissão da gestão (${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}): ${gcReais(r.taxa)}`);
-  } else if (e.tipo === 'A') linhas.push(`• Comissão da gestão (${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}): ${gcReais(r.taxa)}`);
-  else linhas.push(`• Taxa da gestão (${r.trechos} trecho${r.trechos > 1 ? 's' : ''}, ${r.pax} passageiro${r.pax > 1 ? 's' : ''}): ${gcReais(r.taxa)}`);
+  }
+  linhas.push(`• Taxa VEM (${r.taxaPor === 'pct' ? `${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}` : r.taxaPor === 'minimo' ? `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'}` : `${gcReais(r.porPax)} por passageiro por trecho, ${r.pax} passageiro${r.pax > 1 ? 's' : ''} e ${r.trechos} trecho${r.trechos > 1 ? 's' : ''}`}): ${gcReais(r.taxaGeral)}`);
+  if (r.descontoPlano > 0) linhas.push(`• Desconto do Planejamento Anual (metade das mensalidades pagas): − ${gcReais(r.descontoPlano)}`);
   if (r.descontoIndicacao > 0) linhas.push(`• Desconto por indicação (seu crédito): − ${gcReais(r.descontoIndicacao)}`);
   if (r.repasse > 0) linhas.push(`• Taxas de embarque, pelo valor real cobrado${e.repMoeda === 'USD' ? ` (US$ ${moedaTxt(e.repValor)})` : ''}: ${gcReais(r.repasse)}`);
   linhas.push('', `Total: ${gcReais(r.precoTotal)}`);
   if (r.recebido > 0) linhas.push(`Já recebido: ${gcReais(r.recebido)}`, r.aReceber > 0.004 ? `Falta: ${gcReais(r.aReceber)}` : 'Tudo quitado. Obrigado!');
-  if (r.mercado > 0 && e.tipo !== 'B') linhas.push('', `Em dinheiro, a mesma viagem custava ${gcReais(r.mercado)}.`);
+  if (r.mercado > 0) linhas.push('', `Em dinheiro, a mesma viagem custava ${gcReais(r.mercado)}.`);
   return linhas.join('\n');
 }
 function geMensagem(cid, eid){
@@ -84681,44 +84725,39 @@ function geRegrasAbrir(cid){
   const d = document.getElementById('dlgGestao'); if (!d) return;
   const rg = geRegras();
   const pc = v => gePctTxt(v);
-  d.innerHTML = `<div class="dr-painel">${gcCab('Regras de cobrança da gestão', 'Valem para as próximas emissões. Cada emissão ainda pode ter o seu percentual.')}
+  d.innerHTML = `<div class="dr-painel">${gcCab('Regras de cobrança da gestão', 'Valem para as próximas emissões e para o diagnóstico.')}
     <div class="dr-corpo"><div class="eq-vista">
-      <div class="eq-tit">A e C · Comissão sobre a economia</div>
+      <div class="ge-alerta info" style="margin:0 0 12px"><svg><use href="#i-info"/></svg><span><b>Regra geral:</b> a taxa VEM é o MAIOR entre o valor por passageiro por trecho e o percentual da economia, e nunca fica abaixo do mínimo da viagem. Vale para os três tipos de emissão. Taxas de embarque são repasse.</span></div>
+      <div class="eq-tit">Regra geral da taxa VEM</div>
       <div class="eq-campos">
-        <div class="campo"><label>Percentual padrão</label><input type="text" inputmode="decimal" id="grPct" value="${pc(rg.pct)}"></div>
-        <div class="campo"><label>Mínimo por emissão <span class="fraco">0 = sem mínimo</span></label><input type="text" inputmode="decimal" data-moeda id="grMin" value="${moedaTxt(rg.minimo)}"></div>
+        <div class="campo"><label>R$ por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="grTaxaB" value="${moedaTxt(rg.taxaB)}"></div>
+        <div class="campo"><label>% da economia</label><input type="text" inputmode="decimal" id="grPct" value="${pc(rg.pct)}"></div>
+        <div class="campo"><label>Mínimo por viagem internacional</label><input type="text" inputmode="decimal" data-moeda id="grMinInt" value="${moedaTxt(rg.minInt)}"></div>
+        <div class="campo"><label>Mínimo por viagem nacional</label><input type="text" inputmode="decimal" data-moeda id="grMinNac" value="${moedaTxt(rg.minNac)}"></div>
       </div>
-      <label class="chk" style="margin-top:12px"><input type="checkbox" id="grTab"${rg.tabela ? ' checked' : ''}><span>Usar a tabela flexível (proposta, ainda em decisão)</span></label>
-      <div class="eq-campos" id="grTabCampos">
-        <div class="campo"><label>% para economia alta ou cliente anual</label><input type="text" inputmode="decimal" id="grPctA" value="${pc(rg.pctAlto)}"></div>
-        <div class="campo"><label>Economia alta a partir de</label><input type="text" inputmode="decimal" data-moeda id="grLimA" value="${moedaTxt(rg.limiteAlto)}"></div>
-        <div class="campo"><label>% para viagem próxima ou roteiro complexo</label><input type="text" inputmode="decimal" id="grPctU" value="${pc(rg.pctUrgente)}"></div>
-        <div class="campo"><label>Viagem próxima: menos de (dias)</label><input type="text" inputmode="numeric" id="grDiasU" value="${rg.diasUrgente}"></div>
-      </div>
-      <div class="eq-tit">B · Milhas do cliente</div>
+      <div class="eq-tit">Planejamento Anual</div>
       <div class="eq-campos">
-        <div class="campo"><label>Taxa por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="grTaxaB" value="${moedaTxt(rg.taxaB)}"></div>
-        <div class="campo"><label>Mínimo por trecho <span class="fraco">0 = sem mínimo</span></label><input type="text" inputmode="decimal" data-moeda id="grMinB" value="${moedaTxt(rg.minBTrecho)}"></div>
+        <div class="campo"><label>Mensalidade</label><input type="text" inputmode="decimal" data-moeda id="grPlanM" value="${moedaTxt(rg.planMensal)}"></div>
+        <div class="campo"><label>Número de mensalidades</label><input type="text" inputmode="numeric" id="grPlanN" value="${rg.planParcelas}"></div>
+        <div class="campo"><label>% das mensalidades descontado na emissão</label><input type="text" inputmode="decimal" id="grPlanD" value="${pc(rg.planDesc)}"></div>
+        <div class="campo"><label>Filtro: economia estimada mínima</label><input type="text" inputmode="decimal" data-moeda id="grFiltro" value="${moedaTxt(rg.filtro)}"></div>
       </div>
       <div class="eq-tit">Programa de indicação</div>
       <div class="eq-campos">
         <div class="campo"><label>Crédito por indicação</label><input type="text" inputmode="decimal" data-moeda id="grCred" value="${moedaTxt(rg.credito)}"></div>
         <div class="campo"><label>Validade do crédito (meses)</label><input type="text" inputmode="numeric" id="grCredMeses" value="${rg.creditoMeses}"></div>
       </div>
-      <div class="ge-alerta info"><svg><use href="#i-info"/></svg><span>Em decisão: o mínimo do tipo B (R$ 700 por trecho ou R$ 600 ida e volta, da regra de 21/11) e a tabela flexível. Enquanto não decidir, deixe o mínimo em 0 e a tabela desligada.</span></div>
     </div></div>
     <footer class="dr-pe"><button type="button" class="bt perigo" id="grF">Fechar</button><span class="esticar"></span><button type="button" class="bt primario" id="grS"><svg><use href="#i-ok"/></svg>Salvar regras</button></footer></div>`;
   const $r = s => d.querySelector(s);
-  const tab = () => $r('#grTabCampos').classList.toggle('ge-oculto', !$r('#grTab').checked);
-  $r('#grTab').onchange = tab; tab();
   $r('#grF').onclick = () => geAbrir(cid);
   $r('#grS').onclick = () => {
     const p = s => parseFloat(String($r(s).value || '').replace(',', '.'));
-    const pcts = ['#grPct', '#grPctA', '#grPctU'].find(s => !(p(s) >= 0 && p(s) <= 100));
+    const pcts = ['#grPct', '#grPlanD'].find(s => !(p(s) >= 0 && p(s) <= 100));
     if (pcts) return erroNoCampo($r(pcts), 'O percentual vai de 0 a 100.');
     DB.cfg = DB.cfg || {};
-    DB.cfg.gestaoRegras = {pct:p('#grPct'), minimo:moedaNum($r('#grMin').value) || 0, tabela:$r('#grTab').checked, pctAlto:p('#grPctA'), limiteAlto:moedaNum($r('#grLimA').value) || 0,
-      pctUrgente:p('#grPctU'), diasUrgente:parseInt($r('#grDiasU').value, 10) || 30, taxaB:moedaNum($r('#grTaxaB').value) || 0, minBTrecho:moedaNum($r('#grMinB').value) || 0,
+    DB.cfg.gestaoRegras = {pct:p('#grPct'), taxaB:moedaNum($r('#grTaxaB').value) || 0, minInt:moedaNum($r('#grMinInt').value) || 0, minNac:moedaNum($r('#grMinNac').value) || 0,
+      planMensal:moedaNum($r('#grPlanM').value) || 0, planParcelas:Math.max(1, parseInt($r('#grPlanN').value, 10) || 12), planDesc:p('#grPlanD'), filtro:moedaNum($r('#grFiltro').value) || 0,
       credito:moedaNum($r('#grCred').value) || 0, creditoMeses:Math.max(1, parseInt($r('#grCredMeses').value, 10) || 12)};
     salvar(); avisar('Regras salvas.', 'ok'); geAbrir(cid);
   };
@@ -85024,8 +85063,14 @@ function gexAbrir(id){
 function gexExcluir(id, destId){
   const c = gcDB().find(x => x.id === id); if (!c) return;
   const dest = destId ? gcDB().find(x => x.id === destId) : null;
+  let iguais = 0;
   if (dest){
-    geDoCliente(c).forEach(e => { geDoClienteCriar(dest).push(e); });
+    /* emissão que o destino já tem (mesmo código de reserva ou mesmo registro) não entra de novo */
+    geDoCliente(c).forEach(e => {
+      const loc = String(e.loc || '').toUpperCase();
+      if (geDoCliente(dest).some(x => x.id === e.id || (loc && String(x.loc || '').toUpperCase() === loc))){ iguais++; return; }
+      geDoClienteCriar(dest).push(e);
+    });
     giCreditos(c).forEach(cr => { giCreditosCriar(dest).push(cr); });
     (DB.reservas || []).forEach(r => { if (r.gestaoCli === id) r.gestaoCli = dest.id; });
     if (!dest.indicadoPor && c.indicadoPor && c.indicadoPor !== dest.id) dest.indicadoPor = c.indicadoPor;
@@ -85038,7 +85083,7 @@ function gexExcluir(id, destId){
   (DB.gcExcluidos = Array.isArray(DB.gcExcluidos) ? DB.gcExcluidos : []).push({id, nome:c.nome, carteiraId:c.carteiraId || '', em:Date.now()});
   salvar();
   abrirGestaoClientes();
-  avisar(`${esc(c.nome)} saiu da gestão${dest ? '; as emissões estão com ' + esc(dest.nome) : ''}.`, 'ok', 6000);
+  avisar(`${esc(c.nome)} saiu da gestão${dest ? '; as emissões estão com ' + esc(dest.nome) : ''}${iguais ? ` (${iguais === 1 ? '1 emissão já estava lá e não foi repetida' : iguais + ' emissões já estavam lá e não foram repetidas'})` : ''}.`, 'ok', 7000);
 }
 (function(){
   const _ed = gcEditar;
@@ -85083,6 +85128,435 @@ function gexExcluir(id, destId){
 @media (prefers-reduced-motion:reduce){ #dlgGestao .eq-card.gc-volta{ animation:none; outline:3px solid var(--ouro); } }
 </style>
 
+<style id="gdiag-css">
+.gd-trilha{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; margin:0 0 14px; }
+.gd-trilha button{ display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 4px; border-radius:12px; border:1px solid var(--fio-suave); background:transparent; color:var(--grafite); font:inherit; font-size:calc(11.5px * var(--esc)); cursor:pointer; line-height:1.2; text-align:center; }
+.gd-trilha button i{ font-style:normal; width:24px; height:24px; border-radius:99px; display:grid; place-items:center; border:1px solid var(--fio); font-weight:700; font-size:calc(12px * var(--esc)); }
+.gd-trilha button[aria-current="step"]{ border-color:var(--ouro); color:var(--giz); }
+.gd-trilha button[aria-current="step"] i{ background:var(--ouro); color:#10141c; border-color:var(--ouro); }
+.gd-trilha button.feito i{ border-color:var(--jade); color:var(--jade); }
+.gd-passos{ display:grid; }
+.gd-passos > .gd-passo{ grid-area:1/1; }
+.gd-passos > .gd-passo[hidden]{ display:block !important; visibility:hidden; pointer-events:none; }
+.gd-passos > .gd-passo[hidden] *{ visibility:hidden !important; transition:none !important; }
+.gd-pergunta{ display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:12px; background:color-mix(in srgb, var(--ouro) 9%, transparent); border:1px solid color-mix(in srgb, var(--ouro) 30%, transparent); margin:0 0 12px; line-height:1.5; font-size:calc(13.5px * var(--esc)); }
+.gd-pergunta svg{ width:18px; height:18px; flex:none; margin-top:2px; color:var(--ouro); fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.gd-pergunta b{ color:var(--giz); }
+.gd-nav{ display:flex; justify-content:space-between; gap:10px; margin-top:14px; }
+.gd-carteira{ margin:0 0 12px; padding:10px 12px; border:1px solid var(--fio-suave); border-radius:12px; font-size:calc(13px * var(--esc)); line-height:1.6; }
+.gd-res{ display:grid; gap:12px; }
+.gd-bloco{ border:1px solid var(--fio-suave); border-radius:14px; padding:12px 14px; }
+.gd-bloco h4{ margin:0 0 8px; font-size:calc(13px * var(--esc)); color:var(--giz); display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; }
+.gd-l{ display:flex; justify-content:space-between; gap:12px; padding:4px 0; font-size:calc(13.5px * var(--esc)); }
+.gd-l b{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+.gd-l small{ display:block; color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.gd-l.forte b{ color:var(--giz); font-size:calc(15px * var(--esc)); }
+.gd-l.sep{ border-top:1px solid var(--fio-suave); margin-top:4px; padding-top:8px; }
+.gd-selo{ font-size:calc(12px * var(--esc)); font-weight:700; padding:3px 10px; border-radius:99px; border:1px solid; white-space:nowrap; }
+.gd-selo.ok{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 55%, transparent); }
+.gd-selo.nao{ color:var(--brasa); border-color:color-mix(in srgb, var(--brasa) 55%, transparent); }
+.gd-rec{ border-color:color-mix(in srgb, var(--ouro) 55%, transparent); background:color-mix(in srgb, var(--ouro) 7%, transparent); }
+.gd-rec b.gd-tipo{ font-size:calc(17px * var(--esc)); color:var(--ouro); }
+@media (max-width:760px){
+  .gd-trilha{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+}
+</style>
+<script id="gdiag-js">
+/* ── Ficha de diagnóstico (26/11/2026, regras VEM seção 10.1) ──────────────────
+   Uma aba da Ficha em 6 passos, na ordem da entrevista, com a pergunta a fazer
+   em cada um: gastos, programas e saldos, viagem, preço de mercado, custo em
+   milhas e o resultado (economia estimada, filtro de R$ 6.000, Emissão avulsa x
+   Planejamento Anual e o tipo recomendado). A viagem usa os mesmos campos do
+   Objetivo (o que se digita num aparece no outro). No fim, registra o plano
+   fechado; as mensalidades pagas viram desconto na emissão. */
+const GD_PASSOS = ['Gastos', 'Programas', 'Viagem', 'Mercado', 'Milhas', 'Resultado'];
+function gdMesesAte(mesISO, hoje){
+  if (!/^\d{4}-\d{2}/.test(String(mesISO || ''))) return null;
+  const h = hoje || hojeISO();
+  return (Number(mesISO.slice(0, 4)) - Number(h.slice(0, 4))) * 12 + (Number(mesISO.slice(5, 7)) - Number(h.slice(5, 7)));
+}
+/* A simulação inteira, em centavos na origem. Entra a economia (ou o mercado e o custo). */
+function gdSimular({economia, mercado, milhas, milheiro, taxas, pax, trechos, ambito, meses}){
+  const rg = geRegras();
+  const custo = centavos(geN(milhas) / 1000 * geN(milheiro) + geN(taxas));
+  const eco = economia != null && economia !== '' ? centavos(geN(economia)) : (geN(mercado) > 0 && custo > 0 ? centavos(geN(mercado) - custo) : null);
+  const r = {custo, economia:eco, filtro:centavos(rg.filtro), meses};
+  if (eco == null) return r;
+  r.passa = eco >= r.filtro;
+  const tg = geTaxaGeral({pax, trechos, economia:eco, ambito});
+  r.avulsa = {taxa:tg.taxa, por:tg.por, tg, fica:centavos(eco - tg.taxa)};
+  r.avulsa.pctCli = eco > 0 ? r.avulsa.fica / eco * 100 : 0;
+  const mens = centavos(geN(rg.planMensal) * geN(rg.planParcelas));
+  const desc = centavos(mens * geN(rg.planDesc) / 100);
+  const taxaFinal = centavos(Math.max(tg.taxa - desc, tg.minimo));
+  const total = centavos(mens + taxaFinal);
+  r.plano = {mens, desc, taxaFinal, descUsado:centavos(tg.taxa - taxaFinal), total, fica:centavos(eco - total)};
+  r.plano.pctCli = eco > 0 ? r.plano.fica / eco * 100 : 0;
+  if (!r.passa){
+    r.tipo = r.avulsa.fica > 0 ? 'Emissão avulsa' : 'Manual/Guia';
+    r.porque = r.avulsa.fica > 0 ? `A economia estimada fica abaixo de ${gcReais(r.filtro)}: o Planejamento Anual não compensa para o cliente. A emissão avulsa ainda deixa ${gcReais(r.avulsa.fica)} com ele.` : `Nem a emissão avulsa deixa economia para o cliente: ofereça o Manual/Guia.`;
+  } else if (meses != null && meses >= 6){
+    r.tipo = 'Planejamento Anual'; r.porque = `Passa no filtro e a viagem está a ${meses} meses: dá tempo de acumular com as mensalidades.`;
+  } else {
+    r.tipo = 'VEM Emissão'; r.porque = meses == null ? 'Passa no filtro. Sem o mês da viagem, a recomendação fica na emissão; informe o mês para comparar com o Planejamento Anual.' : `Passa no filtro, mas a viagem está a ${meses < 0 ? 'menos de 1' : meses} ${meses === 1 ? 'mês' : 'meses'}: o Planejamento Anual é para viagens a 6 meses ou mais.`;
+  }
+  return r;
+}
+function gdPctTxt(v){ return Math.round(v) + '%'; }
+function gdProposta(){
+  const rg = geRegras();
+  const metade = geN(rg.planDesc) === 50 ? 'metade' : gePctTxt(rg.planDesc) + '%';
+  return `Plano de Planejamento Anual VEM · preço de fundador: ${gcReais(rg.planMensal)} por mês, durante ${rg.planParcelas} meses, cobrados automaticamente. Na emissão, ${metade} do que você pagou de mensalidade é descontada da taxa final. Se cancelar antes da emissão, as mensalidades já pagas não são devolvidas e o desconto não se aplica. Taxas de embarque são cobradas à parte, pelo valor real.`;
+}
+function gdSaldosCarteira(c){
+  try {
+    const l = typeof gcLinhaServ === 'function' ? gcLinhaServ(c) : null; if (!l) return '';
+    const db = contaDesembrulha(l.dados) || {}; const cs = db.contas || [], ss = (db.saldos || []).filter(x => geN(x.qtd) > 0);
+    if (!ss.length) return '';
+    const por = {}; ss.forEach(x => { (por[x.prog] = por[x.prog] || []).push(x); });
+    return Object.entries(por).map(([p, l2]) => `<div><b>${esc(prog(p).n)}</b>: ${nBR(soma(l2.map(x => geN(x.qtd))))}${l2.length > 1 ? ` <span class="fraco">(${l2.map(x => `${esc(nomeCurto((cs.find(k => k.id === x.contaId) || {}).nome || ''))} ${nBR(x.qtd)}`).join(' · ')})</span>` : ''}</div>`).join('');
+  } catch(_){ return ''; }
+}
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const vista = d.querySelector('.dr-corpo .eq-vista'); if (!vista || vista.querySelector('#gdDiag')) return v;
+    const c = _gcEd, dg = c.diag || {}, rg = geRegras();
+    const m = x => x != null && x !== '' && geN(x) ? moedaTxt(geN(x)) : '';
+    const P = (txt) => `<div class="gd-pergunta"><svg><use href="#i-info"/></svg><span>${txt}</span></div>`;
+    const carteira = gdSaldosCarteira(c);
+    const ob = id => vista.querySelector('#' + id);
+    const html = `<div class="eq-tit">Diagnóstico</div>
+      <div id="gdDiag">
+        <div class="gd-trilha" role="tablist" aria-label="Passos do diagnóstico">${GD_PASSOS.map((n, i) => `<button type="button" data-p="${i}"><i>${i + 1}</i>${n}</button>`).join('')}</div>
+        <div class="gd-passos">
+          <div class="gd-passo" data-p="0">
+            ${P('<b>Pergunte:</b> "Quanto você gasta por mês no cartão, somando todos? E quais cartões você usa?"')}
+            <div class="eq-campos">
+              <div class="campo"><label>Gasto mensal no cartão</label><input type="text" inputmode="decimal" data-moeda id="gdGasto" value="${m(dg.gasto)}" placeholder="8.000,00"></div>
+              <div class="campo"><label>Cartões</label><input type="text" id="gdCartoes" value="${esc(dg.cartoes || '')}" placeholder="Itaú Personnalité Visa Infinite, XP"></div>
+            </div>
+          </div>
+          <div class="gd-passo" data-p="1" hidden>
+            ${P('<b>Pergunte:</b> "Em quais programas você tem pontos ou milhas, e quanto tem em cada um?" Peça os prints dos aplicativos: mande ao Claude e ele devolve um bloco para colar na carteira do cliente.')}
+            ${carteira ? `<div class="gd-carteira"><div class="fraco" style="margin-bottom:4px">Já na carteira do cliente:</div>${carteira}</div>` : ''}
+            <div class="campo"><label>Programas e saldos <span class="fraco">o que ele disser</span></label><textarea id="gdProgs" rows="4" placeholder="LATAM Pass 100.000 · Livelo 45.000 · Esfera 27.000">${esc(dg.progs || '')}</textarea></div>
+          </div>
+          <div class="gd-passo" data-p="2" hidden>
+            ${P('<b>Pergunte:</b> "Para onde quer ir, em que mês, quantas pessoas e em qual classe?" (é o mesmo Objetivo da ficha)')}
+            <div class="eq-campos">
+              <div class="campo"><label>Destino</label><input type="text" id="gdDestino" placeholder="ex.: Lisboa"></div>
+              <div class="campo"><label>Classe</label><select id="gdCabine" data-ordem="natural"></select></div>
+              <div class="campo"><label>Mês da viagem</label><div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:8px"><select id="gdMesM" data-ordem="natural"></select><select id="gdMesA" data-ordem="natural"></select></div></div>
+              <div class="campo"><label>Quantas pessoas</label><input type="text" inputmode="numeric" id="gdPax" placeholder="2"></div>
+              <div class="campo"><label>Viagem</label><select id="gdAmbito" data-ordem="natural"><option value="int"${dg.ambito !== 'nac' ? ' selected' : ''}>Internacional</option><option value="nac"${dg.ambito === 'nac' ? ' selected' : ''}>Nacional</option></select></div>
+              <div class="campo"><label>Trechos <span class="fraco">ida e volta = 2</span></label><input type="text" inputmode="numeric" id="gdTrechos" value="${esc(dg.trechos || 2)}"></div>
+            </div>
+          </div>
+          <div class="gd-passo" data-p="3" hidden>
+            ${P('<b>Faça junto com ele:</b> pesquise o mesmo voo em dinheiro (Google Flights ou site da companhia), mesma classe e bagagem, para todas as pessoas. Guarde o print.')}
+            <div class="eq-campos">
+              <div class="campo"><label>Preço de mercado <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="decimal" data-moeda id="gdMercado" value="${m(dg.mercado)}" placeholder="40.000,00"></div>
+              <div class="campo"><label>Fonte</label><select id="gdFonte" data-ordem="natural">${['Google Flights', 'Site da companhia', 'Agência', 'Outra'].map(o => `<option${(dg.fonte || 'Google Flights') === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
+              <div class="campo"><label>Data da pesquisa</label><input type="date" id="gdDataMerc" value="${esc(dg.dataMerc || hojeISO())}"></div>
+            </div>
+          </div>
+          <div class="gd-passo" data-p="4" hidden>
+            ${P('<b>Faça você:</b> veja quantas milhas o programa pede para essa viagem e o milheiro de referência. O custo estimado é milhas ÷ 1.000 × milheiro + taxas de embarque.')}
+            <div class="eq-campos">
+              <div class="campo"><label>Milhas da emissão <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="numeric" data-milhar id="gdMilhas" value="${dg.milhas ? qtdTxt(dg.milhas) : ''}" placeholder="300.000"></div>
+              <div class="campo"><label>Milheiro de referência</label><input type="text" inputmode="decimal" data-moeda id="gdMilheiro" value="${m(dg.milheiro)}" placeholder="25,00"></div>
+              <div class="campo"><label>Taxas de embarque estimadas</label><input type="text" inputmode="decimal" data-moeda id="gdTaxas" value="${m(dg.taxas)}" placeholder="1.200,00"></div>
+            </div>
+          </div>
+          <div class="gd-passo" data-p="5" hidden>
+            <div id="gdRes"></div>
+            <div class="eq-tit" style="margin-top:16px">Fechou? Registre o plano</div>
+            <div class="eq-campos">
+              <div class="campo"><label>Plano contratado</label><select id="gdPlano" data-ordem="natural"><option value="">ainda não fechou</option><option value="emissao"${c.plano === 'emissao' ? ' selected' : ''}>VEM Emissão</option><option value="anual"${c.plano === 'anual' ? ' selected' : ''}>Planejamento Anual</option></select></div>
+              <div class="campo gd-so-anual"><label>Mensalidade</label><input type="text" inputmode="decimal" data-moeda id="gdPlanoMensal" value="${moedaTxt(c.planoMensal != null && c.planoMensal !== '' ? geN(c.planoMensal) : geN(rg.planMensal))}"></div>
+              <div class="campo gd-so-anual"><label>Mensalidades já pagas</label><input type="text" inputmode="numeric" id="gdPlanoPagas" value="${esc(c.planoPagas || 0)}"></div>
+              <div class="campo gd-so-anual"><label>Início do plano</label><input type="date" id="gdPlanoDesde" value="${esc(c.planoDesde || '')}"></div>
+              <div class="campo gd-so-anual"><label>Cancelou em <span class="fraco">só se cancelou</span></label><input type="date" id="gdPlanoCancelou" value="${esc(c.planoCancelou || '')}"></div>
+            </div>
+            <p class="fraco gd-so-anual" id="gdPlanoNota" style="margin:8px 0 0;font-size:calc(12.5px * var(--esc))"></p>
+          </div>
+        </div>
+        <div class="gd-nav"><button type="button" class="bt fantasma" id="gdAnt"><svg><use href="#i-seta-e"/></svg>Anterior</button><button type="button" class="bt primario" id="gdProx">Próximo<svg><use href="#i-seta"/></svg></button></div>
+      </div>`;
+    const tReg = [...vista.querySelectorAll(':scope > .eq-tit')].find(t => /Regras/.test(t.textContent));
+    if (tReg) tReg.insertAdjacentHTML('beforebegin', html); else vista.insertAdjacentHTML('beforeend', html);
+    const q = s => vista.querySelector(s);
+    /* a viagem é a mesma do Objetivo: espelho nos dois sentidos */
+    [['gdDestino', 'gcDestino'], ['gdCabine', 'gcCabine'], ['gdMesM', 'gcMesM'], ['gdMesA', 'gcMesA'], ['gdPax', 'gcPax']].forEach(([a, b]) => {
+      const A = q('#' + a), B = ob(b); if (!A || !B) return;
+      if (A.tagName === 'SELECT') A.innerHTML = B.innerHTML;
+      A.value = B.value;
+      const ida = () => { B.value = A.value; pintar(); }, volta = () => { A.value = B.value; pintar(); };
+      A.addEventListener('input', ida); A.addEventListener('change', ida); B.addEventListener('input', volta); B.addEventListener('change', volta);
+    });
+    let passo = Math.min(5, Math.max(0, Math.round(geN(dg.passo))));
+    const ir = i => {
+      passo = Math.min(5, Math.max(0, i));
+      vista.querySelectorAll('.gd-passo').forEach(p => { p.hidden = Number(p.dataset.p) !== passo; p.inert = p.hidden; });
+      vista.querySelectorAll('.gd-trilha button').forEach(b => { const k = Number(b.dataset.p); if (k === passo) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); b.classList.toggle('feito', k < passo); });
+      q('#gdAnt').disabled = passo === 0; q('#gdProx').hidden = passo === 5;
+      pintar();
+    };
+    function ler(){
+      const mes = q('#gdMesA').value && q('#gdMesM').value ? `${q('#gdMesA').value}-${q('#gdMesM').value}` : '';
+      return {gasto:moedaNum(q('#gdGasto').value) || 0, cartoes:q('#gdCartoes').value.trim(), progs:q('#gdProgs').value.trim(), ambito:q('#gdAmbito').value,
+        trechos:Math.max(1, parseInt(q('#gdTrechos').value, 10) || 1), mercado:moedaNum(q('#gdMercado').value) || 0, fonte:q('#gdFonte').value, dataMerc:q('#gdDataMerc').value,
+        milhas:qtdNum(q('#gdMilhas').value) || 0, milheiro:moedaNum(q('#gdMilheiro').value) || 0, taxas:moedaNum(q('#gdTaxas').value) || 0, passo, mes, pax:Math.max(1, parseInt(q('#gdPax').value, 10) || 1)};
+    }
+    function pintar(){
+      const x = ler();
+      const r = gdSimular({mercado:x.mercado, milhas:x.milhas, milheiro:x.milheiro, taxas:x.taxas, pax:x.pax, trechos:x.trechos, ambito:x.ambito, meses:gdMesesAte(x.mes)});
+      const L = (a, b, cls, sub) => `<div class="gd-l${cls ? ' ' + cls : ''}"><span>${a}${sub ? `<small>${sub}</small>` : ''}</span><b>${b}</b></div>`;
+      let h = '';
+      if (r.economia == null){
+        h = `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>Para o resultado, faltam ${[!(x.mercado > 0) && 'o preço de mercado (passo 4)', !(r.custo > 0) && 'as milhas e o milheiro (passo 5)'].filter(Boolean).join(' e ')}.</span></div>`;
+      } else {
+        h = `<div class="gd-res">
+          <div class="gd-bloco"><h4>Economia estimada <span class="gd-selo ${r.passa ? 'ok' : 'nao'}">${r.passa ? 'Passa' : 'Não passa'} no filtro de ${gcReais(r.filtro)}</span></h4>
+            ${L('Preço de mercado', gcReais(x.mercado), '', `${esc(x.fonte)}${x.dataMerc ? ', ' + gcDataTxt(x.dataMerc) : ''}`)}
+            ${L('Custo estimado em milhas', '− ' + gcReais(r.custo), '', `${nBR(x.milhas)} ÷ 1.000 × ${gcReais(x.milheiro)} + ${gcReais(x.taxas)} de taxas`)}
+            ${L('Economia estimada', gcReais(r.economia), 'forte sep')}</div>
+          <div class="gd-bloco"><h4>VEM Emissão <span class="fraco" style="font-weight:400">taxa só na emissão</span></h4>
+            ${L('Taxa VEM', gcReais(r.avulsa.taxa), '', geTaxaExplica(Object.assign({}, r.avulsa.tg, {taxaPor:r.avulsa.por, porPax:r.avulsa.tg.porPax, ambito:x.ambito})))}
+            ${L('Fica com o cliente', gcReais(r.avulsa.fica), 'forte sep', gdPctTxt(r.avulsa.pctCli) + ' da economia')}</div>
+          <div class="gd-bloco"><h4>Planejamento Anual <span class="fraco" style="font-weight:400">${rg.planParcelas} × ${gcReais(rg.planMensal)}</span></h4>
+            ${L('Mensalidades', gcReais(r.plano.mens))}
+            ${L('Taxa VEM na emissão', gcReais(r.plano.taxaFinal), '', `${gcReais(r.avulsa.taxa)} − ${gcReais(r.plano.descUsado)} de desconto${r.plano.descUsado < r.plano.desc - 0.004 ? ` (o desconto de ${gcReais(r.plano.desc)} pararia abaixo do mínimo)` : ''}`)}
+            ${L('Total para a VEM', gcReais(r.plano.total), 'sep')}
+            ${L('Fica com o cliente', (r.plano.fica < 0 ? '− ' : '') + gcReais(Math.abs(r.plano.fica)), 'forte', gdPctTxt(r.plano.pctCli) + ' da economia')}</div>
+          <div class="gd-bloco gd-rec"><h4>Tipo recomendado</h4><b class="gd-tipo" id="gdTipo">${esc(r.tipo)}</b><p class="fraco" style="margin:6px 0 0;line-height:1.5">${esc(r.porque)}</p>
+            ${r.tipo === 'Planejamento Anual' ? `<div style="margin-top:10px"><button type="button" class="bt p fantasma" id="gdCopiar"><svg><use href="#i-copiar"/></svg>Copiar a proposta para o cliente</button></div>` : ''}</div>
+        </div>`;
+      }
+      q('#gdRes').innerHTML = h;
+      const cp = q('#gdCopiar'); if (cp) cp.onclick = () => mtCopiar(gdProposta(), 'Proposta copiada.');
+      const anual = q('#gdPlano').value === 'anual';
+      vista.querySelectorAll('.gd-so-anual').forEach(el => el.classList.toggle('ge-oculto', !anual));
+      if (anual){
+        const pagas = Math.max(0, parseInt(q('#gdPlanoPagas').value, 10) || 0), mm = moedaNum(q('#gdPlanoMensal').value) || 0;
+        q('#gdPlanoNota').textContent = `${pagas} ${pagas === 1 ? 'mensalidade paga' : 'mensalidades pagas'}: ${gcReais(centavos(mm * pagas * geN(rg.planDesc) / 100))} de desconto na taxa da emissão, sem passar do mínimo da viagem.`;
+      }
+    }
+    q('#gdDiag').addEventListener('input', pintar); q('#gdDiag').addEventListener('change', pintar);
+    vista.querySelectorAll('.gd-trilha button').forEach(b => b.onclick = () => ir(Number(b.dataset.p)));
+    q('#gdAnt').onclick = () => ir(passo - 1); q('#gdProx').onclick = () => ir(passo + 1);
+    gdIr._ir = ir;
+    ir(passo);
+    return v;
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(){
+    const d = document.getElementById('dlgGestao'), e = _gcEd;
+    if (d && e && d.querySelector('#gdDiag')){
+      const q = s => d.querySelector(s);
+      const atual = [...d.querySelectorAll('.gd-passo')].findIndex(p => !p.hidden);
+      e.diag = {gasto:moedaNum(q('#gdGasto').value) || 0, cartoes:q('#gdCartoes').value.trim(), progs:q('#gdProgs').value.trim(), ambito:q('#gdAmbito').value,
+        trechos:Math.max(1, parseInt(q('#gdTrechos').value, 10) || 1), mercado:moedaNum(q('#gdMercado').value) || 0, fonte:q('#gdFonte').value, dataMerc:q('#gdDataMerc').value,
+        milhas:qtdNum(q('#gdMilhas').value) || 0, milheiro:moedaNum(q('#gdMilheiro').value) || 0, taxas:moedaNum(q('#gdTaxas').value) || 0, passo:Math.max(0, atual)};
+      e.plano = q('#gdPlano').value;
+      if (e.plano === 'anual'){ e.planoMensal = moedaNum(q('#gdPlanoMensal').value) || 0; e.planoPagas = Math.max(0, parseInt(q('#gdPlanoPagas').value, 10) || 0); e.planoDesde = q('#gdPlanoDesde').value; e.planoCancelou = q('#gdPlanoCancelou').value; }
+      else { delete e.planoMensal; delete e.planoPagas; delete e.planoDesde; delete e.planoCancelou; }
+    }
+    return _sv.apply(this, arguments);
+  };
+})();
+function gdIr(){}
+</script>
+<style id="gdi-css">
+.gdi-topo{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin:0 0 12px; }
+.gdi-topo div{ border:1px solid var(--fio-suave); border-radius:12px; padding:8px 10px; display:flex; flex-direction:column; gap:2px; }
+.gdi-topo small{ color:var(--grafite); font-size:calc(11.5px * var(--esc)); }
+.gdi-topo b{ font-size:calc(17px * var(--esc)); font-variant-numeric:tabular-nums; color:var(--giz); }
+.gdi-novo{ border:1px dashed var(--fio); border-radius:14px; padding:12px; margin:0 0 12px; }
+.gdi-lista{ display:grid; gap:10px; }
+.gdi-item{ border:1px solid var(--fio-suave); border-radius:14px; padding:12px; display:grid; gap:8px; }
+.gdi-cab{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; font-size:calc(12.5px * var(--esc)); color:var(--grafite); }
+.gdi-cab b{ color:var(--giz); font-size:calc(13px * var(--esc)); }
+.gdi-txt{ white-space:pre-wrap; line-height:1.55; font-size:calc(14px * var(--esc)); }
+.gdi-st{ font-size:calc(11.5px * var(--esc)); font-weight:700; padding:2px 9px; border-radius:99px; border:1px solid var(--fio); }
+.gdi-st.enviado{ color:var(--anil, #6aa0ff); border-color:currentColor; }
+.gdi-st.fez{ color:var(--jade); border-color:currentColor; }
+.gdi-st.recusou, .gdi-st.venceu{ color:var(--brasa); border-color:currentColor; }
+.gdi-bts{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.gdi-bts select{ width:auto; min-width:0; }
+.gdi-hist{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); }
+.gdi-gar{ border:1px solid var(--fio-suave); border-radius:14px; padding:12px 14px; margin-top:14px; }
+.gdi-gar h4{ margin:0 0 8px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:center; font-size:calc(13.5px * var(--esc)); color:var(--giz); }
+.gdi-cond{ display:flex; gap:8px; align-items:flex-start; font-size:calc(13px * var(--esc)); line-height:1.5; padding:3px 0; }
+.gdi-cond i{ font-style:normal; font-weight:800; width:18px; flex:none; }
+.gdi-cond.sim i{ color:var(--jade); } .gdi-cond.nao i{ color:var(--brasa); }
+@media (max-width:760px){ .gdi-topo{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+</style>
+<script id="gdi-js">
+/* ── Diário do plano (26/11/2026, regras VEM seção 10.6) e Garantia Economia VEM
+   (seção 10.3, item 5). Cada recomendação ao cliente fica registrada na ficha:
+   tipo, texto, prazo, status com a data de cada mudança, prints e observação.
+   "Enviar pelo WhatsApp" só abre o WhatsApp com o texto: quem envia é a pessoa.
+   Grava na hora (no cliente salvo e na ficha aberta), sem depender do Salvar.
+   "Prazo venceu sem resposta" é automático para o que foi enviado e passou do
+   prazo sem resposta; ler a tela não muda nada gravado. */
+const GDI_TIPOS = ['Transferência', 'Compra de pontos', 'Compra em parceiro', 'Clube', 'Emissão', 'Outro'];
+const GDI_ST = {registrada:'Registrada, não enviada', enviado:'Enviado', fez:'Cliente fez', recusou:'Cliente recusou', venceu:'Prazo venceu sem resposta'};
+function gdiLista(c){ return Array.isArray(c && c.diario) ? c.diario : []; }
+function gdiStatus(it, hoje){
+  const h = hoje || hojeISO();
+  if (it.status === 'enviado' && it.prazo && it.prazo < h) return 'venceu';
+  return it.status || 'registrada';
+}
+function gdiCumprido(c, hoje){
+  const l = gdiLista(c).map(x => gdiStatus(x, hoje));
+  const env = l.filter(s => s !== 'registrada').length, fez = l.filter(s => s === 'fez').length;
+  return {env, fez, recusou:l.filter(s => s === 'recusou').length, venceu:l.filter(s => s === 'venceu').length, aguardando:l.filter(s => s === 'enviado').length, pct:env ? fez / env * 100 : null};
+}
+function gdiSomaMeses(iso, n){ const [a, m, d] = iso.split('-').map(Number); const x = new Date(Date.UTC(a, m - 1 + n, d)); return x.toISOString().slice(0, 10); }
+/* Garantia: as três condições e o valor a devolver (até as mensalidades pagas). */
+function gdGarantia(c, hoje){
+  const r = {aplica:false, conds:[], devolver:0};
+  if (!c || c.plano !== 'anual'){ r.motivo = 'A garantia é só do Planejamento Anual.'; return r; }
+  const rg = geRegras(), h = hoje || hojeISO();
+  const mensal = c.planoMensal != null && c.planoMensal !== '' ? geN(c.planoMensal) : geN(rg.planMensal);
+  r.mensPagas = centavos(mensal * Math.max(0, Math.round(geN(c.planoPagas))));
+  if (!c.planoDesde){ r.motivo = 'Falta o início do plano (Diagnóstico, passo 6).'; return r; }
+  r.fim = gdiSomaMeses(c.planoDesde, 12);
+  const ems = geDoCliente(c).filter(e => e.data && e.data >= c.planoDesde && e.data <= r.fim).sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  const cu = gdiCumprido(c, h);
+  const c1 = cu.recusou === 0 && cu.venceu === 0;
+  r.conds.push({ok:c1, txt:c1 ? (cu.env ? `Seguiu o plano: ${cu.fez} de ${cu.env} recomendações feitas${cu.aguardando ? `, ${cu.aguardando} ainda no prazo` : ''}.` : 'Seguiu o plano: nenhuma recomendação recusada ou vencida (o diário ainda está vazio).') : `Não seguiu o plano: ${[cu.recusou && `${cu.recusou} recusada${cu.recusou > 1 ? 's' : ''}`, cu.venceu && `${cu.venceu} com prazo vencido sem resposta`].filter(Boolean).join(' e ')}.`});
+  const c2 = ems.length > 0;
+  r.conds.push({ok:c2, txt:c2 ? `Emissão feita pela VEM dentro dos 12 meses (até ${gcDataTxt(r.fim)}).` : `Ainda sem emissão pela VEM dentro dos 12 meses (até ${gcDataTxt(r.fim)}).`});
+  const prim = ems[0];
+  const c3 = !c.planoCancelou || (prim && c.planoCancelou > prim.data);
+  r.conds.push({ok:c3, txt:c3 ? (c.planoCancelou ? `Cancelou em ${gcDataTxt(c.planoCancelou)}, depois da emissão.` : 'Não cancelou a assinatura.') : `Cancelou em ${gcDataTxt(c.planoCancelou)}, antes da emissão.`});
+  const rs = ems.map(e => geCalc(e, c));
+  r.economia = centavos(soma(rs.map(x => Math.max(0, x.economia))));
+  r.taxas = centavos(soma(rs.map(x => x.taxa)));
+  r.pagoVEM = centavos(r.mensPagas + r.taxas);
+  if (!(c1 && c2 && c3)){ r.motivo = 'Nem todas as condições foram cumpridas.'; return r; }
+  if (r.economia >= r.pagoVEM){ r.motivo = `A economia (${gcReais(r.economia)}) cobriu tudo o que o cliente pagou à VEM (${gcReais(r.pagoVEM)}).`; return r; }
+  r.aplica = true; r.devolver = centavos(Math.min(r.pagoVEM - r.economia, r.mensPagas));
+  r.motivo = `A economia (${gcReais(r.economia)}) ficou abaixo do que o cliente pagou à VEM (${gcReais(r.pagoVEM)}: ${gcReais(r.mensPagas)} de mensalidades + ${gcReais(r.taxas)} de taxa VEM).`;
+  return r;
+}
+function gdiZap(c){ const z = String((c && c.zap) || '').replace(/\D/g, ''); return z ? z.replace(/^(?!55)/, '55') : ''; }
+/* grava no cliente salvo e espelha na ficha aberta */
+function gdiMudar(cid, fn){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  if (!Array.isArray(c.diario)) c.diario = [];
+  fn(c.diario, c);
+  c.alterado = Date.now();
+  if (_gcEd && _gcEd.id === cid) _gcEd.diario = JSON.parse(JSON.stringify(c.diario));
+  salvar();
+}
+function gdiQuando(ms){ try { return new Date(ms).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}); } catch(_){ return ''; } }
+function gdiPintar(box, cid){
+  const c = gcDB().find(x => x.id === cid);
+  if (!c){ box.innerHTML = `<div class="ge-alerta info"><svg><use href="#i-info"/></svg><span>Salve a ficha primeiro: o diário começa depois que o cliente existe.</span></div>`; return; }
+  const l = gdiLista(c).slice().sort((a, b) => b.em - a.em), cu = gdiCumprido(c), g = gdGarantia(c), z = gdiZap(c);
+  box.innerHTML = `
+    <div class="gdi-topo">
+      <div><small>Plano cumprido</small><b id="gdiPct">${cu.pct == null ? '–' : Math.round(cu.pct) + '%'}</b></div>
+      <div><small>Enviadas</small><b>${cu.env}</b></div>
+      <div><small>Cliente fez</small><b>${cu.fez}</b></div>
+      <div><small>Recusou ou venceu</small><b>${cu.recusou + cu.venceu}</b></div>
+    </div>
+    <div class="gdi-novo">
+      <div class="eq-campos">
+        <div class="campo"><label>Tipo</label><select id="gdiTipo" data-ordem="natural">${GDI_TIPOS.map(t => `<option>${t}</option>`).join('')}</select></div>
+        <div class="campo"><label>Prazo para fazer <span class="fraco">ex.: fim da promoção</span></label><input type="date" id="gdiPrazo"></div>
+      </div>
+      <div class="campo" style="margin-top:10px"><label>Recomendação <span class="fraco">o texto que vai para o cliente</span></label><textarea id="gdiTexto" rows="3" placeholder="Transfira 50.000 pontos Livelo para a LATAM com 100% de bônus até 30/11, fim da promoção."></textarea></div>
+      <div class="gdi-bts" style="margin-top:10px;justify-content:flex-end"><button type="button" class="bt primario p" id="gdiAdd"><svg><use href="#i-mais"/></svg>Registrar recomendação</button></div>
+    </div>
+    <div class="gdi-lista">${l.length ? l.map(it => {
+      const st = gdiStatus(it);
+      return `<div class="gdi-item" data-id="${esc(it.id)}">
+        <div class="gdi-cab"><b>${esc(it.tipo)}</b><span>${gdiQuando(it.em)}</span>${it.prazo ? `<span>prazo ${gcDataTxt(it.prazo)}</span>` : ''}<span class="gdi-st ${st}">${GDI_ST[st]}</span></div>
+        <div class="gdi-txt">${esc(it.texto)}</div>
+        ${(it.hist || []).length ? `<div class="gdi-hist">${it.hist.map(h => `${GDI_ST[h.status] || h.status}: ${gdiQuando(h.em)}`).join(' · ')}</div>` : ''}
+        <div class="gdi-bts">
+          ${z ? `<a class="bt p fantasma" data-gdi="zap" href="https://wa.me/${z}?text=${encodeURIComponent(it.texto)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Enviar pelo WhatsApp</a>` : `<span class="fraco" style="font-size:calc(12px * var(--esc))">Sem WhatsApp na ficha</span>`}
+          <select data-gdi="st" aria-label="Status">${['registrada', 'enviado', 'fez', 'recusou'].map(k => `<option value="${k}"${(it.status || 'registrada') === k ? ' selected' : ''}>${GDI_ST[k]}</option>`).join('')}</select>
+          <button type="button" class="bt p fantasma" data-gdi="prints"><svg><use href="#i-imagem"/></svg>Prints</button>
+          <button type="button" class="bt p vermelho-solido" data-gdi="del"><svg><use href="#i-lixo"/></svg>Excluir</button>
+        </div>
+        <div class="campo"><label>Observação</label><input type="text" data-gdi="obs" value="${esc(it.obs || '')}" placeholder="ex.: disse que faz no fim de semana"></div>
+        <div data-gdi="caixa" hidden></div>
+      </div>`; }).join('') : `<p class="fraco" style="margin:0">Nenhuma recomendação registrada ainda.</p>`}</div>
+    <div class="gdi-gar">
+      <h4>Garantia Economia VEM <span class="gd-selo ${g.aplica ? 'ok' : 'nao'}" id="gdiGarSelo">Garantia se aplica? ${g.aplica ? 'Sim' : 'Não'}</span></h4>
+      ${g.conds.map(k => `<div class="gdi-cond ${k.ok ? 'sim' : 'nao'}"><i>${k.ok ? '✓' : '✕'}</i><span>${esc(k.txt)}</span></div>`).join('')}
+      <p class="fraco" style="margin:8px 0 0;line-height:1.5">${esc(g.motivo || '')}</p>
+      ${g.aplica ? `<div class="gd-l forte sep"><span>Valor a devolver <small>até as mensalidades pagas (${gcReais(g.mensPagas)})</small></span><b id="gdiDevolver">${gcReais(g.devolver)}</b></div>` : ''}
+    </div>
+    <div class="gdi-bts" style="margin-top:12px"><button type="button" class="bt fantasma" id="gdiExp"><svg><use href="#i-documento"/></svg>Linha do tempo para o cliente (PDF)</button></div>`;
+  const q = s => box.querySelector(s);
+  q('#gdiAdd').onclick = () => {
+    const texto = q('#gdiTexto').value.trim();
+    if (texto.length < 5) return erroNoCampo(q('#gdiTexto'), 'Escreva a recomendação.');
+    gdiMudar(cid, l2 => l2.push({id:uid(), em:Date.now(), tipo:q('#gdiTipo').value, texto, prazo:q('#gdiPrazo').value, status:'registrada', hist:[]}));
+    gdiPintar(box, cid); avisar('Recomendação registrada.', 'ok');
+  };
+  box.querySelectorAll('.gdi-item').forEach(li => {
+    const id = li.dataset.id;
+    const mudaSt = st => gdiMudar(cid, l2 => { const it = l2.find(x => x.id === id); if (it && it.status !== st){ it.status = st; (it.hist = it.hist || []).push({status:st, em:Date.now()}); } });
+    const zap = li.querySelector('[data-gdi="zap"]');
+    if (zap) zap.addEventListener('click', () => { const it = gdiLista(gcDB().find(x => x.id === cid)).find(x => x.id === id); if (it && (it.status || 'registrada') === 'registrada'){ mudaSt('enviado'); setTimeout(() => gdiPintar(box, cid), 50); } });
+    li.querySelector('[data-gdi="st"]').onchange = ev => { mudaSt(ev.target.value); gdiPintar(box, cid); };
+    li.querySelector('[data-gdi="obs"]').onchange = ev => gdiMudar(cid, l2 => { const it = l2.find(x => x.id === id); if (it) it.obs = ev.target.value.trim(); });
+    li.querySelector('[data-gdi="prints"]').onclick = () => {
+      const cx = li.querySelector('[data-gdi="caixa"]'); cx.hidden = !cx.hidden;
+      if (!cx.hidden && !cx.dataset.ok && typeof prvCaixa === 'function'){ try { prvCaixa(cx, 'diario:' + id, 'beforeend'); cx.dataset.ok = '1'; } catch(_){} }
+    };
+    const del = li.querySelector('[data-gdi="del"]');
+    del.onclick = () => {
+      if (!del.dataset.ok){ del.dataset.ok = '1'; del.innerHTML = '<svg><use href="#i-lixo"/></svg>Tem certeza? Toque de novo'; setTimeout(() => { if (del.isConnected){ delete del.dataset.ok; del.innerHTML = '<svg><use href="#i-lixo"/></svg>Excluir'; } }, 5000); return; }
+      gdiMudar(cid, l2 => { const i = l2.findIndex(x => x.id === id); if (i >= 0) l2.splice(i, 1); });
+      gdiPintar(box, cid); avisar('Recomendação excluída.', 'ok');
+    };
+  });
+  q('#gdiExp').onclick = () => gdiExportar(cid);
+}
+function gdiLinhaHTML(c){
+  const l = gdiLista(c).slice().sort((a, b) => a.em - b.em), cu = gdiCumprido(c), g = gdGarantia(c);
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Diário do plano · ${esc(c.nome)}</title>
+  <style>body{font-family:Inter,system-ui,sans-serif;color:#111;max-width:760px;margin:32px auto;padding:0 20px;line-height:1.5}h1{font-size:22px;margin:0}h2{font-size:15px;margin:24px 0 8px}
+  .it{border-left:3px solid #c9a227;padding:6px 0 10px 14px;margin:0 0 12px}.m{color:#555;font-size:13px}.st{font-weight:700}table{border-collapse:collapse}td{padding:2px 12px 2px 0}@media print{.np{display:none}}</style></head><body>
+  <h1>Diário do plano</h1><div class="m">${esc(c.nome)} · VEM Viagens & Experiências com Milhas · gerado em ${gdiQuando(Date.now())}</div>
+  <h2>Resumo</h2><table><tr><td>Recomendações enviadas</td><td><b>${cu.env}</b></td></tr><tr><td>Feitas pelo cliente</td><td><b>${cu.fez}</b></td></tr><tr><td>Plano cumprido</td><td><b>${cu.pct == null ? '–' : Math.round(cu.pct) + '%'}</b></td></tr></table>
+  <h2>Linha do tempo</h2>${l.map(it => `<div class="it"><div class="m">${gdiQuando(it.em)} · ${esc(it.tipo)}${it.prazo ? ' · prazo ' + gcDataTxt(it.prazo) : ''} · <span class="st">${GDI_ST[gdiStatus(it)]}</span></div><div>${esc(it.texto)}</div>${(it.hist || []).length ? `<div class="m">${it.hist.map(h => `${GDI_ST[h.status] || h.status}: ${gdiQuando(h.em)}`).join(' · ')}</div>` : ''}${it.obs ? `<div class="m">Obs.: ${esc(it.obs)}</div>` : ''}</div>`).join('') || '<p>Nenhuma recomendação registrada.</p>'}
+  ${c.plano === 'anual' ? `<h2>Garantia Economia VEM</h2><p>${g.conds.map(k => (k.ok ? '✓ ' : '✕ ') + esc(k.txt)).join('<br>')}</p><p><b>Garantia se aplica: ${g.aplica ? 'sim' : 'não'}.</b> ${esc(g.motivo || '')}${g.aplica ? ` Valor a devolver: <b>${gcReais(g.devolver)}</b>.` : ''}</p>` : ''}
+  <p class="np"><button onclick="print()">Salvar em PDF ou imprimir</button></p></body></html>`;
+}
+function gdiExportar(cid){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  const w = window.open('', '_blank');
+  if (!w){ avisar('O navegador bloqueou a janela. Libere as janelas deste site e tente de novo.', 'alerta', 6000); return; }
+  w.document.open(); w.document.write(gdiLinhaHTML(c)); w.document.close();
+}
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const vista = d.querySelector('.dr-corpo .eq-vista'); if (!vista || vista.querySelector('#gdiBox')) return v;
+    const html = `<div class="eq-tit">Diário do plano</div><div id="gdiBox"></div>`;
+    const tReg = [...vista.querySelectorAll(':scope > .eq-tit')].find(t => /Regras/.test(t.textContent));
+    if (tReg) tReg.insertAdjacentHTML('beforebegin', html); else vista.insertAdjacentHTML('beforeend', html);
+    gdiPintar(vista.querySelector('#gdiBox'), _gcEd.id);
+    return v;
+  };
+})();
+</script>
+
+
 <style id="gfi-css">
 /* ══ FICHA DO CLIENTE DA GESTÃO EM ABAS (26/11/2026) ═══════════════════════════
    Uma aba por assunto, nada de página comprida. Novas: Origem e indicação
@@ -85095,6 +85569,7 @@ function gexExcluir(id, destId){
 #dlgGestao .gfi-pilha > .gfi-painel{ grid-area:1 / 1; min-width:0; }
 /* altura fixa: a aba maior dá a altura de todas; a escondida ocupa o lugar sem aparecer */
 #dlgGestao .gfi-pilha > .gfi-painel[hidden]{ display:block !important; visibility:hidden; pointer-events:none; }
+#dlgGestao .gfi-pilha > .gfi-painel[hidden] *{ visibility:hidden !important; transition:none !important; }
 #dlgGestao .gfi-painel > .eq-tit:first-child{ display:none; }
 .gfi-novo{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-top:12px; padding:12px; border:1px dashed var(--fio); border-radius:12px; }
 .gfi-novo[hidden]{ display:none !important; }
@@ -85369,11 +85844,13 @@ function cimpAbrir(){
   });
   let plano = null;
   const txt = $('#cimpTxt'), ok = $('#cimpOk');
-  $('#cimpF').onclick = fecharFolha;
+  const esquecer = () => { try { sessionStorage.removeItem('torre-colar-carteira'); } catch(_){} };
+  $('#cimpF').onclick = () => { esquecer(); fecharFolha(); };
   txt.oninput = () => { plano = null; $('#cimpPrevia').innerHTML = ''; ok.innerHTML = '<svg><use href="#i-ok"/></svg>Conferir'; };
   ok.onclick = () => {
     if (plano){
-      const r = cimpAplicar(plano); fecharFolha();
+      const de_novo = cimpLer(txt.value); if (de_novo.erro) return erroNoCampo(txt, de_novo.erro);
+      const r = cimpAplicar(de_novo.plano); esquecer(); fecharFolha();
       avisar(`${r.novas ? (r.novas === 1 ? '1 pessoa cadastrada, ' : r.novas + ' pessoas cadastradas, ') : ''}${r.lanc === 1 ? '1 saldo lançado' : r.lanc + ' saldos lançados'}.`, 'ok', 6000);
       return;
     }
@@ -85394,5 +85871,77 @@ function cimpAbrir(){
 })();
 </script>
 
+
+<script id="cimp2-js">
+/* ── Bloco de carteira colado na Gestão (26/11/2026) ──────────────────────────
+   O bloco de contas e saldos é da carteira do cliente. Colado na janela da
+   Gestão, a Torre reconhece, abre a carteira certa e já mostra a conferência
+   (Carteira › Contas › Colar dados prontos), em vez de recusar em silêncio.
+   Os erros da janela da Gestão passam a aparecer na tela. */
+function cimp2Candidatos(txt){
+  let j; try { j = JSON.parse(String(txt || '').trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '')); } catch(_){ return null; }
+  if (!j || !j.vem_carteira || !Array.isArray(j.contas)) return null;
+  const tit = j.contas.find(x => /^titular/i.test(x.papel || '')) || j.contas[0];
+  const n = cimpNorm(tit && tit.nome), pri = n.split(' ')[0];
+  const cands = gcDB().filter(c => cimpNorm(c.nome).split(' ')[0] === pri);
+  return {nome:tit ? tit.nome : '', cands};
+}
+(function(){
+  const _ab = geImportarAbrir;
+  geImportarAbrir = function(){
+    const v = _ab.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d) return v;
+    const ta = d.querySelector('#geImpTxt');
+    if (ta && !ta.closest('.campo')){ const w = document.createElement('div'); w.className = 'campo'; ta.parentNode.insertBefore(w, ta); w.appendChild(ta); }
+    const ok = d.querySelector('#geImpOk'); if (!ok) return v;
+    const orig = ok.onclick;
+    ok.onclick = ev => {
+      const k = cimp2Candidatos(ta.value);
+      if (!k) return orig.call(ok, ev);
+      const ir = c => {
+        if (!c.carteiraId) return erroNoCampo(ta, `${esc(c.nome)} ainda não tem carteira no servidor. Abra a Gestão com a internet ligada e tente de novo.`);
+        try { sessionStorage.setItem('torre-colar-carteira', ta.value); } catch(_){}
+        gcAbrirCarteira(c.id);
+      };
+      if (k.cands.length === 1) return ir(k.cands[0]);
+      if (!k.cands.length) return erroNoCampo(ta, `Este bloco é da carteira de ${esc(k.nome)}, mas não há cliente da gestão com esse nome. Cadastre o cliente primeiro.`);
+      /* mais de um com o mesmo primeiro nome: a pessoa escolhe */
+      const box = document.createElement('div'); box.id = 'cimp2Esc'; box.style.marginTop = '12px';
+      box.innerHTML = `<div class="ge-alerta info" style="margin:0 0 10px"><svg><use href="#i-info"/></svg><span style="font-size:calc(15px * var(--esc));line-height:1.5"><b>Este bloco é de contas e saldos.</b> Ele entra na carteira do cliente › Contas › Colar dados prontos. Toque no cliente certo e a Torre abre essa tela com a conferência pronta (${esc(k.nome)}).</span></div>
+        <div style="display:grid;gap:8px">${k.cands.map(c => `<button type="button" class="bt fantasma" data-id="${esc(c.id)}"><svg><use href="#i-carteira"/></svg>Abrir a carteira de ${esc(c.nome)}</button>`).join('')}</div>`;
+      const velho = d.querySelector('#cimp2Esc'); if (velho) velho.remove();
+      ta.closest('.campo').insertAdjacentElement('afterend', box);
+      box.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => ir(k.cands.find(c => c.id === b.dataset.id)));
+    };
+    return v;
+  };
+  /* na carteira: depois que os dados do servidor chegam, abre a conferência pronta */
+  if (typeof GC_CARTEIRA !== 'undefined' && GC_CARTEIRA){
+    let txt = null; try { txt = sessionStorage.getItem('torre-colar-carteira'); } catch(_){}
+    if (txt){
+      /* a carteira redesenha a tela quando os dados do servidor chegam e isso fecha
+         a janela: o bloco fica guardado até a pessoa clicar em Confirmar ou Fechar,
+         e a conferência volta sozinha se sumir antes disso */
+      let n = 0, desde = 0;
+      const t = setInterval(() => {
+        n++;
+        let ainda = null; try { ainda = sessionStorage.getItem('torre-colar-carteira'); } catch(_){}
+        if (!ainda || n > 120){ clearInterval(t); return; }
+        if (!(window._gcCarteira && window._gcCarteira.nome)) return;
+        if (!desde) desde = n;
+        if (n - desde < 3) return;
+        const aberta = document.body.classList.contains('folha-aberta');
+        if (aberta && document.getElementById('cimpTxt')) return;   /* a conferência está na tela */
+        if (aberta) return;   /* outra janela aberta: espera */
+        try { irPara('saldo'); irParaAba('saldo', 'sl-contas'); } catch(_){}
+        cimpAbrir();
+        const ta2 = document.getElementById('cimpTxt'); if (!ta2) return;
+        ta2.value = ainda;
+        document.getElementById('cimpOk').click();
+      }, 500);
+    }
+  }
+})();
+</script>
 </body>
 </html>
