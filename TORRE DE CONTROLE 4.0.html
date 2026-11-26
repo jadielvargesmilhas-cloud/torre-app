@@ -37480,7 +37480,10 @@ function editarReserva(id, rascunho){
       /* A data de emissão passou a ser digitada, e não mais assumida como hoje:
          quem lança uma emissão de semana passada precisa registrar o dia certo. */
       status:$('#rsStatus').value, criada:($('#rsCriada') && $('#rsCriada').value) || r.criada || hojeISO(),
-      itin:$('#rsItin').value.trim()};
+      itin:$('#rsItin').value.trim(),
+      /* venda que nasceu numa emissão da gestão: custo do milheiro travado na data e o vínculo de volta (25/11/2026) */
+      cpmFixo:Number(r.cpmFixo) || 0, gestaoCli:r.gestaoCli || '', gestaoEmId:r.gestaoEmId || ''};
+    if (!novo.gestaoEmId){ delete novo.cpmFixo; delete novo.gestaoCli; delete novo.gestaoEmId; }
     if (!conferirAntesDeSalvar('reservas', novo, 'uma emissão')) return;
     if (id) DB.reservas[DB.reservas.findIndex(x => x.id === id)] = novo; else DB.reservas.push(novo);
     /* Emissão aberta a partir de um trecho da jornada: fica ligada a ele. */
@@ -37499,6 +37502,7 @@ function editarReserva(id, rascunho){
        consumida e a tela dizia que não. */
     sincCpfDaEmissao(novo);
     sincronizarSaidaDaEmissao(novo);
+    if (typeof geVinculou === 'function') geVinculou(novo);
     salvar(); fecharFolha();
     renderBalcao(); renderEmissoes(); renderFita();
     if (vistaAtual === 'rota' && typeof renderRota === 'function') renderRota();
@@ -84227,6 +84231,497 @@ function abrirResumoHack(){
   abrirFolha({titulo:'Resumo do Hack do Carrinho', largura:'estreita', corpo,
     pe:`<button class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
 }
+</script>
+
+<style id="ge-css">
+/* ══ EMISSÕES DA GESTÃO (25/11/2026) ═════════════════════════════════════════════
+   O resultado de cada emissão feita para um cliente de gestão, pelas regras da
+   VEM: A (dinheiro), B (milhas do cliente), C (milhas da VEM). Receita de produto
+   (a milha vendida) e receita de serviço (a comissão) ficam separadas: a milha
+   vira uma emissão em Emitidos, com o custo travado na data; a comissão mora
+   só aqui. As taxas de embarque são repasse: entram e saem, nunca são lucro. */
+.ge-tipos{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.ge-tipo{ all:unset; box-sizing:border-box; cursor:pointer; padding:10px 12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); display:flex; flex-direction:column; gap:3px; }
+.ge-tipo b{ font-size:calc(13.5px * var(--esc)); color:var(--giz); }
+.ge-tipo small{ font-size:calc(11.5px * var(--esc)); color:var(--grafite); line-height:1.35; }
+.ge-tipo.on{ border-color:var(--ouro); box-shadow:0 0 0 1px var(--ouro) inset; background:color-mix(in srgb, var(--ouro) 8%, var(--sup-1)); }
+.ge-tipo:focus-visible{ outline:2px solid var(--anil-claro); outline-offset:2px; }
+.ge-res{ border:1px solid var(--fio); border-radius:14px; background:var(--sup-1); padding:6px 16px 10px; margin-top:16px; }
+.ge-l{ display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:7px 0; border-top:1px solid var(--fio-suave); font-size:calc(13.5px * var(--esc)); }
+.ge-l:first-child{ border-top:0; }
+.ge-l span{ color:var(--giz-2); }
+.ge-l span small{ display:block; color:var(--grafite); font-size:calc(11.5px * var(--esc)); margin-top:2px; }
+.ge-l b{ font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+.ge-l.forte b{ font-size:calc(16px * var(--esc)); }
+.ge-l.lucro b{ color:var(--jade); font-size:calc(19px * var(--esc)); }
+.ge-l.sep{ border-top:1px solid var(--fio); margin-top:4px; padding-top:10px; }
+.ge-alerta{ display:grid; grid-template-columns:18px minmax(0,1fr); gap:9px; padding:10px 12px; border-radius:12px; margin-top:12px; font-size:calc(12.5px * var(--esc)); line-height:1.5;
+  border:1px solid color-mix(in srgb, var(--brasa) 45%, transparent); background:color-mix(in srgb, var(--brasa) 9%, transparent); color:var(--giz); }
+.ge-alerta svg{ width:17px; height:17px; fill:none; stroke:var(--brasa); stroke-width:2; margin-top:1px; }
+.ge-alerta.info{ border-color:var(--fio); background:var(--sup-1); }
+.ge-alerta.info svg{ stroke:var(--anil, #3D7BF0); }
+.ge-stats{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-bottom:14px; }
+.ge-stat{ border:1px solid var(--fio); border-radius:12px; background:var(--sup-1); padding:10px 12px; display:flex; flex-direction:column; gap:3px; min-width:0; }
+.ge-stat small{ font-size:calc(11px * var(--esc)); letter-spacing:.06em; text-transform:uppercase; color:var(--grafite); }
+.ge-stat b{ font-size:calc(16px * var(--esc)); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ge-stat.lucro{ border-color:color-mix(in srgb, var(--jade) 55%, transparent); }
+.ge-stat.lucro b{ color:var(--jade); }
+.ge-em{ border:1px solid var(--fio); border-radius:14px; background:var(--sup-1); padding:12px 14px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 14px; align-items:center; }
+.ge-em + .ge-em{ margin-top:8px; }
+.ge-em-tit{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; }
+.ge-em-tit b{ font-size:calc(14px * var(--esc)); }
+.ge-chip{ font-size:calc(11px * var(--esc)); font-weight:600; padding:2px 8px; border-radius:99px; border:1px solid var(--fio); color:var(--grafite); white-space:nowrap; }
+.ge-chip.c{ color:var(--ouro); border-color:color-mix(in srgb, var(--ouro) 50%, transparent); }
+.ge-chip.ok{ color:var(--jade); border-color:color-mix(in srgb, var(--jade) 50%, transparent); }
+.ge-chip.alerta{ color:var(--brasa); border-color:color-mix(in srgb, var(--brasa) 50%, transparent); }
+.ge-em small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.ge-em-num{ text-align:right; display:flex; flex-direction:column; gap:2px; }
+.ge-em-num b{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ge-em-num .lucro{ color:var(--jade); font-size:calc(12.5px * var(--esc)); font-weight:600; }
+.ge-em-bts{ grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px; }
+.ge-msg{ width:100%; min-height:220px; font:inherit; font-size:calc(13.5px * var(--esc)); line-height:1.55; padding:12px; border-radius:12px; border:1px solid var(--fio); background:var(--sup-1); color:var(--giz); resize:vertical; }
+.ge-oculto{ display:none !important; }
+@media (max-width:760px){
+  .ge-tipos{ grid-template-columns:minmax(0,1fr); }
+  .ge-stats{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .ge-em{ grid-template-columns:minmax(0,1fr); }
+  .ge-em-num{ text-align:left; }
+}
+</style>
+<script id="ge-js">
+/* ── regras (Ajustes da gestão) ─────────────────────────────────────────────── */
+const GE_REGRAS_PADRAO = {pct:30, minimo:0, taxaB:300, minBTrecho:0, tabela:false, pctAlto:25, limiteAlto:20000, pctUrgente:35, diasUrgente:30};
+const GE_TIPOS = {
+  A:{n:'A · Dinheiro', d:'O cliente paga a companhia. A VEM cobra % da economia.'},
+  B:{n:'B · Milhas do cliente', d:'Emitida com as milhas dele. Taxa fixa por passageiro por trecho.'},
+  C:{n:'C · Milhas da VEM', d:'Emitida com as suas milhas. Milheiro com margem + % da economia.'}
+};
+function geRegras(){ const r = (DB.cfg && DB.cfg.gestaoRegras) || {}; return Object.assign({}, GE_REGRAS_PADRAO, r); }
+function geN(v){ return Number(v) || 0; }
+function gePctTxt(v){ return String(Math.round(geN(v) * 100) / 100).replace('.', ','); }
+
+/* % sugerido: o padrão, ou a tabela flexível quando ligada nos Ajustes. */
+function gePctSugerido(e, c, econ){
+  const rg = geRegras();
+  if (!rg.tabela) return {pct:rg.pct, por:'padrão da VEM'};
+  const dias = e.dataVoo && e.data ? Math.round((new Date(e.dataVoo + 'T12:00:00') - new Date(e.data + 'T12:00:00')) / 864e5) : null;
+  if (e.complexo || (dias != null && dias >= 0 && dias < rg.diasUrgente)) return {pct:rg.pctUrgente, por:e.complexo ? 'roteiro complexo' : `viagem em menos de ${rg.diasUrgente} dias`};
+  if (econ > rg.limiteAlto || (c && c.anual)) return {pct:rg.pctAlto, por:c && c.anual ? 'cliente de gestão anual' : `economia acima de ${gcReais(rg.limiteAlto)}`};
+  return {pct:rg.pct, por:'padrão da VEM'};
+}
+
+/* A conta inteira, em centavos na origem (cada total é a soma do que aparece). */
+function geCalc(e, c){
+  const rg = geRegras(), t = e.tipo || 'C';
+  const pax = Math.max(1, Math.round(geN(e.pax)) || 1), trechos = Math.max(1, Math.round(geN(e.trechos)) || 1);
+  const mercado = centavos(geN(e.mercado));
+  const repasse = e.repMoeda === 'USD' ? centavos(geN(e.repValor) * geN(e.repCambio)) : centavos(geN(e.repValor));
+  const r = {tipo:t, pax, trechos, mercado, repasse, valorMilhas:0, custo:0, economia:0, pct:0, pctPor:'', taxa:0, minimoAplicado:false, alertas:[]};
+  if (t === 'C'){
+    r.valorMilhas = centavos(geN(e.milhas) / 1000 * geN(e.milheiro));
+    r.custo = centavos(geN(e.milhas) / 1000 * geN(e.custoMil));
+    r.economia = centavos(mercado - r.valorMilhas);
+  } else if (t === 'A'){
+    r.pagoCia = centavos(geN(e.pagoCia));
+    r.economia = centavos(mercado - r.pagoCia);
+  }
+  if (t === 'A' || t === 'C'){
+    const sug = gePctSugerido(e, c, r.economia);
+    r.pct = e.pct != null && e.pct !== '' ? geN(e.pct) : sug.pct; r.pctPor = e.pct != null && e.pct !== '' ? 'escolhido nesta emissão' : sug.por;
+    const pelaPct = r.economia > 0 ? centavos(r.economia * r.pct / 100) : 0;
+    r.taxa = pelaPct;
+    if (rg.minimo > 0 && pelaPct < rg.minimo){ r.taxa = centavos(rg.minimo); r.minimoAplicado = true; }
+    if (!(mercado > 0)) r.alertas.push('Falta o preço de mercado: sem ele não há economia nem comissão.');
+    else if (r.economia <= 0) r.alertas.push(`Não houve economia: ${t === 'C' ? 'o valor das milhas' : 'o que o cliente pagou'} não ficou abaixo do preço de mercado.`);
+  } else {
+    const porTrecho = centavos(geN(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB) * pax);
+    const minT = centavos(rg.minBTrecho);
+    r.taxaPorTrecho = minT > porTrecho ? minT : porTrecho;
+    r.minimoAplicado = minT > porTrecho;
+    r.taxa = centavos(r.taxaPorTrecho * trechos);
+  }
+  r.precoSemTaxas = centavos(r.valorMilhas + r.taxa);
+  r.precoTotal = centavos(r.precoSemTaxas + repasse);
+  r.lucroMilha = centavos(r.valorMilhas - r.custo);
+  r.lucroTaxa = r.taxa;
+  r.lucro = centavos(r.lucroMilha + r.lucroTaxa);
+  r.recebido = centavos(geN(e.recebido));
+  r.aReceber = centavos(r.precoTotal - r.recebido);
+  if (t === 'C' && mercado > 0 && r.precoSemTaxas > mercado) r.alertas.push(`O preço ao cliente (${gcReais(r.precoSemTaxas)}) passou do preço de mercado (${gcReais(mercado)}). Pela regra da VEM ele nunca pode passar: baixe o milheiro cobrado ou o percentual.`);
+  if (t === 'C' && geN(e.milheiro) > 0 && geN(e.custoMil) > 0 && geN(e.milheiro) < geN(e.custoMil)) r.alertas.push('O milheiro cobrado está abaixo do custo real: a milha dá prejuízo.');
+  if (e.repMoeda === 'USD' && geN(e.repValor) > 0 && !(geN(e.repCambio) > 0)) r.alertas.push('Falta o câmbio das taxas em dólar (o da fatura do cartão).');
+  return r;
+}
+
+function geDoCliente(c){ if (!Array.isArray(c.emissoes)) c.emissoes = []; return c.emissoes; }
+function geTotais(c){
+  const rs = geDoCliente(c).map(e => geCalc(e, c));
+  const s = k => centavos(soma(rs.map(r => r[k])));
+  return {n:rs.length, precoTotal:s('precoTotal'), custo:s('custo'), repasse:s('repasse'), lucroMilha:s('lucroMilha'), lucroTaxa:s('lucroTaxa'), lucro:s('lucro'), recebido:s('recebido'), aReceber:s('aReceber')};
+}
+
+/* ── lista de emissões do cliente ───────────────────────────────────────────── */
+function geAbrir(cid){
+  let d = document.getElementById('dlgGestao');
+  if (!d || !d.open){ abrirGestaoClientes(); d = document.getElementById('dlgGestao'); }
+  if (!d) return;
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  const ems = geDoCliente(c).slice().sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
+  const T = geTotais(c);
+  d.innerHTML = `<div class="dr-painel">${gcCab('Emissões da gestão', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista">
+      ${ems.length ? `<div class="ge-stats">
+        <div class="ge-stat"><small>Total da venda</small><b>${gcReais(T.precoTotal)}</b></div>
+        <div class="ge-stat"><small>Custo das milhas</small><b>${gcReais(T.custo)}</b></div>
+        <div class="ge-stat"><small>Taxas de repasse</small><b>${gcReais(T.repasse)}</b></div>
+        <div class="ge-stat"><small>A receber</small><b>${gcReais(T.aReceber)}</b></div>
+        <div class="ge-stat"><small>Lucro na milha</small><b>${gcReais(T.lucroMilha)}</b></div>
+        <div class="ge-stat"><small>Lucro na comissão</small><b>${gcReais(T.lucroTaxa)}</b></div>
+        <div class="ge-stat lucro"><small>Lucro total</small><b>${gcReais(T.lucro)}</b></div>
+        <div class="ge-stat"><small>Recebido</small><b>${gcReais(T.recebido)}</b></div>
+      </div>
+      <div class="eq-tit">Emissões</div>
+      ${ems.map(e => geLinhaHTML(c, e)).join('')}` : `<div class="eq-vazio"><span class="eq-selo"><svg><use href="#i-aviao"/></svg></span><b>Nenhuma emissão de ${esc(gcPrimeiro(c.nome))} ainda</b>
+        <p>Registre cada emissão: a Torre calcula a economia, a sua comissão, o custo das milhas e o lucro, e separa o que é lucro na milha do que é lucro na comissão.</p></div>`}
+      <div class="ge-alerta info" style="margin-top:14px"><svg><use href="#i-info"/></svg><span><b>Como a conta se divide:</b> a parte das milhas da VEM (tipo C) vira uma emissão em Emitidos, com o custo do milheiro travado na data: é lá que o saldo da conta baixa e que aparece o lucro na milha. A comissão é serviço e fica só aqui. Taxas de embarque são repasse: entram e saem, nunca contam como lucro.</span></div>
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="geVoltar">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt fantasma" id="geRegrasBt"><svg><use href="#i-ajustes"/></svg>Regras de cobrança</button>
+      <button type="button" class="bt primario" id="geNova"><svg><use href="#i-mais"/></svg>Nova emissão</button></footer></div>`;
+  d.querySelector('#geVoltar').onclick = () => gcDesenharLista(d);
+  d.querySelector('#geNova').onclick = () => geEditar(cid, null);
+  d.querySelector('#geRegrasBt').onclick = () => geRegrasAbrir(cid);
+  d.querySelectorAll('.ge-em[data-id]').forEach(li => {
+    const eid = li.dataset.id;
+    li.querySelector('[data-ge="ed"]').onclick = () => geEditar(cid, eid);
+    li.querySelector('[data-ge="msg"]').onclick = () => geMensagem(cid, eid);
+    const bt = li.querySelector('[data-ge="torre"]'); if (bt) bt.onclick = () => geRegistrarNaTorre(cid, eid);
+    const bv = li.querySelector('[data-ge="ver"]'); if (bv) bv.onclick = () => { d.close(); if (typeof editarReserva === 'function') editarReserva(bv.dataset.r); };
+  });
+}
+function geLinhaHTML(c, e){
+  const r = geCalc(e, c);
+  const res = e.reservaId ? (DB.reservas || []).find(x => x.id === e.reservaId) : null;
+  const rec = r.aReceber <= 0.004 ? '<span class="ge-chip ok">Recebido</span>' : r.recebido > 0 ? `<span class="ge-chip alerta">Falta receber ${gcReais(r.aReceber)}</span>` : '<span class="ge-chip alerta">A receber</span>';
+  const torre = e.tipo !== 'C' ? '' : res ? `<button type="button" class="bt p fantasma" data-ge="ver" data-r="${esc(res.id)}"><svg><use href="#i-aviao"/></svg>Ver em Emitidos</button>`
+    : `<button type="button" class="bt p primario" data-ge="torre"><svg><use href="#i-aviao"/></svg>Registrar em Emitidos (baixa o saldo)</button>`;
+  return `<div class="ge-em" data-id="${esc(e.id)}">
+    <div><div class="ge-em-tit"><b>${esc(e.trecho || 'Emissão')}</b><span class="ge-chip${e.tipo === 'C' ? ' c' : ''}">${esc(GE_TIPOS[e.tipo || 'C'].n)}</span>${rec}${r.alertas.length ? '<span class="ge-chip alerta">Conferir</span>' : ''}</div>
+      <small>${esc([e.data ? gcDataTxt(e.data) : '', e.loc, e.classe, r.pax + (r.pax === 1 ? ' passageiro' : ' passageiros'), e.prog ? prog(e.prog).n : ''].filter(Boolean).join(' · '))}</small></div>
+    <div class="ge-em-num"><b>${gcReais(r.precoTotal)}</b><span class="lucro">lucro ${gcReais(r.lucro)}</span></div>
+    <div class="ge-em-bts"><button type="button" class="bt p fantasma" data-ge="ed"><svg><use href="#i-lapis"/></svg>Abrir</button>
+      <button type="button" class="bt p fantasma" data-ge="msg"><svg><use href="#i-link"/></svg>Mensagem ao cliente</button>${torre}</div>
+  </div>`;
+}
+
+/* ── o formulário de uma emissão ────────────────────────────────────────────── */
+function geEditar(cid, eid){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  const orig = eid ? geDoCliente(c).find(x => x.id === eid) : null;
+  const rg = geRegras();
+  const e = orig ? JSON.parse(JSON.stringify(orig)) : {id:uid(), tipo:'C', data:hojeISO(), pax:1, trechos:1, repMoeda:'USD', classe:'', prog:'', criado:Date.now()};
+  const progs = PROG_IDS.filter(p => ['milhas'].includes((PROGRAMAS[p] || {}).tipo));
+  const m = v => v != null && v !== '' && geN(v) ? moedaTxt(geN(v)) : '';
+  d.innerHTML = `<div class="dr-painel">${gcCab(orig ? 'Emissão da gestão' : 'Nova emissão da gestão', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista" id="geForm">
+      <div class="eq-tit">1 · Tipo de emissão</div>
+      <div class="ge-tipos" role="radiogroup" aria-label="Tipo de emissão">${Object.entries(GE_TIPOS).map(([k, v]) => `<button type="button" role="radio" class="ge-tipo${e.tipo === k ? ' on' : ''}" data-t="${k}" aria-checked="${e.tipo === k}"><b>${v.n}</b><small>${v.d}</small></button>`).join('')}</div>
+      <div class="eq-tit">2 · A emissão</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Data da emissão</label><input type="date" id="geData" value="${esc(e.data || '')}"></div>
+        <div class="campo"><label>Código da reserva</label><input type="text" id="geLoc" value="${esc(e.loc || '')}" placeholder="2PT3KQ" autocapitalize="characters" spellcheck="false"></div>
+        <div class="campo"><label>Trecho</label><input type="text" id="geTrecho" value="${esc(e.trecho || '')}" placeholder="Nova York (JFK) → São Paulo (GRU)"></div>
+        <div class="campo"><label>Data do voo</label><input type="date" id="geVoo" value="${esc(e.dataVoo || '')}"></div>
+        <div class="campo"><label>Classe</label><select id="geClasse" data-ordem="natural"><option value="">escolha</option>${GC_CABINES.map(x => `<option${e.classe === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
+        <div class="campo"><label>Passageiros</label><input type="text" inputmode="numeric" id="gePax" value="${esc(e.pax || 1)}"></div>
+        <div class="campo ge-so-b"><label>Trechos <span class="fraco">ida e volta = 2</span></label><input type="text" inputmode="numeric" id="geTrechos" value="${esc(e.trechos || 1)}"></div>
+        <div class="campo ge-so-bc"><label>Programa de milhas</label><select id="geProg"><option value="">escolha</option>${progs.map(p => `<option value="${p}"${e.prog === p ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+      </div>
+      <div class="ge-so-ac"><div class="eq-tit">3 · Preço de mercado</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Preço de mercado <span class="fraco">todos os passageiros, mesmo voo, classe e bagagem</span></label><input type="text" inputmode="decimal" data-moeda id="geMercado" value="${m(e.mercado)}" placeholder="28.194,00"></div>
+        <div class="campo ge-so-a"><label>Quanto o cliente pagou à companhia</label><input type="text" inputmode="decimal" data-moeda id="gePagoCia" value="${m(e.pagoCia)}"></div>
+      </div>
+      <div id="gePrintBox"></div></div>
+      <div class="ge-so-c"><div class="eq-tit">4 · Milhas da VEM</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="geMilhas" value="${e.milhas ? qtdTxt(e.milhas) : ''}" placeholder="197.670"></div>
+        <div class="campo"><label>Custo real do milheiro <span class="fraco" id="geCustoDica"></span></label><input type="text" inputmode="decimal" data-moeda id="geCustoMil" value="${m(e.custoMil)}" placeholder="67,75"></div>
+        <div class="campo"><label>Milheiro cobrado</label><input type="text" inputmode="decimal" data-moeda id="geMilheiro" value="${m(e.milheiro)}" placeholder="80,00"></div>
+      </div></div>
+      <div class="ge-so-b"><div class="eq-tit">4 · Taxa da gestão</div>
+      <div class="eq-campos"><div class="campo"><label>Taxa por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="geTaxaB" value="${m(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB)}"></div></div></div>
+      <div class="ge-so-ac"><div class="eq-tit">5 · Comissão</div>
+      <div class="eq-campos">
+        <div class="campo"><label>% sobre a economia <span class="fraco" id="gePctDica"></span></label><input type="text" inputmode="decimal" id="gePct" value="${e.pct != null && e.pct !== '' ? gePctTxt(e.pct) : ''}" placeholder="${gePctTxt(rg.pct)}"></div>
+        ${rg.tabela ? `<label class="chk" style="align-self:end"><input type="checkbox" id="geComplexo"${e.complexo ? ' checked' : ''}><span>Roteiro complexo</span></label>` : ''}
+      </div></div>
+      <div class="eq-tit">6 · Taxas de repasse <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">embarque e aeroporto, pelo valor real</span></div>
+      <div class="eq-campos">
+        <div class="campo"><label>Moeda</label><select id="geRepMoeda" data-ordem="natural"><option value="BRL"${e.repMoeda !== 'USD' ? ' selected' : ''}>Reais (R$)</option><option value="USD"${e.repMoeda === 'USD' ? ' selected' : ''}>Dólar (US$)</option></select></div>
+        <div class="campo"><label>Valor cobrado pela companhia</label><input type="text" inputmode="decimal" data-moeda id="geRepValor" value="${m(e.repValor)}" placeholder="16,80"></div>
+        <div class="campo ge-so-usd"><label>Câmbio da fatura</label><input type="text" inputmode="decimal" id="geRepCambio" value="${e.repCambio ? String(e.repCambio).replace('.', ',') : ''}" placeholder="5,4321"></div>
+      </div>
+      <div class="eq-tit">7 · Recebimento</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Valor já recebido</label><input type="text" inputmode="decimal" data-moeda id="geRecebido" value="${m(e.recebido)}"></div>
+        <div class="campo"><label>Data do último recebimento</label><input type="date" id="geRecebidoEm" value="${esc(e.recebidoEm || '')}"></div>
+      </div>
+      <div class="eq-tit">Resultado</div>
+      <div id="geRes"></div>
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="geF">Fechar</button><span class="esticar"></span>
+      ${orig ? `<button type="button" class="bt vermelho-solido" id="geDel"><svg><use href="#i-lixo"/></svg>Excluir</button>` : ''}
+      <button type="button" class="bt primario" id="geSalvar"><svg><use href="#i-ok"/></svg>Salvar</button></footer></div>`;
+  const $g = s => d.querySelector(s);
+  if (typeof prvCaixa === 'function') try { prvCaixa($g('#gePrintBox'), 'gestao:' + e.id, 'beforeend'); } catch(_){}
+  const ler = () => {
+    const pct = String($g('#gePct').value || '').trim();
+    Object.assign(e, {data:$g('#geData').value, loc:$g('#geLoc').value.trim().toUpperCase(), trecho:$g('#geTrecho').value.trim(), dataVoo:$g('#geVoo').value,
+      classe:$g('#geClasse').value, pax:Math.max(1, parseInt($g('#gePax').value, 10) || 1), trechos:Math.max(1, parseInt($g('#geTrechos').value, 10) || 1), prog:$g('#geProg').value,
+      mercado:moedaNum($g('#geMercado').value) || 0, pagoCia:moedaNum($g('#gePagoCia').value) || 0,
+      milhas:qtdNum($g('#geMilhas').value) || 0, custoMil:moedaNum($g('#geCustoMil').value) || 0, milheiro:moedaNum($g('#geMilheiro').value) || 0,
+      taxaB:moedaNum($g('#geTaxaB').value), pct:pct === '' ? '' : (parseFloat(pct.replace(',', '.')) || 0), complexo:!!($g('#geComplexo') || {}).checked,
+      repMoeda:$g('#geRepMoeda').value, repValor:moedaNum($g('#geRepValor').value) || 0, repCambio:parseFloat(String($g('#geRepCambio').value || '').replace(/\./g, '').replace(',', '.')) || 0,
+      recebido:moedaNum($g('#geRecebido').value) || 0, recebidoEm:$g('#geRecebidoEm').value});
+    return e;
+  };
+  const mostrar = () => {
+    const t = e.tipo;
+    d.querySelectorAll('.ge-so-a').forEach(x => x.classList.toggle('ge-oculto', t !== 'A'));
+    d.querySelectorAll('.ge-so-b').forEach(x => x.classList.toggle('ge-oculto', t !== 'B'));
+    d.querySelectorAll('.ge-so-c').forEach(x => x.classList.toggle('ge-oculto', t !== 'C'));
+    d.querySelectorAll('.ge-so-ac').forEach(x => x.classList.toggle('ge-oculto', t === 'B'));
+    d.querySelectorAll('.ge-so-bc').forEach(x => x.classList.toggle('ge-oculto', t === 'A'));
+    d.querySelectorAll('.ge-so-usd').forEach(x => x.classList.toggle('ge-oculto', $g('#geRepMoeda').value !== 'USD'));
+  };
+  const pintar = () => {
+    ler(); mostrar();
+    const r = geCalc(e, c);
+    const cpm = e.prog && typeof cpmPorPrograma === 'function' ? cpmPorPrograma()[e.prog] : null;
+    $g('#geCustoDica').textContent = cpm ? `· na Torre: ${gcReais(cpm)}` : '';
+    $g('#gePctDica').textContent = e.tipo === 'B' ? '' : `· ${gePctTxt(r.pct)}% (${r.pctPor})`;
+    const L = (a, b, cls, sub) => `<div class="ge-l${cls ? ' ' + cls : ''}"><span>${a}${sub ? `<small>${sub}</small>` : ''}</span><b>${b}</b></div>`;
+    let h = '';
+    if (e.tipo === 'C'){
+      h += L('Valor das milhas', gcReais(r.valorMilhas), '', `${nBR(geN(e.milhas))} ÷ 1.000 × ${gcReais(e.milheiro)}`);
+      h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.valorMilhas)}`);
+      h += L(`Comissão VEM (${gePctTxt(r.pct)}%)`, gcReais(r.taxa), '', r.minimoAplicado ? `mínimo por emissão aplicado (${gePctTxt(r.pct)}% daria menos)` : '');
+    } else if (e.tipo === 'A'){
+      h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.pagoCia)} pagos`);
+      h += L(`Comissão VEM (${gePctTxt(r.pct)}%)`, gcReais(r.taxa), '', r.minimoAplicado ? 'mínimo por emissão aplicado' : '');
+    } else {
+      h += L('Taxa da gestão', gcReais(r.taxa), '', `${gcReais(r.taxaPorTrecho)} por trecho × ${r.trechos}${r.minimoAplicado ? ' (mínimo por trecho aplicado)' : ` (${gcReais(e.taxaB)} × ${r.pax} passageiro${r.pax > 1 ? 's' : ''})`}`);
+    }
+    h += L('Preço ao cliente, sem taxas', gcReais(r.precoSemTaxas), 'forte sep');
+    h += L('Taxas de repasse', gcReais(r.repasse), '', e.repMoeda === 'USD' ? `US$ ${moedaTxt(e.repValor)} × ${String(e.repCambio || 0).replace('.', ',')}` : 'pelo valor real');
+    h += L('Total a receber do cliente', gcReais(r.precoTotal), 'forte');
+    if (e.tipo === 'C') h += L('Custo das milhas', '− ' + gcReais(r.custo), 'sep', `${nBR(geN(e.milhas))} ÷ 1.000 × ${gcReais(e.custoMil)}`);
+    h += L('Repasse à companhia', '− ' + gcReais(r.repasse), e.tipo === 'C' ? '' : 'sep');
+    if (e.tipo === 'C') h += L('Lucro na milha', gcReais(r.lucroMilha), '', `${nBR(geN(e.milhas))} ÷ 1.000 × (${gcReais(e.milheiro)} − ${gcReais(e.custoMil)})`);
+    h += L(e.tipo === 'B' ? 'Lucro na taxa' : 'Lucro na comissão', gcReais(r.lucroTaxa));
+    h += L('Lucro total', gcReais(r.lucro), 'lucro sep');
+    h += L('Já recebido', gcReais(r.recebido), 'sep');
+    h += L(r.aReceber >= 0 ? 'Falta receber' : 'Recebido a mais', gcReais(Math.abs(r.aReceber)), 'forte');
+    $g('#geRes').innerHTML = `<div class="ge-res">${h}</div>${r.alertas.map(a => `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>${esc(a)}</span></div>`).join('')}`;
+  };
+  d.querySelectorAll('.ge-tipo').forEach(b => b.onclick = () => { e.tipo = b.dataset.t; d.querySelectorAll('.ge-tipo').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); pintar(); });
+  d.querySelector('#geForm').addEventListener('input', pintar);
+  d.querySelector('#geForm').addEventListener('change', pintar);
+  $g('#geProg').addEventListener('change', () => {
+    const cpm = e.prog && typeof cpmPorPrograma === 'function' ? cpmPorPrograma()[$g('#geProg').value] : null;
+    if (cpm && !$g('#geCustoMil').value) { $g('#geCustoMil').value = moedaTxt(centavos(cpm)); pintar(); }
+  });
+  pintar();
+  $g('#geF').onclick = () => geAbrir(cid);
+  if ($g('#geDel')) $g('#geDel').onclick = () => geConfirmar(() => geEditar(cid, eid), 'Excluir esta emissão da gestão?', `${esc(e.trecho || 'Emissão')} · ${gcReais(geCalc(orig, c).precoTotal)}. ${orig.reservaId ? 'A emissão em Emitidos continua lá (e o saldo também): apague por lá se quiser desfazer a venda das milhas.' : 'Não dá para desfazer.'}`, () => {
+    c.emissoes = geDoCliente(c).filter(x => x.id !== orig.id); salvar(); avisar('Emissão excluída.', 'ok'); geAbrir(cid);
+  }, 'Excluir', true);
+  $g('#geSalvar').onclick = () => {
+    ler();
+    const faltam = [];
+    if (!e.data) faltam.push({sel:'#geData', msg:'Informe a data da emissão.'});
+    if (!e.trecho) faltam.push({sel:'#geTrecho', msg:'Informe o trecho.'});
+    if (e.tipo === 'C'){
+      if (!e.prog) faltam.push({sel:'#geProg', msg:'Escolha o programa das milhas.'});
+      if (!(e.milhas > 0)) faltam.push({sel:'#geMilhas', msg:'Informe as milhas usadas.'});
+      if (!(e.custoMil > 0)) faltam.push({sel:'#geCustoMil', msg:'Informe o custo real do milheiro.'});
+      if (!(e.milheiro > 0)) faltam.push({sel:'#geMilheiro', msg:'Informe o milheiro cobrado.'});
+    }
+    if ((e.tipo === 'A' || e.tipo === 'C') && !(e.mercado > 0)) faltam.push({sel:'#geMercado', msg:'O preço de mercado decide a economia e a comissão: informe-o (com o print).'});
+    if (e.tipo === 'A' && !(e.pagoCia > 0)) faltam.push({sel:'#gePagoCia', msg:'Informe quanto o cliente pagou à companhia.'});
+    if (e.repMoeda === 'USD' && e.repValor > 0 && !(e.repCambio > 0)) faltam.push({sel:'#geRepCambio', msg:'Informe o câmbio da fatura para converter as taxas.'});
+    if (faltam.length){ faltam.forEach(f => { const el = d.querySelector(f.sel); if (el) erroNoCampo(el, f.msg); }); return; }
+    const lista = geDoCliente(c), i = lista.findIndex(x => x.id === e.id);
+    if (i >= 0) lista[i] = e; else lista.push(e);
+    geSincReserva(c, e);
+    salvar();
+    avisar(e.tipo === 'C' && !e.reservaId ? 'Emissão salva. Falta registrar em Emitidos para o saldo das milhas baixar.' : 'Emissão salva.', e.tipo === 'C' && !e.reservaId ? 'alerta' : 'ok', 5200);
+    geAbrir(cid);
+  };
+}
+
+/* A janela da gestão fica por cima de tudo (modal): a pergunta de confirmação
+   abriria atrás dela. Fecha, pergunta e volta para onde estava se cancelar. */
+function geConfirmar(voltar, titulo, texto, sim, rotulo, duplo){
+  const d = document.getElementById('dlgGestao'); if (d && d.open) d.close();
+  let feito = false, faltas = 0;
+  confirmar(titulo, texto, () => { feito = true; sim(); }, rotulo, duplo);
+  const t = setInterval(() => {
+    const aberto = [...document.querySelectorAll('#btConfirmarAcao, #btConfirmarFinal')].some(b => b.offsetParent);
+    if (aberto){ faltas = 0; return; }
+    if (++faltas < 3) return;
+    clearInterval(t); if (!feito){ abrirGestaoClientes(); voltar(); }
+  }, 250);
+}
+
+/* ── a parte das milhas vira uma emissão em Emitidos (só tipo C) ──────────────
+   Usa o formulário de sempre da Torre: é ele que baixa o saldo da conta certa,
+   conta o CPF e mostra o resultado em Vendas. Cobrado = valor das milhas + taxas
+   de repasse; custo = milheiro travado na data (não o custo médio de amanhã). */
+function geRegistrarNaTorre(cid, eid){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  const e = geDoCliente(c).find(x => x.id === eid); if (!e || e.tipo !== 'C') return;
+  const r = geCalc(e, c);
+  const pes = (DB.pessoas || []).find(p => semAcento(String(p.nome || '').toLowerCase()) === semAcento(String(c.nome || '').toLowerCase()));
+  const rasc = {tipo:'voo', quem:'terceiro', cliente:pes ? pes.nome : c.nome, clienteId:pes ? pes.id : '', desc:e.trecho || 'Emissão da gestão', loc:e.loc || '',
+    data:e.dataVoo || '', hora:'', prog:e.prog, milhas:e.milhas, taxas:r.repasse, cobrado:centavos(r.valorMilhas + r.repasse), custoExtra:0,
+    status:'emitida', trajeto:'ida', pax:[], criada:e.data || hojeISO(), pagto:'pix', cpmFixo:e.custoMil, gestaoCli:cid, gestaoEmId:eid};
+  const d = document.getElementById('dlgGestao'); if (d && d.open) d.close();
+  editarReserva(null, rasc);
+  avisar('Confira a conta de onde saíram as milhas e salve: o saldo baixa e a venda entra em Emitidos.', 'info', 7000);
+}
+/* chamada depois que a emissão é salva em Emitidos */
+function geVinculou(res){
+  if (!res || !res.gestaoEmId) return;
+  const c = gcDB().find(x => x.id === res.gestaoCli); if (!c) return;
+  const e = geDoCliente(c).find(x => x.id === res.gestaoEmId); if (!e) return;
+  if (e.reservaId !== res.id){ e.reservaId = res.id; salvar(); }
+}
+/* gestão editada depois: a emissão ligada acompanha (milhas, taxas, cobrado, custo) */
+function geSincReserva(c, e){
+  if (!e.reservaId) return;
+  const res = (DB.reservas || []).find(x => x.id === e.reservaId); if (!res) { e.reservaId = ''; return; }
+  const r = geCalc(e, c);
+  Object.assign(res, {prog:e.prog || res.prog, milhas:e.milhas, taxas:r.repasse, cobrado:centavos(r.valorMilhas + r.repasse), cpmFixo:e.custoMil, loc:e.loc || res.loc});
+  try { if (typeof sincronizarSaidaDaEmissao === 'function') sincronizarSaidaDaEmissao(res); } catch(_){}
+}
+
+/* ── mensagem clara ao cliente: o que é passagem, o que é comissão, o total ── */
+function geTextoMsg(c, e){
+  const r = geCalc(e, c), pn = gcPrimeiro(c.nome);
+  const linhas = [`Olá, ${pn}! Segue o resumo da emissão ${e.trecho ? `(${e.trecho}${e.dataVoo ? ', ' + gcDataTxt(e.dataVoo) : ''})` : ''}${e.loc ? `, código ${e.loc}` : ''}:`, ''];
+  if (e.tipo === 'C'){
+    linhas.push(`• Passagem (${nBR(geN(e.milhas))} milhas): ${gcReais(r.valorMilhas)}`);
+    linhas.push(`• Comissão da gestão (${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}): ${gcReais(r.taxa)}`);
+  } else if (e.tipo === 'A') linhas.push(`• Comissão da gestão (${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}): ${gcReais(r.taxa)}`);
+  else linhas.push(`• Taxa da gestão (${r.trechos} trecho${r.trechos > 1 ? 's' : ''}, ${r.pax} passageiro${r.pax > 1 ? 's' : ''}): ${gcReais(r.taxa)}`);
+  if (r.repasse > 0) linhas.push(`• Taxas de embarque, pelo valor real cobrado${e.repMoeda === 'USD' ? ` (US$ ${moedaTxt(e.repValor)})` : ''}: ${gcReais(r.repasse)}`);
+  linhas.push('', `Total: ${gcReais(r.precoTotal)}`);
+  if (r.recebido > 0) linhas.push(`Já recebido: ${gcReais(r.recebido)}`, r.aReceber > 0.004 ? `Falta: ${gcReais(r.aReceber)}` : 'Tudo quitado. Obrigado!');
+  if (r.mercado > 0 && e.tipo !== 'B') linhas.push('', `Em dinheiro, a mesma viagem custava ${gcReais(r.mercado)}.`);
+  return linhas.join('\n');
+}
+function geMensagem(cid, eid){
+  const d = document.getElementById('dlgGestao'); const c = gcDB().find(x => x.id === cid); if (!d || !c) return;
+  const e = geDoCliente(c).find(x => x.id === eid); if (!e) return;
+  const txt = geTextoMsg(c, e);
+  d.innerHTML = `<div class="dr-painel">${gcCab('Mensagem ao cliente', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista">
+      <div class="ge-alerta info" style="margin:0 0 12px"><svg><use href="#i-info"/></svg><span>Passagem, comissão e taxas aparecem em linhas separadas, com o total. Assim o cliente nunca fica em dúvida se a comissão já estava no valor.</span></div>
+      <textarea class="ge-msg" id="geMsg">${esc(txt)}</textarea></div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="geMsgF">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt fantasma" id="geMsgCop"><svg><use href="#i-copiar"/></svg>Copiar</button>
+      ${c.zap ? `<a class="bt primario" id="geMsgZap" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir no WhatsApp</a>` : ''}</footer></div>`;
+  const ta = d.querySelector('#geMsg');
+  const z = d.querySelector('#geMsgZap');
+  const atualizarZap = () => { if (z) z.href = 'https://wa.me/' + String(c.zap).replace(/\D/g, '').replace(/^(?!55)/, '55') + '?text=' + encodeURIComponent(ta.value); };
+  ta.addEventListener('input', atualizarZap); atualizarZap();
+  d.querySelector('#geMsgF').onclick = () => geAbrir(cid);
+  d.querySelector('#geMsgCop').onclick = async () => { try { await navigator.clipboard.writeText(ta.value); avisar('Mensagem copiada.', 'ok'); } catch(_){ ta.select(); document.execCommand('copy'); avisar('Mensagem copiada.', 'ok'); } };
+}
+
+/* ── regras de cobrança (valem para todas as emissões novas) ────────────────── */
+function geRegrasAbrir(cid){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const rg = geRegras();
+  const pc = v => gePctTxt(v);
+  d.innerHTML = `<div class="dr-painel">${gcCab('Regras de cobrança da gestão', 'Valem para as próximas emissões. Cada emissão ainda pode ter o seu percentual.')}
+    <div class="dr-corpo"><div class="eq-vista">
+      <div class="eq-tit">A e C · Comissão sobre a economia</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Percentual padrão</label><input type="text" inputmode="decimal" id="grPct" value="${pc(rg.pct)}"></div>
+        <div class="campo"><label>Mínimo por emissão <span class="fraco">0 = sem mínimo</span></label><input type="text" inputmode="decimal" data-moeda id="grMin" value="${moedaTxt(rg.minimo)}"></div>
+      </div>
+      <label class="chk" style="margin-top:12px"><input type="checkbox" id="grTab"${rg.tabela ? ' checked' : ''}><span>Usar a tabela flexível (proposta, ainda em decisão)</span></label>
+      <div class="eq-campos" id="grTabCampos">
+        <div class="campo"><label>% para economia alta ou cliente anual</label><input type="text" inputmode="decimal" id="grPctA" value="${pc(rg.pctAlto)}"></div>
+        <div class="campo"><label>Economia alta a partir de</label><input type="text" inputmode="decimal" data-moeda id="grLimA" value="${moedaTxt(rg.limiteAlto)}"></div>
+        <div class="campo"><label>% para viagem próxima ou roteiro complexo</label><input type="text" inputmode="decimal" id="grPctU" value="${pc(rg.pctUrgente)}"></div>
+        <div class="campo"><label>Viagem próxima: menos de (dias)</label><input type="text" inputmode="numeric" id="grDiasU" value="${rg.diasUrgente}"></div>
+      </div>
+      <div class="eq-tit">B · Milhas do cliente</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Taxa por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="grTaxaB" value="${moedaTxt(rg.taxaB)}"></div>
+        <div class="campo"><label>Mínimo por trecho <span class="fraco">0 = sem mínimo</span></label><input type="text" inputmode="decimal" data-moeda id="grMinB" value="${moedaTxt(rg.minBTrecho)}"></div>
+      </div>
+      <div class="ge-alerta info"><svg><use href="#i-info"/></svg><span>Em decisão: o mínimo do tipo B (R$ 700 por trecho ou R$ 600 ida e volta, da regra de 21/11) e a tabela flexível. Enquanto não decidir, deixe o mínimo em 0 e a tabela desligada.</span></div>
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="grF">Fechar</button><span class="esticar"></span><button type="button" class="bt primario" id="grS"><svg><use href="#i-ok"/></svg>Salvar regras</button></footer></div>`;
+  const $r = s => d.querySelector(s);
+  const tab = () => $r('#grTabCampos').classList.toggle('ge-oculto', !$r('#grTab').checked);
+  $r('#grTab').onchange = tab; tab();
+  $r('#grF').onclick = () => geAbrir(cid);
+  $r('#grS').onclick = () => {
+    const p = s => parseFloat(String($r(s).value || '').replace(',', '.'));
+    const pcts = ['#grPct', '#grPctA', '#grPctU'].find(s => !(p(s) >= 0 && p(s) <= 100));
+    if (pcts) return erroNoCampo($r(pcts), 'O percentual vai de 0 a 100.');
+    DB.cfg = DB.cfg || {};
+    DB.cfg.gestaoRegras = {pct:p('#grPct'), minimo:moedaNum($r('#grMin').value) || 0, tabela:$r('#grTab').checked, pctAlto:p('#grPctA'), limiteAlto:moedaNum($r('#grLimA').value) || 0,
+      pctUrgente:p('#grPctU'), diasUrgente:parseInt($r('#grDiasU').value, 10) || 30, taxaB:moedaNum($r('#grTaxaB').value) || 0, minBTrecho:moedaNum($r('#grMinB').value) || 0};
+    salvar(); avisar('Regras salvas.', 'ok'); geAbrir(cid);
+  };
+}
+
+/* ── encaixes: cartão do cliente, cobrança do mês, custo travado em Emitidos ── */
+(function(){
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(d){
+    const v = _dl.apply(this, arguments);
+    d = d || document.getElementById('dlgGestao'); if (!d) return v;
+    d.querySelectorAll('.eq-card[data-id]').forEach(card => {
+      const c = gcDB().find(x => x.id === card.dataset.id); if (!c || card.querySelector('[data-gc="emissoes"]')) return;
+      const n = geDoCliente(c).length, T = n ? geTotais(c) : null;
+      const alvo = card.querySelector('.gc-acoes2') || card.querySelector('.eq-acoes');
+      if (!alvo) return;
+      alvo.insertAdjacentHTML('beforeend', `<button type="button" class="bt p fantasma" data-gc="emissoes"><svg><use href="#i-aviao"/></svg>Emissões${n ? ` (${n})` : ''}</button>`);
+      alvo.querySelector('[data-gc="emissoes"]').onclick = () => geAbrir(c.id);
+      if (T && T.aReceber > 0.004){ const s = card.querySelector('.gc-sinais'); if (s) s.insertAdjacentHTML('afterbegin', `<span class="gc-sinal alerta">Falta receber ${esc(gcReais(T.aReceber))} das emissões</span>`); }
+    });
+    return v;
+  };
+  /* Cobrança do mês: a comissão das emissões já foi cobrada junto com a passagem. */
+  const _cob = cobAbrir;
+  cobAbrir = function(id, ym){
+    const v = _cob.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); const c = gcDB().find(x => x.id === id); if (!d || !c) return v;
+    const mes = ym || (d.querySelector('#cobMes') || {}).value || relMesAnterior();
+    const doMes = geDoCliente(c).filter(e => String(e.data || '').slice(0, 7) === mes);
+    if (doMes.length){
+      const tot = centavos(soma(doMes.map(e => geCalc(e, c).lucroTaxa)));
+      const alvo = d.querySelector('.cob-total') || d.querySelector('.eq-vista');
+      if (alvo) alvo.insertAdjacentHTML('afterend', `<div class="ge-alerta info"><svg><use href="#i-info"/></svg><span><b>${doMes.length === 1 ? '1 emissão' : doMes.length + ' emissões'} neste mês, com ${gcReais(tot)} de comissão.</b> Essa comissão já entra no preço de cada passagem (Emissões da gestão): não coloque a mesma economia aqui, para não cobrar duas vezes.</span></div>`);
+    }
+    return v;
+  };
+  /* Emitidos: a venda que veio da gestão usa o custo do milheiro travado na data. */
+  const _cr = custoReserva;
+  custoReserva = function(r){
+    if (r && Number(r.cpmFixo) > 0) return (Number(r.milhas) || 0) / 1000 * Number(r.cpmFixo) + (Number(r.taxas) || 0) + (Number(r.custoExtra) || 0);
+    return _cr.apply(this, arguments);
+  };
+})();
 </script>
 </body>
 </html>
