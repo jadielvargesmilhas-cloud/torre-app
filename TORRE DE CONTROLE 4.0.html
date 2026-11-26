@@ -12021,7 +12021,13 @@ const PROGRAMAS = {
   virgin:    { n:'Virgin Atlantic Flying Club', cia:'Virgin Atlantic', tipo:'milhas', cor:'#DA0530', ali:'SkyTeam',
                faixas:{otimo:38, alvo:52, razoavel:70}, base:0, validade:0,
                fonte:'Provisório · sem referência de mercado no Brasil, ajuste em Ajustes → Programas',
-               nota:'Virgin Points, que não expiram pela política atual.\nSem transferência de Livelo ou Esfera: entra por compra direta (com bônus frequentes), voos e pontos IHG (5 : 3) ou Hilton (10 : 1,5).\nTabela fixa nos voos da própria Virgin; emite também Delta, Air France-KLM e ANA.' }
+               nota:'Virgin Points, que não expiram pela política atual.\nSem transferência de Livelo ou Esfera: entra por compra direta (com bônus frequentes), voos e pontos IHG (5 : 3) ou Hilton (10 : 1,5).\nTabela fixa nos voos da própria Virgin; emite também Delta, Air France-KLM e ANA.' },
+  /* AAdvantage (26/11/2026): entrou para a carteira de cliente da gestão, que tem
+     saldo na American. Faixas provisórias, como as da Virgin. */
+  aadvantage:{ n:'AAdvantage', cia:'American Airlines', tipo:'milhas', cor:'#0078D2', ali:'oneworld',
+               faixas:{otimo:38, alvo:52, razoavel:70}, base:0, validade:0,
+               fonte:'Provisório · sem referência de mercado no Brasil, ajuste em Ajustes → Programas',
+               nota:'Programa da American Airlines, aliança oneworld.\nAs milhas vencem depois de 24 meses sem nenhuma movimentação na conta.' }
 };
 const PROG_IDS = Object.keys(PROGRAMAS);
 const PROG_MILHAS = PROG_IDS.filter(k => PROGRAMAS[k].tipo === 'milhas');
@@ -12044,7 +12050,7 @@ const SIGLA_PROG = {
   azul:'AZ', smiles:'SM', latampass:'LA', tap:'TP', flyingblue:'FB', iberia:'IB',
   connect:'CM', aeromexico:'AM', united:'MP', lifemiles:'LM', aeroplan:'AP',
   suma:'AE', livelo:'LV', esfera:'ES', atomos:'AT', revpoints:'RP', uau:'UA', banriclube:'BR',
-  british:'BA', qatar:'QR', finnair:'AY', virgin:'VS',
+  british:'BA', qatar:'QR', finnair:'AY', virgin:'VS', aadvantage:'AA',
   hilton:'HH', ihg:'IH', accor:'AC'
 };
 function siglaProg(p){
@@ -13666,6 +13672,7 @@ const NIVEIS = {
   aeroplan:   ['25K','35K','50K','75K','Super Elite'],
   united:     ['Silver','Gold','Platinum','1K'],
   lifemiles:  ['Silver','Gold','Diamond'],
+  aadvantage: ['Gold','Platinum','Platinum Pro','Executive Platinum'],
   livelo:     ['Clube ativo'],
   esfera:     ['Clube ativo']
 };
@@ -31639,7 +31646,7 @@ Responda APENAS com JSON válido, sem texto antes ou depois, neste formato:
 Regras rígidas:
 - Um item em voos para cada voo (cada conexão é um voo), na ordem. Origem e destino em código IATA de 3 letras. Datas AAAA-MM-DD, horas HH:MM (24h), no horário local de cada aeroporto como a tela mostra.
 - cia é a companhia que OPERA o voo (a da tela do voo ou de "operado por"), não o programa de milhas.
-- programa é o programa pelo qual a passagem foi emitida, um destes códigos: smiles, latampass, azul, tap, iberia, flyingblue, connect, lifemiles, suma, british, qatar, finnair, aeroplan, united, aeromexico, virgin. Se foi paga em dinheiro, use "". Se não der para saber, use "".
+- programa é o programa pelo qual a passagem foi emitida, um destes códigos: smiles, latampass, azul, tap, iberia, flyingblue, connect, lifemiles, suma, british, qatar, finnair, aeroplan, united, aeromexico, virgin, aadvantage. Se foi paga em dinheiro, use "". Se não der para saber, use "".
 - milhas é o TOTAL de milhas/pontos da emissão (todos os passageiros), número puro. taxas é o total em reais pago junto (taxas de embarque e da companhia), número puro com ponto decimal.
 - Em tela com várias opções de pagamento, use a opção marcada ou o total do resumo do pedido.
 - data_emissao e hora_emissao só se aparecerem (data da compra ou do pagamento). Nunca use a data do voo nelas.
@@ -32083,7 +32090,7 @@ const MESES_LEITURA = {jan:1, janeiro:1, january:1, fev:2, feb:2, fevereiro:2, f
 const PREFIXO_CIA = {AD:['Azul', 'azul'], G3:['GOL', 'smiles'], LA:['LATAM', 'latampass'], JJ:['LATAM', 'latampass'], TP:['TAP', 'tap'], UX:['Air Europa', 'suma'],
   IB:['Iberia', 'iberia'], AF:['Air France', 'flyingblue'], KL:['KLM', 'flyingblue'], CM:['Copa', 'connect'], AV:['Avianca', 'lifemiles'], UA:['United', 'united'],
   AC:['Air Canada', 'aeroplan'], BA:['British Airways', 'british'], QR:['Qatar Airways', 'qatar'], AY:['Finnair', 'finnair'], AM:['Aeromexico', 'aeromexico'], VS:['Virgin Atlantic', 'virgin'],
-  LH:['Lufthansa', ''], LX:['Swiss', ''], AZ:['ITA', ''], TK:['Turkish', ''], EK:['Emirates', ''], AA:['American', ''], DL:['Delta', ''], ET:['Ethiopian', ''], AT:['Royal Air Maroc', '']};
+  LH:['Lufthansa', ''], LX:['Swiss', ''], AZ:['ITA', ''], TK:['Turkish', ''], EK:['Emirates', ''], AA:['American', 'aadvantage'], DL:['Delta', ''], ET:['Ethiopian', ''], AT:['Royal Air Maroc', '']};
 function dataDoTexto(t, ref){
   const pad = n => String(n).padStart(2, '0');
   const ok = (a, m, d) => a && m >= 1 && m <= 12 && d >= 1 && d <= 31 ? `${a}-${pad(m)}-${pad(d)}` : null;
@@ -36446,7 +36453,7 @@ function ordemNaAgenda(a, b){
    Companhia sem programa na Torre continua escrita por extenso. */
 const CIA_PARA_PROG = [[/^azul/i, 'azul'], [/^gol/i, 'smiles'], [/^latam/i, 'latampass'], [/^tap/i, 'tap'], [/^air europa/i, 'suma'], [/^iberia/i, 'iberia'],
   [/^copa/i, 'connect'], [/^(air france|klm)/i, 'flyingblue'], [/^avianca/i, 'lifemiles'], [/^united/i, 'united'], [/^air canada/i, 'aeroplan'],
-  [/^british/i, 'british'], [/^qatar/i, 'qatar'], [/^finnair/i, 'finnair'], [/^aeromexico/i, 'aeromexico'], [/^virgin/i, 'virgin']];
+  [/^british/i, 'british'], [/^qatar/i, 'qatar'], [/^finnair/i, 'finnair'], [/^aeromexico/i, 'aeromexico'], [/^virgin/i, 'virgin'], [/^american/i, 'aadvantage']];
 const progDaCia = nome => { const x = CIA_PARA_PROG.find(([re]) => re.test(String(nome || '').trim())); return x && PROGRAMAS[x[1]] ? x[1] : ''; };
 /* ── emissão na lista ─────────────────────────────────────────────────────────
    A descrição vem como "GRU → ADZ (ida e volta) · LATAM · Voos LA 4904 e
@@ -44402,7 +44409,7 @@ function renderBuscaCotacao({p, dinheiro, resgate, erros, f}){
    ══════════════════════════════════════════════════════════════════════════════ */
 /* todos os programas aéreos da Torre: os três brasileiros primeiro, depois os
    internacionais; programa novo cadastrado em PROGRAMAS entra sozinho no fim */
-const CC_ORDEM = ['smiles', 'azul', 'azulmundo', 'latampass', 'tap', 'iberia', 'suma', 'connect', 'flyingblue', 'british', 'qatar', 'finnair', 'lifemiles', 'aeroplan', 'united', 'aeromexico', 'virgin'];
+const CC_ORDEM = ['smiles', 'azul', 'azulmundo', 'latampass', 'tap', 'iberia', 'suma', 'connect', 'flyingblue', 'british', 'qatar', 'finnair', 'lifemiles', 'aeroplan', 'united', 'aeromexico', 'virgin', 'aadvantage'];
 /* Azul pelo Mundo não é programa à parte: é o canal da Azul para resgatar, com
    pontos Azul Fidelidade, voos das companhias parceiras. Entra na busca como
    opção própria, e o custo usa o milheiro da Azul. */
@@ -44432,7 +44439,7 @@ function instrucaoCC(p){
     iberia:'iberia.com (Iberia Plus, pagar com Avios)', flyingblue:'flyingblue.com (Air France-KLM)', suma:'aireuropa.com (SUMA, pagar com milhas)', connect:'copaair.com (ConnectMiles, usar milhas)',
     british:'britishairways.com (Avios, Reward Flight Finder)', qatar:'qatarairways.com (Privilege Club, Avios)', finnair:'finnair.com (Finnair Plus, Avios)',
     lifemiles:'lifemiles.com', aeroplan:'aircanada.com (Aeroplan)', united:'united.com (MileagePlus, usar milhas)', aeromexico:'aeromexico.com (Aeromexico Rewards)',
-    virgin:'virginatlantic.com (Flying Club)'})[k] || prog(k).n;
+    virgin:'virginatlantic.com (Flying Club)', aadvantage:'aa.com (AAdvantage, usar milhas)'})[k] || prog(k).n;
   const dBR = iso => iso ? dataBR(iso) : '';
   return `Preciso de uma cotação de passagem com milhas. Faça a busca nos sites abaixo, no navegador, e me devolva o resultado no formato pedido no fim.
 
@@ -46307,7 +46314,7 @@ const NOMES_MERCADO = {
   'qatar privilege club':'qatar', 'qatar':'qatar', 'finnair plus':'finnair', 'hilton honors':'hilton',
   'ihg':'ihg', 'ihg one rewards':'ihg', 'all accor':'accor', 'connect miles':'connect', 'connectmiles':'connect',
   'united airlines':'united', 'mileageplus':'united', 'lifemiles':'lifemiles', 'aeroplan':'aeroplan',
-  'air europa suma':'suma', 'aeromexico rewards':'aeromexico', 'virgin atlantic':'virgin', 'flying club':'virgin', 'virgin atlantic flying club':'virgin'
+  'air europa suma':'suma', 'aeromexico rewards':'aeromexico', 'virgin atlantic':'virgin', 'flying club':'virgin', 'virgin atlantic flying club':'virgin', 'aadvantage':'aadvantage', 'american airlines':'aadvantage'
 };
 const progDoMercado = nome => NOMES_MERCADO[String(nome || '').trim().toLowerCase()] || null;
 const numBR = t => { const m = String(t || '').replace(/\u00a0/g, ' ').match(/-?[\d.]+(?:,\d+)?/); return m ? Number(m[0].replace(/\./g, '').replace(',', '.')) : null; };
@@ -81620,7 +81627,15 @@ const GC_CORES = ['#C9A227', '#10A97A', '#3D7BF0', '#8B5CF6', '#E07B39', '#0EA5E
 const _gcServ = {estado:'', erro:'', linhas:null, lidoEm:0};
 let _gcEd = null;
 
-function gcDB(){ if (!Array.isArray(DB.clientesGestao)) DB.clientesGestao = []; return DB.clientesGestao; }
+function gcDB(){
+  if (!Array.isArray(DB.clientesGestao)) DB.clientesGestao = [];
+  /* cliente excluído não volta pela sincronização de outro aparelho (26/11/2026) */
+  if (Array.isArray(DB.gcExcluidos) && DB.gcExcluidos.length){
+    const fora = new Set(DB.gcExcluidos.map(x => x.id));
+    if (DB.clientesGestao.some(c => fora.has(c.id))) DB.clientesGestao = DB.clientesGestao.filter(c => !fora.has(c.id));
+  }
+  return DB.clientesGestao;
+}
 function gcCor(c){ let h = 0; const t = String(c.id || c.nome || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return GC_CORES[Math.abs(h) % GC_CORES.length]; }
 function gcPrimeiro(n){ return String(n || '').trim().split(/\s+/)[0] || ''; }
 function gcHoraTxt(ts){ if (!ts) return ''; const d = new Date(ts); return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); }
@@ -84357,7 +84372,10 @@ function geCalc(e, c){
   return r;
 }
 
-function geDoCliente(c){ if (!Array.isArray(c.emissoes)) c.emissoes = []; return c.emissoes; }
+/* ler não muda o cliente (26/11/2026): se mudasse, a sincronização acharia que este
+   aparelho mexeu nele e um cliente excluído em outro aparelho voltava */
+function geDoCliente(c){ return Array.isArray(c.emissoes) ? c.emissoes : []; }
+function geDoClienteCriar(c){ if (!Array.isArray(c.emissoes)) c.emissoes = []; return c.emissoes; }
 function geTotais(c){
   const rs = geDoCliente(c).map(e => geCalc(e, c));
   const s = k => centavos(soma(rs.map(r => r[k])));
@@ -84564,7 +84582,7 @@ function geEditar(cid, eid){
     if (e.tipo === 'A' && !(e.pagoCia > 0)) faltam.push({sel:'#gePagoCia', msg:'Informe quanto o cliente pagou à companhia.'});
     if (e.repMoeda === 'USD' && e.repValor > 0 && !(e.repCambio > 0)) faltam.push({sel:'#geRepCambio', msg:'Informe o câmbio da fatura para converter as taxas.'});
     if (faltam.length){ faltam.forEach(f => { const el = d.querySelector(f.sel); if (el) erroNoCampo(el, f.msg); }); return; }
-    const lista = geDoCliente(c), i = lista.findIndex(x => x.id === e.id);
+    const lista = geDoClienteCriar(c), i = lista.findIndex(x => x.id === e.id);
     if (i >= 0) lista[i] = e; else lista.push(e);
     giAplicarUso(c, e);
     delete e._editando;
@@ -84764,7 +84782,8 @@ function geRegrasAbrir(cid){
 @media (max-width:760px){ .gi-l{ grid-template-columns:minmax(0,1fr); } }
 </style>
 <script id="gi-js">
-function giCreditos(c){ if (!Array.isArray(c.creditos)) c.creditos = []; return c.creditos; }
+function giCreditos(c){ return Array.isArray(c.creditos) ? c.creditos : []; }
+function giCreditosCriar(c){ if (!Array.isArray(c.creditos)) c.creditos = []; return c.creditos; }
 function giSomaMeses(iso, m){ const d = new Date(iso + 'T12:00:00'); const dia = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + m); const ult = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(dia, ult)); return d.toLocaleDateString('sv'); }
 function giUsado(cr, excetoEm){ return centavos(soma((cr.usos || []).filter(u => u.em !== excetoEm).map(u => u.valor))); }
 function giSaldo(cr, excetoEm){ return centavos(Math.max(0, geN(cr.valor) - giUsado(cr, excetoEm))); }
@@ -84803,7 +84822,7 @@ function giDisponivel(c, e){
 /* Ao salvar: tira os usos antigos desta emissão e reparte o desconto de novo,
    primeiro nos créditos que vencem antes. */
 function giAplicarUso(c, e){
-  giCreditos(c).forEach(cr => { cr.usos = (cr.usos || []).filter(u => u.em !== e.id); });
+  giCreditos(c).forEach(cr => { if ((cr.usos || []).some(u => u.em === e.id)) cr.usos = cr.usos.filter(u => u.em !== e.id); });
   if (!e.usarCredito) return;
   let falta = geCalc(e, c).descontoIndicacao || 0;
   const ok = giCreditos(c).filter(cr => giValido(cr, e.data || hojeISO()) && giSaldo(cr) > 0).sort((a, b) => String(a.validoAte).localeCompare(String(b.validoAte)));
@@ -84816,7 +84835,7 @@ function giAplicarUso(c, e){
 }
 function giDesfazerEmissao(c, e){
   giCreditos(c).forEach(cr => { cr.usos = (cr.usos || []).filter(u => u.em !== e.id); });
-  gcDB().forEach(x => { x.creditos = giCreditos(x).filter(cr => !(cr.origemEm === e.id && !(cr.usos || []).length)); });
+  gcDB().forEach(x => { if (Array.isArray(x.creditos) && x.creditos.some(cr => cr.origemEm === e.id && !(cr.usos || []).length)) x.creditos = x.creditos.filter(cr => !(cr.origemEm === e.id && !(cr.usos || []).length)); });
 }
 /* Libera os créditos devidos: para cada cliente indicado, a 1ª emissão dele quitada. */
 function giLiberar(){
@@ -84832,7 +84851,7 @@ function giLiberar(){
     if (!(r.precoTotal > 0) || r.aReceber > 0.004) return;   /* pagou = quitou tudo */
     const lib = pri.recebidoEm || hojeISO();
     const cr = {id:uid(), valor:centavos(geN(rg.credito)), origemCli:ind.id, origemNome:ind.nome, origemEm:pri.id, liberadoEm:lib, validoAte:giSomaMeses(lib, rg.creditoMeses || 12), usos:[]};
-    giCreditos(quem).push(cr); novos.push({cr, para:quem, de:ind});
+    giCreditosCriar(quem).push(cr); novos.push({cr, para:quem, de:ind});
   });
   return novos;
 }
@@ -84932,7 +84951,7 @@ function geImportarTexto(txt){
     const loc = String(e0.loc || '').toUpperCase();
     if (loc && geDoCliente(c).some(x => String(x.loc || '').toUpperCase() === loc)){ rep++; return; }
     const e = Object.assign({tipo:'C', pax:1, trechos:1, repMoeda:'BRL'}, e0, {id:uid(), loc, criado:Date.now()});
-    geDoCliente(c).push(e); n++;
+    geDoClienteCriar(c).push(e); n++;
   });
   giLiberar(); salvar();
   if (typeof gcEnviarPendentes === 'function' && novo) try { gcEnviarPendentes().then(gcLerServidor); } catch(_){}
@@ -85006,8 +85025,8 @@ function gexExcluir(id, destId){
   const c = gcDB().find(x => x.id === id); if (!c) return;
   const dest = destId ? gcDB().find(x => x.id === destId) : null;
   if (dest){
-    geDoCliente(c).forEach(e => { geDoCliente(dest).push(e); });
-    giCreditos(c).forEach(cr => { giCreditos(dest).push(cr); });
+    geDoCliente(c).forEach(e => { geDoClienteCriar(dest).push(e); });
+    giCreditos(c).forEach(cr => { giCreditosCriar(dest).push(cr); });
     (DB.reservas || []).forEach(r => { if (r.gestaoCli === id) r.gestaoCli = dest.id; });
     if (!dest.indicadoPor && c.indicadoPor && c.indicadoPor !== dest.id) dest.indicadoPor = c.indicadoPor;
   }
@@ -85016,6 +85035,7 @@ function gexExcluir(id, destId){
     giCreditos(x).forEach(cr => { if (cr.origemCli === id && dest){ cr.origemCli = dest.id; } });
   });
   DB.clientesGestao = gcDB().filter(x => x.id !== id);
+  (DB.gcExcluidos = Array.isArray(DB.gcExcluidos) ? DB.gcExcluidos : []).push({id, nome:c.nome, carteiraId:c.carteiraId || '', em:Date.now()});
   salvar();
   abrirGestaoClientes();
   avisar(`${esc(c.nome)} saiu da gestão${dest ? '; as emissões estão com ' + esc(dest.nome) : ''}.`, 'ok', 6000);
@@ -85071,7 +85091,10 @@ function gexExcluir(id, destId){
 #dlgGestao .gfi-abas{ margin:0 0 16px; position:sticky; top:0; z-index:3; background:var(--sup-0); overflow-x:auto; scrollbar-width:none; }
 #dlgGestao .gfi-abas::-webkit-scrollbar{ display:none; }
 #dlgGestao .gfi-abas [role=tab]{ flex:1 0 auto; white-space:nowrap; padding-left:12px; padding-right:12px; }
-#dlgGestao .gfi-painel[hidden]{ display:none !important; }
+#dlgGestao .gfi-pilha{ display:grid; }
+#dlgGestao .gfi-pilha > .gfi-painel{ grid-area:1 / 1; min-width:0; }
+/* altura fixa: a aba maior dá a altura de todas; a escondida ocupa o lugar sem aparecer */
+#dlgGestao .gfi-pilha > .gfi-painel[hidden]{ display:block !important; visibility:hidden; pointer-events:none; }
 #dlgGestao .gfi-painel > .eq-tit:first-child{ display:none; }
 .gfi-novo{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-top:12px; padding:12px; border:1px dashed var(--fio); border-radius:12px; }
 .gfi-novo[hidden]{ display:none !important; }
@@ -85142,12 +85165,13 @@ function gfiIndicadoNome(c){
     const juntos = []; grupos.forEach(x => { if (x.tit === 'Situação' && juntos.length){ juntos[juntos.length - 1].nos.push(...x.nos); } else juntos.push(x); });
     const bar = document.createElement('div'); bar.className = 'dr-abas gfi-abas'; bar.setAttribute('role', 'tablist');
     vista.innerHTML = ''; vista.appendChild(bar);
+    const pilha = document.createElement('div'); pilha.className = 'gfi-pilha'; vista.appendChild(pilha);
     juntos.forEach((x, i) => {
-      const p = document.createElement('div'); p.className = 'gfi-painel'; p.setAttribute('role', 'tabpanel'); p.hidden = i > 0; p.dataset.i = i;
-      x.nos.forEach(n => p.appendChild(n)); vista.appendChild(p);
+      const p = document.createElement('div'); p.className = 'gfi-painel'; p.setAttribute('role', 'tabpanel'); p.hidden = i > 0; p.inert = i > 0; p.dataset.i = i;
+      x.nos.forEach(n => p.appendChild(n)); pilha.appendChild(p);
       bar.insertAdjacentHTML('beforeend', `<button type="button" role="tab" aria-selected="${i === 0}" data-i="${i}">${esc(nomes[x.tit] || x.tit)}</button>`);
     });
-    const ir = i => { bar.querySelectorAll('[role=tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.i == i)); vista.querySelectorAll('.gfi-painel').forEach(p => p.hidden = p.dataset.i != i); const b = bar.querySelector(`[data-i="${i}"]`); if (b) b.scrollIntoView({block:'nearest', inline:'nearest'}); const corpo = d.querySelector('.dr-corpo'); if (corpo) corpo.scrollTop = 0; };
+    const ir = i => { bar.querySelectorAll('[role=tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.i == i)); vista.querySelectorAll('.gfi-painel').forEach(p => { p.hidden = p.dataset.i != i; p.inert = p.hidden; }); const b = bar.querySelector(`[data-i="${i}"]`); if (b) b.scrollIntoView({block:'nearest', inline:'nearest'}); const corpo = d.querySelector('.dr-corpo'); if (corpo) corpo.scrollTop = 0; };
     bar.querySelectorAll('[role=tab]').forEach(b => b.onclick = () => ir(b.dataset.i));
     gfiIrAba._ir = ir;
     /* indicado: cadastrar novo */
@@ -85210,7 +85234,7 @@ function gfiCredTorre(){ if (!Array.isArray(DB.creditosIndicacao)) DB.creditosIn
     /* quem tinha crédito guardado e virou cliente da gestão: o crédito vai para a ficha dele */
     gfiCredTorre().slice().forEach(cr => {
       const g = gcDB().find(x => semAcento(String(x.nome).toLowerCase()) === semAcento(String(cr.pessoaNome || '').toLowerCase()));
-      if (g){ giCreditos(g).push(cr); DB.creditosIndicacao = gfiCredTorre().filter(x => x.id !== cr.id); }
+      if (g){ giCreditosCriar(g).push(cr); DB.creditosIndicacao = gfiCredTorre().filter(x => x.id !== cr.id); }
     });
     return novos;
   };
@@ -85269,5 +85293,106 @@ function gfiCredTorre(){ if (!Array.isArray(DB.creditosIndicacao)) DB.creditosIn
   };
 })();
 </script>
+<style id="cimp-css">
+#btCimp{margin-right:8px}
+.cimp-lista{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.cimp-lista li{border:1px solid var(--fio-suave);border-radius:12px;padding:10px 12px;line-height:1.5}
+.cimp-lista li b{font-weight:700}
+.cimp-lista .cimp-prog{display:flex;justify-content:space-between;gap:12px;font-size:calc(13.5px * var(--esc))}
+.cimp-txt{width:100%;min-height:170px;font-family:ui-monospace,Menlo,monospace;font-size:13px;border:1px solid var(--fio);border-radius:12px;padding:10px;background:var(--fundo-campo, transparent);color:inherit}
+</style>
+<script id="cimp-js">
+/* ── Colar dados prontos nas Contas (26/11/2026) ────────────────────────────────
+   Um bloco (preparado pelo Claude a partir do que o cliente informou) cadastra
+   as pessoas e lança os saldos de uma vez. Feito para a carteira do cliente de
+   gestão, mas funciona em qualquer Torre. Nada é apagado: pessoa com o mesmo
+   nome (ou o mesmo primeiro nome, quando só há uma) é reaproveitada; o saldo
+   informado substitui o anterior daquele programa, como no Lançar saldo.
+   Mostra o que vai mudar e só grava depois do Confirmar. */
+function cimpNorm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function cimpLer(txt){
+  let j; try { j = JSON.parse(String(txt || '').trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '')); } catch(_){ return {erro:'O texto colado não está completo. Copie o bloco inteiro, do primeiro { ao último }.'}; }
+  if (!j || !j.vem_carteira || !Array.isArray(j.contas) || !j.contas.length) return {erro:'Este texto não é um bloco de contas e saldos.'};
+  const contas = DB.contas || [];
+  const plano = [];
+  for (const c0 of j.contas){
+    const nome = String(c0.nome || '').trim().replace(/\s+/g, ' ');
+    if (!nome) return {erro:'Uma das pessoas do bloco está sem nome.'};
+    const n = cimpNorm(nome), pri = n.split(' ')[0];
+    let alvo = contas.find(c => cimpNorm(c.nome) === n);
+    if (!alvo){ const mesmos = contas.filter(c => cimpNorm(c.nome).split(' ')[0] === pri); if (mesmos.length === 1) alvo = mesmos[0]; }
+    const saldos = [];
+    for (const [p, q] of Object.entries(c0.saldos || {})){
+      if (!PROGRAMAS[p]) return {erro:`Programa desconhecido no bloco: ${p}.`};
+      const qtd = Math.round(Number(q));
+      if (!Number.isFinite(qtd) || qtd < 0) return {erro:`Saldo inválido em ${prog(p).n}.`};
+      const atual = alvo ? (DB.saldos.find(s => s.contaId === alvo.id && s.prog === p) || {}).qtd : undefined;
+      saldos.push({p, qtd, atual:atual == null ? null : Number(atual) || 0});
+    }
+    const niveis = {};
+    for (const [p, v] of Object.entries(c0.niveis || {})){ if ((NIVEIS[p] || []).includes(v)) niveis[p] = v; }
+    plano.push({nome, papel:c0.papel || 'Outro', alvo, saldos, niveis});
+  }
+  return {plano};
+}
+function cimpAplicar(plano){
+  let novas = 0, lanc = 0;
+  for (const it of plano){
+    let c = it.alvo;
+    if (!c){
+      const temTit = (DB.contas || []).some(x => /^titular/i.test(x.papel || ''));
+      const papel = PARENTESCO.includes(it.papel) && !(/^titular/i.test(it.papel) && temTit) ? it.papel : 'Outro';
+      c = {id:uid(), nome:it.nome, papel, cpf:'', email:'', obs:'', niveis:{}};
+      DB.contas.push(c); novas++;
+    }
+    c.niveis = Object.assign({}, c.niveis || {}, it.niveis);
+    for (const s of it.saldos){
+      let sal = DB.saldos.find(x => x.contaId === c.id && x.prog === s.p);
+      if (!sal){ sal = {id:uid(), contaId:c.id, prog:s.p, qtd:0}; DB.saldos.push(sal); }
+      sal.qtd = s.qtd; sal.digitado = s.qtd; sal.digitadoEm = Date.now(); lanc++;
+    }
+  }
+  salvar();
+  try { aplicarTudo(); } catch(_){ try { renderSaldo(); renderFita(); } catch(__){} }
+  try { renderHeroiDaVista(vistaAtual); } catch(_){}
+  try { pintarFaixaModulo(vistaAtual); } catch(_){}
+  return {novas, lanc};
+}
+function cimpAbrir(){
+  abrirFolha({
+    titulo:'Colar dados prontos',
+    corpo:`<p class="fraco" style="margin:0 0 10px;line-height:1.55">Cole o bloco inteiro (começa com <b>{</b> e termina com <b>}</b>). Antes de gravar, a Torre mostra o que vai mudar.</p>
+      <div class="campo"><textarea class="cimp-txt" id="cimpTxt" placeholder="Cole aqui"></textarea></div>
+      <div id="cimpPrevia"></div>`,
+    pe:`<button type="button" class="bt perigo" id="cimpF">Fechar</button>
+      <button type="button" class="bt primario" id="cimpOk"><svg><use href="#i-ok"/></svg>Conferir</button>`
+  });
+  let plano = null;
+  const txt = $('#cimpTxt'), ok = $('#cimpOk');
+  $('#cimpF').onclick = fecharFolha;
+  txt.oninput = () => { plano = null; $('#cimpPrevia').innerHTML = ''; ok.innerHTML = '<svg><use href="#i-ok"/></svg>Conferir'; };
+  ok.onclick = () => {
+    if (plano){
+      const r = cimpAplicar(plano); fecharFolha();
+      avisar(`${r.novas ? (r.novas === 1 ? '1 pessoa cadastrada, ' : r.novas + ' pessoas cadastradas, ') : ''}${r.lanc === 1 ? '1 saldo lançado' : r.lanc + ' saldos lançados'}.`, 'ok', 6000);
+      return;
+    }
+    const r = cimpLer(txt.value);
+    if (r.erro) return erroNoCampo(txt, r.erro);
+    plano = r.plano;
+    $('#cimpPrevia').innerHTML = `<ul class="cimp-lista">${plano.map(it => `<li>
+        <div><b>${esc(it.alvo ? it.alvo.nome : it.nome)}</b> · ${it.alvo ? 'já cadastrada' : 'pessoa nova'}${Object.keys(it.niveis).length ? ' · ' + Object.entries(it.niveis).map(([p, v]) => `${esc(prog(p).n)} ${esc(v)}`).join(', ') : ''}</div>
+        ${it.saldos.map(s => `<div class="cimp-prog"><span>${esc(prog(s.p).n)}</span><span><b>${nBR(s.qtd)}</b>${s.atual != null && s.atual !== s.qtd ? ` <span class="fraco">(era ${nBR(s.atual)})</span>` : ''}</span></div>`).join('')}
+      </li>`).join('')}</ul>`;
+    ok.innerHTML = '<svg><use href="#i-ok"/></svg>Confirmar e gravar';
+  };
+}
+(function(){
+  const bt = document.getElementById('btNovaConta'); if (!bt || document.getElementById('btCimp')) return;
+  bt.insertAdjacentHTML('beforebegin', `<button type="button" class="bt fantasma" id="btCimp"><svg><use href="#i-copiar"/></svg>Colar dados prontos</button>`);
+  document.getElementById('btCimp').onclick = cimpAbrir;
+})();
+</script>
+
 </body>
 </html>
