@@ -81762,7 +81762,7 @@ function gcDesenharLista(d, semAnimar){
   d.innerHTML = `<div class="dr-painel">${gcCab('Clientes da gestão', 'A carteira de cada cliente, o objetivo dele e o que espera a sua ação.')}
     <div class="dr-corpo"><div class="${semAnimar ? '' : 'eq-vista'}">
     ${cs.length ? `<div class="eq-grade">${cs.map(c => `<div class="eq-card${c.ativo === false ? ' pausado' : ''}" style="--pc:${gcCor(c)}" data-id="${esc(c.id)}">
-        <div class="eq-quem">${gcAvatar(c)}<div><b>${esc(c.nome)}</b><small>${esc([c.zap, c.email].filter(Boolean).join(' · ') || 'Sem contato cadastrado')}${c.ativo === false ? ' · gestão pausada' : ''}</small></div></div>
+        <div class="eq-quem">${gcAvatar(Object.assign({}, c, {nome:gcNomeTela(c)}))}<div><b title="${esc(c.nome)}">${esc(gcNomeTela(c))}</b><small>${esc([c.zap, c.email].filter(Boolean).join(' · ') || 'Sem contato cadastrado')}${c.ativo === false ? ' · gestão pausada' : ''}</small></div></div>
         ${gcObjetivo(c)}
         ${gcSaldos(c)}
         ${gcSinais(c)}
@@ -85555,6 +85555,37 @@ function gdiExportar(cid){
   };
 })();
 </script>
+<script id="gapel-js">
+/* ── Nome na tela (26/11/2026) ─────────────────────────────────────────────────
+   A ficha guarda o nome completo; os cartões da Gestão mostram o nome curto.
+   Sem "Nome na tela", vale a regra da Torre (primeiro nome + último sobrenome);
+   com ele, vale o que a pessoa escreveu (ex.: RODRIGO NARDONI, como o cliente é
+   conhecido). */
+function gcNomeTela(c){ const a = String((c && c.apelido) || '').trim(); return a || (typeof nomeCurto === 'function' ? nomeCurto(c.nome || '') : (c.nome || '')); }
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const nome = d.querySelector('#gcNome'); if (!nome || d.querySelector('#gcApelido')) return v;
+    const campo = nome.closest('.campo');
+    campo.insertAdjacentHTML('afterend', `<div class="campo"><label>Nome na tela <span class="fraco">como aparece nos cartões; em branco, a Torre abrevia</span></label><input type="text" id="gcApelido" value="${esc(_gcEd.apelido || '')}" placeholder="${esc(nomeCurto(_gcEd.nome || '') || 'ex.: Carla Rocha')}" autocomplete="off"></div>`);
+    const ap = d.querySelector('#gcApelido');
+    nome.addEventListener('input', () => { ap.placeholder = nomeCurto(nome.value.trim()) || 'ex.: Carla Rocha'; });
+    return v;
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(){
+    const d = document.getElementById('dlgGestao');
+    if (d && _gcEd && d.querySelector('#gcApelido')){
+      const a = d.querySelector('#gcApelido').value.trim().replace(/\s+/g, ' ');
+      if (a) _gcEd.apelido = a; else delete _gcEd.apelido;
+    }
+    return _sv.apply(this, arguments);
+  };
+})();
+</script>
+
 
 
 <style id="gfi-css">
