@@ -81789,6 +81789,7 @@ function gcDesenharLista(d, semAnimar){
 function gcEditar(id){
   const d = document.getElementById('dlgGestao'); if (!d) return;
   const orig = id ? gcDB().find(c => c.id === id) : null;
+  if (id && !orig){ avisar('Este cliente já não está na lista (foi excluído). A lista foi atualizada.', 'alerta', 6000); gcDesenharLista(d); return; }
   _gcEd = orig ? JSON.parse(JSON.stringify(orig)) : {id:'', nome:'', zap:'', email:'', ativo:true, objetivo:{}, regras:{programas:[]}, cofre:[], acessos:[], termo:{}, aprovacoes:[]};
   const e = _gcEd; e.objetivo = e.objetivo || {}; e.regras = e.regras || {programas:[]}; e.cofre = e.cofre || []; e.acessos = e.acessos || []; e.termo = e.termo || {};
   const progsMilhas = PROG_IDS.filter(p => ['milhas', 'pontos'].includes((PROGRAMAS[p] || {}).tipo));
@@ -85037,7 +85038,7 @@ function geImportarAbrir(){
    só sai da lista. Pede confirmação duas vezes. */
 function gexAbrir(id){
   const d = document.getElementById('dlgGestao'); if (!d) return;
-  const c = gcDB().find(x => x.id === id); if (!c) return;
+  const c = gcDB().find(x => x.id === id); if (!c){ avisar('Este cliente já não está na lista (foi excluído). Feche e abra a Gestão de novo.', 'alerta', 6000); try { gcDesenharLista(d); } catch(_){} return; }
   const ems = geDoCliente(c).length, crs = giCreditos(c).length, outros = gcDB().filter(x => x.id !== id).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
   const tem = ems || crs;
   d.innerHTML = `<div class="dr-painel">${gcCab('Excluir cliente', esc(c.nome))}
@@ -85089,7 +85090,7 @@ function gexExcluir(id, destId){
   const _ed = gcEditar;
   gcEditar = function(id){
     const v = _ed.apply(this, arguments);
-    const d = document.getElementById('dlgGestao'); if (!d || !id) return v;
+    const d = document.getElementById('dlgGestao'); if (!d || !id || !gcDB().some(x => x.id === id)) return v;   /* cadastro novo ou que já não existe: nada a excluir */
     const pe = d.querySelector('.dr-pe'), sv = d.querySelector('#gcSalvar');
     if (pe && sv && !pe.querySelector('#gexBt')){
       sv.insertAdjacentHTML('beforebegin', `<button type="button" class="bt vermelho-solido" id="gexBt"><svg><use href="#i-lixo"/></svg>Excluir cliente</button>`);
@@ -86017,6 +86018,180 @@ function areasTopoAbrir(){
   /* os botões da barra aparecem depois (conta, mentoria, gestão): mostra o do topo quando houver algum */
   const ver = () => bt.classList.toggle('tem', areasTopoItens().length > 0);
   ver(); setInterval(ver, 1500);
+})();
+</script>
+
+<style id="gquem-css">
+/* avisos por cima das janelas (a janela da Gestão é modal e cobria os avisos) */
+#avisos:popover-open{ top:auto; margin:0; border:0; padding:0; background:transparent; overflow:visible; height:auto; color:inherit; }
+@media (min-width:861px){ #avisos:popover-open{ left:auto; } }
+.gq-sub{ margin-top:16px !important; }
+.gq-fam{ display:grid; gap:8px; }
+.gq-pes{ display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:space-between; border:1px solid var(--fio-suave); border-radius:12px; padding:10px 12px; }
+.gq-pes b{ color:var(--giz); }
+.gq-pes small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:2px; }
+.gq-pes small .alerta{ color:var(--brasa); font-weight:600; }
+.gq-pes .gq-bts{ display:flex; gap:6px; flex-wrap:wrap; }
+.gq-add{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:end; margin-top:4px; }
+@media (max-width:760px){ .gq-add{ grid-template-columns:minmax(0,1fr); } }
+</style>
+<script id="gquem-js">
+/* ── Avisos por cima das janelas (26/11/2026) ──────────────────────────────────
+   A janela da Gestão fica na camada mais alta da página e escondia os avisos
+   ("saiu da gestão", "ficha atualizada"). A caixa de avisos sobe para a mesma
+   camada toda vez que aparece um aviso. */
+(function(){
+  const _av = avisar;
+  avisar = function(){
+    const v = _av.apply(this, arguments);
+    try {
+      const host = document.getElementById('avisos');
+      if (host && host.showPopover){
+        if (!host.hasAttribute('popover')) host.setAttribute('popover', 'manual');
+        if (host.matches(':popover-open')) host.hidePopover();
+        host.showPopover();
+      }
+    } catch(_){}
+    return v;
+  };
+})();
+
+/* ── A lista da Gestão se atualiza sozinha (26/11/2026) ────────────────────────
+   Excluir num aparelho e olhar a lista aberta no outro deixava um cartão velho
+   na tela; a Ficha dele abria "Novo cliente". Quando a sincronização traz uma
+   mudança, a lista aberta é desenhada de novo. */
+function gcAssinatura(){ return gcDB().map(c => [c.id, c.nome, c.apelido || '', c.alterado || '', (c.emissoes || []).length, c.ativo !== false].join('|')).join('§'); }
+(function(){
+  let ultima = '';
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(){ const v = _dl.apply(this, arguments); try { ultima = gcAssinatura(); } catch(_){} return v; };
+  setInterval(() => {
+    const d = document.getElementById('dlgGestao');
+    if (!d || !d.open || !d.querySelector('.dr-pe [data-gc="novo"]')) return;   /* só na lista */
+    let a = ''; try { a = gcAssinatura(); } catch(_){ return; }
+    if (a !== ultima){ const y = (d.querySelector('.dr-corpo') || {}).scrollTop || 0; gcDesenharLista(d, true); const c = d.querySelector('.dr-corpo'); if (c) c.scrollTop = y; }
+  }, 1500);
+})();
+
+/* ── Ficha › Quem é completa (26/11/2026) ──────────────────────────────────────
+   CPF, nascimento e cidade (os dois vieram de Preferências, para não ficarem em
+   dois lugares), Instagram, profissão e empresa, melhor forma e horário para
+   falar, contato de apoio e a família que viaja junto, ligada ao cadastro de
+   passageiros da Torre (documentos num lugar só, o mesmo que a emissão usa).
+   Número de passaporte e cartão não ficam na ficha. */
+const GQ_FORMAS = ['WhatsApp', 'Ligação', 'E-mail'];
+const GQ_HORAS = ['Manhã', 'Tarde', 'Noite', 'Qualquer hora'];
+function gqStatusPessoa(p){
+  const partes = [];
+  partes.push(p.cpf ? 'CPF ok' : '<span class="alerta">sem CPF</span>');
+  if (p.nasc) partes.push('nascimento ok'); else partes.push('<span class="alerta">sem nascimento</span>');
+  if (p.pass){
+    if (p.passVal){
+      const [a, m] = String(p.passVal).split('-');
+      const seis = new Date(); seis.setMonth(seis.getMonth() + 6);
+      const curto = new Date(p.passVal + 'T12:00:00') < seis;
+      partes.push(curto ? `<span class="alerta">passaporte vence em ${m}/${a}</span>` : `passaporte vence em ${m}/${a}`);
+    } else partes.push('passaporte sem validade');
+  } else partes.push('sem passaporte');
+  return partes.join(' · ');
+}
+function gqFamMudar(cid, fn){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  if (!Array.isArray(c.familia)) c.familia = [];
+  fn(c.familia); c.familia = [...new Set(c.familia)];
+  c.alterado = Date.now();
+  if (_gcEd && _gcEd.id === cid) _gcEd.familia = c.familia.slice();
+  salvar();
+}
+/* abre o cadastro de passageiro (fica fora da janela da Gestão): salva a ficha
+   antes e volta para ela quando o cadastro fecha */
+function gqAbrirPassageiro(cid, pid){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const orig = gcDB().find(x => x.id === cid); if (!orig) return;
+  gcSalvar(orig);
+  if (_gcEd) return;   /* a ficha tem erro de preenchimento: fica nela para corrigir */
+  if (d.open) d.close();
+  editarPessoa(pid || null, pid ? undefined : {aoSalvar:p => gqFamMudar(cid, l => l.push(p.id))});
+  let viu = false, n = 0;
+  const t = setInterval(() => {
+    n++; const veu = document.getElementById('veu'); const ab = !!(veu && veu.classList.contains('aberto'));   /* a marca do corpo é apagada quando a janela da Gestão fecha; o véu é só da folha */
+    if (ab){ viu = true; return; }
+    if (!viu && n < 10) return;
+    clearInterval(t);
+    abrirGestaoClientes(); gcEditar(cid);
+  }, 300);
+}
+function gqPintarFam(box, cid){
+  const c = gcDB().find(x => x.id === cid);
+  if (!c){ box.innerHTML = '<p class="fraco" style="margin:0">Salve a ficha primeiro; depois dá para ligar a família ao cadastro de passageiros.</p>'; return; }
+  const ps = (c.familia || []).map(id => (DB.pessoas || []).find(p => p.id === id)).filter(Boolean);
+  const livres = (DB.pessoas || []).filter(p => !(c.familia || []).includes(p.id)).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  box.innerHTML = `<div class="gq-fam">${ps.length ? ps.map(p => `<div class="gq-pes" data-id="${esc(p.id)}"><div><b>${esc(p.nome)}</b><small>${gqStatusPessoa(p)}</small></div>
+      <div class="gq-bts"><button type="button" class="bt p fantasma" data-gq="doc"><svg><use href="#i-documento"/></svg>Documentos</button><button type="button" class="bt p perigo" data-gq="tirar">Tirar</button></div></div>`).join('')
+      : '<p class="fraco" style="margin:0">Ninguém ligado ainda. Ligue o próprio cliente e quem viaja com ele.</p>'}
+    <div class="gq-add">
+      <div class="campo"><label>Ligar alguém do cadastro de passageiros</label><select id="gqFamSel" data-ordem="natural"><option value="">escolha</option>${livres.map(p => `<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join('')}</select></div>
+      <button type="button" class="bt fantasma" id="gqFamLigar"><svg><use href="#i-mais"/></svg>Ligar</button>
+      <button type="button" class="bt fantasma" id="gqFamNovo"><svg><use href="#i-usuarios"/></svg>Cadastrar passageiro novo</button>
+    </div></div>`;
+  box.querySelector('#gqFamLigar').onclick = () => { const v = box.querySelector('#gqFamSel').value; if (!v) return erroNoCampo(box.querySelector('#gqFamSel'), 'Escolha quem ligar.'); gqFamMudar(cid, l => l.push(v)); gqPintarFam(box, cid); avisar('Passageiro ligado à ficha.', 'ok'); };
+  box.querySelector('#gqFamNovo').onclick = () => gqAbrirPassageiro(cid, null);
+  box.querySelectorAll('.gq-pes').forEach(li => {
+    li.querySelector('[data-gq="doc"]').onclick = () => gqAbrirPassageiro(cid, li.dataset.id);
+    li.querySelector('[data-gq="tirar"]').onclick = () => { gqFamMudar(cid, l => { const i = l.indexOf(li.dataset.id); if (i >= 0) l.splice(i, 1); }); gqPintarFam(box, cid); avisar('Passageiro tirado da ficha (o cadastro dele continua na Torre).', 'ok'); };
+  });
+}
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const nome = d.querySelector('#gcNome'); if (!nome || d.querySelector('#gqCpf')) return v;
+    const e = _gcEd;
+    const painel = nome.closest('.gfi-painel') || nome.closest('.eq-vista');
+    const sel = (id, ops, val, vazio) => `<select id="${id}" data-ordem="natural"><option value="">${vazio}</option>${ops.map(o => `<option${val === o ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
+    painel.insertAdjacentHTML('beforeend', `
+      <div class="eq-tit gq-sub">Dados pessoais</div>
+      <div class="eq-campos" id="gqPessoais">
+        <div class="campo"><label>CPF</label><input type="text" inputmode="numeric" id="gqCpf" value="${esc(e.cpf || '')}" placeholder="000.000.000-00"></div>
+        <div class="campo"><label>Instagram</label><input type="text" id="gqInsta" value="${esc(e.insta || '')}" placeholder="@usuario" autocapitalize="off" spellcheck="false"></div>
+        <div class="campo"><label>Profissão</label><input type="text" id="gqProf" value="${esc(e.profissao || '')}" placeholder="ex.: médico"></div>
+        <div class="campo"><label>Empresa</label><input type="text" id="gqEmp" value="${esc(e.empresa || '')}" placeholder="onde trabalha"></div>
+        <div class="campo"><label>Melhor forma de falar</label>${sel('gqForma', GQ_FORMAS, e.contatoForma || '', 'escolha')}</div>
+        <div class="campo"><label>Melhor horário</label>${sel('gqHora', GQ_HORAS, e.contatoHora || '', 'escolha')}</div>
+      </div>
+      <div class="eq-tit gq-sub">Contato de apoio <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">quem resolve junto: cônjuge, secretária</span></div>
+      <div class="eq-campos">
+        <div class="campo"><label>Nome</label><input type="text" id="gqApoioNome" value="${esc(e.apoioNome || '')}"></div>
+        <div class="campo"><label>WhatsApp</label><input type="text" inputmode="tel" id="gqApoioZap" value="${esc(e.apoioZap || '')}" placeholder="(71) 9 9999-9999"></div>
+      </div>
+      <div class="eq-tit gq-sub">Família que viaja junto <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">os documentos ficam no cadastro de passageiros</span></div>
+      <div id="gqFam"></div>`);
+    /* nascimento e cidade vêm de Preferências para cá */
+    const pess = d.querySelector('#gqPessoais');
+    const niver = d.querySelector('#gfiNiver'), cid = d.querySelector('#gfiCidade');
+    if (niver){ const cp = niver.closest('.campo'); const lb = cp.querySelector('label'); if (lb) lb.textContent = 'Data de nascimento'; pess.insertBefore(cp, pess.children[1]); }
+    if (cid){ pess.appendChild(cid.closest('.campo')); }
+    gqPintarFam(d.querySelector('#gqFam'), e.id);
+    return v;
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(){
+    const d = document.getElementById('dlgGestao'), e = _gcEd;
+    if (d && e && d.querySelector('#gqCpf')){
+      const cpf = d.querySelector('#gqCpf').value.trim();
+      if (cpf && !cpfValido(cpf)) return erroNoCampo(d.querySelector('#gqCpf'), 'CPF inválido. Confira os números, ou deixe em branco.');
+      const dig = soDigitos(cpf);
+      if (dig && gcDB().some(x => x.id !== e.id && soDigitos(x.cpf || '') === dig)) return erroNoCampo(d.querySelector('#gqCpf'), 'Já existe um cliente da gestão com este CPF.');
+      e.cpf = cpf ? formatarCPF(cpf) : '';
+      e.insta = d.querySelector('#gqInsta').value.trim();
+      e.profissao = d.querySelector('#gqProf').value.trim(); e.empresa = d.querySelector('#gqEmp').value.trim();
+      e.contatoForma = d.querySelector('#gqForma').value; e.contatoHora = d.querySelector('#gqHora').value;
+      e.apoioNome = d.querySelector('#gqApoioNome').value.trim(); e.apoioZap = d.querySelector('#gqApoioZap').value.trim();
+      const st = gcDB().find(x => x.id === e.id); if (st && Array.isArray(st.familia)) e.familia = st.familia.slice();
+    }
+    return _sv.apply(this, arguments);
+  };
 })();
 </script>
 
