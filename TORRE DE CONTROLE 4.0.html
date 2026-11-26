@@ -85943,5 +85943,51 @@ function cimp2Candidatos(txt){
   }
 })();
 </script>
+<style id="areastopo-css">
+#btAreasTopo{ display:none; }
+@media (max-width:900px){ #btAreasTopo.tem{ display:inline-grid; } }
+.areas-menu{ position:fixed; z-index:2147482000; min-width:220px; max-width:calc(100vw - 32px); background:var(--sup-1, #fff); border:1px solid var(--fio); border-radius:16px; box-shadow:0 18px 48px rgba(0,0,0,.28); padding:6px; display:grid; gap:2px; }
+.areas-menu button{ display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; border:0; border-radius:12px; background:transparent; color:var(--giz); font:inherit; font-size:calc(15px * var(--esc)); font-weight:600; text-align:left; cursor:pointer; }
+.areas-menu button:hover, .areas-menu button:focus-visible{ background:color-mix(in srgb, var(--ouro) 12%, transparent); outline:none; }
+.areas-menu svg{ width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; color:var(--ouro); }
+</style>
+<script id="areastopo-js">
+/* ── Celular: Equipe, Mentoria e Gestão no topo (26/11/2026) ───────────────────
+   A barra fixa da direita some no celular, e com ela os botões de Equipe,
+   Mentoria e Gestão. Um botão ao lado da foto do perfil abre essas mesmas
+   opções; cada uma faz exatamente o que o botão da barra faz. */
+function areasTopoItens(){
+  return [...document.querySelectorAll('.trilho-dir .trilho-nav .tb')].filter(b => getComputedStyle(b).display !== 'none' && !b.hidden)
+    .map(b => ({b, nome:(b.querySelector('span') || {}).textContent || b.getAttribute('aria-label') || '', ic:(b.querySelector('use') || {getAttribute:() => ''}).getAttribute('href')}))
+    .filter(x => x.nome.trim());
+}
+function areasTopoFechar(){ const m = document.getElementById('areasMenu'); if (m) m.remove(); const bt = document.getElementById('btAreasTopo'); if (bt) bt.setAttribute('aria-expanded', 'false'); }
+function areasTopoAbrir(){
+  if (document.getElementById('areasMenu')) return areasTopoFechar();
+  const bt = document.getElementById('btAreasTopo'); const it = areasTopoItens(); if (!bt || !it.length) return;
+  const m = document.createElement('div'); m.id = 'areasMenu'; m.className = 'areas-menu'; m.setAttribute('role', 'menu');
+  m.innerHTML = it.map((x, i) => `<button type="button" role="menuitem" data-i="${i}">${x.ic ? `<svg><use href="${esc(x.ic)}"/></svg>` : ''}<span>${esc(x.nome.trim())}</span></button>`).join('');
+  document.body.appendChild(m);
+  const r = bt.getBoundingClientRect();
+  m.style.top = Math.round(r.bottom + 8) + 'px';
+  m.style.right = Math.max(16, Math.round(innerWidth - r.right)) + 'px';
+  bt.setAttribute('aria-expanded', 'true');
+  m.querySelectorAll('button').forEach(b => b.onclick = () => { const x = it[Number(b.dataset.i)]; areasTopoFechar(); x.b.click(); });
+  setTimeout(() => { const f = m.querySelector('button'); if (f) f.focus(); }, 30);
+}
+(function(){
+  const p = document.getElementById('btPerfilTopo'); if (!p || document.getElementById('btAreasTopo')) return;
+  p.insertAdjacentHTML('beforebegin', `<button type="button" class="bt fantasma icone" id="btAreasTopo" aria-haspopup="menu" aria-expanded="false" aria-label="Equipe, Mentoria e Gestão"><svg><use href="#i-usuarios"/></svg></button>`);
+  const bt = document.getElementById('btAreasTopo');
+  bt.onclick = ev => { ev.stopPropagation(); areasTopoAbrir(); };
+  document.addEventListener('click', ev => { const m = document.getElementById('areasMenu'); if (m && !m.contains(ev.target)) areasTopoFechar(); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') areasTopoFechar(); });
+  addEventListener('resize', areasTopoFechar);
+  /* os botões da barra aparecem depois (conta, mentoria, gestão): mostra o do topo quando houver algum */
+  const ver = () => bt.classList.toggle('tem', areasTopoItens().length > 0);
+  ver(); setInterval(ver, 1500);
+})();
+</script>
+
 </body>
 </html>
