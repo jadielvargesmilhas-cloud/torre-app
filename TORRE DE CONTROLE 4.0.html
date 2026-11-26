@@ -85915,6 +85915,7 @@ function gcNomeTela(c){ const a = String((c && c.apelido) || '').trim(); return 
 #dlgGestao .gfi-pilha > .gfi-painel[hidden]{ display:block !important; visibility:hidden; pointer-events:none; }
 #dlgGestao .gfi-pilha > .gfi-painel[hidden] *{ visibility:hidden !important; transition:none !important; }
 #dlgGestao .gfi-painel > .eq-tit:first-child{ display:none; }
+#dlgGestao .gfi-painel.gfi-mostra-tit > .eq-tit:first-child{ display:block; margin-top:0; }
 .gfi-novo{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-top:12px; padding:12px; border:1px dashed var(--fio); border-radius:12px; }
 .gfi-novo[hidden]{ display:none !important; }
 @media (max-width:760px){ #dlgGestao .gfi-abas{ margin-left:0; margin-right:0; } #dlgGestao .gfi-abas [role=tab]{ flex:0 0 auto; } .gfi-novo{ grid-template-columns:minmax(0,1fr); } }
@@ -85980,13 +85981,17 @@ function gfiIndicadoNome(c){
     const nos = [...vista.childNodes].filter(n => !(n.nodeType === 3 && !n.textContent.trim())); const grupos = []; let g = null; const antes = [];
     nos.forEach(n => { if (n.nodeType === 1 && n.classList.contains('eq-tit')){ g = {tit:n.textContent.replace(/^\s*\d+\s*·\s*/, '').trim(), nos:[n]}; grupos.push(g); } else if (g) g.nos.push(n); else antes.push(n); });
     if (grupos[0] && antes.length) grupos[0].nos.splice(1, 0, ...antes);
-    const nomes = {'Quem é':'Quem é', 'Origem e indicação':'Origem', 'Objetivo':'Objetivo', 'Viagem e preferências':'Preferências', 'Regras da gestão':'Regras', 'Cofre de acesso':'Cofre', 'Termo de gestão':'Termo', 'Situação':'Situação', 'Cobrança do serviço':'Cobrança', 'Página do cliente':'Página do cliente'};
-    const juntos = []; grupos.forEach(x => { if (x.tit === 'Situação' && juntos.length){ juntos[juntos.length - 1].nos.push(...x.nos); } else juntos.push(x); });
+    const nomes = {'Quem é':'Quem é', 'Origem e indicação':'Rota', 'Objetivo':'Objetivo', 'Viagem e preferências':'Preferências', 'Regras da gestão':'Regras', 'Cofre de acesso':'Cofre', 'Termo de gestão':'Termo', 'Situação':'Situação', 'Cobrança do serviço':'Cobrança', 'Página do cliente':'Página do cliente'};
+    /* "Rota" (26/11/2026): de onde o cliente veio (origem e indicação) até aonde quer chegar (objetivo), numa aba só */
+    const juntos = []; grupos.forEach(x => { const ult = juntos[juntos.length - 1];
+      if (x.tit === 'Situação' && ult){ ult.nos.push(...x.nos); }
+      else if (x.tit === 'Objetivo' && ult && ult.tit === 'Origem e indicação'){ ult.nos.push(...x.nos); ult.mostraTit = true; }
+      else juntos.push(x); });
     const bar = document.createElement('div'); bar.className = 'dr-abas gfi-abas'; bar.setAttribute('role', 'tablist');
     vista.innerHTML = ''; vista.appendChild(bar);
     const pilha = document.createElement('div'); pilha.className = 'gfi-pilha'; vista.appendChild(pilha);
     juntos.forEach((x, i) => {
-      const p = document.createElement('div'); p.className = 'gfi-painel'; p.setAttribute('role', 'tabpanel'); p.hidden = i > 0; p.inert = i > 0; p.dataset.i = i;
+      const p = document.createElement('div'); p.className = 'gfi-painel' + (x.mostraTit ? ' gfi-mostra-tit' : ''); p.setAttribute('role', 'tabpanel'); p.hidden = i > 0; p.inert = i > 0; p.dataset.i = i;
       x.nos.forEach(n => p.appendChild(n)); pilha.appendChild(p);
       bar.insertAdjacentHTML('beforeend', `<button type="button" role="tab" aria-selected="${i === 0}" data-i="${i}">${esc(nomes[x.tit] || x.tit)}</button>`);
     });
@@ -86471,7 +86476,10 @@ function gqPintarFam(box, cid){
         <div class="campo"><label>Empresa</label><input type="text" id="gqEmp" value="${esc(e.empresa || '')}" placeholder="onde trabalha"></div>
         <div class="campo"><label>Melhor forma de falar</label>${sel('gqForma', GQ_FORMAS, e.contatoForma || '', 'escolha')}</div>
         <div class="campo"><label>Melhor horário</label>${sel('gqHora', GQ_HORAS, e.contatoHora || '', 'escolha')}</div>
-      </div>
+      </div>`);
+    /* contato de apoio e família ficam em Preferências, junto de "Com quem viaja" (26/11/2026) */
+    const pPref = (d.querySelector('#gfiCom') || d.querySelector('#gfiAero') || nome).closest('.gfi-painel') || painel;
+    pPref.insertAdjacentHTML('beforeend', `
       <div class="eq-tit gq-sub">Contato de apoio <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">quem resolve junto: cônjuge, secretária</span></div>
       <div class="eq-campos">
         <div class="campo"><label>Nome</label><input type="text" id="gqApoioNome" value="${esc(e.apoioNome || '')}"></div>
