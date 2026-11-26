@@ -81940,6 +81940,7 @@ function gcAprovacoes(id){
 function gcAbrirCarteira(id){
   const c = gcDB().find(x => x.id === id); if (!c || !c.carteiraId) return;
   if (!contaAtiva()) return avisar('Entre na sua conta para abrir a carteira do cliente.', 'alerta', 5200);
+  try { sessionStorage.setItem('torre-volta-gestao', id); } catch(_){}   /* para voltar à lista da Gestão (botão ou seta do navegador) */
   location.href = location.pathname + '?carteira=' + encodeURIComponent(c.carteiraId);
 }
 
@@ -82034,8 +82035,11 @@ function gcPintarFaixa(){
     document.body.appendChild(f);
   }
   const nome = (window._gcCarteira || {}).nome || '', estreita = matchMedia('(max-width:760px)').matches;
-  const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>${estreita ? '' : 'Carteira de '}<b>${esc(nome ? nomeCurto(nome) : 'cliente')}</b></span><button type="button" id="gcFaixaVoltar">${estreita ? 'Voltar' : 'Voltar à minha Torre'}</button>`;
-  if (f._html !== html){ f.innerHTML = html; f._html = html; f.querySelector('#gcFaixaVoltar').onclick = () => { location.href = location.pathname; }; }
+  const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>${estreita ? '' : 'Carteira de '}<b>${esc(nome ? nomeCurto(nome) : 'cliente')}</b></span><button type="button" id="gcFaixaVoltar">${estreita ? 'Voltar' : 'Voltar à Gestão'}</button>`;
+  if (f._html !== html){ f.innerHTML = html; f._html = html; f.querySelector('#gcFaixaVoltar').onclick = () => {
+    try { if (!sessionStorage.getItem('torre-volta-gestao')) sessionStorage.setItem('torre-volta-gestao', '1'); } catch(_){}
+    location.href = location.pathname;
+  }; }
   if (nome) document.title = 'Carteira de ' + nomeCurto(nome) + ' · Torre de Controle';
 }
 if (GC_CARTEIRA) gcPintarFaixa();
@@ -85027,6 +85031,241 @@ function gexExcluir(id, destId){
       pe.querySelector('#gexBt').onclick = () => gexAbrir(id);
     }
     return v;
+  };
+})();
+</script>
+
+<script id="gvolta-js">
+/* Voltar da carteira do cliente cai de novo na lista da Gestão, com o cartão
+   dele destacado (botão "Voltar à Gestão" ou seta de voltar do navegador). */
+(function(){
+  if (typeof GC_CARTEIRA !== 'undefined' && GC_CARTEIRA) return;
+  let alvo = null; try { alvo = sessionStorage.getItem('torre-volta-gestao'); } catch(_){}
+  if (!alvo) return;
+  try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){}
+  let n = 0;
+  const tentar = () => {
+    if (++n > 40) return;
+    if (typeof abrirGestaoClientes !== 'function' || typeof contaAtiva !== 'function' || !contaAtiva() || document.documentElement.classList.contains('conta-fora')) return setTimeout(tentar, 250);
+    abrirGestaoClientes();
+    setTimeout(() => {
+      const card = alvo !== '1' && document.querySelector(`#dlgGestao .eq-card[data-id="${CSS.escape(alvo)}"]`);
+      if (card){ card.scrollIntoView({block:'center'}); card.classList.add('gc-volta'); setTimeout(() => card.classList.remove('gc-volta'), 2400); }
+    }, 350);
+  };
+  addEventListener('pageshow', () => setTimeout(tentar, 300), {once:true});
+  if (document.readyState === 'complete') setTimeout(tentar, 300);
+})();
+</script>
+<style id="gvolta-css">
+#dlgGestao .eq-card.gc-volta{ animation:gcVolta 2.2s ease-out; }
+@keyframes gcVolta{ 0%,40%{ box-shadow:0 0 0 3px var(--ouro); } 100%{ box-shadow:0 0 0 0 transparent; } }
+@media (prefers-reduced-motion:reduce){ #dlgGestao .eq-card.gc-volta{ animation:none; outline:3px solid var(--ouro); } }
+</style>
+
+<style id="gfi-css">
+/* ══ FICHA DO CLIENTE DA GESTÃO EM ABAS (26/11/2026) ═══════════════════════════
+   Uma aba por assunto, nada de página comprida. Novas: Origem e indicação
+   (indicado por qualquer cliente da Torre, não só da gestão) e Viagem e
+   preferências (o que uma ficha completa de agência registra). */
+#dlgGestao .gfi-abas{ margin:0 0 16px; position:sticky; top:0; z-index:3; background:var(--sup-0); overflow-x:auto; scrollbar-width:none; }
+#dlgGestao .gfi-abas::-webkit-scrollbar{ display:none; }
+#dlgGestao .gfi-abas [role=tab]{ flex:1 0 auto; white-space:nowrap; padding-left:12px; padding-right:12px; }
+#dlgGestao .gfi-painel[hidden]{ display:none !important; }
+#dlgGestao .gfi-painel > .eq-tit:first-child{ display:none; }
+.gfi-novo{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-top:12px; padding:12px; border:1px dashed var(--fio); border-radius:12px; }
+.gfi-novo[hidden]{ display:none !important; }
+@media (max-width:760px){ #dlgGestao .gfi-abas{ margin-left:0; margin-right:0; } #dlgGestao .gfi-abas [role=tab]{ flex:0 0 auto; } .gfi-novo{ grid-template-columns:minmax(0,1fr); } }
+</style>
+<script id="gfi-js">
+const GFI_ORIGENS = ['Indicação', 'Instagram', 'WhatsApp', 'Mentoria', 'Cliente de cotação (VEM)', 'Evento', 'Outro'];
+function gfiPessoasCli(excetoNome){
+  const g = new Set(gcDB().map(x => semAcento(String(x.nome).toLowerCase())));
+  return (DB.pessoas || []).filter(p => p.papeis && p.papeis.cliente && !g.has(semAcento(String(p.nome || '').toLowerCase())) && semAcento(String(p.nome || '').toLowerCase()) !== semAcento(String(excetoNome || '').toLowerCase()))
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+}
+function gfiIndicadoNome(c){
+  if (c.indicadoPor){ const g = gcDB().find(x => x.id === c.indicadoPor); if (g) return {nome:g.nome, tipo:'gestao'}; }
+  if (c.indicadoPorPessoa){ const p = (DB.pessoas || []).find(x => x.id === c.indicadoPorPessoa); if (p) return {nome:p.nome, tipo:'torre'}; }
+  return null;
+}
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const vista = d.querySelector('.dr-corpo .eq-vista'); if (!vista || vista.querySelector('.gfi-abas')) return v;
+    const e = _gcEd, pf = e.perfil || {};
+    /* 1) seções novas */
+    const titulos = [...vista.querySelectorAll(':scope > .eq-tit')];
+    const tObj = titulos.find(t => /Objetivo/.test(t.textContent));
+    const outrosG = gcDB().filter(x => x.id !== e.id).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+    const outrosP = gfiPessoasCli(e.nome);
+    const selInd = e.indicadoPor ? e.indicadoPor : e.indicadoPorPessoa ? 'p:' + e.indicadoPorPessoa : '';
+    const origemHTML = `<div class="eq-tit">Origem e indicação</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Como chegou</label><select id="gfiOrigem" data-ordem="natural"><option value="">escolha</option>${GFI_ORIGENS.map(o => `<option${(e.origem || '') === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="campo"><label>Cliente desde</label><input type="date" id="gfiDesde" value="${esc(e.desde || (e.criado ? new Date(e.criado).toLocaleDateString('sv') : ''))}"></div>
+        <div class="campo" id="gfiIndCampo"><label>Indicado por <span class="fraco">quem trouxe este cliente</span></label><select id="gcIndicado" data-ordem="natural">
+          <option value="">ninguém (veio sozinho)</option>
+          ${outrosG.length ? `<optgroup label="Clientes da gestão">${outrosG.map(x => `<option value="${esc(x.id)}"${selInd === x.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</optgroup>` : ''}
+          ${outrosP.length ? `<optgroup label="Outros clientes da Torre">${outrosP.map(p => `<option value="p:${esc(p.id)}"${selInd === 'p:' + p.id ? ' selected' : ''}>${esc(p.nome)}</option>`).join('')}</optgroup>` : ''}
+          <option value="novo">+ Cadastrar quem indicou</option></select></div>
+      </div>
+      <div class="gfi-novo" id="gfiNovo" hidden>
+        <div class="campo"><label>Nome de quem indicou</label><input type="text" id="gfiNovoNome" autocapitalize="characters" placeholder="Nome completo"></div>
+        <div class="campo"><label>WhatsApp <span class="fraco">opcional</span></label><input type="tel" id="gfiNovoZap" placeholder="(71) 9 9999-9999"></div>
+      </div>
+      <div class="ge-alerta info"><svg><use href="#i-info"/></svg><span>Quem indicou ganha o crédito de indicação quando este cliente quitar a primeira emissão. Se não for cliente da gestão, o crédito fica guardado no nome dele para a próxima emissão.</span></div>`;
+    const prefHTML = `<div class="eq-tit">Viagem e preferências</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Aniversário</label><input type="date" id="gfiNiver" value="${esc(pf.niver || '')}"></div>
+        <div class="campo"><label>Cidade</label><input type="text" id="gfiCidade" value="${esc(pf.cidade || '')}" placeholder="Salvador, BA"></div>
+        <div class="campo"><label>Aeroporto de saída</label><input type="text" id="gfiAero" value="${esc(pf.aero || '')}" placeholder="SSA" autocapitalize="characters" maxlength="20"></div>
+        <div class="campo"><label>Companhias preferidas</label><input type="text" id="gfiCias" value="${esc(pf.cias || '')}" placeholder="LATAM, TAP"></div>
+        <div class="campo"><label>Assento</label><select id="gfiAssento" data-ordem="natural"><option value="">sem preferência</option>${['Janela', 'Corredor'].map(o => `<option${pf.assento === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="campo"><label>Viaja com</label><input type="text" id="gfiCom" value="${esc(pf.com || '')}" placeholder="quem costuma ir junto"></div>
+        <div class="campo"><label>Data especial <span class="fraco">ex.: aniversário de casamento</span></label><input type="text" id="gfiDataEsp" value="${esc(pf.dataEsp || '')}" placeholder="12/06 · casamento"></div>
+        <div class="campo"><label>Viagens por ano</label><input type="text" inputmode="numeric" id="gfiFreq" value="${esc(pf.freq || '')}" placeholder="2"></div>
+      </div>
+      <div class="campo" style="margin-top:12px"><label>Observações</label><textarea id="gfiObs" rows="3" placeholder="O que é bom lembrar sempre que atender este cliente">${esc(pf.obs || '')}</textarea></div>`;
+    /* tira o "Indicado por" antigo (ficava no Quem é) */
+    const velho = vista.querySelector('#gcIndicado'); if (velho) velho.closest('.campo').remove();
+    if (tObj){ tObj.insertAdjacentHTML('beforebegin', origemHTML); }
+    const tReg = [...vista.querySelectorAll(':scope > .eq-tit')].find(t => /Regras/.test(t.textContent));
+    if (tReg) tReg.insertAdjacentHTML('beforebegin', prefHTML);
+    /* 2) agrupa por título em abas */
+    const nos = [...vista.childNodes].filter(n => !(n.nodeType === 3 && !n.textContent.trim())); const grupos = []; let g = null; const antes = [];
+    nos.forEach(n => { if (n.nodeType === 1 && n.classList.contains('eq-tit')){ g = {tit:n.textContent.replace(/^\s*\d+\s*·\s*/, '').trim(), nos:[n]}; grupos.push(g); } else if (g) g.nos.push(n); else antes.push(n); });
+    if (grupos[0] && antes.length) grupos[0].nos.splice(1, 0, ...antes);
+    const nomes = {'Quem é':'Quem é', 'Origem e indicação':'Origem', 'Objetivo':'Objetivo', 'Viagem e preferências':'Preferências', 'Regras da gestão':'Regras', 'Cofre de acesso':'Cofre', 'Termo de gestão':'Termo', 'Situação':'Situação', 'Cobrança do serviço':'Cobrança', 'Página do cliente':'Página do cliente'};
+    const juntos = []; grupos.forEach(x => { if (x.tit === 'Situação' && juntos.length){ juntos[juntos.length - 1].nos.push(...x.nos); } else juntos.push(x); });
+    const bar = document.createElement('div'); bar.className = 'dr-abas gfi-abas'; bar.setAttribute('role', 'tablist');
+    vista.innerHTML = ''; vista.appendChild(bar);
+    juntos.forEach((x, i) => {
+      const p = document.createElement('div'); p.className = 'gfi-painel'; p.setAttribute('role', 'tabpanel'); p.hidden = i > 0; p.dataset.i = i;
+      x.nos.forEach(n => p.appendChild(n)); vista.appendChild(p);
+      bar.insertAdjacentHTML('beforeend', `<button type="button" role="tab" aria-selected="${i === 0}" data-i="${i}">${esc(nomes[x.tit] || x.tit)}</button>`);
+    });
+    const ir = i => { bar.querySelectorAll('[role=tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.i == i)); vista.querySelectorAll('.gfi-painel').forEach(p => p.hidden = p.dataset.i != i); const b = bar.querySelector(`[data-i="${i}"]`); if (b) b.scrollIntoView({block:'nearest', inline:'nearest'}); const corpo = d.querySelector('.dr-corpo'); if (corpo) corpo.scrollTop = 0; };
+    bar.querySelectorAll('[role=tab]').forEach(b => b.onclick = () => ir(b.dataset.i));
+    gfiIrAba._ir = ir;
+    /* indicado: cadastrar novo */
+    const sel = vista.querySelector('#gcIndicado'), novo = vista.querySelector('#gfiNovo');
+    const vernovo = () => { novo.hidden = sel.value !== 'novo'; if (!novo.hidden) setTimeout(() => vista.querySelector('#gfiNovoNome').focus(), 30); };
+    sel.addEventListener('change', () => { vernovo(); if (sel.value && !vista.querySelector('#gfiOrigem').value) vista.querySelector('#gfiOrigem').value = 'Indicação'; });
+    return v;
+  };
+  /* um erro num campo escondido: abre a aba dele */
+  const _er = erroNoCampo;
+  erroNoCampo = function(el){
+    try { const p = el && el.closest && el.closest('.gfi-painel'); if (p && p.hidden && gfiIrAba._ir) gfiIrAba._ir(p.dataset.i); } catch(_){}
+    return _er.apply(this, arguments);
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(){
+    const d = document.getElementById('dlgGestao'), e = _gcEd;
+    if (d && e && d.querySelector('#gfiOrigem')){
+      const sel = d.querySelector('#gcIndicado'); let pes = '';
+      if (sel && sel.value === 'novo'){
+        const nome = d.querySelector('#gfiNovoNome').value.trim().replace(/\s+/g, ' ').toUpperCase();
+        if (nome.length < 3) return erroNoCampo(d.querySelector('#gfiNovoNome'), 'Escreva o nome de quem indicou.');
+        let p = (DB.pessoas || []).find(x => semAcento(String(x.nome || '').toLowerCase()) === semAcento(nome.toLowerCase()));
+        if (!p){ p = {id:uid(), nome, fone:d.querySelector('#gfiNovoZap').value.trim(), papeis:{cliente:true}, criado:Date.now()}; (DB.pessoas = DB.pessoas || []).push(p); }
+        else { p.papeis = Object.assign({}, p.papeis, {cliente:true}); }
+        pes = p.id; sel.value = '';
+      } else if (sel && sel.value.startsWith('p:')){ pes = sel.value.slice(2); sel.value = ''; }
+      e.indicadoPorPessoa = pes;
+      e.origem = d.querySelector('#gfiOrigem').value;
+      if (!e.origem && (pes || (sel && sel.value))) e.origem = 'Indicação';
+      e.desde = d.querySelector('#gfiDesde').value;
+      e.perfil = {niver:d.querySelector('#gfiNiver').value, cidade:d.querySelector('#gfiCidade').value.trim(), aero:d.querySelector('#gfiAero').value.trim().toUpperCase(), cias:d.querySelector('#gfiCias').value.trim(),
+        assento:d.querySelector('#gfiAssento').value, com:d.querySelector('#gfiCom').value.trim(), dataEsp:d.querySelector('#gfiDataEsp').value.trim(), freq:d.querySelector('#gfiFreq').value.trim(), obs:d.querySelector('#gfiObs').value.trim()};
+    }
+    return _sv.apply(this, arguments);
+  };
+})();
+function gfiIrAba(){}
+
+/* ── crédito de indicação para quem NÃO é cliente da gestão ──────────────────
+   Fica guardado no nome dele (DB.creditosIndicacao). Se ele virar cliente da
+   gestão, o crédito passa para a ficha dele sozinho. */
+function gfiCredTorre(){ if (!Array.isArray(DB.creditosIndicacao)) DB.creditosIndicacao = []; return DB.creditosIndicacao; }
+(function(){
+  const _lib = giLiberar;
+  giLiberar = function(){
+    const novos = _lib.apply(this, arguments);
+    const rg = geRegras(); if (!(geN(rg.credito) > 0)) return novos;
+    gcDB().forEach(ind => {
+      if (ind.indicadoPor || !ind.indicadoPorPessoa) return;
+      const p = (DB.pessoas || []).find(x => x.id === ind.indicadoPorPessoa); if (!p) return;
+      if (gfiCredTorre().some(cr => cr.origemCli === ind.id) || gcDB().some(x => giCreditos(x).some(cr => cr.origemCli === ind.id))) return;
+      const ems = geDoCliente(ind).slice().sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || (a.criado || 0) - (b.criado || 0));
+      const pri = ems[0]; if (!pri) return;
+      const r = geCalc(pri, ind); if (!(r.precoTotal > 0) || r.aReceber > 0.004) return;
+      const lib = pri.recebidoEm || hojeISO();
+      const cr = {id:uid(), valor:centavos(geN(rg.credito)), pessoaId:p.id, pessoaNome:p.nome, origemCli:ind.id, origemNome:ind.nome, origemEm:pri.id, liberadoEm:lib, validoAte:giSomaMeses(lib, rg.creditoMeses || 12), usos:[]};
+      gfiCredTorre().push(cr); novos.push({cr, para:{nome:p.nome}, de:ind});
+    });
+    /* quem tinha crédito guardado e virou cliente da gestão: o crédito vai para a ficha dele */
+    gfiCredTorre().slice().forEach(cr => {
+      const g = gcDB().find(x => semAcento(String(x.nome).toLowerCase()) === semAcento(String(cr.pessoaNome || '').toLowerCase()));
+      if (g){ giCreditos(g).push(cr); DB.creditosIndicacao = gfiCredTorre().filter(x => x.id !== cr.id); }
+    });
+    return novos;
+  };
+  const _sec = giSecaoHTML;
+  giSecaoHTML = function(c){
+    let h = _sec.apply(this, arguments);
+    const ind = gfiIndicadoNome(c);
+    if (ind && ind.tipo === 'torre'){
+      const cr = gfiCredTorre().find(x => x.origemCli === c.id);
+      const st = cr ? ((cr.usos || []).length ? 'Usado' + (cr.usos[0].nota ? ' · ' + cr.usos[0].nota : '') + ' em ' + gcDataTxt(cr.usos[0].data) : giValido(cr) ? 'Disponível' : 'Vencido') : '';
+      const bloco = `<div class="gi-resumo"><span>Indicado por <b>${esc(ind.nome)}</b> (cliente da Torre)</span>${cr ? `<span>Crédito de ${esc(gcPrimeiro(ind.nome))}: <b>${gcReais(cr.valor)}</b> · ${esc(st)} · válido até ${gcDataTxt(cr.validoAte)}</span>` : '<span>O crédito sai quando a primeira emissão for quitada.</span>'}</div>
+        ${cr && !(cr.usos || []).length && giValido(cr) ? `<div class="ge-em-bts" style="margin-bottom:12px"><button type="button" class="bt p fantasma" data-gfi-usar="${esc(cr.id)}"><svg><use href="#i-ok"/></svg>Marcar crédito de ${esc(gcPrimeiro(ind.nome))} como usado</button></div>` : ''}`;
+      h = h ? h.replace('<div class="gi-resumo">', bloco + '<div class="gi-resumo">') : `<div class="eq-tit">Indicações</div>${bloco}`;
+    }
+    return h;
+  };
+  const _ab = geAbrir;
+  geAbrir = function(cid){
+    const v = _ab.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d) return v;
+    d.querySelectorAll('[data-gfi-usar]').forEach(b => b.onclick = () => {
+      const cr = gfiCredTorre().find(x => x.id === b.dataset.gfiUsar); if (!cr) return;
+      cr.usos = [{em:'', valor:cr.valor, data:hojeISO(), nota:'na cotação'}]; salvar(); avisar('Crédito marcado como usado.', 'ok'); geAbrir(cid);
+    });
+    return v;
+  };
+})();
+
+/* ── Colar dados prontos agora traz a ficha inteira (só preenche o que está vazio) ── */
+(function(){
+  const _imp = geImportarTexto;
+  geImportarTexto = function(txt){
+    let j = null; try { j = JSON.parse(String(txt || '').trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '')); } catch(_){}
+    const r = _imp.apply(this, arguments);
+    if (r.erro || !j || !j.cliente) return r;
+    const c = r.c, k = j.cliente, vazio = x => x == null || x === '' || (typeof x === 'object' && !Object.values(x).some(v => v !== '' && v != null));
+    if (k.zap && !c.zap) c.zap = k.zap;
+    if (k.email && !c.email) c.email = String(k.email).toLowerCase();
+    if (k.objetivo && vazio(c.objetivo)) c.objetivo = Object.assign({destino:'', cabine:'', mes:'', pax:''}, k.objetivo);
+    if (k.perfil) c.perfil = Object.assign({}, k.perfil, Object.fromEntries(Object.entries(c.perfil || {}).filter(([, v]) => v)));
+    if (k.origem && !c.origem) c.origem = k.origem;
+    if (k.desde && !c.desde) c.desde = k.desde;
+    if (k.indicadoPorNome && !c.indicadoPor && !c.indicadoPorPessoa){
+      const n = semAcento(String(k.indicadoPorNome).trim().toLowerCase());
+      const g = gcDB().find(x => x.id !== c.id && semAcento(String(x.nome).toLowerCase()) === n);
+      if (g) c.indicadoPor = g.id;
+      else {
+        let p = (DB.pessoas || []).find(x => semAcento(String(x.nome || '').toLowerCase()) === n);
+        if (!p){ p = {id:uid(), nome:String(k.indicadoPorNome).trim().toUpperCase(), fone:k.indicadoPorZap || '', papeis:{cliente:true}, criado:Date.now()}; (DB.pessoas = DB.pessoas || []).push(p); }
+        c.indicadoPorPessoa = p.id;
+      }
+      if (!c.origem) c.origem = 'Indicação';
+    }
+    giLiberar(); salvar();
+    return r;
   };
 })();
 </script>
