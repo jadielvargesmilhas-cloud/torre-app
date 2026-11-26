@@ -81957,6 +81957,8 @@ function gcAbrirCarteira(id){
   const c = gcDB().find(x => x.id === id); if (!c || !c.carteiraId) return;
   if (!contaAtiva()) return avisar('Entre na sua conta para abrir a carteira do cliente.', 'alerta', 5200);
   try { sessionStorage.setItem('torre-volta-gestao', id); } catch(_){}   /* para voltar à lista da Gestão (botão ou seta do navegador) */
+  /* a seta do navegador volta para este endereço: anota o "voltar" nele também */
+  try { const u = new URL(location.href); u.searchParams.set('volta', id); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch(_){}
   location.href = location.pathname + '?carteira=' + encodeURIComponent(c.carteiraId);
 }
 
@@ -82053,8 +82055,10 @@ function gcPintarFaixa(){
   const nome = (window._gcCarteira || {}).nome || '', estreita = matchMedia('(max-width:760px)').matches;
   const html = `<span class="gc-faixa-ic"><svg><use href="#i-carteira"/></svg></span><span>${estreita ? '' : 'Carteira de '}<b>${esc(nome ? nomeCurto(nome) : 'cliente')}</b></span><button type="button" id="gcFaixaVoltar">${estreita ? 'Voltar' : 'Voltar à Gestão'}</button>`;
   if (f._html !== html){ f.innerHTML = html; f._html = html; f.querySelector('#gcFaixaVoltar').onclick = () => {
-    try { if (!sessionStorage.getItem('torre-volta-gestao')) sessionStorage.setItem('torre-volta-gestao', '1'); } catch(_){}
-    location.href = location.pathname;
+    let k = null; try { k = sessionStorage.getItem('torre-volta-gestao'); if (!k) sessionStorage.setItem('torre-volta-gestao', '1'); } catch(_){}
+    /* o aviso vai também no endereço (só o código interno do cliente): a memória da aba
+       pode se perder na troca de página em alguns navegadores */
+    location.href = location.pathname + '?volta=' + encodeURIComponent(k || '1');
   }; }
   if (nome) document.title = 'Carteira de ' + nomeCurto(nome) + ' · Torre de Controle';
 }
@@ -84315,11 +84319,55 @@ function abrirResumoHack(){
    R$ 400 nacional). Planejamento Anual: R$ 97 x 12; na emissão, 50% das
    mensalidades pagas saem da taxa, sem passar do mínimo. Filtro de venda do
    plano: economia estimada de R$ 6.000 ou mais. */
-const GE_REGRAS_PADRAO = {pct:30, taxaB:300, minInt:900, minNac:400, filtro:6000, planMensal:97, planParcelas:12, planDesc:50, credito:300, creditoMeses:12};
+/* 26/11/2026 15h30 (documento consolidado): A = R$ 150 por pessoa por trecho (taxa de
+   serviço); B = o maior entre R$ 300 por trecho (ou reserva) e 30% da economia; C =
+   milheiro cobrado + 30% da economia. Mínimo por viagem nas passagens; hotel e carro
+   avulsos ficam no R$ 300 por reserva. Proteção: só usar pontos com economia de
+   R$ 1.000 ou mais por trecho/reserva. */
+const GE_REGRAS_PADRAO = {pct:30, taxaA:150, taxaB:300, bPorPax:false, minInt:900, minNac:400, protecao:1000, filtro:6000, planMensal:97, planParcelas:12, planDesc:50, credito:300, creditoMeses:12};
+/* Valor de balcão por programa (preço do milheiro no mercado), editável em Regras. */
+const GE_BALCAO_PADRAO = {azul:{valor:13.5, em:'2026-11-26'}};
+function geBalcaoTudo(){ return Object.assign({}, GE_BALCAO_PADRAO, (DB.cfg && DB.cfg.gestaoBalcao) || {}); }
+function geBalcao(p){ const b = geBalcaoTudo()[p]; return b && geN(b.valor) > 0 ? {valor:geN(b.valor), em:b.em || ''} : null; }
+/* Origem de cada ponto na carteira do cliente (seção 4.2). */
+const GP_ORIGENS = {
+  entrada:{n:'Saldo de entrada', d:'o que já tinha ao entrar na gestão', balcao:true},
+  cartao_base:{n:'Cartão · parte base', d:'gasto × pontuação do cartão de entrada', balcao:true},
+  compra:{n:'Compra de pontos', d:'custo real pago'},
+  transferencia:{n:'Transferência bonificada', d:'custo real dos pontos transferidos'},
+  clube:{n:'Clube', d:'custo real do clube'},
+  cartao_extra:{n:'Cartão · parte extra', d:'troca de cartão orientada pela VEM: anuidade'},
+  vem:{n:'Milhas da VEM', d:'milheiro cobrado do cliente'}
+};
+function gpLista(c){ return Array.isArray(c && c.pontos) ? c.pontos : []; }
+/* Valor de cada entrada: balcão do dia (entrada e cartão base) ou o custo registrado. */
+function gpValorEntrada(x){
+  if ((GP_ORIGENS[x.origem] || {}).balcao){ const b = geBalcao(x.prog); return b ? geN(x.qtd) / 1000 * b.valor : null; }
+  return geN(x.custo);
+}
+function gpResumo(c, p){
+  const l = gpLista(c).filter(x => x.prog === p && geN(x.qtd) > 0);
+  const qtd = soma(l.map(x => geN(x.qtd)));
+  const vs = l.map(gpValorEntrada);
+  const faltaBalcao = vs.some(v => v == null);
+  const valor = centavos(soma(vs.map(v => v || 0)));
+  return {qtd, valor, mil:qtd > 0 ? valor / qtd * 1000 : 0, faltaBalcao, linhas:l};
+}
+/* Valor de N pontos pela média da carteira (sem arredondar o milheiro no meio). */
+function gpValorUso(c, p, n){ const r = gpResumo(c, p); return r.qtd > 0 ? centavos(geN(n) * r.valor / r.qtd) : 0; }
+function geValorPontos(e, c){
+  const linhas = (Array.isArray(e.pts) ? e.pts : []).map(l => {
+    const qtd = Math.max(0, Math.round(geN(l.qtd)));
+    if (l.modo === 'carteira'){ const r = gpResumo(c, l.prog); return {prog:l.prog, qtd, modo:'carteira', mil:r.mil, valor:gpValorUso(c, l.prog, qtd), falta:!r.qtd || r.faltaBalcao}; }
+    const mil = geN(l.mil);
+    return {prog:l.prog, qtd, modo:l.modo || 'balcao', mil, valor:centavos(qtd / 1000 * mil), falta:!(mil > 0)};
+  }).filter(x => x.qtd > 0 && x.prog);
+  return {linhas, qtd:soma(linhas.map(x => x.qtd)), valor:centavos(soma(linhas.map(x => x.valor))), falta:linhas.some(x => x.falta)};
+}
 const GE_TIPOS = {
-  A:{n:'A · Dinheiro', d:'O cliente paga a companhia. Taxa VEM pela regra geral.'},
-  B:{n:'B · Milhas do cliente', d:'Emitida com as milhas dele. Taxa VEM pela regra geral.'},
-  C:{n:'C · Milhas da VEM', d:'Emitida com as suas milhas. Milheiro com margem + taxa VEM.'}
+  A:{n:'A · Só dinheiro', d:'Nenhum ponto usado. Taxa de serviço: R$ 150 por pessoa por trecho.'},
+  B:{n:'B · Pontos do cliente', d:'Passagem, hotel ou carro. O maior entre R$ 300 por trecho e 30% da economia.'},
+  C:{n:'C · Milhas da VEM', d:'Milheiro cobrado (custo + margem) + 30% da economia.'}
 };
 function geRegras(){ const r = (DB.cfg && DB.cfg.gestaoRegras) || {}; return Object.assign({}, GE_REGRAS_PADRAO, r); }
 function geN(v){ return Number(v) || 0; }
@@ -84334,12 +84382,12 @@ function geTaxaGeral({pax, trechos, economia, ambito, pct, porPax, semMinimo}){
   pax = Math.max(1, Math.round(geN(pax)) || 1); trechos = Math.max(1, Math.round(geN(trechos)) || 1);
   const pp = porPax != null && porPax !== '' ? geN(porPax) : geN(rg.taxaB);
   const pc = pct != null && pct !== '' ? geN(pct) : geN(rg.pct);
-  const porTrecho = centavos(pp * pax * trechos);
+  const porTrecho = centavos(pp * trechos * (rg.bPorPax ? pax : 1));
   const pelaPct = geN(economia) > 0 ? centavos(geN(economia) * pc / 100) : 0;
   const minimo = semMinimo ? 0 : centavos(ambito === 'nac' ? rg.minNac : rg.minInt);
   let taxa = Math.max(porTrecho, pelaPct), por = pelaPct > porTrecho ? 'pct' : 'trecho';
   if (taxa < minimo){ taxa = minimo; por = 'minimo'; }
-  return {taxa:centavos(taxa), por, porTrecho, pelaPct, minimo, pax, trechos, porPax:pp, pct:pc};
+  return {taxa:centavos(taxa), por, porTrecho, pelaPct, minimo, pax, trechos, porPax:pp, pct:pc, porPessoa:!!rg.bPorPax, tipo:'B', unid:trechos, produto:'passagem'};
 }
 /* Planejamento Anual: quanto das mensalidades já pagas vira desconto. */
 function gePlanoCredito(c){
@@ -84355,38 +84403,69 @@ function geCalc(e, c){
   const pax = Math.max(1, Math.round(geN(e.pax)) || 1), trechos = Math.max(1, Math.round(geN(e.trechos)) || 1);
   const mercado = centavos(geN(e.mercado));
   const repasse = e.repMoeda === 'USD' ? centavos(geN(e.repValor) * geN(e.repCambio)) : centavos(geN(e.repValor));
-  const r = {tipo:t, pax, trechos, mercado, repasse, valorMilhas:0, custo:0, economia:0, pct:0, pctPor:'', taxa:0, minimoAplicado:false, alertas:[]};
+  const r = {tipo:t, pax, trechos, mercado, repasse, valorMilhas:0, custo:0, economia:0, pct:0, pctPor:'', taxa:0, minimoAplicado:false, alertas:[], passagens:0};
+  const prod = t === 'B' ? (e.produto || 'passagem') : 'passagem';
+  const unid = prod === 'passagem' ? trechos : Math.max(1, Math.round(geN(e.reservas)) || 1);
+  r.produto = prod; r.unid = unid;
   if (t === 'C'){
     r.valorMilhas = centavos(geN(e.milhas) / 1000 * geN(e.milheiro));
     r.custo = centavos(geN(e.milhas) / 1000 * geN(e.custoMil));
-    r.economia = centavos(mercado - r.valorMilhas);
+    /* C: a economia não desconta as taxas de repasse (simulação 10.5 do documento de 26/11, valor já cobrado do Rodrigo) */
+    r.economia = mercado > 0 ? centavos(mercado - r.valorMilhas) : 0;
   } else if (t === 'A'){
-    r.pagoCia = centavos(geN(e.pagoCia));
-    r.economia = centavos(mercado - r.pagoCia);
-  } else if (t === 'B' && geN(e.milhasCli) > 0 && geN(e.milheiroCli) > 0){
-    r.valorMilhasCli = centavos(geN(e.milhasCli) / 1000 * geN(e.milheiroCli));
-    r.economia = mercado > 0 ? centavos(mercado - r.valorMilhasCli) : 0;
+    r.passagens = r.pagoCia = centavos(geN(e.pagoCia));
+  } else {
+    r.pontos = geValorPontos(e, c);
+    r.valorPontos = r.pontos.valor;
+    r.economia = mercado > 0 && r.pontos.qtd > 0 ? centavos(mercado - r.valorPontos - repasse) : 0;
+    if (r.pontos.qtd > 0) r.rendimento = mercado > 0 ? mercado / (r.pontos.qtd / 1000) : 0;
   }
   r.ambito = e.ambito === 'nac' ? 'nac' : 'int';
   const usaPct = e.pct != null && e.pct !== '';
-  const tg = geTaxaGeral({pax, trechos, economia:r.economia, ambito:r.ambito, pct:usaPct ? e.pct : null, porPax:e.taxaB, semMinimo:!!e.minJaCobrado});
-  r.pct = tg.pct; r.pctPor = usaPct ? 'escolhido nesta emissão' : 'regra geral da VEM';
-  r.porTrecho = tg.porTrecho; r.pelaPct = tg.pelaPct; r.porPax = tg.porPax; r.minimo = tg.minimo; r.taxaPor = tg.por;
-  r.minimoAplicado = tg.por === 'minimo';
-  r.taxaGeral = tg.taxa; r.taxaPorTrecho = centavos(tg.porPax * pax);
+  r.pct = usaPct ? geN(e.pct) : geN(rg.pct); r.pctPor = usaPct ? 'escolhido nesta emissão' : 'regra geral da VEM';
+  r.minimo = e.minJaCobrado || prod !== 'passagem' ? 0 : centavos(r.ambito === 'nac' ? rg.minNac : rg.minInt);
+  r.pelaPct = r.economia > 0 ? centavos(r.economia * r.pct / 100) : 0;
+  if (t === 'A'){
+    r.porPax = e.taxaA != null && e.taxaA !== '' ? geN(e.taxaA) : geN(rg.taxaA);
+    r.porTrecho = centavos(r.porPax * pax * trechos); r.pelaPct = 0; r.porPessoa = true;
+  } else if (t === 'B'){
+    r.porPax = e.taxaB != null && e.taxaB !== '' ? geN(e.taxaB) : geN(rg.taxaB);
+    r.porPessoa = prod === 'passagem' && !!rg.bPorPax;
+    r.porTrecho = centavos(r.porPax * unid * (r.porPessoa ? pax : 1));
+  } else { r.porPax = 0; r.porTrecho = 0; }
+  let tx = Math.max(r.porTrecho, r.pelaPct), por = t === 'C' || r.pelaPct > r.porTrecho ? 'pct' : 'trecho';
+  if (tx < r.minimo){ tx = r.minimo; por = 'minimo'; }
+  r.taxaPor = por; r.minimoAplicado = por === 'minimo';
+  r.taxaGeral = centavos(tx); r.taxaPorTrecho = centavos(r.porPax * pax);
+  /* B: decisão automática "usar pontos ou pagar em dinheiro" (seção 5) */
+  if (t === 'B'){
+    const custoReal = centavos(r.valorPontos + repasse + r.taxaGeral);
+    const minEco = centavos(geN(rg.protecao) * unid);
+    const nome = prod === 'passagem' ? (unid > 1 ? 'trechos' : 'trecho') : (unid > 1 ? 'reservas' : 'reserva');
+    if (!(mercado > 0) || !(r.pontos.qtd > 0)) { r.decisao = ''; r.motivo = !(mercado > 0) ? 'Falta o preço em dinheiro de referência.' : 'Falta informar os pontos usados.'; }
+    else if (r.pontos.falta){ r.decisao = ''; r.motivo = 'Falta o valor por mil de algum programa (valor de balcão ou custo).'; }
+    else if (r.economia < minEco){ r.decisao = 'dinheiro'; r.motivo = r.economia <= 0 ? `Com os pontos, a viagem sai mais cara que em dinheiro (economia de ${r.economia < 0 ? '− ' : ''}${gcReais(Math.abs(r.economia))}). Guarde os pontos.` : `A economia (${gcReais(r.economia)}) fica abaixo de ${gcReais(minEco)} (R$ ${moedaTxt(geN(rg.protecao))} por ${prod === 'passagem' ? 'trecho' : 'reserva'}, ${unid} ${nome}). Guarde os pontos.`; }
+    else if (custoReal > mercado){ r.decisao = 'dinheiro'; r.motivo = `O custo real (${gcReais(custoReal)}: pontos + taxas + Taxa VEM) passaria do preço em dinheiro (${gcReais(mercado)}).`; }
+    else { r.decisao = 'pontos'; r.motivo = `Economia de ${gcReais(r.economia)}, acima de ${gcReais(minEco)}, e o custo real (${gcReais(custoReal)}) fica abaixo do preço em dinheiro.`; }
+    if (r.decisao === 'dinheiro'){ r.taxaGeral = 0; r.taxaPor = 'dinheiro'; r.minimoAplicado = false; r.alertas.push('Decisão: pagar em dinheiro. ' + r.motivo + ' Se a VEM fizer a emissão em dinheiro, use a situação A.'); }
+    if (r.decisao === 'pontos' && r.rendimento && r.pontos.linhas.some(l => l.modo === 'balcao')){
+      const bmax = Math.max(...r.pontos.linhas.filter(l => l.modo === 'balcao').map(l => l.mil));
+      if (r.rendimento < bmax) r.alertas.push(`Rendimento do ponto: ${gcReais(r.rendimento)} por mil, abaixo do balcão (${gcReais(bmax)}). Não compensa usar pontos de entrada.`);
+    }
+  }
   /* Planejamento Anual: no formulário, o que há disponível; salva, o que ficou gravado nela */
   r.descontoPlano = 0;
   if (c && c.plano === 'anual'){
     const usado = centavos(soma(geDoCliente(c).filter(x => x.id !== e.id).map(x => geN(x.descontoPlano))));
     const base = e._editando ? Math.max(0, centavos(gePlanoCredito(c) - usado)) : geN(e.descontoPlano);
-    r.descontoPlano = centavos(Math.max(0, Math.min(base, r.taxaGeral - tg.minimo)));
+    r.descontoPlano = centavos(Math.max(0, Math.min(base, r.taxaGeral - r.minimo)));
   } else if (!e._editando && geN(e.descontoPlano) > 0){
-    r.descontoPlano = centavos(Math.max(0, Math.min(geN(e.descontoPlano), r.taxaGeral - tg.minimo)));
+    r.descontoPlano = centavos(Math.max(0, Math.min(geN(e.descontoPlano), r.taxaGeral - r.minimo)));
   }
   r.taxa = centavos(r.taxaGeral - r.descontoPlano);
-  if ((t === 'A' || t === 'C') && !(mercado > 0)) r.alertas.push('Falta o preço de mercado: sem ele a taxa VEM fica só pelos R$ por passageiro por trecho.');
-  else if ((t === 'A' || t === 'C') && r.economia <= 0) r.alertas.push(`Não houve economia: ${t === 'C' ? 'o valor das milhas' : 'o que o cliente pagou'} não ficou abaixo do preço de mercado.`);
-  r.precoSemTaxas = centavos(r.valorMilhas + r.taxa);
+  if (t === 'C' && !(mercado > 0)) r.alertas.push('Falta o preço em dinheiro de referência: sem ele não há economia para os 30%.');
+  else if (t === 'C' && r.economia <= 0) r.alertas.push('Não houve economia: o valor das milhas não ficou abaixo do preço em dinheiro.');
+  r.precoSemTaxas = centavos(r.valorMilhas + r.passagens + r.taxa);
   r.precoTotal = centavos(r.precoSemTaxas + repasse);
   r.lucroMilha = centavos(r.valorMilhas - r.custo);
   r.lucroTaxa = r.taxa;
@@ -84489,28 +84568,31 @@ function geEditar(cid, eid){
         <div class="campo"><label>Passageiros</label><input type="text" inputmode="numeric" id="gePax" value="${esc(e.pax || 1)}"></div>
         <div class="campo"><label>Trechos <span class="fraco">ida e volta = 2</span></label><input type="text" inputmode="numeric" id="geTrechos" value="${esc(e.trechos || 1)}"></div>
         <div class="campo"><label>Viagem</label><select id="geAmbito" data-ordem="natural"><option value="int"${e.ambito !== 'nac' ? ' selected' : ''}>Internacional</option><option value="nac"${e.ambito === 'nac' ? ' selected' : ''}>Nacional</option></select></div>
-        <div class="campo ge-so-bc"><label>Programa de milhas</label><select id="geProg"><option value="">escolha</option>${progs.map(p => `<option value="${p}"${e.prog === p ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+        <div class="campo ge-so-b"><label>O que é</label><select id="geProduto" data-ordem="natural">${[['passagem', 'Passagem'], ['hotel', 'Hotel'], ['carro', 'Carro']].map(([k, n]) => `<option value="${k}"${(e.produto || 'passagem') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="campo ge-so-res"><label>Reservas</label><input type="text" inputmode="numeric" id="geReservas" value="${esc(e.reservas || 1)}"></div>
+        <div class="campo ge-so-c"><label>Programa de milhas</label><select id="geProg"><option value="">escolha</option>${progs.map(p => `<option value="${p}"${e.prog === p ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
       </div>
-      <div><div class="eq-tit">3 · Preço de mercado <span class="fraco ge-so-b" style="text-transform:none;letter-spacing:0;font-weight:400">opcional no tipo B</span></div>
+      <div class="ge-so-a"><div class="eq-tit">3 · Passagens em dinheiro</div>
+      <div class="eq-campos"><div class="campo"><label>Valor das passagens <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="decimal" data-moeda id="gePagoCia" value="${m(e.pagoCia)}" placeholder="36.402,00"></div></div></div>
+      <div class="ge-so-bc"><div class="eq-tit">3 · Preço em dinheiro de referência</div>
       <div class="eq-campos">
-        <div class="campo"><label>Preço de mercado <span class="fraco">todos os passageiros, mesmo voo, classe e bagagem</span></label><input type="text" inputmode="decimal" data-moeda id="geMercado" value="${m(e.mercado)}" placeholder="28.194,00"></div>
-        <div class="campo ge-so-a"><label>Quanto o cliente pagou à companhia</label><input type="text" inputmode="decimal" data-moeda id="gePagoCia" value="${m(e.pagoCia)}"></div>
-        <div class="campo ge-so-b"><label>Milhas do cliente usadas</label><input type="text" inputmode="numeric" data-milhar id="geMilhasCli" value="${e.milhasCli ? qtdTxt(e.milhasCli) : ''}" placeholder="120.000"></div>
-        <div class="campo ge-so-b"><label>Valor do milheiro do cliente <span class="fraco">para medir a economia</span></label><input type="text" inputmode="decimal" data-moeda id="geMilheiroCli" value="${m(e.milheiroCli)}" placeholder="30,00"></div>
+        <div class="campo"><label>Preço em dinheiro <span class="fraco">menor preço do dia: mesmo voo (ou hotel), classe e bagagem, em site confiável, com print</span></label><input type="text" inputmode="decimal" data-moeda id="geMercado" value="${m(e.mercado)}" placeholder="28.194,00"></div>
       </div>
       <div id="gePrintBox"></div></div>
+      <div class="ge-so-b"><div class="eq-tit">4 · Pontos do cliente usados</div><div id="gePtsBox"></div></div>
       <div class="ge-so-c"><div class="eq-tit">4 · Milhas da VEM</div>
       <div class="eq-campos">
         <div class="campo"><label>Milhas usadas</label><input type="text" inputmode="numeric" data-milhar id="geMilhas" value="${e.milhas ? qtdTxt(e.milhas) : ''}" placeholder="197.670"></div>
         <div class="campo"><label>Custo real do milheiro <span class="fraco" id="geCustoDica"></span></label><input type="text" inputmode="decimal" data-moeda id="geCustoMil" value="${m(e.custoMil)}" placeholder="67,75"></div>
         <div class="campo"><label>Milheiro cobrado</label><input type="text" inputmode="decimal" data-moeda id="geMilheiro" value="${m(e.milheiro)}" placeholder="80,00"></div>
       </div></div>
-      <div><div class="eq-tit">5 · Taxa VEM <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">o maior entre os dois, nunca abaixo do mínimo da viagem</span></div>
+      <div><div class="eq-tit">5 · Taxa VEM <span class="fraco" id="geTaxaSub" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
       <div class="eq-campos">
-        <div class="campo"><label>R$ por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="geTaxaB" value="${m(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB)}"></div>
-        <div class="campo"><label>% sobre a economia <span class="fraco" id="gePctDica"></span></label><input type="text" inputmode="decimal" id="gePct" value="${e.pct != null && e.pct !== '' ? gePctTxt(e.pct) : ''}" placeholder="${gePctTxt(rg.pct)}"></div>
+        <div class="campo ge-so-a"><label>R$ por pessoa por trecho</label><input type="text" inputmode="decimal" data-moeda id="geTaxaA" value="${m(e.taxaA != null && e.taxaA !== '' ? e.taxaA : rg.taxaA)}"></div>
+        <div class="campo ge-so-b"><label id="geTaxaBRot">R$ por trecho</label><input type="text" inputmode="decimal" data-moeda id="geTaxaB" value="${m(e.taxaB != null && e.taxaB !== '' ? e.taxaB : rg.taxaB)}"></div>
+        <div class="campo ge-so-bc"><label>% sobre a economia <span class="fraco" id="gePctDica"></span></label><input type="text" inputmode="decimal" id="gePct" value="${e.pct != null && e.pct !== '' ? gePctTxt(e.pct) : ''}" placeholder="${gePctTxt(rg.pct)}"></div>
       </div>
-      <label class="chk" style="margin-top:10px"><input type="checkbox" id="geMinJa"${e.minJaCobrado ? ' checked' : ''}><span>O mínimo desta viagem já foi cobrado em outra emissão (ex.: a ida)</span></label></div>
+      <label class="chk ge-so-min" style="margin-top:10px"><input type="checkbox" id="geMinJa"${e.minJaCobrado ? ' checked' : ''}><span>O mínimo desta viagem já foi cobrado em outra emissão (ex.: a ida)</span></label></div>
       <div class="eq-tit">6 · Taxas de repasse <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">embarque e aeroporto, pelo valor real</span></div>
       <div class="eq-campos">
         <div class="campo"><label>Moeda</label><select id="geRepMoeda" data-ordem="natural"><option value="BRL"${e.repMoeda !== 'USD' ? ' selected' : ''}>Reais (R$)</option><option value="USD"${e.repMoeda === 'USD' ? ' selected' : ''}>Dólar (US$)</option></select></div>
@@ -84531,14 +84613,15 @@ function geEditar(cid, eid){
       <button type="button" class="bt primario" id="geSalvar"><svg><use href="#i-ok"/></svg>Salvar</button></footer></div>`;
   const $g = s => d.querySelector(s);
   if (typeof prvCaixa === 'function') try { prvCaixa($g('#gePrintBox'), 'gestao:' + e.id, 'beforeend'); } catch(_){}
+  gePtsPintar($g('#gePtsBox'), e, c);
   const ler = () => {
     const pct = String($g('#gePct').value || '').trim();
     Object.assign(e, {data:$g('#geData').value, loc:$g('#geLoc').value.trim().toUpperCase(), trecho:$g('#geTrecho').value.trim(), dataVoo:$g('#geVoo').value,
       classe:$g('#geClasse').value, pax:Math.max(1, parseInt($g('#gePax').value, 10) || 1), trechos:Math.max(1, parseInt($g('#geTrechos').value, 10) || 1), prog:$g('#geProg').value,
       mercado:moedaNum($g('#geMercado').value) || 0, pagoCia:moedaNum($g('#gePagoCia').value) || 0,
       milhas:qtdNum($g('#geMilhas').value) || 0, custoMil:moedaNum($g('#geCustoMil').value) || 0, milheiro:moedaNum($g('#geMilheiro').value) || 0,
-      taxaB:moedaNum($g('#geTaxaB').value), pct:pct === '' ? '' : (parseFloat(pct.replace(',', '.')) || 0), ambito:$g('#geAmbito').value, minJaCobrado:$g('#geMinJa').checked,
-      milhasCli:qtdNum($g('#geMilhasCli').value) || 0, milheiroCli:moedaNum($g('#geMilheiroCli').value) || 0,
+      taxaB:moedaNum($g('#geTaxaB').value), taxaA:moedaNum($g('#geTaxaA').value), pct:pct === '' ? '' : (parseFloat(pct.replace(',', '.')) || 0), ambito:$g('#geAmbito').value, minJaCobrado:$g('#geMinJa').checked,
+      produto:$g('#geProduto').value, reservas:Math.max(1, parseInt($g('#geReservas').value, 10) || 1), pts:gePtsLer($g('#gePtsBox')),
       repMoeda:$g('#geRepMoeda').value, repValor:moedaNum($g('#geRepValor').value) || 0, repCambio:parseFloat(String($g('#geRepCambio').value || '').replace(/\./g, '').replace(',', '.')) || 0,
       recebido:moedaNum($g('#geRecebido').value) || 0, recebidoEm:$g('#geRecebidoEm').value,
       usarCredito:$g('#geUsarCred') ? $g('#geUsarCred').checked : !!e.usarCredito});
@@ -84551,6 +84634,11 @@ function geEditar(cid, eid){
     d.querySelectorAll('.ge-so-c').forEach(x => x.classList.toggle('ge-oculto', t !== 'C'));
     d.querySelectorAll('.ge-so-ac').forEach(x => x.classList.toggle('ge-oculto', t === 'B'));
     d.querySelectorAll('.ge-so-bc').forEach(x => x.classList.toggle('ge-oculto', t === 'A'));
+    const hot = t === 'B' && $g('#geProduto').value !== 'passagem';
+    d.querySelectorAll('.ge-so-res').forEach(x => x.classList.toggle('ge-oculto', !hot));
+    d.querySelectorAll('.ge-so-min').forEach(x => x.classList.toggle('ge-oculto', hot));
+    $g('#geTaxaBRot').textContent = hot ? 'R$ por reserva' : geRegras().bPorPax ? 'R$ por passageiro por trecho' : 'R$ por trecho';
+    $g('#geTaxaSub').textContent = t === 'A' ? 'taxa de serviço, nunca abaixo do mínimo da viagem' : t === 'C' ? 'percentual da economia, nunca abaixo do mínimo da viagem' : hot ? 'o maior entre os dois' : 'o maior entre os dois, nunca abaixo do mínimo da viagem';
     d.querySelectorAll('.ge-so-usd').forEach(x => x.classList.toggle('ge-oculto', $g('#geRepMoeda').value !== 'USD'));
     /* numeração das partes sem pular número quando uma some */
     let k = 0; d.querySelectorAll('#geForm .eq-tit').forEach(ti => { if (ti.closest('.ge-oculto')) return; const tn = ti.firstChild; if (tn && tn.nodeType === 3 && /^\s*\d+\s*·/.test(tn.nodeValue)) tn.nodeValue = tn.nodeValue.replace(/^\s*\d+/, String(++k)); });
@@ -84564,17 +84652,23 @@ function geEditar(cid, eid){
     giPintarCampo(c, e, $g('#geCredBox'));
     const L = (a, b, cls, sub) => `<div class="ge-l${cls ? ' ' + cls : ''}"><span>${a}${sub ? `<small>${sub}</small>` : ''}</span><b>${b}</b></div>`;
     let h = '';
+    const neg = v => (v < 0 ? '− ' : '') + gcReais(Math.abs(v));
     if (e.tipo === 'C'){
       h += L('Valor das milhas', gcReais(r.valorMilhas), '', `${nBR(geN(e.milhas))} ÷ 1.000 × ${gcReais(e.milheiro)}`);
-      h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.valorMilhas)}`);
+      h += L('Economia', neg(r.economia), '', `${gcReais(r.mercado)} em dinheiro − ${gcReais(r.valorMilhas)}`);
     } else if (e.tipo === 'A'){
-      h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.pagoCia)} pagos`);
-    } else if (r.valorMilhasCli){
-      h += L('Economia', gcReais(r.economia), '', `${gcReais(r.mercado)} de mercado − ${gcReais(r.valorMilhasCli)} das milhas do cliente`);
+      h += L('Passagens em dinheiro', gcReais(r.passagens));
+    } else if (r.pontos && r.pontos.qtd > 0){
+      r.pontos.linhas.forEach(l => { h += L(`Pontos ${esc(prog(l.prog).n)}`, gcReais(l.valor), '', `${nBR(l.qtd)} ÷ 1.000 × ${gcReais(l.mil)} (${l.modo === 'carteira' ? 'média da carteira do cliente' : l.modo === 'balcao' ? 'valor de balcão' : 'custo real'})`); });
+      if (r.pontos.linhas.length > 1) h += L('Valor dos pontos usados', gcReais(r.valorPontos));
+      if (r.mercado > 0) h += L('Economia', neg(r.economia), '', `${gcReais(r.mercado)} em dinheiro − ${gcReais(r.valorPontos)} dos pontos${r.repasse ? ` − ${gcReais(r.repasse)} de taxas` : ''}`);
+      if (r.rendimento) h += L('Rendimento do ponto', gcReais(r.rendimento) + ' por mil', '', 'preço em dinheiro ÷ (pontos ÷ 1.000)');
+      if (r.decisao) h += `<div class="ge-decisao ${r.decisao}" id="geDecisao"><b>${r.decisao === 'pontos' ? 'Usar pontos' : 'Pagar em dinheiro'}</b><span>${esc(r.motivo)}</span></div>`;
+      else if (r.motivo) h += `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>${esc(r.motivo)}</span></div>`;
     }
     h += geTaxaLinhas(r, L);
     if (r.descontoIndicacao > 0) h += L('Desconto por indicação', '− ' + gcReais(r.descontoIndicacao), '', `crédito de indicação abatido da ${e.tipo === 'B' ? 'taxa da gestão' : 'comissão'} (${gcReais(r.taxaBruta)} − ${gcReais(r.descontoIndicacao)})`);
-    h += L('Preço ao cliente, sem taxas', gcReais(r.precoSemTaxas), 'forte sep');
+    h += L(e.tipo === 'A' ? 'Passagens + taxa de serviço' : e.tipo === 'B' ? 'A VEM recebe, sem taxas' : 'Preço ao cliente, sem taxas', gcReais(r.precoSemTaxas), 'forte sep');
     h += L('Taxas de repasse', gcReais(r.repasse), '', e.repMoeda === 'USD' ? `US$ ${moedaTxt(e.repValor)} × ${String(e.repCambio || 0).replace('.', ',')}` : 'pelo valor real');
     h += L('Total a receber do cliente', gcReais(r.precoTotal), 'forte');
     if (e.tipo === 'C') h += L('Custo das milhas', '− ' + gcReais(r.custo), 'sep', `${nBR(geN(e.milhas))} ÷ 1.000 × ${gcReais(e.custoMil)}`);
@@ -84584,6 +84678,7 @@ function geEditar(cid, eid){
     h += L('Lucro total', gcReais(r.lucro), 'lucro sep');
     h += L('Já recebido', gcReais(r.recebido), 'sep');
     h += L(r.aReceber >= 0 ? 'Falta receber' : 'Recebido a mais', gcReais(Math.abs(r.aReceber)), 'forte');
+    if (r.linhaCliente) h += `<div class="ge-linha-cli" id="geLinhaCli">${esc(r.linhaCliente)}</div>`;
     $g('#geRes').innerHTML = `<div class="ge-res">${h}</div>${r.alertas.map(a => `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>${esc(a)}</span></div>`).join('')}`;
   };
   d.querySelectorAll('.ge-tipo').forEach(b => b.onclick = () => { e.tipo = b.dataset.t; d.querySelectorAll('.ge-tipo').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); pintar(); });
@@ -84675,13 +84770,19 @@ function geSincReserva(c, e){
 
 /* As linhas da taxa VEM no resultado: de onde ela veio, em uma frase. */
 function geTaxaExplica(r){
-  const pt = `${gcReais(r.porPax)} × ${r.pax} passageiro${r.pax > 1 ? 's' : ''} × ${r.trechos} trecho${r.trechos > 1 ? 's' : ''} = ${gcReais(r.porTrecho)}`;
+  const pl = (n, a, b) => `${n} ${n > 1 ? b : a}`;
+  const un = r.produto && r.produto !== 'passagem' ? pl(r.unid, 'reserva', 'reservas') : pl(r.unid || r.trechos, 'trecho', 'trechos');
+  const pt = r.porPessoa ? `${gcReais(r.porPax)} × ${pl(r.pax, r.tipo === 'A' ? 'pessoa' : 'passageiro', r.tipo === 'A' ? 'pessoas' : 'passageiros')} × ${pl(r.trechos, 'trecho', 'trechos')} = ${gcReais(r.porTrecho)}` : `${gcReais(r.porPax)} × ${un} = ${gcReais(r.porTrecho)}`;
   const pc = `${gePctTxt(r.pct)}% da economia = ${gcReais(r.pelaPct)}`;
-  if (r.taxaPor === 'minimo') return `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'} (${pt}; ${pc})`;
+  const mn = `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'}`;
+  if (r.taxaPor === 'dinheiro') return 'decisão: pagar em dinheiro, sem Taxa VEM de pontos';
+  if (r.tipo === 'A') return r.taxaPor === 'minimo' ? `${mn} (${pt})` : `taxa de serviço: ${pt}`;
+  if (r.tipo === 'C') return r.taxaPor === 'minimo' ? `${mn} (${pc})` : pc;
+  if (r.taxaPor === 'minimo') return `${mn} (${pt}; ${pc})`;
   return r.taxaPor === 'pct' ? `${pc}, maior que ${pt}` : `${pt}, maior que ${pc}`;
 }
 function geTaxaLinhas(r, L){
-  let h = L('Taxa VEM', gcReais(r.taxaGeral), '', geTaxaExplica(r));
+  let h = L(r.tipo === 'A' ? 'Taxa de serviço VEM' : 'Taxa VEM', r.taxaPor === 'dinheiro' ? '—' : gcReais(r.taxaGeral), '', geTaxaExplica(r));
   if (r.descontoPlano > 0) h += L('Desconto do Planejamento Anual', '− ' + gcReais(r.descontoPlano), '', `metade das mensalidades pagas${r.taxaGeral - r.descontoPlano <= r.minimo + 0.004 && r.minimo > 0 ? ', até o mínimo da viagem' : ''}`);
   return h;
 }
@@ -84693,13 +84794,20 @@ function geTextoMsg(c, e){
   if (e.tipo === 'C'){
     linhas.push(`• Passagem (${nBR(geN(e.milhas))} milhas): ${gcReais(r.valorMilhas)}`);
   }
-  linhas.push(`• Taxa VEM (${r.taxaPor === 'pct' ? `${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}` : r.taxaPor === 'minimo' ? `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'}` : `${gcReais(r.porPax)} por passageiro por trecho, ${r.pax} passageiro${r.pax > 1 ? 's' : ''} e ${r.trechos} trecho${r.trechos > 1 ? 's' : ''}`}): ${gcReais(r.taxaGeral)}`);
+  if (e.tipo === 'A'){
+    linhas.push(`• Passagens, em dinheiro: ${gcReais(r.passagens)}`);
+    linhas.push(`• Taxa de serviço VEM (pesquisa, comparação, emissão e acompanhamento; ${r.taxaPor === 'minimo' ? `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'}` : `${gcReais(r.porPax)} por pessoa por trecho`}): ${gcReais(r.taxaGeral)}`);
+  } else if (r.taxaPor !== 'dinheiro'){
+    linhas.push(`• Taxa VEM (${r.taxaPor === 'pct' ? `${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}` : r.taxaPor === 'minimo' ? `mínimo da viagem ${r.ambito === 'nac' ? 'nacional' : 'internacional'}` : `${gcReais(r.porPax)} por ${r.produto !== 'passagem' ? 'reserva' : r.porPessoa ? 'passageiro por trecho' : 'trecho'}`}): ${gcReais(r.taxaGeral)}`);
+  }
+  if (e.tipo === 'B' && r.pontos && r.pontos.qtd > 0) linhas.splice(2, 0, `• Pontos usados: ${r.pontos.linhas.map(l => `${nBR(l.qtd)} ${prog(l.prog).n}`).join(' + ')} (valem ${gcReais(r.valorPontos)})`);
   if (r.descontoPlano > 0) linhas.push(`• Desconto do Planejamento Anual (metade das mensalidades pagas): − ${gcReais(r.descontoPlano)}`);
   if (r.descontoIndicacao > 0) linhas.push(`• Desconto por indicação (seu crédito): − ${gcReais(r.descontoIndicacao)}`);
   if (r.repasse > 0) linhas.push(`• Taxas de embarque, pelo valor real cobrado${e.repMoeda === 'USD' ? ` (US$ ${moedaTxt(e.repValor)})` : ''}: ${gcReais(r.repasse)}`);
   linhas.push('', `Total: ${gcReais(r.precoTotal)}`);
   if (r.recebido > 0) linhas.push(`Já recebido: ${gcReais(r.recebido)}`, r.aReceber > 0.004 ? `Falta: ${gcReais(r.aReceber)}` : 'Tudo quitado. Obrigado!');
-  if (r.mercado > 0) linhas.push('', `Em dinheiro, a mesma viagem custava ${gcReais(r.mercado)}.`);
+  if (r.mercado > 0 && e.tipo !== 'A') linhas.push('', `Em dinheiro, a mesma viagem custava ${gcReais(r.mercado)}.`);
+  if (r.linhaCliente) linhas.push(r.linhaCliente);
   return linhas.join('\n');
 }
 function geMensagem(cid, eid){
@@ -84849,7 +84957,7 @@ function giDisponivel(c, e){
       r.descontoIndicacao = centavos(Math.min(r.taxa, base));
       if (r.descontoIndicacao > 0){
         r.taxa = centavos(r.taxa - r.descontoIndicacao);
-        r.precoSemTaxas = centavos(r.valorMilhas + r.taxa);
+        r.precoSemTaxas = centavos(r.valorMilhas + (r.passagens || 0) + r.taxa);
         r.precoTotal = centavos(r.precoSemTaxas + r.repasse);
         r.lucroTaxa = r.taxa;
         r.lucro = centavos(r.lucroMilha + r.lucroTaxa);
@@ -85107,20 +85215,34 @@ function gexExcluir(id, destId){
 (function(){
   if (typeof GC_CARTEIRA !== 'undefined' && GC_CARTEIRA) return;
   let alvo = null; try { alvo = sessionStorage.getItem('torre-volta-gestao'); } catch(_){}
+  try {
+    const u = new URL(location.href), v = u.searchParams.get('volta');
+    if (v != null){ alvo = alvo || v || '1'; try { sessionStorage.setItem('torre-volta-gestao', alvo); } catch(_){} u.searchParams.delete('volta'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash); }
+  } catch(_){}
   if (!alvo) return;
-  try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){}
-  let n = 0;
+  /* a marca só sai depois que a Gestão ficou aberta de verdade: se a Torre
+     recarregar logo ao voltar (dados chegando da nuvem), ela abre de novo */
+  let n = 0, firme = 0;
+  const conferir = () => {
+    const d = document.getElementById('dlgGestao');
+    if (d && d.open && d.querySelector('.eq-card[data-id], .dr-pe [data-gc="novo"]')){ if (++firme >= 4){ try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){} return; } }
+    else { firme = 0; if (n <= 60) return tentar(); }
+    setTimeout(conferir, 500);
+  };
   const tentar = () => {
-    if (++n > 40) return;
+    if (++n > 60){ try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){} return; }
     if (typeof abrirGestaoClientes !== 'function' || typeof contaAtiva !== 'function' || !contaAtiva() || document.documentElement.classList.contains('conta-fora')) return setTimeout(tentar, 250);
-    abrirGestaoClientes();
+    const d0 = document.getElementById('dlgGestao');
+    if (!(d0 && d0.open)) abrirGestaoClientes();
+    setTimeout(conferir, 500);
     setTimeout(() => {
       const card = alvo !== '1' && document.querySelector(`#dlgGestao .eq-card[data-id="${CSS.escape(alvo)}"]`);
       if (card){ card.scrollIntoView({block:'center'}); card.classList.add('gc-volta'); setTimeout(() => card.classList.remove('gc-volta'), 2400); }
     }, 350);
   };
-  addEventListener('pageshow', () => setTimeout(tentar, 300), {once:true});
-  if (document.readyState === 'complete') setTimeout(tentar, 300);
+  let foi = false; const uma = () => { if (foi) return; foi = true; tentar(); };
+  addEventListener('pageshow', () => setTimeout(uma, 300), {once:true});
+  if (document.readyState === 'complete') setTimeout(uma, 300);
 })();
 </script>
 <style id="gvolta-css">
@@ -85556,6 +85678,190 @@ function gdiExportar(cid){
   };
 })();
 </script>
+<style id="gpts-css">
+.ge-decisao{ display:grid; gap:4px; border-radius:12px; padding:10px 12px; margin:8px 0; border:1px solid; }
+.ge-decisao b{ font-size:calc(15px * var(--esc)); }
+.ge-decisao span{ font-size:calc(13px * var(--esc)); line-height:1.5; color:var(--grafite); }
+.ge-decisao.pontos{ border-color:color-mix(in srgb, var(--jade) 55%, transparent); background:color-mix(in srgb, var(--jade) 8%, transparent); }
+.ge-decisao.pontos b{ color:var(--jade); }
+.ge-decisao.dinheiro{ border-color:color-mix(in srgb, var(--brasa) 55%, transparent); background:color-mix(in srgb, var(--brasa) 7%, transparent); }
+.ge-decisao.dinheiro b{ color:var(--brasa); }
+.ge-linha-cli{ margin-top:10px; padding:10px 12px; border-radius:12px; background:color-mix(in srgb, var(--ouro) 10%, transparent); border:1px solid color-mix(in srgb, var(--ouro) 35%, transparent); font-weight:600; color:var(--giz); }
+.ge-pts{ display:grid; gap:8px; }
+.ge-pt{ display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,.9fr) auto; gap:8px; align-items:end; }
+.ge-pt .ge-pt-del{ height:40px; }
+@media (max-width:760px){ .ge-pt{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .ge-pt .ge-pt-del{ grid-column:1 / -1; } }
+.gpt-tab{ width:100%; border-collapse:collapse; font-size:calc(13.5px * var(--esc)); }
+.gpt-tab th, .gpt-tab td{ padding:8px 6px; border-bottom:1px solid var(--fio-suave); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.gpt-tab th:first-child, .gpt-tab td:first-child{ text-align:left; white-space:normal; }
+.gpt-tab small{ display:block; color:var(--grafite); font-size:calc(11.5px * var(--esc)); white-space:normal; }
+.gpt-tab tfoot td{ font-weight:700; color:var(--giz); }
+.gpt-caixa{ border:1px solid var(--fio-suave); border-radius:14px; padding:12px; margin-top:12px; }
+.gpt-item{ display:flex; justify-content:space-between; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--fio-suave); font-size:calc(13.5px * var(--esc)); flex-wrap:wrap; }
+.gpt-item small{ display:block; color:var(--grafite); }
+</style>
+<script id="gpts-js">
+/* ── Carteira do cliente com a origem de cada ponto (26/11/2026, seções 4 e 9.2) ──
+   Aba "Pontos e origem" na Ficha: cada entrada com programa, origem, quantidade,
+   data e custo; custo médio por programa (entrada e cartão base pelo valor de
+   balcão; compra, transferência, clube e cartão extra pelo custo real); calculadora
+   do cartão (base × extra). Grava na hora, como o Diário. */
+function gptMudar(cid, fn){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  if (!Array.isArray(c.pontos)) c.pontos = [];
+  fn(c.pontos, c); c.alterado = Date.now();
+  if (_gcEd && _gcEd.id === cid) _gcEd.pontos = JSON.parse(JSON.stringify(c.pontos));
+  salvar();
+}
+function gptCartao(o){
+  const meses = Math.max(1, Math.round(geN(o.meses)) || 12);
+  const base = Math.round(geN(o.gasto) * geN(o.antes) * meses);
+  const extra = Math.max(0, Math.round(geN(o.gasto) * (geN(o.depois) - geN(o.antes)) * meses));
+  const custoExtra = centavos(geN(o.anuidade) * meses / 12);
+  const b = geBalcao(o.prog);
+  const valorBase = b ? centavos(base / 1000 * b.valor) : null;
+  return {meses, base, extra, custoExtra, valorBase, balcao:b, milExtra:extra ? custoExtra / extra * 1000 : 0,
+    total:base + extra, valorTotal:valorBase == null ? null : centavos(valorBase + custoExtra), media:valorBase == null || !(base + extra) ? null : (valorBase + custoExtra) / (base + extra) * 1000};
+}
+function gptPintar(box, cid){
+  const c = gcDB().find(x => x.id === cid);
+  if (!c){ box.innerHTML = '<p class="fraco" style="margin:0">Salve a ficha primeiro; depois dá para lançar os pontos do cliente.</p>'; return; }
+  const ps = [...new Set(gpLista(c).map(x => x.prog))];
+  const res = ps.map(p => ({p, r:gpResumo(c, p)}));
+  const todos = PROG_IDS.slice().sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR'));
+  const opP = sel => todos.map(p => `<option value="${p}"${p === sel ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('');
+  const dg = c.diag || {};
+  box.innerHTML = `
+    <p class="fraco" style="margin:0 0 10px;line-height:1.55">O que o cliente já tinha ou ganharia de qualquer jeito vale pelo preço de mercado (balcão do dia). O que a gestão acrescentou, com compras, bônus ou troca de cartão, vale pelo que custou de verdade.</p>
+    ${res.length ? `<table class="gpt-tab" id="gptResumo"><thead><tr><th>Programa</th><th>Pontos</th><th>Custo médio</th><th>Valor</th></tr></thead><tbody>
+      ${res.map(({p, r}) => `<tr data-p="${p}"><td>${esc(prog(p).n)}<small>${Object.keys(GP_ORIGENS).filter(o => r.linhas.some(x => x.origem === o)).map(o => `${GP_ORIGENS[o].n} ${nBR(soma(r.linhas.filter(x => x.origem === o).map(x => geN(x.qtd))))}`).join(' · ')}${r.faltaBalcao ? ' · <b style="color:var(--brasa)">falta o valor de balcão</b>' : ''}</small></td><td>${nBR(r.qtd)}</td><td>${gcReais(r.mil)}</td><td>${gcReais(r.valor)}</td></tr>`).join('')}
+    </tbody></table>` : '<p class="fraco" style="margin:0">Nenhum ponto lançado ainda.</p>'}
+    <div class="gpt-caixa">
+      <div class="eq-tit" style="margin-top:0">Valor de balcão <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">preço do milheiro no mercado, no dia</span></div>
+      <div class="eq-campos">
+        <div class="campo"><label>Programa</label><select id="gptBalP" data-ordem="natural">${opP(ps[0] || 'azul')}</select></div>
+        <div class="campo"><label>R$ por mil <span class="fraco" id="gptBalEm"></span></label><input type="text" inputmode="decimal" data-moeda id="gptBalV"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button type="button" class="bt fantasma p" id="gptBalOk"><svg><use href="#i-ok"/></svg>Atualizar o balcão</button></div>
+    </div>
+    <div class="gpt-caixa">
+      <div class="eq-tit" style="margin-top:0">Lançar pontos</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Programa</label><select id="gptP" data-ordem="natural">${opP(ps[0] || 'azul')}</select></div>
+        <div class="campo"><label>Origem</label><select id="gptO" data-ordem="natural">${Object.entries(GP_ORIGENS).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join('')}</select></div>
+        <div class="campo"><label>Quantidade</label><input type="text" inputmode="numeric" data-milhar id="gptQ" placeholder="100.000"></div>
+        <div class="campo"><label>Data</label><input type="date" id="gptD" value="${hojeISO()}"></div>
+        <div class="campo" id="gptCustoC"><label>Custo real <span class="fraco">R$ pagos por estes pontos</span></label><input type="text" inputmode="decimal" data-moeda id="gptC" placeholder="7.200,00"></div>
+        <div class="campo"><label>Observação</label><input type="text" id="gptObs" placeholder="ex.: Livelo 40% off + 100% de bônus"></div>
+      </div>
+      <p class="fraco" id="gptODica" style="margin:6px 0 0;font-size:calc(12px * var(--esc))"></p>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button type="button" class="bt primario p" id="gptAdd"><svg><use href="#i-mais"/></svg>Lançar</button></div>
+    </div>
+    <div class="gpt-caixa">
+      <div class="eq-tit" style="margin-top:0">Pontos do cartão · base × extra</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Programa</label><select id="gpcP" data-ordem="natural">${opP(ps[0] || 'azul')}</select></div>
+        <div class="campo"><label>Gasto mensal no cartão</label><input type="text" inputmode="decimal" data-moeda id="gpcG" value="${dg.gasto ? moedaTxt(dg.gasto) : ''}" placeholder="10.000,00"></div>
+        <div class="campo"><label>Pontos por real · cartão de entrada</label><input type="text" inputmode="decimal" id="gpcA" value="${c.diagPtsReal ? String(c.diagPtsReal).replace('.', ',') : ''}" placeholder="1"></div>
+        <div class="campo"><label>Pontos por real · cartão novo</label><input type="text" inputmode="decimal" id="gpcN" placeholder="2,5"></div>
+        <div class="campo"><label>Anuidade por ano · cartão novo</label><input type="text" inputmode="decimal" data-moeda id="gpcY" placeholder="1.200,00"></div>
+        <div class="campo"><label>Meses</label><input type="text" inputmode="numeric" id="gpcM" value="12"></div>
+      </div>
+      <div id="gpcRes" style="margin-top:10px"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button type="button" class="bt fantasma p" id="gpcAdd"><svg><use href="#i-mais"/></svg>Lançar base e extra</button></div>
+    </div>
+    <div class="gpt-caixa"><div class="eq-tit" style="margin-top:0">Entradas</div>
+      ${gpLista(c).length ? gpLista(c).slice().sort((a, b) => String(b.data || '').localeCompare(String(a.data || ''))).map(x => `<div class="gpt-item" data-id="${esc(x.id)}"><div><b>${nBR(geN(x.qtd))} ${esc(prog(x.prog).n)}</b> · ${esc((GP_ORIGENS[x.origem] || {}).n || x.origem)}<small>${x.data ? gcDataTxt(x.data) : ''}${(GP_ORIGENS[x.origem] || {}).balcao ? ' · vale pelo balcão do dia' : ` · custo ${gcReais(geN(x.custo))}`}${x.obs ? ' · ' + esc(x.obs) : ''}${x.doDiag ? ' · do diagnóstico' : ''}</small></div><button type="button" class="bt p vermelho-solido" data-gpt="del"><svg><use href="#i-lixo"/></svg>Excluir</button></div>`).join('') : '<p class="fraco" style="margin:0">Nenhuma entrada.</p>'}
+    </div>`;
+  const q = s => box.querySelector(s);
+  const balPintar = () => { const b = geBalcao(q('#gptBalP').value); q('#gptBalV').value = b ? moedaTxt(b.valor) : ''; q('#gptBalEm').textContent = b && b.em ? `· atualizado em ${gcDataTxt(b.em)}` : '· ainda não informado'; };
+  q('#gptBalP').onchange = balPintar; balPintar();
+  q('#gptBalOk').onclick = () => {
+    const v = moedaNum(q('#gptBalV').value); if (!(v > 0)) return erroNoCampo(q('#gptBalV'), 'Informe o valor por mil.');
+    DB.cfg = DB.cfg || {}; DB.cfg.gestaoBalcao = Object.assign({}, DB.cfg.gestaoBalcao || {}, {[q('#gptBalP').value]:{valor:v, em:hojeISO()}});
+    salvar(); gptPintar(box, cid); avisar('Valor de balcão atualizado.', 'ok');
+  };
+  const oDica = () => { const o = GP_ORIGENS[q('#gptO').value]; q('#gptCustoC').classList.toggle('ge-oculto', !!o.balcao); q('#gptODica').textContent = o.balcao ? `${o.n}: ${o.d}. Vale pelo valor de balcão do dia da emissão.` : `${o.n}: ${o.d}.`; };
+  q('#gptO').onchange = oDica; oDica();
+  q('#gptAdd').onclick = () => {
+    const qtd = qtdNum(q('#gptQ').value), o = q('#gptO').value;
+    if (!(qtd > 0)) return erroNoCampo(q('#gptQ'), 'Informe a quantidade.');
+    const custo = moedaNum(q('#gptC').value) || 0;
+    if (!GP_ORIGENS[o].balcao && o !== 'cartao_extra' && !(custo > 0)) return erroNoCampo(q('#gptC'), 'Informe quanto custaram estes pontos.');
+    gptMudar(cid, l => l.push({id:uid(), prog:q('#gptP').value, origem:o, qtd, data:q('#gptD').value || hojeISO(), custo:GP_ORIGENS[o].balcao ? 0 : custo, obs:q('#gptObs').value.trim()}));
+    gptPintar(box, cid); avisar('Pontos lançados.', 'ok');
+  };
+  const cartao = () => ({prog:q('#gpcP').value, gasto:moedaNum(q('#gpcG').value) || 0, antes:parseFloat(String(q('#gpcA').value).replace(',', '.')) || 0, depois:parseFloat(String(q('#gpcN').value).replace(',', '.')) || 0, anuidade:moedaNum(q('#gpcY').value) || 0, meses:parseInt(q('#gpcM').value, 10) || 12});
+  const cPintar = () => {
+    const o = cartao(), r = gptCartao(o);
+    if (!(o.gasto > 0) || !(o.antes > 0)){ q('#gpcRes').innerHTML = '<p class="fraco" style="margin:0">Informe o gasto mensal e os pontos por real do cartão de entrada.</p>'; return; }
+    const v = x => x == null ? '<span style="color:var(--brasa)">falta o balcão</span>' : gcReais(x);
+    q('#gpcRes').innerHTML = `<table class="gpt-tab" id="gpcTab"><thead><tr><th>Em ${r.meses} meses</th><th>Pontos</th><th>Valor por mil</th><th>Valor total</th></tr></thead><tbody>
+      <tr><td>Base<small>${moedaTxt(o.gasto)} × ${String(o.antes).replace('.', ',')} × ${r.meses}</small></td><td>${nBR(r.base)}</td><td>${r.balcao ? gcReais(r.balcao.valor) + ' (balcão)' : v(null)}</td><td>${v(r.valorBase)}</td></tr>
+      <tr><td>Extra<small>troca de cartão orientada pela VEM</small></td><td>${nBR(r.extra)}</td><td>${r.extra ? gcReais(r.milExtra) : '–'}</td><td>${gcReais(r.custoExtra)}</td></tr>
+    </tbody><tfoot><tr><td>Total</td><td>${nBR(r.total)}</td><td>${r.media == null ? '–' : gcReais(r.media) + ' (média)'}</td><td>${v(r.valorTotal)}</td></tr></tfoot></table>`;
+  };
+  ['#gpcP', '#gpcG', '#gpcA', '#gpcN', '#gpcY', '#gpcM'].forEach(s => { q(s).addEventListener('input', cPintar); q(s).addEventListener('change', cPintar); }); cPintar();
+  q('#gpcAdd').onclick = () => {
+    const o = cartao(), r = gptCartao(o);
+    if (!(o.gasto > 0)) return erroNoCampo(q('#gpcG'), 'Informe o gasto mensal.');
+    if (!(o.antes > 0)) return erroNoCampo(q('#gpcA'), 'Informe os pontos por real do cartão de entrada.');
+    gptMudar(cid, l => {
+      l.push({id:uid(), prog:o.prog, origem:'cartao_base', qtd:r.base, data:hojeISO(), custo:0, obs:`${moedaTxt(o.gasto)} × ${String(o.antes).replace('.', ',')} pt/R$ × ${r.meses} meses`});
+      if (r.extra > 0) l.push({id:uid(), prog:o.prog, origem:'cartao_extra', qtd:r.extra, data:hojeISO(), custo:r.custoExtra, obs:`cartão novo ${String(o.depois).replace('.', ',')} pt/R$, anuidade ${moedaTxt(o.anuidade)}/ano`});
+    });
+    gptPintar(box, cid); avisar('Pontos do cartão lançados (base e extra).', 'ok');
+  };
+  box.querySelectorAll('[data-gpt="del"]').forEach(bt => bt.onclick = () => {
+    if (!bt.dataset.ok){ bt.dataset.ok = '1'; bt.innerHTML = '<svg><use href="#i-lixo"/></svg>Tem certeza? Toque de novo'; setTimeout(() => { if (bt.isConnected){ delete bt.dataset.ok; bt.innerHTML = '<svg><use href="#i-lixo"/></svg>Excluir'; } }, 5000); return; }
+    const id = bt.closest('.gpt-item').dataset.id;
+    gptMudar(cid, l => { const i = l.findIndex(x => x.id === id); if (i >= 0) l.splice(i, 1); });
+    gptPintar(box, cid); avisar('Entrada excluída.', 'ok');
+  });
+}
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const vista = d.querySelector('.dr-corpo .eq-vista'); if (!vista || vista.querySelector('#gptBox')) return v;
+    const html = `<div class="eq-tit">Pontos e origem</div><div id="gptBox"></div>`;
+    const tAlvo = [...vista.querySelectorAll(':scope > .eq-tit')].find(t => /Diário do plano/.test(t.textContent)) || [...vista.querySelectorAll(':scope > .eq-tit')].find(t => /Regras/.test(t.textContent));
+    if (tAlvo) tAlvo.insertAdjacentHTML('beforebegin', html); else vista.insertAdjacentHTML('beforeend', html);
+    gptPintar(vista.querySelector('#gptBox'), _gcEd.id);
+    /* Diagnóstico: pontos por real do cartão (passo 1) e saldo de entrada por programa (passo 2) */
+    const p0 = vista.querySelector('.gd-passo[data-p="0"] .eq-campos'), p1 = vista.querySelector('.gd-passo[data-p="1"]');
+    if (p0 && p1){
+      p0.insertAdjacentHTML('beforeend', `<div class="campo"><label>Pontos por real do cartão atual</label><input type="text" inputmode="decimal" id="gdPtsReal" value="${_gcEd.diagPtsReal ? String(_gcEd.diagPtsReal).replace('.', ',') : ''}" placeholder="1"></div>`);
+      const prog0 = PROG_IDS.slice().sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR'));
+      const linha = (p, q) => `<div class="ge-pt gd-ent"><div class="campo"><label>Programa</label><select data-ordem="natural">${prog0.map(x => `<option value="${x}"${x === p ? ' selected' : ''}>${esc(prog(x).n)}</option>`).join('')}</select></div><div class="campo"><label>Saldo de entrada</label><input type="text" inputmode="numeric" data-milhar value="${q ? qtdTxt(q) : ''}" placeholder="100.000"></div><button type="button" class="bt p fantasma ge-pt-del" aria-label="Tirar">Tirar</button></div>`;
+      const ent = (_gcEd.diagEntrada || []);
+      p1.querySelector('.campo').insertAdjacentHTML('beforebegin', `<div class="eq-tit gq-sub" style="margin-top:0 !important">Saldo de entrada por programa <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">vira "pontos de entrada" na aba Pontos e origem</span></div>
+        <div class="ge-pts" id="gdEnt">${(ent.length ? ent : [{prog:'azul', qtd:0}]).map(x => linha(x.prog, x.qtd)).join('')}</div>
+        <div style="margin:8px 0 12px"><button type="button" class="bt fantasma p" id="gdEntMais"><svg><use href="#i-mais"/></svg>Mais um programa</button></div>`);
+      const box = vista.querySelector('#gdEnt');
+      const ligar = () => box.querySelectorAll('.ge-pt-del').forEach(b => b.onclick = () => { if (box.children.length > 1) b.closest('.gd-ent').remove(); else b.closest('.gd-ent').querySelector('input').value = ''; });
+      vista.querySelector('#gdEntMais').onclick = () => { box.insertAdjacentHTML('beforeend', linha('azul', 0)); ligar(); };
+      ligar();
+    }
+    return v;
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(){
+    const d = document.getElementById('dlgGestao'), e = _gcEd;
+    if (d && e && d.querySelector('#gdEnt')){
+      e.diagPtsReal = parseFloat(String(d.querySelector('#gdPtsReal').value || '').replace(',', '.')) || 0;
+      const ent = [...d.querySelectorAll('#gdEnt .gd-ent')].map(r => ({prog:r.querySelector('select').value, qtd:qtdNum(r.querySelector('input').value) || 0})).filter(x => x.qtd > 0);
+      e.diagEntrada = ent;
+      const st = gcDB().find(x => x.id === e.id);
+      const antes = gpLista(st || e).filter(x => !x.doDiag);
+      e.pontos = antes.concat(ent.map(x => ({id:uid(), prog:x.prog, origem:'entrada', qtd:x.qtd, data:(e.planoDesde || hojeISO()), custo:0, obs:'saldo de entrada (diagnóstico)', doDiag:true})));
+    }
+    return _sv.apply(this, arguments);
+  };
+})();
+</script>
+
 <script id="gapel-js">
 /* ── Nome na tela (26/11/2026) ─────────────────────────────────────────────────
    A ficha guarda o nome completo; os cartões da Gestão mostram o nome curto.
@@ -86198,6 +86504,107 @@ function gqPintarFam(box, cid){
     }
     return _sv.apply(this, arguments);
   };
+})();
+</script>
+
+<script id="gsim-js">
+/* ── Simulador de emissão: pontos do cliente por programa e origem (26/11/2026) ──
+   Cada linha: programa, pontos, origem do valor (balcão do dia, custo real da
+   gestão ou média da carteira do cliente) e o valor por mil. O balcão fica gravado
+   na emissão: é o do dia em que ela foi feita. */
+const GE_PT_MODOS = {balcao:'Balcão do dia', custo:'Custo real', carteira:'Média da carteira'};
+function gePtsLinha(c, l){
+  const todos = PROG_IDS.slice().sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR'));
+  const mil = l.modo === 'carteira' ? (gpResumo(c, l.prog).mil || '') : l.mil;
+  return `<div class="ge-pt" data-modo="${esc(l.modo || 'balcao')}">
+    <div class="campo"><label>Programa</label><select data-pt="prog" data-ordem="natural">${todos.map(p => `<option value="${p}"${p === l.prog ? ' selected' : ''}>${esc(prog(p).n)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Pontos</label><input type="text" inputmode="numeric" data-milhar data-pt="qtd" value="${geN(l.qtd) ? qtdTxt(geN(l.qtd)) : ''}" placeholder="500.000"></div>
+    <div class="campo"><label>Origem do valor</label><select data-pt="modo" data-ordem="natural">${Object.entries(GE_PT_MODOS).map(([k, n]) => `<option value="${k}"${(l.modo || 'balcao') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="campo"><label>R$ por mil</label><input type="text" inputmode="decimal" data-moeda data-pt="mil" value="${geN(mil) ? moedaTxt(centavos(geN(mil))) : ''}"${l.modo === 'carteira' ? ' readonly' : ''} placeholder="13,50"></div>
+    <button type="button" class="bt p fantasma ge-pt-del" data-pt="del" aria-label="Tirar este programa">Tirar</button>
+  </div>`;
+}
+function gePtsPintar(box, e, c){
+  if (!box) return;
+  let ls = Array.isArray(e.pts) && e.pts.length ? e.pts : null;
+  if (!ls){ const p0 = gpLista(c)[0]; ls = [p0 ? {prog:p0.prog, qtd:0, modo:'carteira'} : {prog:'azul', qtd:0, modo:'balcao', mil:(geBalcao('azul') || {}).valor || ''}]; }
+  box.innerHTML = `<div class="ge-pts">${ls.map(l => gePtsLinha(c, l)).join('')}</div>
+    <div style="margin-top:8px"><button type="button" class="bt fantasma p" data-pt="mais"><svg><use href="#i-mais"/></svg>Mais um programa</button></div>
+    <p class="fraco" style="margin:8px 0 0;font-size:calc(12px * var(--esc));line-height:1.55"><b>Balcão do dia:</b> pontos que o cliente já tinha ou ganharia de qualquer jeito (saldo de entrada, cartão base). <b>Custo real:</b> pontos gerados na gestão (compra, transferência, clube, cartão extra). <b>Média da carteira:</b> origens misturadas, pela aba Pontos e origem da Ficha.</p>`;
+  const recarregar = row => {
+    const p = row.querySelector('[data-pt="prog"]').value, modo = row.querySelector('[data-pt="modo"]').value, mil = row.querySelector('[data-pt="mil"]');
+    row.dataset.modo = modo; mil.readOnly = modo === 'carteira';
+    if (modo === 'balcao'){ const b = geBalcao(p); mil.value = b ? moedaTxt(b.valor) : ''; mil.placeholder = b ? '' : 'informe o balcão'; }
+    else if (modo === 'carteira'){ const r = gpResumo(c, p); mil.value = r.qtd ? moedaTxt(centavos(r.mil)) : ''; mil.placeholder = r.qtd ? '' : 'carteira sem este programa'; }
+    else if (row.dataset.ultimo !== 'custo') mil.value = '';
+    row.dataset.ultimo = modo;
+  };
+  box.addEventListener('change', ev => { const row = ev.target.closest('.ge-pt'); if (row && (ev.target.dataset.pt === 'modo' || ev.target.dataset.pt === 'prog')) recarregar(row); });
+  box.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-pt]'); if (!b) return;
+    if (b.dataset.pt === 'mais'){ const lista = box.querySelector('.ge-pts'); lista.insertAdjacentHTML('beforeend', gePtsLinha(c, {prog:'azul', qtd:0, modo:'balcao', mil:(geBalcao('azul') || {}).valor || ''})); lista.lastElementChild.dataset.ultimo = 'balcao'; b.closest('form, #geForm, .eq-vista').dispatchEvent(new Event('input', {bubbles:true})); }
+    if (b.dataset.pt === 'del'){ const lista = box.querySelector('.ge-pts'); if (lista.children.length > 1) b.closest('.ge-pt').remove(); else b.closest('.ge-pt').querySelector('[data-pt="qtd"]').value = ''; box.dispatchEvent(new Event('input', {bubbles:true})); }
+  });
+  box.querySelectorAll('.ge-pt').forEach(r => r.dataset.ultimo = r.dataset.modo);
+}
+function gePtsLer(box){
+  if (!box) return [];
+  return [...box.querySelectorAll('.ge-pt')].map(r => ({prog:r.querySelector('[data-pt="prog"]').value, qtd:qtdNum(r.querySelector('[data-pt="qtd"]').value) || 0,
+    modo:r.querySelector('[data-pt="modo"]').value, mil:r.querySelector('[data-pt="modo"]').value === 'carteira' ? 0 : (moedaNum(r.querySelector('[data-pt="mil"]').value) || 0)}));
+}
+/* A linha da proposta (seção 5.4): depois de todos os descontos. */
+(function(){
+  const _c = geCalc;
+  geCalc = function(e, c){
+    const r = _c.apply(this, arguments);
+    if (r.tipo === 'B' && r.decisao === 'pontos'){
+      r.custoReal = centavos(r.valorPontos + r.repasse + r.taxa);
+      r.clienteEconomiza = centavos(r.mercado - r.custoReal);
+      r.linhaCliente = `Você paga ${gcReais(r.custoReal)} no total e economiza ${gcReais(r.clienteEconomiza)}.`;
+    } else if (r.tipo === 'C' && r.mercado > 0){
+      r.custoReal = centavos(r.precoSemTaxas + r.repasse);
+      r.clienteEconomiza = centavos(r.mercado - r.custoReal);
+      r.linhaCliente = `Você paga ${gcReais(r.custoReal)} no total e economiza ${gcReais(r.clienteEconomiza)}.`;
+    } else if (r.tipo === 'A'){
+      r.custoReal = r.precoTotal;
+      r.linhaCliente = `Você paga ${gcReais(r.precoTotal)} no total: passagens ${gcReais(r.passagens)} + taxa de serviço ${gcReais(r.taxa)}.`;
+    }
+    return r;
+  };
+})();
+/* Regras: situação A, proteção do cliente, R$ 300 por passageiro (opção) e o balcão. */
+(function(){
+  const _ab = geRegrasAbrir;
+  geRegrasAbrir = function(cid){
+    const v = _ab.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d) return v;
+    const rg = geRegras(), bal = geBalcaoTudo();
+    const tInd = [...d.querySelectorAll('.eq-tit')].find(t => /indicação/i.test(t.textContent));
+    const progs = PROG_IDS.slice().sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR'));
+    tInd.insertAdjacentHTML('beforebegin', `
+      <div class="eq-tit">Situações A e B</div>
+      <div class="eq-campos">
+        <div class="campo"><label>A · R$ por pessoa por trecho</label><input type="text" inputmode="decimal" data-moeda id="grTaxaA" value="${moedaTxt(rg.taxaA)}"></div>
+        <div class="campo"><label>Proteção: economia mínima por trecho ou reserva</label><input type="text" inputmode="decimal" data-moeda id="grProt" value="${moedaTxt(rg.protecao)}"></div>
+      </div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="grBPax"${rg.bPorPax ? ' checked' : ''}><span>B · contar os R$ por trecho também por passageiro</span></label>
+      <div class="eq-tit">Valor de balcão por programa <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">preço do milheiro no mercado; a data muda quando o valor muda</span></div>
+      <div class="eq-campos" id="grBalcao">${progs.map(p => `<div class="campo"><label>${esc(prog(p).n)} <span class="fraco">${bal[p] && bal[p].em ? 'em ' + gcDataTxt(bal[p].em) : ''}</span></label><input type="text" inputmode="decimal" data-moeda data-bal="${p}" value="${bal[p] && geN(bal[p].valor) ? moedaTxt(geN(bal[p].valor)) : ''}" placeholder="não informado"></div>`).join('')}</div>`);
+    const sv = d.querySelector('#grS'), orig = sv.onclick;
+    sv.onclick = ev => {
+      const extra = {taxaA:moedaNum(d.querySelector('#grTaxaA').value) || 0, protecao:moedaNum(d.querySelector('#grProt').value) || 0, bPorPax:d.querySelector('#grBPax').checked};
+      const nb = {}; d.querySelectorAll('[data-bal]').forEach(i => { const p = i.dataset.bal, val = moedaNum(i.value) || 0; if (!(val > 0)) return; const ant = bal[p]; nb[p] = ant && geN(ant.valor) === val ? ant : {valor:val, em:hojeISO()}; });
+      const r = orig.call(sv, ev);
+      if (DB.cfg && DB.cfg.gestaoRegras && Object.prototype.hasOwnProperty.call(DB.cfg.gestaoRegras, 'pct')){ Object.assign(DB.cfg.gestaoRegras, extra); DB.cfg.gestaoBalcao = nb; salvar(); }
+      return r;
+    };
+    return v;
+  };
+})();
+/* Proposta do Planejamento Anual com a garantia (documento de 26/11/2026). */
+(function(){
+  const _p = gdProposta;
+  gdProposta = function(){ return _p.apply(this, arguments) + ' Garantia: se a economia não cobrir o que você pagou à VEM, eu devolvo a diferença, até o valor das mensalidades.'; };
 })();
 </script>
 
