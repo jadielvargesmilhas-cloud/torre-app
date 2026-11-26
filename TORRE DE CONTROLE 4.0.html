@@ -85268,6 +85268,21 @@ function gexExcluir(id, destId){
 .gd-nav{ display:flex; justify-content:space-between; gap:10px; margin-top:14px; }
 .gd-carteira{ margin:0 0 12px; padding:10px 12px; border:1px solid var(--fio-suave); border-radius:12px; font-size:calc(13px * var(--esc)); line-height:1.6; }
 .gd-res{ display:grid; gap:12px; }
+.gd-l3{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+.gd-trechos{ display:grid; gap:10px; }
+.gd-trecho{ border:1px solid var(--fio-suave); border-radius:14px; padding:10px 12px 12px; }
+.gd-trecho-cab{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.gd-trecho-n{ font-size:calc(11.5px * var(--esc)); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ouro); white-space:nowrap; }
+.gd-trecho-cab input{ flex:1; min-width:0; }
+.gd-trecho-nome{ color:var(--giz); font-weight:600; }
+.gd-tot{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:calc(14px * var(--esc)); }
+.gd-tot b{ color:var(--giz); font-variant-numeric:tabular-nums; }
+.gd-cards{ display:grid; gap:8px; }
+.gd-card{ display:grid; grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) auto; gap:8px 10px; align-items:end; }
+.gd-card [data-c="tirar"]{ height:40px; }
+.gd-card-info{ grid-column:1 / -1; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:-2px; }
+.gd-card-info:empty{ display:none; }
+@media (max-width:760px){ .gd-l3{ grid-template-columns:minmax(0,1fr); } .gd-card{ grid-template-columns:minmax(0,1fr) minmax(0,.8fr); } .gd-card [data-c="tirar"]{ grid-column:1 / -1; } }
 .gd-bloco{ border:1px solid var(--fio-suave); border-radius:14px; padding:12px 14px; }
 .gd-bloco h4{ margin:0 0 8px; font-size:calc(13px * var(--esc)); color:var(--giz); display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; }
 .gd-l{ display:flex; justify-content:space-between; gap:12px; padding:4px 0; font-size:calc(13.5px * var(--esc)); }
@@ -85301,7 +85316,7 @@ function gdMesesAte(mesISO, hoje){
 /* A simulação inteira, em centavos na origem. Entra a economia (ou o mercado e o custo). */
 function gdSimular({economia, mercado, milhas, milheiro, taxas, pax, trechos, ambito, meses}){
   const rg = geRegras();
-  const custo = centavos(geN(milhas) / 1000 * geN(milheiro) + geN(taxas));
+  const custo = arguments[0].custo != null ? centavos(geN(arguments[0].custo)) : centavos(geN(milhas) / 1000 * geN(milheiro) + geN(taxas));
   const eco = economia != null && economia !== '' ? centavos(geN(economia)) : (geN(mercado) > 0 && custo > 0 ? centavos(geN(mercado) - custo) : null);
   const r = {custo, economia:eco, filtro:centavos(rg.filtro), meses};
   if (eco == null) return r;
@@ -85331,6 +85346,74 @@ function gdProposta(){
   const metade = geN(rg.planDesc) === 50 ? 'metade' : gePctTxt(rg.planDesc) + '%';
   return `Plano de Planejamento Anual VEM · preço de fundador: ${gcReais(rg.planMensal)} por mês, durante ${rg.planParcelas} meses, cobrados automaticamente. Na emissão, ${metade} do que você pagou de mensalidade é descontada da taxa final. Se cancelar antes da emissão, as mensalidades já pagas não são devolvidas e o desconto não se aplica. Taxas de embarque são cobradas à parte, pelo valor real.`;
 }
+/* Trechos do diagnóstico (26/11/2026): uma lista só para o Mercado (preço, fonte,
+   data) e para as Milhas (milhas, milheiro, taxas), cada um com a sua economia. */
+const GD_FONTES = ['Google Flights', 'Site da companhia', 'Skyscanner', 'Agência', 'Outra'];
+function gdTrechoCusto(t){ return centavos(geN(t.milhas) / 1000 * geN(t.milheiro) + geN(t.taxas)); }
+function gdTrechosTot(l){ return {mercado:centavos(soma(l.map(t => geN(t.mercado)))), milhas:soma(l.map(t => geN(t.milhas))), taxas:centavos(soma(l.map(t => geN(t.taxas)))), custo:centavos(soma(l.map(gdTrechoCusto)))}; }
+function gdTrechosLer(raiz){
+  const m = [...raiz.querySelectorAll('#gdMercBox .gd-trecho')], k = [...raiz.querySelectorAll('#gdMilBox .gd-trecho')];
+  return m.map((r, i) => { const s = k[i]; const g = (el, sel) => el ? el.querySelector(sel) : null;
+    return {nome:g(r, '[data-t="nome"]').value.trim(), mercado:moedaNum(g(r, '[data-t="mercado"]').value) || 0, fonte:g(r, '[data-t="fonte"]').value, data:g(r, '[data-t="data"]').value,
+      milhas:s ? qtdNum(g(s, '[data-t="milhas"]').value) || 0 : 0, milheiro:s ? moedaNum(g(s, '[data-t="milheiro"]').value) || 0 : 0, taxas:s ? moedaNum(g(s, '[data-t="taxas"]').value) || 0 : 0}; });
+}
+function gdTrechosMontar(vista, dg, aoMudar){
+  let l = Array.isArray(dg.lista) && dg.lista.length ? dg.lista.map(t => Object.assign({}, t))
+    : [{nome:'', mercado:geN(dg.mercado), fonte:dg.fonte || 'Google Flights', data:dg.dataMerc || hojeISO(), milhas:geN(dg.milhas), milheiro:geN(dg.milheiro), taxas:geN(dg.taxas)}];
+  const mb = vista.querySelector('#gdMercBox'), kb = vista.querySelector('#gdMilBox');
+  const m = v => v != null && v !== '' && geN(v) ? moedaTxt(geN(v)) : '';
+  const pintar = () => {
+    mb.innerHTML = l.map((t, i) => `<div class="gd-trecho" data-i="${i}">
+      <div class="gd-trecho-cab"><span class="gd-trecho-n">Trecho ${i + 1}</span><input type="text" data-t="nome" value="${esc(t.nome || '')}" placeholder="ex.: Salvador → Lisboa" aria-label="Nome do trecho ${i + 1}">${l.length > 1 ? `<button type="button" class="bt p fantasma" data-gd="trecho-tirar" data-i="${i}">Tirar</button>` : ''}</div>
+      <div class="gd-l3">
+        <div class="campo"><label>Preço em dinheiro <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="decimal" data-moeda data-t="mercado" value="${m(t.mercado)}" placeholder="20.000,00"></div>
+        <div class="campo"><label>Fonte</label><select data-t="fonte" data-ordem="natural">${GD_FONTES.map(o => `<option${(t.fonte || 'Google Flights') === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="campo"><label>Data da pesquisa</label><input type="date" data-t="data" value="${esc(t.data || hojeISO())}"></div>
+      </div></div>`).join('');
+    kb.innerHTML = l.map((t, i) => `<div class="gd-trecho" data-i="${i}">
+      <div class="gd-trecho-cab"><span class="gd-trecho-n">Trecho ${i + 1}</span><span class="gd-trecho-nome">${esc(t.nome || 'sem nome (dê o nome no passo 4)')}</span></div>
+      <div class="gd-l3">
+        <div class="campo"><label>Milhas <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="numeric" data-milhar data-t="milhas" value="${t.milhas ? qtdTxt(t.milhas) : ''}" placeholder="150.000"></div>
+        <div class="campo"><label>Milheiro de referência</label><input type="text" inputmode="decimal" data-moeda data-t="milheiro" value="${m(t.milheiro)}" placeholder="25,00"></div>
+        <div class="campo"><label>Taxas de embarque</label><input type="text" inputmode="decimal" data-moeda data-t="taxas" value="${m(t.taxas)}" placeholder="600,00"></div>
+      </div></div>`).join('');
+  };
+  const sinc = () => { l = gdTrechosLer(vista); };
+  pintar();
+  [mb, kb].forEach(b => b.addEventListener('input', ev => { if (ev.target.dataset.t === 'nome'){ sinc(); const i = ev.target.closest('.gd-trecho').dataset.i; const n = kb.querySelector(`.gd-trecho[data-i="${i}"] .gd-trecho-nome`); if (n) n.textContent = ev.target.value.trim() || 'sem nome (dê o nome no passo 4)'; } }));
+  vista.querySelectorAll('[data-gd="trecho-mais"]').forEach(b => b.onclick = () => { sinc(); const ult = l[l.length - 1] || {}; l.push({nome:'', mercado:0, fonte:ult.fonte || 'Google Flights', data:ult.data || hojeISO(), milhas:0, milheiro:ult.milheiro || 0, taxas:0}); pintar(); aoMudar(); });
+  mb.addEventListener('click', ev => { const b = ev.target.closest('[data-gd="trecho-tirar"]'); if (!b) return; sinc(); l.splice(Number(b.dataset.i), 1); pintar(); aoMudar(); });
+}
+/* Cartões do cliente, escolhidos no Catálogo de cartões, com a pontuação (pontos por dólar). */
+function gdCatalogoAchar(nome){ const n = cimpNorm(nome); return (typeof CATALOGO !== 'undefined' ? CATALOGO : []).find(k => cimpNorm(k.n) === n) || null; }
+function gdCardsLer(raiz){ return [...raiz.querySelectorAll('#gdCards .gd-card')].map(r => ({nome:r.querySelector('[data-c="nome"]').value.trim(), pts:parseFloat(String(r.querySelector('[data-c="pts"]').value || '').replace(',', '.')) || 0})).filter(c => c.nome); }
+function gdCardsMontar(vista, dg, aoMudar){
+  const box = vista.querySelector('#gdCards');
+  let l = Array.isArray(dg.cards) && dg.cards.length ? dg.cards.slice() : (dg.cartoes ? String(dg.cartoes).split(',').map(n => ({nome:n.trim(), pts:0})).filter(c => c.nome) : []);
+  if (!l.length) l = [{nome:'', pts:0}];
+  const pv = v => v ? String(v).replace('.', ',') : '';
+  const pintar = () => {
+    box.innerHTML = l.map((c, i) => { const k = gdCatalogoAchar(c.nome);
+      return `<div class="gd-card" data-i="${i}">
+        <div class="campo"><label>${i === 0 ? 'Cartão principal' : 'Cartão'}</label><input type="text" list="gdCatList" data-c="nome" value="${esc(c.nome)}" placeholder="digite para buscar no catálogo" autocomplete="off"></div>
+        <div class="campo"><label>Pontos por dólar</label><input type="text" inputmode="decimal" data-c="pts" value="${pv(c.pts)}" placeholder="2,5"></div>
+        <button type="button" class="bt p fantasma" data-c="tirar" aria-label="Tirar este cartão">Tirar</button>
+        <small class="gd-card-info" data-c="info">${k ? `${esc(k.c)} · anuidade ${gcReais(k.a)}` : c.nome ? 'fora do catálogo' : ''}</small>
+      </div>`; }).join('');
+    real();
+  };
+  const real = () => { const dol = moedaNum(vista.querySelector('#gdDolar').value) || 0;
+    box.querySelectorAll('.gd-card').forEach(r => { const k = gdCatalogoAchar(r.querySelector('[data-c="nome"]').value), pts = parseFloat(String(r.querySelector('[data-c="pts"]').value || '').replace(',', '.')) || 0;
+      const inf = []; if (k) inf.push(`${esc(k.c)} · anuidade ${gcReais(k.a)}`); else if (r.querySelector('[data-c="nome"]').value.trim()) inf.push('fora do catálogo');
+      if (pts && dol) inf.push(`≈ ${String(Math.round(pts / dol * 100) / 100).replace('.', ',')} ponto por real`);
+      r.querySelector('[data-c="info"]').innerHTML = inf.join(' · '); }); };
+  pintar();
+  box.addEventListener('change', ev => { if (ev.target.dataset.c !== 'nome') return; const k = gdCatalogoAchar(ev.target.value); const pts = ev.target.closest('.gd-card').querySelector('[data-c="pts"]'); if (k && !pts.value) pts.value = String(k.pm).replace('.', ','); real(); aoMudar(); });
+  box.addEventListener('input', ev => { if (ev.target.dataset.c === 'nome'){ const k = gdCatalogoAchar(ev.target.value); const pts = ev.target.closest('.gd-card').querySelector('[data-c="pts"]'); if (k) pts.value = String(k.pm).replace('.', ','); } real(); });
+  vista.querySelector('#gdDolar').addEventListener('input', real);
+  box.addEventListener('click', ev => { const b = ev.target.closest('[data-c="tirar"]'); if (!b) return; l = gdCardsLer(vista); const i = Number(b.closest('.gd-card').dataset.i); if (l.length > 1) l.splice(i, 1); else l = [{nome:'', pts:0}]; if (!l.length) l = [{nome:'', pts:0}]; pintar(); aoMudar(); });
+  vista.querySelector('#gdCardMais').onclick = () => { l = gdCardsLer(vista); l.push({nome:'', pts:0}); pintar(); const ult = box.querySelector('.gd-card:last-child [data-c="nome"]'); if (ult) ult.focus(); };
+}
 function gdSaldosCarteira(c){
   try {
     const l = typeof gcLinhaServ === 'function' ? gcLinhaServ(c) : null; if (!l) return '';
@@ -85358,9 +85441,14 @@ function gdSaldosCarteira(c){
           <div class="gd-passo" data-p="0">
             ${P('<b>Pergunte:</b> "Quanto você gasta por mês no cartão, somando todos? E quais cartões você usa?"')}
             <div class="eq-campos">
-              <div class="campo"><label>Gasto mensal no cartão</label><input type="text" inputmode="decimal" data-moeda id="gdGasto" value="${m(dg.gasto)}" placeholder="8.000,00"></div>
-              <div class="campo"><label>Cartões</label><input type="text" id="gdCartoes" value="${esc(dg.cartoes || '')}" placeholder="Itaú Personnalité Visa Infinite, XP"></div>
+              <div class="campo"><label>Gasto mensal no cartão <span class="fraco">somando todos</span></label><input type="text" inputmode="decimal" data-moeda id="gdGasto" value="${m(dg.gasto)}" placeholder="8.000,00"></div>
+              <div class="campo"><label>Dólar de referência <span class="fraco">para converter pontos por dólar em pontos por real</span></label><input type="text" inputmode="decimal" data-moeda id="gdDolar" value="${m(dg.dolar)}" placeholder="R$ do dia"></div>
             </div>
+            <div class="eq-tit gq-sub">Cartões que o cliente tem <span class="fraco" style="text-transform:none;letter-spacing:0;font-weight:400">escolha no Catálogo de cartões da Torre; o primeiro é o principal</span></div>
+            <datalist id="gdCatList">${(typeof CATALOGO !== 'undefined' ? CATALOGO : []).map(k => `<option value="${esc(k.n)}"></option>`).join('')}</datalist>
+            <div class="gd-cards" id="gdCards"></div>
+            <div style="margin-top:8px"><button type="button" class="bt fantasma p" id="gdCardMais"><svg><use href="#i-mais"/></svg>Adicionar cartão</button></div>
+            <input type="hidden" id="gdCartoes" value="${esc(dg.cartoes || '')}">
           </div>
           <div class="gd-passo" data-p="1" hidden>
             ${P('<b>Pergunte:</b> "Em quais programas você tem pontos ou milhas, e quanto tem em cada um?" Peça os prints dos aplicativos: mande ao Claude e ele devolve um bloco para colar na carteira do cliente.')}
@@ -85380,19 +85468,13 @@ function gdSaldosCarteira(c){
           </div>
           <div class="gd-passo" data-p="3" hidden>
             ${P('<b>Faça junto com ele:</b> pesquise o mesmo voo em dinheiro (Google Flights ou site da companhia), mesma classe e bagagem, para todas as pessoas. Guarde o print.')}
-            <div class="eq-campos">
-              <div class="campo"><label>Preço de mercado <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="decimal" data-moeda id="gdMercado" value="${m(dg.mercado)}" placeholder="40.000,00"></div>
-              <div class="campo"><label>Fonte</label><select id="gdFonte" data-ordem="natural">${['Google Flights', 'Site da companhia', 'Agência', 'Outra'].map(o => `<option${(dg.fonte || 'Google Flights') === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
-              <div class="campo"><label>Data da pesquisa</label><input type="date" id="gdDataMerc" value="${esc(dg.dataMerc || hojeISO())}"></div>
-            </div>
+            <div class="gd-trechos" id="gdMercBox"></div>
+            <div class="gd-tot"><button type="button" class="bt fantasma p" data-gd="trecho-mais"><svg><use href="#i-mais"/></svg>Adicionar trecho</button><span>Total em dinheiro: <b id="gdMercTot">R$ 0,00</b></span></div>
           </div>
           <div class="gd-passo" data-p="4" hidden>
             ${P('<b>Faça você:</b> veja quantas milhas o programa pede para essa viagem e o milheiro de referência. O custo estimado é milhas ÷ 1.000 × milheiro + taxas de embarque.')}
-            <div class="eq-campos">
-              <div class="campo"><label>Milhas da emissão <span class="fraco">todas as pessoas</span></label><input type="text" inputmode="numeric" data-milhar id="gdMilhas" value="${dg.milhas ? qtdTxt(dg.milhas) : ''}" placeholder="300.000"></div>
-              <div class="campo"><label>Milheiro de referência</label><input type="text" inputmode="decimal" data-moeda id="gdMilheiro" value="${m(dg.milheiro)}" placeholder="25,00"></div>
-              <div class="campo"><label>Taxas de embarque estimadas</label><input type="text" inputmode="decimal" data-moeda id="gdTaxas" value="${m(dg.taxas)}" placeholder="1.200,00"></div>
-            </div>
+            <div class="gd-trechos" id="gdMilBox"></div>
+            <div class="gd-tot"><button type="button" class="bt fantasma p" data-gd="trecho-mais"><svg><use href="#i-mais"/></svg>Adicionar trecho</button><span>Custo em milhas: <b id="gdMilTot">R$ 0,00</b></span></div>
           </div>
           <div class="gd-passo" data-p="5" hidden>
             <div id="gdRes"></div>
@@ -85430,22 +85512,27 @@ function gdSaldosCarteira(c){
     };
     function ler(){
       const mes = q('#gdMesA').value && q('#gdMesM').value ? `${q('#gdMesA').value}-${q('#gdMesM').value}` : '';
-      return {gasto:moedaNum(q('#gdGasto').value) || 0, cartoes:q('#gdCartoes').value.trim(), progs:q('#gdProgs').value.trim(), ambito:q('#gdAmbito').value,
-        trechos:Math.max(1, parseInt(q('#gdTrechos').value, 10) || 1), mercado:moedaNum(q('#gdMercado').value) || 0, fonte:q('#gdFonte').value, dataMerc:q('#gdDataMerc').value,
-        milhas:qtdNum(q('#gdMilhas').value) || 0, milheiro:moedaNum(q('#gdMilheiro').value) || 0, taxas:moedaNum(q('#gdTaxas').value) || 0, passo, mes, pax:Math.max(1, parseInt(q('#gdPax').value, 10) || 1)};
+      const tr = gdTrechosLer(vista), cards = gdCardsLer(vista), dolar = moedaNum(q('#gdDolar').value) || 0;
+      const tot = gdTrechosTot(tr);
+      const f0 = tr.find(t => t.mercado > 0) || {};
+      return {gasto:moedaNum(q('#gdGasto').value) || 0, cartoes:cards.map(c => c.nome).join(', '), cards, dolar, progs:q('#gdProgs').value.trim(), ambito:q('#gdAmbito').value,
+        trechos:Math.max(1, parseInt(q('#gdTrechos').value, 10) || 1), mercado:tot.mercado, fonte:f0.fonte || '', dataMerc:f0.data || '', lista:tr,
+        milhas:tot.milhas, custo:tot.custo, milheiro:tot.milhas ? (tot.custo - tot.taxas) / tot.milhas * 1000 : 0, taxas:tot.taxas, passo, mes, pax:Math.max(1, parseInt(q('#gdPax').value, 10) || 1)};
     }
     function pintar(){
       const x = ler();
-      const r = gdSimular({mercado:x.mercado, milhas:x.milhas, milheiro:x.milheiro, taxas:x.taxas, pax:x.pax, trechos:x.trechos, ambito:x.ambito, meses:gdMesesAte(x.mes)});
+      const r = gdSimular({mercado:x.mercado, custo:x.custo > 0 ? x.custo : null, milhas:x.milhas, milheiro:0, taxas:0, pax:x.pax, trechos:x.trechos, ambito:x.ambito, meses:gdMesesAte(x.mes)});
+      q('#gdMercTot').textContent = gcReais(x.mercado); q('#gdMilTot').textContent = gcReais(x.custo);
       const L = (a, b, cls, sub) => `<div class="gd-l${cls ? ' ' + cls : ''}"><span>${a}${sub ? `<small>${sub}</small>` : ''}</span><b>${b}</b></div>`;
       let h = '';
       if (r.economia == null){
-        h = `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>Para o resultado, faltam ${[!(x.mercado > 0) && 'o preço de mercado (passo 4)', !(r.custo > 0) && 'as milhas e o milheiro (passo 5)'].filter(Boolean).join(' e ')}.</span></div>`;
+        h = `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>Para o resultado, faltam ${[!(x.mercado > 0) && 'o preço de mercado (passo 4)', !(x.custo > 0) && 'as milhas e o milheiro (passo 5)'].filter(Boolean).join(' e ')}.</span></div>`;
       } else {
         h = `<div class="gd-res">
           <div class="gd-bloco"><h4>Economia estimada <span class="gd-selo ${r.passa ? 'ok' : 'nao'}">${r.passa ? 'Passa' : 'Não passa'} no filtro de ${gcReais(r.filtro)}</span></h4>
-            ${L('Preço de mercado', gcReais(x.mercado), '', `${esc(x.fonte)}${x.dataMerc ? ', ' + gcDataTxt(x.dataMerc) : ''}`)}
-            ${L('Custo estimado em milhas', '− ' + gcReais(r.custo), '', `${nBR(x.milhas)} ÷ 1.000 × ${gcReais(x.milheiro)} + ${gcReais(x.taxas)} de taxas`)}
+            ${x.lista.filter(t => t.mercado > 0 || t.milhas > 0).length > 1 ? x.lista.filter(t => t.mercado > 0 || t.milhas > 0).map((t, i) => L(esc(t.nome || 'Trecho ' + (i + 1)), (t.mercado - gdTrechoCusto(t) < 0 ? '− ' : '') + gcReais(Math.abs(centavos(t.mercado - gdTrechoCusto(t)))), '', `${gcReais(t.mercado)} em dinheiro${t.fonte ? ' (' + esc(t.fonte) + (t.data ? ', ' + gcDataTxt(t.data) : '') + ')' : ''} − ${gcReais(gdTrechoCusto(t))} em milhas`)).join('') : ''}
+            ${L('Preço de mercado', gcReais(x.mercado), x.lista.length > 1 ? 'sep' : '', x.lista.length > 1 ? 'soma dos trechos' : `${esc(x.fonte)}${x.dataMerc ? ', ' + gcDataTxt(x.dataMerc) : ''}`)}
+            ${L('Custo estimado em milhas', '− ' + gcReais(r.custo), '', `${nBR(x.milhas)} milhas + ${gcReais(x.taxas)} de taxas`)}
             ${L('Economia estimada', gcReais(r.economia), 'forte sep')}</div>
           <div class="gd-bloco"><h4>VEM Emissão <span class="fraco" style="font-weight:400">taxa só na emissão</span></h4>
             ${L('Taxa VEM', gcReais(r.avulsa.taxa), '', geTaxaExplica(Object.assign({}, r.avulsa.tg, {taxaPor:r.avulsa.por, porPax:r.avulsa.tg.porPax, ambito:x.ambito})))}
@@ -85472,6 +85559,8 @@ function gdSaldosCarteira(c){
     vista.querySelectorAll('.gd-trilha button').forEach(b => b.onclick = () => ir(Number(b.dataset.p)));
     q('#gdAnt').onclick = () => ir(passo - 1); q('#gdProx').onclick = () => ir(passo + 1);
     gdIr._ir = ir;
+    gdTrechosMontar(vista, dg, pintar);
+    gdCardsMontar(vista, dg, pintar);
     ir(passo);
     return v;
   };
@@ -85481,9 +85570,13 @@ function gdSaldosCarteira(c){
     if (d && e && d.querySelector('#gdDiag')){
       const q = s => d.querySelector(s);
       const atual = [...d.querySelectorAll('.gd-passo')].findIndex(p => !p.hidden);
-      e.diag = {gasto:moedaNum(q('#gdGasto').value) || 0, cartoes:q('#gdCartoes').value.trim(), progs:q('#gdProgs').value.trim(), ambito:q('#gdAmbito').value,
-        trechos:Math.max(1, parseInt(q('#gdTrechos').value, 10) || 1), mercado:moedaNum(q('#gdMercado').value) || 0, fonte:q('#gdFonte').value, dataMerc:q('#gdDataMerc').value,
-        milhas:qtdNum(q('#gdMilhas').value) || 0, milheiro:moedaNum(q('#gdMilheiro').value) || 0, taxas:moedaNum(q('#gdTaxas').value) || 0, passo:Math.max(0, atual)};
+      const tr = gdTrechosLer(d), tot = gdTrechosTot(tr), cards = gdCardsLer(d), dolar = moedaNum(q('#gdDolar').value) || 0;
+      const f0 = tr.find(t => t.mercado > 0) || {};
+      e.diag = {gasto:moedaNum(q('#gdGasto').value) || 0, cartoes:cards.map(c => c.nome).join(', '), cards, dolar, progs:q('#gdProgs').value.trim(), ambito:q('#gdAmbito').value,
+        trechos:Math.max(1, parseInt(q('#gdTrechos').value, 10) || 1), lista:tr, mercado:tot.mercado, fonte:f0.fonte || '', dataMerc:f0.data || '',
+        milhas:tot.milhas, custo:tot.custo, taxas:tot.taxas, milheiro:tot.milhas ? centavos((tot.custo - tot.taxas) / tot.milhas * 1000) : 0, passo:Math.max(0, atual)};
+      /* pontos por real do cartão principal (o primeiro), para a calculadora de base × extra */
+      e.diagPtsReal = cards[0] && cards[0].pts > 0 && dolar > 0 ? Math.round(cards[0].pts / dolar * 100) / 100 : (e.diagPtsReal || 0);
       e.plano = q('#gdPlano').value;
       if (e.plano === 'anual'){ e.planoMensal = moedaNum(q('#gdPlanoMensal').value) || 0; e.planoPagas = Math.max(0, parseInt(q('#gdPlanoPagas').value, 10) || 0); e.planoDesde = q('#gdPlanoDesde').value; e.planoCancelou = q('#gdPlanoCancelou').value; }
       else { delete e.planoMensal; delete e.planoPagas; delete e.planoDesde; delete e.planoCancelou; }
@@ -85832,7 +85925,6 @@ function gptPintar(box, cid){
     /* Diagnóstico: pontos por real do cartão (passo 1) e saldo de entrada por programa (passo 2) */
     const p0 = vista.querySelector('.gd-passo[data-p="0"] .eq-campos'), p1 = vista.querySelector('.gd-passo[data-p="1"]');
     if (p0 && p1){
-      p0.insertAdjacentHTML('beforeend', `<div class="campo"><label>Pontos por real do cartão atual</label><input type="text" inputmode="decimal" id="gdPtsReal" value="${_gcEd.diagPtsReal ? String(_gcEd.diagPtsReal).replace('.', ',') : ''}" placeholder="1"></div>`);
       const prog0 = PROG_IDS.slice().sort((a, b) => prog(a).n.localeCompare(prog(b).n, 'pt-BR'));
       const linha = (p, q) => `<div class="ge-pt gd-ent"><div class="campo"><label>Programa</label><select data-ordem="natural">${prog0.map(x => `<option value="${x}"${x === p ? ' selected' : ''}>${esc(prog(x).n)}</option>`).join('')}</select></div><div class="campo"><label>Saldo de entrada</label><input type="text" inputmode="numeric" data-milhar value="${q ? qtdTxt(q) : ''}" placeholder="100.000"></div><button type="button" class="bt p fantasma ge-pt-del" aria-label="Tirar">Tirar</button></div>`;
       const ent = (_gcEd.diagEntrada || []);
@@ -85850,7 +85942,6 @@ function gptPintar(box, cid){
   gcSalvar = function(){
     const d = document.getElementById('dlgGestao'), e = _gcEd;
     if (d && e && d.querySelector('#gdEnt')){
-      e.diagPtsReal = parseFloat(String(d.querySelector('#gdPtsReal').value || '').replace(',', '.')) || 0;
       const ent = [...d.querySelectorAll('#gdEnt .gd-ent')].map(r => ({prog:r.querySelector('select').value, qtd:qtdNum(r.querySelector('input').value) || 0})).filter(x => x.qtd > 0);
       e.diagEntrada = ent;
       const st = gcDB().find(x => x.id === e.id);
