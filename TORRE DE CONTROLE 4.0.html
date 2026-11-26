@@ -84966,5 +84966,69 @@ function geImportarAbrir(){
   };
 })();
 </script>
+
+<script id="gex-js">
+/* ── Excluir cliente da gestão (26/11/2026) ───────────────────────────────────
+   Pela Ficha. Se ele tem emissões ou créditos, dá para passar tudo para outro
+   cliente antes (o caso do cadastro em dobro). A carteira dele no servidor não
+   é apagada: o servidor não deixa ninguém apagar carteira, por segurança; ela
+   só sai da lista. Pede confirmação duas vezes. */
+function gexAbrir(id){
+  const d = document.getElementById('dlgGestao'); if (!d) return;
+  const c = gcDB().find(x => x.id === id); if (!c) return;
+  const ems = geDoCliente(c).length, crs = giCreditos(c).length, outros = gcDB().filter(x => x.id !== id).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  const tem = ems || crs;
+  d.innerHTML = `<div class="dr-painel">${gcCab('Excluir cliente', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista">
+      ${tem ? `<div class="eq-tit">Antes de excluir</div>
+      <p style="margin:0 0 10px;line-height:1.55">${esc(gcPrimeiro(c.nome))} tem ${ems ? (ems === 1 ? '1 emissão' : ems + ' emissões') : ''}${ems && crs ? ' e ' : ''}${crs ? (crs === 1 ? '1 crédito de indicação' : crs + ' créditos de indicação') : ''}. Se este cadastro está em dobro, passe tudo para o cadastro certo.</p>
+      <div class="eq-campos"><div class="campo"><label>O que fazer com ${ems && crs ? 'elas' : ems ? (ems === 1 ? 'ela' : 'elas') : (crs === 1 ? 'ele' : 'eles')}</label><select id="gexDest" data-ordem="natural">
+        ${outros.map(x => `<option value="${esc(x.id)}"${gcPrimeiro(x.nome) === gcPrimeiro(c.nome) ? ' selected' : ''}>Passar para ${esc(x.nome)}</option>`).join('')}
+        <option value=""${outros.some(x => gcPrimeiro(x.nome) === gcPrimeiro(c.nome)) ? '' : ' selected'}>Apagar junto com o cliente</option></select></div></div>` : ''}
+      <div class="ge-alerta info" style="margin-top:14px"><svg><use href="#i-info"/></svg><span>${c.carteiraId ? 'A carteira dele no servidor não é apagada (por segurança, ninguém apaga carteira): ela só sai da sua lista. ' : ''}Emissões já registradas em Emitidos continuam lá.</span></div>
+    </div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="gexF">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt vermelho-solido" id="gexOk"><svg><use href="#i-lixo"/></svg>Excluir cliente</button></footer></div>`;
+  d.querySelector('#gexF').onclick = () => gcEditar(id);
+  d.querySelector('#gexOk').onclick = () => {
+    const destId = (d.querySelector('#gexDest') || {}).value || '';
+    const dest = destId ? gcDB().find(x => x.id === destId) : null;
+    const txt = dest ? `${esc(c.nome)} sai da gestão. ${ems ? (ems === 1 ? 'A emissão passa' : 'As emissões passam') + ' para ' + esc(dest.nome) + '.' : ''}${crs ? ' Os créditos de indicação também.' : ''}`
+      : `${esc(c.nome)} sai da gestão${tem ? ', com as emissões e os créditos dele' : ''}. Não dá para desfazer.`;
+    geConfirmar(() => gexAbrir(id), 'Excluir este cliente da gestão?', txt, () => gexExcluir(id, destId), 'Excluir', true);
+  };
+}
+function gexExcluir(id, destId){
+  const c = gcDB().find(x => x.id === id); if (!c) return;
+  const dest = destId ? gcDB().find(x => x.id === destId) : null;
+  if (dest){
+    geDoCliente(c).forEach(e => { geDoCliente(dest).push(e); });
+    giCreditos(c).forEach(cr => { giCreditos(dest).push(cr); });
+    (DB.reservas || []).forEach(r => { if (r.gestaoCli === id) r.gestaoCli = dest.id; });
+    if (!dest.indicadoPor && c.indicadoPor && c.indicadoPor !== dest.id) dest.indicadoPor = c.indicadoPor;
+  }
+  gcDB().forEach(x => {
+    if (x.indicadoPor === id) x.indicadoPor = dest && dest.id !== x.id ? dest.id : '';
+    giCreditos(x).forEach(cr => { if (cr.origemCli === id && dest){ cr.origemCli = dest.id; } });
+  });
+  DB.clientesGestao = gcDB().filter(x => x.id !== id);
+  salvar();
+  abrirGestaoClientes();
+  avisar(`${esc(c.nome)} saiu da gestão${dest ? '; as emissões estão com ' + esc(dest.nome) : ''}.`, 'ok', 6000);
+}
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !id) return v;
+    const pe = d.querySelector('.dr-pe'), sv = d.querySelector('#gcSalvar');
+    if (pe && sv && !pe.querySelector('#gexBt')){
+      sv.insertAdjacentHTML('beforebegin', `<button type="button" class="bt vermelho-solido" id="gexBt"><svg><use href="#i-lixo"/></svg>Excluir cliente</button>`);
+      pe.querySelector('#gexBt').onclick = () => gexAbrir(id);
+    }
+    return v;
+  };
+})();
+</script>
 </body>
 </html>
