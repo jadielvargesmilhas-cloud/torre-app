@@ -81949,7 +81949,7 @@ function gcAbrirCarteira(id){
     if (window._mtSou || GC_CARTEIRA) return;
     const nav = document.querySelector('.trilho-dir .trilho-nav'); if (!nav || nav.querySelector('.tb-gc')) return;
     const ref = nav.querySelector('.tb-mt') || nav.querySelector('.tb-eq');
-    const h = `<button type="button" class="tb tb-gc" onclick="abrirGestaoClientes()" data-dica="Clientes da gestão: a carteira de cada cliente e o que espera a sua ação" data-dica-lado="esquerda" aria-label="Clientes"><svg><use href="#i-usuarios"/></svg><span>Clientes</span></button>`;
+    const h = `<button type="button" class="tb tb-gc" onclick="abrirGestaoClientes()" data-dica="Gestão: a carteira de cada cliente de gestão, as emissões, as indicações e o que espera a sua ação" data-dica-lado="esquerda" aria-label="Gestão"><svg><use href="#i-carteira"/></svg><span>Gestão</span></button>`;
     if (ref) ref.insertAdjacentHTML('afterend', h); else nav.insertAdjacentHTML('afterbegin', h);
   }
   botao();
@@ -84290,7 +84290,7 @@ function abrirResumoHack(){
 </style>
 <script id="ge-js">
 /* ── regras (Ajustes da gestão) ─────────────────────────────────────────────── */
-const GE_REGRAS_PADRAO = {pct:30, minimo:0, taxaB:300, minBTrecho:0, tabela:false, pctAlto:25, limiteAlto:20000, pctUrgente:35, diasUrgente:30};
+const GE_REGRAS_PADRAO = {pct:30, minimo:0, taxaB:300, minBTrecho:0, tabela:false, pctAlto:25, limiteAlto:20000, pctUrgente:35, diasUrgente:30, credito:300, creditoMeses:12};
 const GE_TIPOS = {
   A:{n:'A · Dinheiro', d:'O cliente paga a companhia. A VEM cobra % da economia.'},
   B:{n:'B · Milhas do cliente', d:'Emitida com as milhas dele. Taxa fixa por passageiro por trecho.'},
@@ -84383,6 +84383,7 @@ function geAbrir(cid){
       <div class="eq-tit">Emissões</div>
       ${ems.map(e => geLinhaHTML(c, e)).join('')}` : `<div class="eq-vazio"><span class="eq-selo"><svg><use href="#i-aviao"/></svg></span><b>Nenhuma emissão de ${esc(gcPrimeiro(c.nome))} ainda</b>
         <p>Registre cada emissão: a Torre calcula a economia, a sua comissão, o custo das milhas e o lucro, e separa o que é lucro na milha do que é lucro na comissão.</p></div>`}
+      ${giSecaoHTML(c)}
       <div class="ge-alerta info" style="margin-top:14px"><svg><use href="#i-info"/></svg><span><b>Como a conta se divide:</b> a parte das milhas da VEM (tipo C) vira uma emissão em Emitidos, com o custo do milheiro travado na data: é lá que o saldo da conta baixa e que aparece o lucro na milha. A comissão é serviço e fica só aqui. Taxas de embarque são repasse: entram e saem, nunca contam como lucro.</span></div>
     </div></div>
     <footer class="dr-pe"><button type="button" class="bt perigo" id="geVoltar">Fechar</button><span class="esticar"></span>
@@ -84391,6 +84392,7 @@ function geAbrir(cid){
   d.querySelector('#geVoltar').onclick = () => gcDesenharLista(d);
   d.querySelector('#geNova').onclick = () => geEditar(cid, null);
   d.querySelector('#geRegrasBt').onclick = () => geRegrasAbrir(cid);
+  d.querySelectorAll('[data-gi-msg]').forEach(b => b.onclick = () => giMensagem(cid, b.dataset.giMsg));
   d.querySelectorAll('.ge-em[data-id]').forEach(li => {
     const eid = li.dataset.id;
     li.querySelector('[data-ge="ed"]').onclick = () => geEditar(cid, eid);
@@ -84421,6 +84423,7 @@ function geEditar(cid, eid){
   const orig = eid ? geDoCliente(c).find(x => x.id === eid) : null;
   const rg = geRegras();
   const e = orig ? JSON.parse(JSON.stringify(orig)) : {id:uid(), tipo:'C', data:hojeISO(), pax:1, trechos:1, repMoeda:'USD', classe:'', prog:'', criado:Date.now()};
+  e._editando = true;
   const progs = PROG_IDS.filter(p => ['milhas'].includes((PROGRAMAS[p] || {}).tipo));
   const m = v => v != null && v !== '' && geN(v) ? moedaTxt(geN(v)) : '';
   d.innerHTML = `<div class="dr-painel">${gcCab(orig ? 'Emissão da gestão' : 'Nova emissão da gestão', esc(c.nome))}
@@ -84468,6 +84471,7 @@ function geEditar(cid, eid){
         <div class="campo"><label>Valor já recebido</label><input type="text" inputmode="decimal" data-moeda id="geRecebido" value="${m(e.recebido)}"></div>
         <div class="campo"><label>Data do último recebimento</label><input type="date" id="geRecebidoEm" value="${esc(e.recebidoEm || '')}"></div>
       </div>
+      <div id="geCredBox"></div>
       <div class="eq-tit">Resultado</div>
       <div id="geRes"></div>
     </div></div>
@@ -84484,7 +84488,8 @@ function geEditar(cid, eid){
       milhas:qtdNum($g('#geMilhas').value) || 0, custoMil:moedaNum($g('#geCustoMil').value) || 0, milheiro:moedaNum($g('#geMilheiro').value) || 0,
       taxaB:moedaNum($g('#geTaxaB').value), pct:pct === '' ? '' : (parseFloat(pct.replace(',', '.')) || 0), complexo:!!($g('#geComplexo') || {}).checked,
       repMoeda:$g('#geRepMoeda').value, repValor:moedaNum($g('#geRepValor').value) || 0, repCambio:parseFloat(String($g('#geRepCambio').value || '').replace(/\./g, '').replace(',', '.')) || 0,
-      recebido:moedaNum($g('#geRecebido').value) || 0, recebidoEm:$g('#geRecebidoEm').value});
+      recebido:moedaNum($g('#geRecebido').value) || 0, recebidoEm:$g('#geRecebidoEm').value,
+      usarCredito:$g('#geUsarCred') ? $g('#geUsarCred').checked : !!e.usarCredito});
     return e;
   };
   const mostrar = () => {
@@ -84502,6 +84507,7 @@ function geEditar(cid, eid){
     const cpm = e.prog && typeof cpmPorPrograma === 'function' ? cpmPorPrograma()[e.prog] : null;
     $g('#geCustoDica').textContent = cpm ? `· na Torre: ${gcReais(cpm)}` : '';
     $g('#gePctDica').textContent = e.tipo === 'B' ? '' : `· ${gePctTxt(r.pct)}% (${r.pctPor})`;
+    giPintarCampo(c, e, $g('#geCredBox'));
     const L = (a, b, cls, sub) => `<div class="ge-l${cls ? ' ' + cls : ''}"><span>${a}${sub ? `<small>${sub}</small>` : ''}</span><b>${b}</b></div>`;
     let h = '';
     if (e.tipo === 'C'){
@@ -84514,6 +84520,7 @@ function geEditar(cid, eid){
     } else {
       h += L('Taxa da gestão', gcReais(r.taxa), '', `${gcReais(r.taxaPorTrecho)} por trecho × ${r.trechos}${r.minimoAplicado ? ' (mínimo por trecho aplicado)' : ` (${gcReais(e.taxaB)} × ${r.pax} passageiro${r.pax > 1 ? 's' : ''})`}`);
     }
+    if (r.descontoIndicacao > 0) h += L('Desconto por indicação', '− ' + gcReais(r.descontoIndicacao), '', `crédito de indicação abatido da ${e.tipo === 'B' ? 'taxa da gestão' : 'comissão'} (${gcReais(r.taxaBruta)} − ${gcReais(r.descontoIndicacao)})`);
     h += L('Preço ao cliente, sem taxas', gcReais(r.precoSemTaxas), 'forte sep');
     h += L('Taxas de repasse', gcReais(r.repasse), '', e.repMoeda === 'USD' ? `US$ ${moedaTxt(e.repValor)} × ${String(e.repCambio || 0).replace('.', ',')}` : 'pelo valor real');
     h += L('Total a receber do cliente', gcReais(r.precoTotal), 'forte');
@@ -84536,7 +84543,7 @@ function geEditar(cid, eid){
   pintar();
   $g('#geF').onclick = () => geAbrir(cid);
   if ($g('#geDel')) $g('#geDel').onclick = () => geConfirmar(() => geEditar(cid, eid), 'Excluir esta emissão da gestão?', `${esc(e.trecho || 'Emissão')} · ${gcReais(geCalc(orig, c).precoTotal)}. ${orig.reservaId ? 'A emissão em Emitidos continua lá (e o saldo também): apague por lá se quiser desfazer a venda das milhas.' : 'Não dá para desfazer.'}`, () => {
-    c.emissoes = geDoCliente(c).filter(x => x.id !== orig.id); salvar(); avisar('Emissão excluída.', 'ok'); geAbrir(cid);
+    giDesfazerEmissao(c, orig); c.emissoes = geDoCliente(c).filter(x => x.id !== orig.id); salvar(); avisar('Emissão excluída.', 'ok'); geAbrir(cid);
   }, 'Excluir', true);
   $g('#geSalvar').onclick = () => {
     ler();
@@ -84555,8 +84562,12 @@ function geEditar(cid, eid){
     if (faltam.length){ faltam.forEach(f => { const el = d.querySelector(f.sel); if (el) erroNoCampo(el, f.msg); }); return; }
     const lista = geDoCliente(c), i = lista.findIndex(x => x.id === e.id);
     if (i >= 0) lista[i] = e; else lista.push(e);
+    giAplicarUso(c, e);
+    delete e._editando;
     geSincReserva(c, e);
+    const lib = giLiberar();
     salvar();
+    if (lib.length) setTimeout(() => avisar(lib.map(x => `Crédito de ${gcReais(x.cr.valor)} liberado para ${esc(x.para.nome)} (indicou ${esc(x.de.nome)}).`).join(' '), 'ok', 7000), 400);
     avisar(e.tipo === 'C' && !e.reservaId ? 'Emissão salva. Falta registrar em Emitidos para o saldo das milhas baixar.' : 'Emissão salva.', e.tipo === 'C' && !e.reservaId ? 'alerta' : 'ok', 5200);
     geAbrir(cid);
   };
@@ -84617,6 +84628,7 @@ function geTextoMsg(c, e){
     linhas.push(`• Comissão da gestão (${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}): ${gcReais(r.taxa)}`);
   } else if (e.tipo === 'A') linhas.push(`• Comissão da gestão (${gePctTxt(r.pct)}% da economia de ${gcReais(r.economia)}): ${gcReais(r.taxa)}`);
   else linhas.push(`• Taxa da gestão (${r.trechos} trecho${r.trechos > 1 ? 's' : ''}, ${r.pax} passageiro${r.pax > 1 ? 's' : ''}): ${gcReais(r.taxa)}`);
+  if (r.descontoIndicacao > 0) linhas.push(`• Desconto por indicação (seu crédito): − ${gcReais(r.descontoIndicacao)}`);
   if (r.repasse > 0) linhas.push(`• Taxas de embarque, pelo valor real cobrado${e.repMoeda === 'USD' ? ` (US$ ${moedaTxt(e.repValor)})` : ''}: ${gcReais(r.repasse)}`);
   linhas.push('', `Total: ${gcReais(r.precoTotal)}`);
   if (r.recebido > 0) linhas.push(`Já recebido: ${gcReais(r.recebido)}`, r.aReceber > 0.004 ? `Falta: ${gcReais(r.aReceber)}` : 'Tudo quitado. Obrigado!');
@@ -84666,6 +84678,11 @@ function geRegrasAbrir(cid){
         <div class="campo"><label>Taxa por passageiro por trecho</label><input type="text" inputmode="decimal" data-moeda id="grTaxaB" value="${moedaTxt(rg.taxaB)}"></div>
         <div class="campo"><label>Mínimo por trecho <span class="fraco">0 = sem mínimo</span></label><input type="text" inputmode="decimal" data-moeda id="grMinB" value="${moedaTxt(rg.minBTrecho)}"></div>
       </div>
+      <div class="eq-tit">Programa de indicação</div>
+      <div class="eq-campos">
+        <div class="campo"><label>Crédito por indicação</label><input type="text" inputmode="decimal" data-moeda id="grCred" value="${moedaTxt(rg.credito)}"></div>
+        <div class="campo"><label>Validade do crédito (meses)</label><input type="text" inputmode="numeric" id="grCredMeses" value="${rg.creditoMeses}"></div>
+      </div>
       <div class="ge-alerta info"><svg><use href="#i-info"/></svg><span>Em decisão: o mínimo do tipo B (R$ 700 por trecho ou R$ 600 ida e volta, da regra de 21/11) e a tabela flexível. Enquanto não decidir, deixe o mínimo em 0 e a tabela desligada.</span></div>
     </div></div>
     <footer class="dr-pe"><button type="button" class="bt perigo" id="grF">Fechar</button><span class="esticar"></span><button type="button" class="bt primario" id="grS"><svg><use href="#i-ok"/></svg>Salvar regras</button></footer></div>`;
@@ -84679,7 +84696,8 @@ function geRegrasAbrir(cid){
     if (pcts) return erroNoCampo($r(pcts), 'O percentual vai de 0 a 100.');
     DB.cfg = DB.cfg || {};
     DB.cfg.gestaoRegras = {pct:p('#grPct'), minimo:moedaNum($r('#grMin').value) || 0, tabela:$r('#grTab').checked, pctAlto:p('#grPctA'), limiteAlto:moedaNum($r('#grLimA').value) || 0,
-      pctUrgente:p('#grPctU'), diasUrgente:parseInt($r('#grDiasU').value, 10) || 30, taxaB:moedaNum($r('#grTaxaB').value) || 0, minBTrecho:moedaNum($r('#grMinB').value) || 0};
+      pctUrgente:p('#grPctU'), diasUrgente:parseInt($r('#grDiasU').value, 10) || 30, taxaB:moedaNum($r('#grTaxaB').value) || 0, minBTrecho:moedaNum($r('#grMinB').value) || 0,
+      credito:moedaNum($r('#grCred').value) || 0, creditoMeses:Math.max(1, parseInt($r('#grCredMeses').value, 10) || 12)};
     salvar(); avisar('Regras salvas.', 'ok'); geAbrir(cid);
   };
 }
@@ -84720,6 +84738,231 @@ function geRegrasAbrir(cid){
   custoReserva = function(r){
     if (r && Number(r.cpmFixo) > 0) return (Number(r.milhas) || 0) / 1000 * Number(r.cpmFixo) + (Number(r.taxas) || 0) + (Number(r.custoExtra) || 0);
     return _cr.apply(this, arguments);
+  };
+})();
+</script>
+
+<style id="gi-css">
+/* ══ PROGRAMA DE INDICAÇÃO (25/11/2026) ═══════════════════════════════════════
+   "Indicou, a pessoa fechou, você ganha R$ 300 na sua próxima emissão."
+   Crédito liberado quando o indicado quita a 1ª emissão; abate a taxa VEM; a
+   sobra continua; dá para juntar créditos; vale 12 meses (aviso 30 dias antes). */
+.gi-cred{ border:1px solid color-mix(in srgb, var(--jade) 45%, var(--fio)); background:color-mix(in srgb, var(--jade) 7%, var(--sup-1)); border-radius:14px; padding:12px 14px; margin-top:16px; }
+.gi-cred label.chk{ margin:0; }
+.gi-cred small{ display:block; color:var(--grafite); font-size:calc(12px * var(--esc)); margin-top:6px; line-height:1.45; }
+.gi-lista{ display:flex; flex-direction:column; gap:8px; }
+.gi-l{ border:1px solid var(--fio); border-radius:12px; background:var(--sup-1); padding:10px 12px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; align-items:center; }
+.gi-l b{ font-variant-numeric:tabular-nums; }
+.gi-l small{ color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.45; }
+.gi-l .ge-em-bts{ grid-column:1 / -1; }
+.gi-resumo{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:calc(12.5px * var(--esc)); color:var(--giz-2); margin:0 0 10px; }
+.gi-resumo b{ color:var(--giz); }
+@media (max-width:760px){ .gi-l{ grid-template-columns:minmax(0,1fr); } }
+</style>
+<script id="gi-js">
+function giCreditos(c){ if (!Array.isArray(c.creditos)) c.creditos = []; return c.creditos; }
+function giSomaMeses(iso, m){ const d = new Date(iso + 'T12:00:00'); const dia = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + m); const ult = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(dia, ult)); return d.toLocaleDateString('sv'); }
+function giUsado(cr, excetoEm){ return centavos(soma((cr.usos || []).filter(u => u.em !== excetoEm).map(u => u.valor))); }
+function giSaldo(cr, excetoEm){ return centavos(Math.max(0, geN(cr.valor) - giUsado(cr, excetoEm))); }
+function giValido(cr, naData){ return String(cr.validoAte || '') >= String(naData || hojeISO()); }
+function giStatus(cr){ const s = giSaldo(cr); if (s <= 0.004) return 'usado'; return giValido(cr) ? 'disponivel' : 'vencido'; }
+/* Quanto esta emissão pode abater: o que ela mesma já usava + o saldo dos créditos válidos na data dela. */
+function giDisponivel(c, e){
+  const data = (e && e.data) || hojeISO(), eid = e && e.id;
+  return centavos(soma(giCreditos(c).map(cr => {
+    const meu = centavos(soma((cr.usos || []).filter(u => u.em === eid).map(u => u.valor)));
+    return (giValido(cr, data) ? giSaldo(cr, eid) : meu);
+  })));
+}
+/* O desconto entra na conta da emissão (a comissão/taxa cai; o lucro cai junto). */
+(function(){
+  const _calc = geCalc;
+  geCalc = function(e, c){
+    const r = _calc.apply(this, arguments);
+    r.taxaBruta = r.taxa; r.descontoIndicacao = 0;
+    if (e && e.usarCredito && c && r.taxa > 0){
+      /* no formulário: o que há disponível; emissão salva: só o que ficou gravado nela */
+      const base = e._editando ? giDisponivel(c, e) : centavos(soma(giCreditos(c).map(cr => soma((cr.usos || []).filter(u => u.em === e.id).map(u => u.valor)))));
+      r.descontoIndicacao = centavos(Math.min(r.taxa, base));
+      if (r.descontoIndicacao > 0){
+        r.taxa = centavos(r.taxa - r.descontoIndicacao);
+        r.precoSemTaxas = centavos(r.valorMilhas + r.taxa);
+        r.precoTotal = centavos(r.precoSemTaxas + r.repasse);
+        r.lucroTaxa = r.taxa;
+        r.lucro = centavos(r.lucroMilha + r.lucroTaxa);
+        r.aReceber = centavos(r.precoTotal - r.recebido);
+      }
+    }
+    return r;
+  };
+})();
+/* Ao salvar: tira os usos antigos desta emissão e reparte o desconto de novo,
+   primeiro nos créditos que vencem antes. */
+function giAplicarUso(c, e){
+  giCreditos(c).forEach(cr => { cr.usos = (cr.usos || []).filter(u => u.em !== e.id); });
+  if (!e.usarCredito) return;
+  let falta = geCalc(e, c).descontoIndicacao || 0;
+  const ok = giCreditos(c).filter(cr => giValido(cr, e.data || hojeISO()) && giSaldo(cr) > 0).sort((a, b) => String(a.validoAte).localeCompare(String(b.validoAte)));
+  for (const cr of ok){
+    if (falta <= 0.004) break;
+    const v = centavos(Math.min(falta, giSaldo(cr)));
+    cr.usos.push({em:e.id, valor:v, data:e.data || hojeISO(), trecho:e.trecho || ''});
+    falta = centavos(falta - v);
+  }
+}
+function giDesfazerEmissao(c, e){
+  giCreditos(c).forEach(cr => { cr.usos = (cr.usos || []).filter(u => u.em !== e.id); });
+  gcDB().forEach(x => { x.creditos = giCreditos(x).filter(cr => !(cr.origemEm === e.id && !(cr.usos || []).length)); });
+}
+/* Libera os créditos devidos: para cada cliente indicado, a 1ª emissão dele quitada. */
+function giLiberar(){
+  const rg = geRegras(), novos = [];
+  if (!(geN(rg.credito) > 0)) return novos;
+  gcDB().forEach(ind => {
+    if (!ind.indicadoPor || ind.indicadoPor === ind.id) return;
+    const quem = gcDB().find(x => x.id === ind.indicadoPor); if (!quem) return;
+    if (gcDB().some(x => giCreditos(x).some(cr => cr.origemCli === ind.id))) return;   /* só a 1ª emissão de cada indicado */
+    const ems = geDoCliente(ind).slice().sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || (a.criado || 0) - (b.criado || 0));
+    const pri = ems[0]; if (!pri) return;
+    const r = geCalc(pri, ind);
+    if (!(r.precoTotal > 0) || r.aReceber > 0.004) return;   /* pagou = quitou tudo */
+    const lib = pri.recebidoEm || hojeISO();
+    const cr = {id:uid(), valor:centavos(geN(rg.credito)), origemCli:ind.id, origemNome:ind.nome, origemEm:pri.id, liberadoEm:lib, validoAte:giSomaMeses(lib, rg.creditoMeses || 12), usos:[]};
+    giCreditos(quem).push(cr); novos.push({cr, para:quem, de:ind});
+  });
+  return novos;
+}
+function giPintarCampo(c, e, box){
+  if (!box) return;
+  const disp = giDisponivel(c, e);
+  if (!(disp > 0) && !e.usarCredito){ box.innerHTML = ''; return; }
+  const r = geCalc(e, c);
+  box.innerHTML = `<div class="gi-cred"><label class="chk"><input type="checkbox" id="geUsarCred"${e.usarCredito ? ' checked' : ''}><span><b>Usar crédito de indicação</b> · ${gcReais(disp)} disponível</span></label>
+    <small>${e.usarCredito ? (r.descontoIndicacao > 0 ? `Abate ${gcReais(r.descontoIndicacao)} da ${e.tipo === 'B' ? 'taxa da gestão' : 'comissão'}${disp > r.descontoIndicacao ? `; sobram ${gcReais(centavos(disp - r.descontoIndicacao))} para a próxima emissão` : ''}.` : 'Ainda não há taxa para abater nesta emissão.') : 'O crédito abate a taxa VEM desta emissão. O que sobrar continua disponível.'}</small></div>`;
+}
+function giSecaoHTML(c){
+  const crs = giCreditos(c), indicados = gcDB().filter(x => x.indicadoPor === c.id);
+  const quem = c.indicadoPor ? gcDB().find(x => x.id === c.indicadoPor) : null;
+  if (!crs.length && !indicados.length && !quem) return '';
+  const disp = centavos(soma(crs.filter(cr => giStatus(cr) === 'disponivel').map(cr => giSaldo(cr))));
+  const ST = {disponivel:['Disponível', 'ok'], usado:['Usado', ''], vencido:['Vencido', 'alerta']};
+  return `<div class="eq-tit">Indicações</div>
+    <div class="gi-resumo">${quem ? `<span>Indicado por <b>${esc(quem.nome)}</b></span>` : ''}${indicados.length ? `<span>Indicou <b>${indicados.length}</b>: ${esc(indicados.map(x => gcPrimeiro(x.nome)).join(', '))}</span>` : ''}${crs.length ? `<span>Crédito disponível: <b>${gcReais(disp)}</b></span>` : ''}</div>
+    ${crs.length ? `<div class="gi-lista">${crs.slice().sort((a, b) => String(b.liberadoEm).localeCompare(String(a.liberadoEm))).map(cr => {
+      const st = giStatus(cr), s = ST[st], saldo = giSaldo(cr);
+      const dias = Math.round((new Date(cr.validoAte + 'T12:00:00') - new Date(hojeISO() + 'T12:00:00')) / 864e5);
+      return `<div class="gi-l"><div><b>${gcReais(cr.valor)}</b> <span class="ge-chip ${s[1]}">${s[0]}${st === 'disponivel' && saldo < geN(cr.valor) ? ' · resta ' + gcReais(saldo) : ''}</span>${st === 'disponivel' && dias <= 30 ? ` <span class="ge-chip alerta">vence em ${dias} dia${dias === 1 ? '' : 's'}</span>` : ''}
+        <br><small>Indicou ${esc(cr.origemNome || 'cliente')} · liberado em ${gcDataTxt(cr.liberadoEm)} · válido até ${gcDataTxt(cr.validoAte)}${(cr.usos || []).length ? ' · usado em ' + cr.usos.map(u => `${gcDataTxt(u.data)} (${gcReais(u.valor)}${u.trecho ? ', ' + esc(u.trecho) : ''})`).join('; ') : ''}</small></div>
+        ${st === 'disponivel' ? `<div class="ge-em-bts"><button type="button" class="bt p fantasma" data-gi-msg="${esc(cr.id)}"><svg><use href="#i-link"/></svg>Avisar ${esc(gcPrimeiro(c.nome))}</button></div>` : ''}</div>`;
+    }).join('')}</div>` : ''}`;
+}
+function giMensagem(cid, crid){
+  const d = document.getElementById('dlgGestao'); const c = gcDB().find(x => x.id === cid); if (!d || !c) return;
+  const cr = giCreditos(c).find(x => x.id === crid); if (!cr) return;
+  const txt = `Olá, ${gcPrimeiro(c.nome)}! ${gcPrimeiro(cr.origemNome || '')}, que você indicou, fechou a primeira emissão com a VEM. Obrigado pela confiança!\n\nVocê ganhou ${gcReais(cr.valor)} de crédito na sua próxima emissão, válido até ${gcDataTxt(cr.validoAte)}.${giSaldo(cr) < geN(cr.valor) ? ` Saldo de hoje: ${gcReais(giSaldo(cr))}.` : ''}\n\nIndicou, a pessoa fechou, você ganha ${gcReais(geRegras().credito)} na sua próxima emissão.`;
+  d.innerHTML = `<div class="dr-painel">${gcCab('Mensagem de indicação', esc(c.nome))}
+    <div class="dr-corpo"><div class="eq-vista"><textarea class="ge-msg" id="giMsg">${esc(txt)}</textarea></div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="giMsgF">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt fantasma" id="giMsgCop"><svg><use href="#i-copiar"/></svg>Copiar</button>
+      ${c.zap ? `<a class="bt primario" id="giMsgZap" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir no WhatsApp</a>` : ''}</footer></div>`;
+  const ta = d.querySelector('#giMsg'), z = d.querySelector('#giMsgZap');
+  const upd = () => { if (z) z.href = 'https://wa.me/' + String(c.zap).replace(/\D/g, '').replace(/^(?!55)/, '55') + '?text=' + encodeURIComponent(ta.value); };
+  ta.addEventListener('input', upd); upd();
+  d.querySelector('#giMsgF').onclick = () => geAbrir(cid);
+  d.querySelector('#giMsgCop').onclick = async () => { try { await navigator.clipboard.writeText(ta.value); } catch(_){ ta.select(); document.execCommand('copy'); } avisar('Mensagem copiada.', 'ok'); };
+}
+/* Ficha: "Indicado por" + cartão: indicado por, crédito disponível, vencimento */
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d || !_gcEd) return v;
+    const email = d.querySelector('#gcEmail'); const grade = email && email.closest('.eq-campos'); if (!grade || d.querySelector('#gcIndicado')) return v;
+    const outros = gcDB().filter(x => x.id !== _gcEd.id).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+    grade.insertAdjacentHTML('beforeend', `<div class="campo"><label>Indicado por <span class="fraco">quem trouxe este cliente</span></label><select id="gcIndicado" data-ordem="natural"><option value="">ninguém (veio sozinho)</option>${outros.map(x => `<option value="${esc(x.id)}"${_gcEd.indicadoPor === x.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></div>`);
+    return v;
+  };
+  const _sv = gcSalvar;
+  gcSalvar = function(){
+    const d = document.getElementById('dlgGestao'), s = d && d.querySelector('#gcIndicado');
+    if (s && _gcEd) _gcEd.indicadoPor = s.value || '';
+    const v = _sv.apply(this, arguments);
+    const lib = giLiberar(); if (lib.length){ salvar(); }
+    return v;
+  };
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(d){
+    const lib = giLiberar(); if (lib.length) salvar();
+    const v = _dl.apply(this, arguments);
+    d = d || document.getElementById('dlgGestao'); if (!d) return v;
+    d.querySelectorAll('.eq-card[data-id]').forEach(card => {
+      const c = gcDB().find(x => x.id === card.dataset.id); if (!c) return;
+      const s = card.querySelector('.gc-sinais'); if (!s) return;
+      const disp = giCreditos(c).filter(cr => giStatus(cr) === 'disponivel');
+      const tot = centavos(soma(disp.map(cr => giSaldo(cr))));
+      const venc = disp.map(cr => Math.round((new Date(cr.validoAte + 'T12:00:00') - new Date(hojeISO() + 'T12:00:00')) / 864e5)).filter(x => x <= 30).sort((a, b) => a - b)[0];
+      if (venc != null) s.insertAdjacentHTML('afterbegin', `<span class="gc-sinal alerta">Crédito de indicação vence em ${venc} dia${venc === 1 ? '' : 's'}</span>`);
+      else if (tot > 0) s.insertAdjacentHTML('afterbegin', `<span class="gc-sinal">Crédito de indicação: ${esc(gcReais(tot))}</span>`);
+    });
+    return v;
+  };
+})();
+</script>
+
+<script id="gimp-js">
+/* ── Colar dados prontos (25/11/2026): um bloco de texto (preparado pelo Claude a
+   partir dos prints) cadastra o cliente de gestão e as emissões dele de uma vez.
+   Nada é apagado: cliente com o mesmo nome é reaproveitado, emissão com o mesmo
+   código de reserva não entra duas vezes. */
+function geImportarTexto(txt){
+  let j; try { j = JSON.parse(String(txt || '').trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '')); } catch(_){ return {erro:'O texto colado não está completo. Copie o bloco inteiro, do primeiro { ao último }.'}; }
+  if (!j || !j.vem_gestao || !j.cliente || !j.cliente.nome) return {erro:'Este texto não é um bloco de dados da gestão.'};
+  const nome = String(j.cliente.nome).trim().replace(/\s+/g, ' ');
+  let c = gcDB().find(x => String(x.nome).toLowerCase() === nome.toLowerCase()), novo = false;
+  if (!c){
+    c = {id:uid(), nome, zap:j.cliente.zap || '', email:String(j.cliente.email || '').toLowerCase(), ativo:true, objetivo:{}, regras:{programas:[]}, cofre:[], acessos:[], termo:{}, aprovacoes:[], criado:Date.now(), pend:true};
+    gcDB().push(c); novo = true;
+  }
+  let n = 0, rep = 0;
+  (j.emissoes || []).forEach(e0 => {
+    const loc = String(e0.loc || '').toUpperCase();
+    if (loc && geDoCliente(c).some(x => String(x.loc || '').toUpperCase() === loc)){ rep++; return; }
+    const e = Object.assign({tipo:'C', pax:1, trechos:1, repMoeda:'BRL'}, e0, {id:uid(), loc, criado:Date.now()});
+    geDoCliente(c).push(e); n++;
+  });
+  giLiberar(); salvar();
+  if (typeof gcEnviarPendentes === 'function' && novo) try { gcEnviarPendentes().then(gcLerServidor); } catch(_){}
+  return {c, novo, n, rep};
+}
+function geImportarAbrir(){
+  let d = document.getElementById('dlgGestao');
+  if (!d || !d.open){ abrirGestaoClientes(); d = document.getElementById('dlgGestao'); }
+  d.innerHTML = `<div class="dr-painel">${gcCab('Colar dados prontos', 'Cliente e emissões de uma vez, a partir do bloco que o Claude preparou.')}
+    <div class="dr-corpo"><div class="eq-vista">
+      <div class="ge-alerta info" style="margin:0 0 12px"><svg><use href="#i-info"/></svg><span>Cole abaixo o bloco inteiro (começa com <b>{</b> e termina com <b>}</b>). Se o cliente já existir, as emissões entram nele; emissão com o mesmo código de reserva não entra duas vezes.</span></div>
+      <textarea class="ge-msg" id="geImpTxt" placeholder="Cole aqui"></textarea></div></div>
+    <footer class="dr-pe"><button type="button" class="bt perigo" id="geImpF">Fechar</button><span class="esticar"></span>
+      <button type="button" class="bt primario" id="geImpOk"><svg><use href="#i-ok"/></svg>Cadastrar</button></footer></div>`;
+  d.querySelector('#geImpF').onclick = () => gcDesenharLista(d);
+  d.querySelector('#geImpOk').onclick = () => {
+    const r = geImportarTexto(d.querySelector('#geImpTxt').value);
+    if (r.erro) return erroNoCampo(d.querySelector('#geImpTxt'), r.erro);
+    avisar(`${esc(r.c.nome)}: ${r.novo ? 'cliente cadastrado' : 'cliente já existia'}, ${r.n === 1 ? '1 emissão cadastrada' : r.n + ' emissões cadastradas'}${r.rep ? `, ${r.rep} já estava${r.rep > 1 ? 'm' : ''} lá` : ''}. Confira e complete o que faltar.`, 'ok', 7000);
+    geAbrir(r.c.id);
+  };
+}
+(function(){
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(d){
+    const v = _dl.apply(this, arguments);
+    d = d || document.getElementById('dlgGestao'); if (!d) return v;
+    const pe = d.querySelector('.dr-pe'); if (pe && !pe.querySelector('#geImpBt')){
+      const novo = pe.querySelector('[data-gc="novo"]');
+      const h = `<button type="button" class="bt fantasma" id="geImpBt"><svg><use href="#i-copiar"/></svg>Colar dados prontos</button>`;
+      if (novo) novo.insertAdjacentHTML('beforebegin', h); else pe.insertAdjacentHTML('beforeend', h);
+      pe.querySelector('#geImpBt').onclick = geImportarAbrir;
+    }
+    return v;
   };
 })();
 </script>
