@@ -18230,7 +18230,7 @@ function renderComposicao(){
              dez segundos. */
           return `<button type="button" class="comp-linha" onclick="editarSaldoDe('${i.p}')"
             aria-label="Ajustar o saldo de ${esc(prog(i.p).n)}"
-            data-dica-tabela="${esc(fichaTanque(i.p, i.qtd, fatia, i.inv, tipo))}" data-dica-lado="baixo">
+           >
             <span class="comp-nome">${discoProg(i.p, 'p')}${esc(prog(i.p).n)}</span>
             <span class="comp-barra"><i style="width:${fatia}%"></i></span>
             <span class="comp-qtd">${nBR(i.qtd)}</span>
@@ -56613,6 +56613,15 @@ function ppRender(){
 .tq-lista{ display:flex; flex-direction:column; gap:2px; }
 .tq-linha{ all:unset; box-sizing:border-box; cursor:pointer; display:grid; grid-template-columns:minmax(0, 1fr) auto auto; align-items:center; gap:14px; padding:8px 10px; border-radius:11px; transition:background .15s; }
 .tq-linha:hover{ background:var(--sup-2); }
+/* 27/11/2026: passar o mouse só destaca (cor do programa, leve deslize para o lado,
+   brilho); nada abre embaixo nem empurra o texto. */
+.tq-linha{ transition:background .18s, box-shadow .18s; }
+.tq-linha .tq-l-nome, .tq-linha .tq-l-qtd b{ transition:transform .18s ease, color .18s ease; }
+.tq-linha:hover{ background:color-mix(in oklab, var(--c) 9%, var(--sup-1, transparent)); box-shadow:inset 3px 0 0 var(--c), 0 6px 18px -14px var(--c); }
+.tq-linha:hover .tq-l-nome{ transform:translateX(4px); }
+.tq-linha:hover .tq-l-nome b{ color:color-mix(in oklab, var(--c) 70%, var(--giz)); }
+.tq-linha:hover .tq-mini i{ filter:brightness(1.12) saturate(1.15); }
+@media (prefers-reduced-motion: reduce){ .tq-linha:hover .tq-l-nome{ transform:none; } }
 .tq-linha:focus-visible{ outline:2px solid var(--anil-claro, var(--anil)); outline-offset:1px; }
 .tq-l-nome{ display:flex; align-items:center; gap:10px; min-width:0; }
 .tq-l-txt{ display:flex; flex-direction:column; gap:5px; min-width:0; flex:1; }
@@ -56683,8 +56692,7 @@ renderComposicao = function(){
       const cpm = i.inv && i.qtd ? i.inv / i.qtd * 1000 : null;
       const cl = cpm != null ? classeCPM(i.p, cpm) : {z:'', t:'sem custo'};
       return `<button type="button" class="tq-linha comp-linha" style="--c:${cor(i.p)}" onclick="editarSaldoDe('${i.p}')"
-          aria-label="Ajustar o saldo de ${esc(prog(i.p).n)}"
-          data-dica-tabela="${esc(fichaTanque(i.p, i.qtd, fatia, i.inv, tipo))}" data-dica-lado="baixo">
+          aria-label="Ajustar o saldo de ${esc(prog(i.p).n)}">
         <span class="tq-l-nome">${discoProg(i.p, 'p')}<span class="tq-l-txt"><b>${esc(prog(i.p).n)}</b><i class="tq-mini"><i style="width:${fatia.toFixed(1)}%"></i></i></span></span>
         <span class="tq-l-qtd"><b>${nBR(i.qtd)}</b><small>${pct(fatia, fatia < 10 ? 1 : 0)}</small></span>
         <span class="tq-l-cpm ${cl.z}" title="${esc(cl.t)}">${cpm != null ? brl2(cpm) : 'sem custo'}</span>
