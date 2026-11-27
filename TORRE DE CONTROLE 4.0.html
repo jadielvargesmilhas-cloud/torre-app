@@ -78343,8 +78343,8 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
 .mpn-chip{ display:inline-flex; align-items:baseline; gap:6px; padding:4px 11px; border-radius:999px; font-size:calc(13px * var(--esc, 1)); color:var(--giz);
   background:color-mix(in oklab, var(--c) 10%, var(--sup-0)); border:1px solid color-mix(in oklab, var(--c) 35%, transparent); }
 .mpn-chip b{ font-family:var(--f-m); color:color-mix(in oklab, var(--c) 70%, var(--giz)); }
-.mpn-fluxo{ container-type:inline-size; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); position:relative; margin-top:16px; }
-.mpn-fluxo::before{ content:''; position:absolute; top:26px; left:12.5%; right:12.5%; border-top:3px dashed color-mix(in oklab, var(--grafite) 35%, transparent); }
+.mpn-fluxo{ container-type:inline-size; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); position:relative; margin-top:16px; }
+.mpn-fluxo::before{ content:''; position:absolute; top:26px; left:16.667%; right:16.667%; border-top:3px dashed color-mix(in oklab, var(--grafite) 35%, transparent); }
 .mpn-passo{ position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; padding:0 8px; background:none; border:0; color:inherit; cursor:pointer; font:inherit; }
 .mpn-ic{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background:var(--sup-0); border:2.5px solid color-mix(in oklab, var(--c) 60%, transparent); box-shadow:0 0 0 6px var(--sup-0), 0 8px 18px -10px color-mix(in oklab, var(--c) 70%, transparent); transition:transform .2s; }
 .mpn-passo:hover .mpn-ic{ transform:scale(1.06); }
@@ -78366,7 +78366,7 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
 @container (max-width:860px) and (min-width:440px){ .mpn-grid{ grid-template-columns:140px minmax(0,1fr); } .mpn-grid > .mpn-dir{ display:contents; }
   .mpn-anel{ width:140px; height:140px; grid-row:1 / span 2; } .mpn-anel-txt b{ font-size:calc(30px * var(--esc, 1)); } .mpn-cab, .mpn-chips{ grid-column:2; } .mpn-fluxo{ grid-column:1 / -1; margin-top:22px; } }
 @media (max-width:640px){ .mpn-grid{ grid-template-columns:1fr; } .mpn-anel{ width:150px; height:150px; } .mpn-card{ padding:22px 18px 18px; } }
-@media (max-width:640px){ .mpn-fluxo{ grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:22px; } .mpn-fluxo::before{ display:none; } .mpn-num{ font-size:min(calc(20px * var(--esc, 1)), 8.4cqi); }
+@media (max-width:640px){ .mpn-fluxo{ grid-template-columns:repeat(3, minmax(0,1fr)); row-gap:22px; } .mpn-fluxo::before{ display:none; } .mpn-num{ font-size:min(calc(20px * var(--esc, 1)), 8.4cqi); }
   .mpn-faixa{ padding:16px 16px 16px 20px; } .mpn-bts{ width:100%; } .mpn-bt{ flex:1 1 auto; justify-content:center; padding:10px 12px; } .mpn-faixa-sub{ white-space:normal; } .mpn-pe .mpn-bt{ width:100%; } }
 </style>
 <script id="mpn-js">
@@ -78422,7 +78422,7 @@ window.rotuloAcaoAviso = function(a){
     const top = D.comp.slice(0, 4), resto = soma(D.comp.slice(4).map(x => x.v));
     const chips = top.map(x => ({n:prog(x.p).n, v:x.v, c:prog(x.p).cor || 'var(--anil)'})).concat(resto > 0 ? [{n:'Outros', v:resto, c:'#9AA3B2'}] : []);
     const diaV = D.prox ? diasAte(D.prox.inicio) : null;
-    const usar = D.gar + D.eco > 0 ? {num:brl(D.gar + D.eco).replace(/,\d\d$/, ''), sub:`${D.gar ? 'garantida' : 'já economizada'}${D.prox ? ` · ${esc(D.prox.nome || 'viagem')} ${quando(diaV)}` : ' nas viagens'}`}
+    const usar = D.gar + D.eco > 0 ? {num:brl(D.gar + D.eco).replace(/,\d\d$/, ''), rot:D.gar ? 'Economia garantida' : 'Economia', sub:D.prox ? `${esc(D.prox.nome || 'Próxima viagem').replace(/-/g, '\u2011')}<br>${quando(diaV)}` : `já economizada<br>nas viagens`}
       : D.prox ? {num:diaV === 0 ? 'hoje' : `${nBR(diaV)}<small>dias</small>`, sub:`até ${esc(D.prox.nome || 'a próxima viagem')}`} : {num:'—', sub:'nenhuma viagem planejada'};
     return `<div class="mpn" id="mpn">
       <div class="mpn-faixa" style="--c:${a0 ? (a0.grau === 3 ? 'var(--brasa)' : a0.grau === 2 ? 'var(--ouro)' : 'var(--anil)') : 'var(--jade)'}">
@@ -78445,13 +78445,11 @@ window.rotuloAcaoAviso = function(a){
             <div class="mpn-chips">${chips.map(x => `<span class="mpn-chip" style="--c:${x.c}"><b>${pct(x.v / D.vale * 100, 0)}</b>${esc(x.n)}</span>`).join('')}</div>
             <div class="mpn-fluxo">
               <button type="button" class="mpn-passo" style="--c:var(--anil-claro)" onclick="irPara('mesa');irParaAba('mesa','ms-lancamentos')" data-mpn="acumular"><span class="mpn-ic">${I.acumular}</span>
-                <span class="mpn-num">${D.entrou30 ? brl(D.entrou30).replace(/,\d\d$/, '') : 'R$ 0'}</span><span class="mpn-rot">Investido</span><span class="mpn-sub">nos últimos 30 dias</span><i class="mpn-barra"></i></button>
+                <span class="mpn-num">${D.entrou30 ? brl(D.entrou30).replace(/,\d\d$/, '') : 'R$ 0'}</span><span class="mpn-rot">Investido</span><span class="mpn-sub">nos últimos<br>30 dias</span><i class="mpn-barra"></i></button>
               <button type="button" class="mpn-passo${D.atras ? ' alerta' : ''}" style="--c:var(--lilas)" onclick="irPara('fabrica');irParaAba('fabrica','fb-compras')" data-mpn="receber"><span class="mpn-ic">${I.receber}</span>
-                <span class="mpn-num">${mil(D.ptsR)}</span><span class="mpn-rot">A receber</span><span class="mpn-sub">${D.pend.length ? `${D.pend.length} ${D.pend.length === 1 ? 'crédito' : 'créditos'}${D.atras ? ` · ${D.atras} ${D.atras === 1 ? 'atrasado' : 'atrasados'}` : ' a caminho'}` : 'nada a caminho'}</span><i class="mpn-barra"></i></button>
-              <button type="button" class="mpn-passo" style="--c:var(--jade)" onclick="irPara('saldo')" data-mpn="prontas"><span class="mpn-ic">${I.prontas}</span>
-                <span class="mpn-num">${mil(D.milhas)}</span><span class="mpn-rot">Milhas prontas</span><span class="mpn-sub">em ${D.nM} ${D.nM === 1 ? 'programa' : 'programas'}${D.pontos ? ` · ${mil(D.pontos).replace(/<[^>]+>/g, ' ')} pts a direcionar` : ''}</span><i class="mpn-barra"></i></button>
+                <span class="mpn-num">${mil(D.ptsR)}</span><span class="mpn-rot">A receber</span><span class="mpn-sub">${D.pend.length ? `${D.pend.length} ${D.pend.length === 1 ? 'crédito' : 'créditos'}<br>${D.atras ? `${D.atras} ${D.atras === 1 ? 'atrasado' : 'atrasados'}` : 'a caminho'}` : 'nada<br>a caminho'}</span><i class="mpn-barra"></i></button>
               <button type="button" class="mpn-passo" style="--c:var(--ouro)" onclick="irPara('rota');irParaAba('rota','rt-plano')" data-mpn="usar"><span class="mpn-ic">${I.usar}</span>
-                <span class="mpn-num">${usar.num}</span><span class="mpn-rot">${D.gar + D.eco > 0 ? 'Economia' : 'Próxima viagem'}</span><span class="mpn-sub">${usar.sub}</span><i class="mpn-barra"></i></button>
+                <span class="mpn-num">${usar.num}</span><span class="mpn-rot">${usar.rot || 'Próxima viagem'}</span><span class="mpn-sub">${usar.sub}</span><i class="mpn-barra"></i></button>
             </div>
           </div>
         </div>
