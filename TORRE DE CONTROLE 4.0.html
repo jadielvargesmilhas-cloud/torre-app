@@ -78386,14 +78386,17 @@ catch(e){ld.textContent='Este link está incompleto. Peça o link completo a que
 @media (max-width:640px){ .mpn-grid{ grid-template-columns:1fr; } .mpn-anel{ width:150px; height:150px; } .mpn-card{ padding:22px 18px 18px; } }
 /* 27/11/2026: anel maior e com mais destaque (número grande, brilho verde suave) */
 .mpn-grid{ grid-template-columns:224px minmax(0,1fr); }
-#mpn .mpn-anel{ width:216px; height:216px; filter:drop-shadow(0 10px 26px color-mix(in oklab, var(--jade) 28%, transparent)); }
-#mpn .mpn-anel circle{ stroke-width:15; }
-#mpn .mpn-anel::before{ content:''; position:absolute; inset:15%; border-radius:50%; background:radial-gradient(circle, color-mix(in oklab, var(--jade) 12%, transparent), transparent 70%); pointer-events:none; }
-#mpn .mpn-anel-txt b{ font-size:calc(52px * var(--esc, 1)); }
-#mpn .mpn-anel-txt b small{ font-size:.38em; }
-#mpn .mpn-anel-txt span{ font-size:calc(11.5px * var(--esc, 1)); max-width:150px; margin-top:10px; color:color-mix(in oklab, var(--giz) 62%, var(--grafite)); }
-@container (max-width:860px) and (min-width:440px){ .mpn-grid{ grid-template-columns:184px minmax(0,1fr); } #mpn .mpn-anel{ width:180px; height:180px; } #mpn .mpn-anel-txt b{ font-size:calc(42px * var(--esc, 1)); } #mpn .mpn-anel-txt span{ font-size:calc(10.5px * var(--esc, 1)); max-width:124px; } }
-@media (max-width:640px){ .mpn-grid{ grid-template-columns:1fr; } #mpn .mpn-anel{ width:196px; height:196px; } #mpn .mpn-anel-txt b{ font-size:calc(46px * var(--esc, 1)); } }
+:is(#mpn, .heroi.sis) .mpn-anel{ width:216px; height:216px; filter:drop-shadow(0 10px 26px color-mix(in oklab, var(--anel, var(--jade)) 28%, transparent)); }
+:is(#mpn, .heroi.sis) .mpn-anel circle{ stroke-width:15; }
+:is(#mpn, .heroi.sis) .mpn-anel::before{ content:''; position:absolute; inset:15%; border-radius:50%; background:radial-gradient(circle, color-mix(in oklab, var(--anel, var(--jade)) 12%, transparent), transparent 70%); pointer-events:none; }
+:is(#mpn, .heroi.sis) .mpn-anel-txt b{ font-size:calc(52px * var(--esc, 1)); }
+:is(#mpn, .heroi.sis) .mpn-anel-txt b small{ font-size:.38em; }
+:is(#mpn, .heroi.sis) .mpn-anel-txt span{ font-size:calc(11.5px * var(--esc, 1)); max-width:150px; margin-top:10px; color:color-mix(in oklab, var(--giz) 62%, var(--grafite)); }
+@container (max-width:860px) and (min-width:440px){ .mpn-grid{ grid-template-columns:184px minmax(0,1fr); } :is(#mpn, .heroi.sis) .mpn-anel{ width:180px; height:180px; } :is(#mpn, .heroi.sis) .mpn-anel-txt b{ font-size:calc(42px * var(--esc, 1)); } :is(#mpn, .heroi.sis) .mpn-anel-txt span{ font-size:calc(10.5px * var(--esc, 1)); max-width:124px; } }
+@media (max-width:640px){ .mpn-grid{ grid-template-columns:1fr; } :is(#mpn, .heroi.sis) .mpn-anel{ width:196px; height:196px; } :is(#mpn, .heroi.sis) .mpn-anel-txt b{ font-size:calc(46px * var(--esc, 1)); } }
+/* nas outras abas (27/11/2026): o mesmo anel do Painel; o texto do anel em até 3 linhas */
+.heroi.sis .mpn-anel-txt span{ max-width:140px; }
+.heroi.sis.sem-anel .mpn-grid{ grid-template-columns:minmax(0,1fr) !important; }
 @media (max-width:640px){ .mpn-fluxo{ grid-template-columns:repeat(3, minmax(0,1fr)); row-gap:22px; } .mpn-fluxo::before{ display:none; } .mpn-num{ font-size:min(calc(20px * var(--esc, 1)), 8.4cqi); }
   .mpn-faixa{ padding:16px 16px 16px 20px; } .mpn-bts{ width:100%; } .mpn-bt{ flex:1 1 auto; justify-content:center; padding:10px 12px; } .mpn-faixa-sub{ white-space:normal; } .mpn-pe .mpn-bt{ width:100%; } }
 </style>
@@ -78644,7 +78647,7 @@ window.rotuloAcaoAviso = function(a){
     alvo.classList.toggle('sem-anel', !anel);
     alvo.innerHTML = `<div class="mpn-card">
       <div class="mpn-grid">
-        ${anel ? `<button type="button" class="mpn-anel" data-sis="comp" aria-label="${esc(pct(p0, 0))} em ${esc(f0.n)}. Ver a composição">
+        ${anel ? `<button type="button" class="mpn-anel" data-sis="comp" style="--anel:${esc(CHIP[0])}" aria-label="${esc(pct(p0, 0))} em ${esc(f0.n)}. Ver a composição">
           <svg viewBox="0 0 190 190"><circle class="t" cx="95" cy="95" r="80"/><circle class="p" cx="95" cy="95" r="80" style="stroke:${esc(CHIP[0])}" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-alvo="${off.toFixed(1)}"/></svg>
           <div class="mpn-anel-txt"><b>${Math.round(p0)}<small>%</small></b><span>em ${esc(f0.n)}</span></div></button>` : ''}
         <div class="mpn-dir" style="min-width:0">
@@ -86889,33 +86892,36 @@ function gePtsLer(box){
 
 <style id="mpnbar-css">
 /* 27/11/2026: barrinha embaixo do anel, na mesma linha das barrinhas dos passos */
-#mpn .mpn-fluxo{ align-items:stretch; }
-#mpn .mpn-fluxo .mpn-barra{ margin-top:auto; } #mpn .mpn-fluxo .mpn-sub{ margin-bottom:6px; }
-#mpn .mpn-card .mpn-anel-barra{ position:absolute; height:4px; border-radius:99px; background:color-mix(in oklab, var(--jade) 55%, transparent); pointer-events:none; }
+:is(#mpn, .heroi.sis) .mpn-fluxo{ align-items:stretch; }
+:is(#mpn, .heroi.sis) .mpn-fluxo .mpn-barra{ margin-top:auto; } :is(#mpn, .heroi.sis) .mpn-fluxo .mpn-sub{ margin-bottom:6px; }
+.mpn-card .mpn-anel-barra{ position:absolute; height:4px; border-radius:99px; background:color-mix(in oklab, var(--anel, var(--jade)) 55%, transparent); pointer-events:none; }
 </style>
 <script id="mpnbar-js">
 (function(){
-  function alinhar(){
-    const card = document.querySelector('#mpn .mpn-card'); if (!card) return;
+  function alinharUm(card){
     const anel = card.querySelector('.mpn-anel'), fluxo = card.querySelector('.mpn-fluxo'), b0 = card.querySelector('.mpn-fluxo .mpn-barra');
-    let bar = card.querySelector('.mpn-anel-barra');
+    let bar = card.querySelector(':scope > .mpn-anel-barra');
     if (!anel || !fluxo || !b0 || !anel.offsetParent){ if (bar) bar.remove(); return; }
     const rc = card.getBoundingClientRect(), ra = anel.getBoundingClientRect(), rf = fluxo.getBoundingClientRect(), rb = b0.getBoundingClientRect();
     /* só quando o anel está ao lado dos passos e acima da linha das barrinhas */
     if (!(ra.right <= rf.left + 1 && ra.bottom <= rb.top + 2)){ if (bar) bar.remove(); return; }
     if (!bar){ bar = document.createElement('i'); bar.className = 'mpn-anel-barra'; card.appendChild(bar); }
-    const larg = rb.width;
-    bar.style.width = larg + 'px';
-    bar.style.left = (ra.left + ra.width / 2 - larg / 2 - rc.left - card.clientLeft) + 'px';
+    const cor = anel.style.getPropertyValue('--anel'); if (cor) bar.style.setProperty('--anel', cor);
+    bar.style.width = rb.width + 'px';
+    bar.style.left = (ra.left + ra.width / 2 - rb.width / 2 - rc.left - card.clientLeft) + 'px';
     bar.style.top = (rb.top - rc.top - card.clientTop) + 'px';
   }
+  function alinhar(){ document.querySelectorAll('.mpn-card').forEach(c => { if (c.offsetParent) alinharUm(c); }); }
   window.mpnAlinharBarra = alinhar;
   if (typeof mpnAplicar === 'function'){
     const o = mpnAplicar;
     window.mpnAplicar = function(){ const r = o.apply(this, arguments); requestAnimationFrame(alinhar); setTimeout(alinhar, 300); return r; };
   }
-  const ro = new ResizeObserver(() => alinhar());
-  new MutationObserver(() => { const c = document.querySelector('#mpn .mpn-card'); if (c && !c.dataset.roBarra){ c.dataset.roBarra = '1'; ro.observe(c); alinhar(); } })
+  const ro = new ResizeObserver(ents => ents.forEach(e => alinharUm(e.target)));
+  let pend = 0;
+  new MutationObserver(() => { if (pend) return; pend = requestAnimationFrame(() => { pend = 0;
+      document.querySelectorAll('.mpn-card').forEach(c => { if (!c.dataset.roBarra){ c.dataset.roBarra = '1'; ro.observe(c); } });
+      alinhar(); }); })
     .observe(document.body, {childList:true, subtree:true});
   addEventListener('resize', alinhar);
 })();
