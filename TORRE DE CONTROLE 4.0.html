@@ -39064,7 +39064,12 @@ function abrirSeletorData(campo){
   painel.className = 'dp';
   painel.setAttribute('role', 'dialog');
   painel.setAttribute('aria-label', 'Escolher data');
-  document.body.appendChild(painel);
+  /* Dentro de uma janela modal (ex.: Gestão) o painel solto no body fica atrás
+     dela e, pior, fica "travado" (a janela modal desliga cliques fora dela).
+     Então ele nasce dentro da própria janela e sobe como popover, por cima. */
+  const dlgM = campo.closest('dialog[open]');
+  (dlgM || document.body).appendChild(painel);
+  if (dlgM && typeof painel.showPopover === 'function'){ try { painel.popover = 'manual'; painel.showPopover(); } catch(_){} }
   _dp = {painel, campo, mes:new Date(base.getFullYear(), base.getMonth(), 1), foco:base};
   dpDesenhar();
 
@@ -52329,6 +52334,7 @@ function abrirListaNaOferta(chave){
       <div class="lo-barra"><i style="width:${prog100}%"></i></div>
       <p class="lo-alvo">Seu alvo: <b>${alvoTxt}</b>. ${bate ? 'Esta oferta chega lá.' : `Faltam ${d.alvoTipo === 'mult' ? nBRdec(Math.max(0, alvoM - o.mult)) + ' pontos por real' : pct(Math.max(0, d.alvo - o.pc), 1)} para o alvo.`}${melhorOutra ? ` Hoje rende mais em <b>${esc(melhorOutra.loja.n)}</b> (${nBRdec(melhorOutra.mult)} por real).` : ''}</p>
       <div class="lo-acoes">
+        <button type="button" class="bt p vermelho-solido lo-tirar" data-id="${esc(d.id)}" onclick="tirarDesejoNaOferta(this)"><svg><use href="#i-lixo"/></svg>Tirar da lista</button>
         <button type="button" class="bt p fantasma" onclick="fecharFolha();abrirDesejoNaLista('${d.id}')"><svg><use href="#i-alvo"/></svg>Ver na lista</button>
         <button type="button" class="bt p ${bate ? 'primario' : 'fantasma'}" onclick="comprarDesejoNaOferta('${d.id}','${esc(String(o.loja.id))}')"><svg><use href="#i-ok"/></svg>Comprei aqui</button>
       </div></div>`;
@@ -52337,6 +52343,23 @@ function abrirListaNaOferta(chave){
     <p class="fraco" style="margin:0 0 14px">${esc(nome)} → ${esc(prog(pg).n)}, ${nBRdec(o0.mult)} pontos por real${o0.fim ? `, ${diasAte(o0.fim) === 0 ? 'fecha hoje' : 'até ' + dataBR(o0.fim)}` : ''}. Cada item fica na lista até você comprar; ao registrar a compra, ele sai da lista e os pontos entram em Acumular como "a receber".</p>
     <div class="lo-lista">${des.map(cartao).join('')}</div>`,
     pe:`<button type="button" class="bt perigo" onclick="fecharFolha()">Fechar</button>`});
+}
+/* Tirar um item da lista direto da janela da oferta (26/11/2026): pede um segundo
+   toque para confirmar e o aviso traz "Desfazer". */
+function tirarDesejoNaOferta(bt){
+  if (!bt.dataset.ok){ bt.dataset.ok = '1'; bt.innerHTML = '<svg><use href="#i-lixo"/></svg>Tem certeza? Toque de novo'; setTimeout(() => { if (bt.isConnected){ delete bt.dataset.ok; bt.innerHTML = '<svg><use href="#i-lixo"/></svg>Tirar da lista'; } }, 5000); return; }
+  const id = bt.dataset.id, d = (DB.desejos || []).find(x => x.id === id); if (!d) return;
+  const pos = DB.desejos.indexOf(d);
+  DB.desejos = DB.desejos.filter(x => x.id !== id); salvar();
+  _desejosCache = null;
+  const card = bt.closest('.lo-item'); if (card) card.remove();
+  if (!document.querySelector('.lo-lista .lo-item')) fecharFolha();
+  prRedesenharTudoSeguro();
+  avisar(`${esc(d.n)} saiu da lista.`, 'ok', 8000);
+  const av = document.querySelector('#avisos')?.lastElementChild;
+  if (av){ const u = document.createElement('button'); u.type = 'button'; u.className = 'bt p fantasma lo-desfaz'; u.textContent = 'Desfazer'; u.style.marginLeft = '10px';
+    u.onclick = () => { DB.desejos = DB.desejos || []; if (!DB.desejos.some(x => x.id === d.id)) DB.desejos.splice(Math.min(pos, DB.desejos.length), 0, d); salvar(); _desejosCache = null; prRedesenharTudoSeguro(); av.remove(); avisar(`${esc(d.n)} voltou para a lista.`, 'ok', 2600); };
+    av.appendChild(u); }
 }
 function comprarDesejoNaOferta(id, chave){
   const d0 = (DB.desejos || []).find(x => x.id === id); if (!d0) return;
@@ -83867,6 +83890,7 @@ function svBotoes(){
 .tsl-fundo{ z-index:10190 !important; }
 .tsl{ z-index:10200 !important; }
 .dp{ z-index:10200 !important; }
+.dp[popover]{ inset:auto; margin:0; color:inherit; overflow:visible; }
 </style>
 <style id="fpx-css">
 /* ══ FICHA DO CLIENTE › PASSAGEIROS: quem viaja por ele, editar e incluir · 22/11/2026 ══ */
@@ -84598,6 +84622,7 @@ function geEditar(cid, eid){
         <div class="campo"><label>Moeda</label><select id="geRepMoeda" data-ordem="natural"><option value="BRL"${e.repMoeda !== 'USD' ? ' selected' : ''}>Reais (R$)</option><option value="USD"${e.repMoeda === 'USD' ? ' selected' : ''}>Dólar (US$)</option></select></div>
         <div class="campo"><label>Valor cobrado pela companhia</label><input type="text" inputmode="decimal" data-moeda id="geRepValor" value="${m(e.repValor)}" placeholder="16,80"></div>
         <div class="campo ge-so-usd"><label>Câmbio da fatura</label><input type="text" inputmode="decimal" id="geRepCambio" value="${e.repCambio ? String(e.repCambio).replace('.', ',') : ''}" placeholder="5,4321"></div>
+        <div class="campo ge-so-usd"><label>Ou o valor em reais da fatura</label><input type="text" inputmode="decimal" data-moeda id="geRepReais" value="${e.repMoeda === 'USD' && e.repValor > 0 && e.repCambio > 0 ? m(centavos(e.repValor * e.repCambio)) : ''}" placeholder="90,72"><small class="fraco" style="display:block;margin-top:4px">Preencha um dos dois: o outro se calcula sozinho.</small></div>
       </div>
       <div class="eq-tit">7 · Recebimento</div>
       <div class="eq-campos">
@@ -84682,6 +84707,17 @@ function geEditar(cid, eid){
     $g('#geRes').innerHTML = `<div class="ge-res">${h}</div>${r.alertas.map(a => `<div class="ge-alerta"><svg><use href="#i-alerta"/></svg><span>${esc(a)}</span></div>`).join('')}`;
   };
   d.querySelectorAll('.ge-tipo').forEach(b => b.onclick = () => { e.tipo = b.dataset.t; d.querySelectorAll('.ge-tipo').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); pintar(); });
+  /* Câmbio e valor em reais da fatura andam juntos: quem digita um, recebe o
+     outro calculado (valor em US$ × câmbio = reais; reais ÷ US$ = câmbio). */
+  d.querySelector('#geForm').addEventListener('input', ev => {
+    const id = ev.target && ev.target.id; if (!['geRepCambio', 'geRepReais', 'geRepValor'].includes(id)) return;
+    const usd = moedaNum($g('#geRepValor').value) || 0;
+    const cam = parseFloat(String($g('#geRepCambio').value || '').replace(/\./g, '').replace(',', '.')) || 0;
+    const brl = moedaNum($g('#geRepReais').value) || 0;
+    if (id === 'geRepReais'){ if (usd > 0 && brl > 0) $g('#geRepCambio').value = (Math.round(brl / usd * 10000) / 10000).toFixed(4).replace('.', ','); }
+    else if (usd > 0 && cam > 0) $g('#geRepReais').value = moedaTxt(centavos(usd * cam));
+    else if (id === 'geRepCambio') $g('#geRepReais').value = '';
+  }, true);
   d.querySelector('#geForm').addEventListener('input', pintar);
   d.querySelector('#geForm').addEventListener('change', pintar);
   $g('#geProg').addEventListener('change', () => {
@@ -85211,8 +85247,11 @@ function gexExcluir(id, destId){
 
 <script id="gvolta-js">
 /* Voltar da carteira do cliente cai de novo na lista da Gestão, com o cartão
-   dele destacado (botão "Voltar à Gestão" ou seta de voltar do navegador). */
-(function(){
+   dele destacado (botão "Voltar à Gestão" ou seta de voltar do navegador).
+   Também quando o navegador mostra a página guardada na memória (celular):
+   aí nenhum código roda no carregamento, só o "pageshow". */
+addEventListener('pageshow', ev => { if (ev.persisted && /[?&]volta=/.test(location.search) && typeof gvoltaIniciar === 'function') gvoltaIniciar(); });
+function gvoltaIniciar(){ (function(){
   if (typeof GC_CARTEIRA !== 'undefined' && GC_CARTEIRA) return;
   let alvo = null; try { alvo = sessionStorage.getItem('torre-volta-gestao'); } catch(_){}
   try {
@@ -85226,7 +85265,8 @@ function gexExcluir(id, destId){
   const conferir = () => {
     const d = document.getElementById('dlgGestao');
     if (d && d.open && d.querySelector('.eq-card[data-id], .dr-pe [data-gc="novo"]')){ if (++firme >= 4){ try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){} return; } }
-    else { firme = 0; if (n <= 60) return tentar(); }
+    else if (firme > 0){ try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){} return; } /* abriu e a pessoa fechou: respeitar */
+    else { if (n <= 60) return tentar(); }
     setTimeout(conferir, 500);
   };
   const tentar = () => {
@@ -85243,7 +85283,8 @@ function gexExcluir(id, destId){
   let foi = false; const uma = () => { if (foi) return; foi = true; tentar(); };
   addEventListener('pageshow', () => setTimeout(uma, 300), {once:true});
   if (document.readyState === 'complete') setTimeout(uma, 300);
-})();
+})(); }
+gvoltaIniciar();
 </script>
 <style id="gvolta-css">
 #dlgGestao .eq-card.gc-volta{ animation:gcVolta 2.2s ease-out; }
