@@ -16154,7 +16154,7 @@ function avisos(){
       /* 26/10/2026: a renovação do clube aparece na tela inicial a partir de 10
          dias (antes ficava só na central de avisos e sumia atrás de outros) e
          vira prioridade nos 3 últimos dias. */
-      L.push({ grau: dias <= 3 ? 3 : dias <= 10 ? 2 : 1, tipo:'clube', dias, renovaClube:true,
+      L.push({ grau: dias <= 3 ? 3 : dias <= 10 ? 2 : 1, tipo:'clube', dias, renovaClube:true, aid:a.id,
         curto:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)}`,
         t:`Clube ${prog(a.prog).n} de ${nomeCurtoConta(a.contaId)} ${renovaTexto(dias)}`,
         s:`${nomeConta(a.contaId)} · ${brl2(a.valor)} · ${MODALIDADES[a.modalidade] || a.modalidade}`, ir:['fabrica','fb-clubes'] });
@@ -46701,7 +46701,7 @@ function receberDoFavorito(){
   const m = String(location.hash || '').match(/#mercado=([\w-]+)/);
   if (!m) return false;
   /* Limpa o endereço antes de tudo: recarregar a página não importa de novo. */
-  history.replaceState(null, '', location.pathname + location.search);
+  history.replaceState(history.state, '', location.pathname + location.search);
   let bruto = null;
   try {
     const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -53903,7 +53903,7 @@ function contaBancoSemUso(db){
 window.__contaVolta = null;
 if (contaLigada() && /(^#|&)(access_token|error_code|error)=/.test(location.hash)){
   try { window.__contaVolta = Object.fromEntries(new URLSearchParams(location.hash.slice(1))); } catch(_){}
-  try { history.replaceState(null, '', location.pathname + location.search); } catch(_){}
+  try { history.replaceState(history.state, '', location.pathname + location.search); } catch(_){}
 }
 
 /* ── a tela de entrada ──────────────────────────────────────────────────────── */
@@ -78429,9 +78429,12 @@ window.rotuloAcaoAviso = function(a){
         <div class="mpn-faixa-txt"><span class="mpn-olho">${a0 ? `Próxima ação · ${a0.dias != null && a0.dias !== undefined ? esc(quando(a0.dias)) : 'agora'}` : 'Atalhos'}</span>
           <b class="mpn-faixa-tit">${a0 ? esc(a0.t) : 'O que você quer registrar agora?'}</b>
           <span class="mpn-faixa-sub">${a0 ? esc(String(a0.s || '').split('\n')[0]) : 'Lance uma compra de pontos ou cole um anúncio que você recebeu.'}</span></div>
-        <div class="mpn-bts">${a0 ? `<button type="button" class="bt primario mpn-bt" onclick="${esc(acaoJs(a0))}">${esc(rotuloAcaoAviso(a0))}</button>` : ''}
-          <button type="button" class="bt ${a0 ? 'fantasma' : 'primario'} mpn-bt" onclick="editarLancamento()">Lançar</button>
-          <button type="button" class="bt fantasma mpn-bt" onclick="irItemMenu('fabrica','fb-mural');setTimeout(()=>{try{abrirColarMural()}catch(e){}},350)">Colar anúncio</button></div>
+        <div class="mpn-bts">${a0 && a0.renovaClube && a0.aid
+            /* clube que renova (27/11/2026): Ver Plano abre a ficha do plano; Mudar Plano, a troca */
+            ? `<button type="button" class="bt primario mpn-bt" data-mpn-bt="ver-plano" onclick="irPara('fabrica');irParaAba('fabrica','fb-clubes');setTimeout(()=>abrirFichaAssinatura('${esc(a0.aid)}'),350)">Ver Plano</button>
+          <button type="button" class="bt fantasma mpn-bt" data-mpn-bt="mudar-plano" onclick="abrirMudarPlano('${esc(a0.aid)}')">Mudar Plano</button>`
+            : `${a0 ? `<button type="button" class="bt primario mpn-bt" onclick="${esc(acaoJs(a0))}">${esc(rotuloAcaoAviso(a0))}</button>` : ''}
+          <button type="button" class="bt ${a0 ? 'fantasma' : 'primario'} mpn-bt" onclick="editarLancamento()">Lançar</button>`}</div>
       </div>
       <div class="mpn-card">
         <div class="mpn-grid">
@@ -86746,5 +86749,112 @@ function gePtsLer(box){
 })();
 </script>
 
+
+<script id="hist-js">
+/* Seta de voltar do navegador (27/11/2026): volta para a tela anterior da Torre
+   em vez de sair dela. Cada troca de tela ou de aba vira um passo no histórico;
+   cada janela ou folha aberta também, e voltar fecha a de cima. No começo do
+   histórico, voltar leva ao Painel; já no Painel, pede um segundo toque para sair. */
+(function(){
+  const H = window.__torreHist = {pilha:[], noHist:0, ignorar:0, fila:[], restaurando:false, ultimaRaiz:0};
+  const abaDe = g => { const b = document.querySelector(`.abas[data-grupo="${g}"] .aba.on`); return b ? b.dataset.aba : null; };
+  const estadoTela = () => ({torre:1, t:'tela', v:vistaAtual, a:abaDe(vistaAtual)});
+  const inicial = {v:vistaAtual, a:null};
+  function empurrar(st){ if (H.ignorar > 0) H.fila.push(st); else try { history.pushState(st, ''); } catch(_){} }
+  function descarregar(){ const f = H.fila.splice(0); f.forEach(st => { try { history.pushState(st, ''); } catch(_){} }); }
+  function voltarCalado(){
+    H.ignorar++; try { history.back(); } catch(_){ H.ignorar--; }
+    setTimeout(() => { if (H.ignorar > 0){ H.ignorar = 0; descarregar(); } }, 900);
+  }
+  function abertos(){
+    const l = [...document.querySelectorAll('dialog[open]')];
+    const veu = document.getElementById('veu'); if (veu && veu.classList.contains('aberto')) l.push(veu);
+    return l;
+  }
+  function sincronizar(){
+    if (H.restaurando) return;
+    const ab = abertos();
+    const antes = H.pilha.length;
+    H.pilha = H.pilha.filter(e => ab.includes(e));
+    let sairam = antes - H.pilha.length;
+    ab.forEach(e => { if (!H.pilha.includes(e)){ H.pilha.push(e); H.noHist++; empurrar({torre:1, t:'camada'}); } });
+    while (sairam-- > 0 && H.noHist > 0){ H.noHist--; voltarCalado(); }
+  }
+  function fecharTopo(){
+    const e = H.pilha.pop(); if (!e) return false;
+    H.noHist = Math.max(0, H.noHist - 1);
+    if (e.id === 'veu'){ try { fecharFolha(); } catch(_){} return true; }
+    /* o mesmo que tocar no "Fechar" da própria janela (cada uma tem a sua lógica) */
+    const bts = [...e.querySelectorAll('button')].filter(b => b.offsetParent && /^\s*(Fechar|Cancelar)\s*$/i.test(b.textContent));
+    const bt = bts.find(b => b.closest('.dr-pe, .pe, footer, .rodape')) || bts[bts.length - 1];
+    if (bt) bt.click();
+    else { const ev = new Event('cancel', {cancelable:true}); if (e.dispatchEvent(ev)) { try { e.close(); } catch(_){} } }
+    setTimeout(() => { if (e.open || (e.id === 'veu' && e.classList.contains('aberto'))){ H.pilha.push(e); H.noHist++; empurrar({torre:1, t:'camada'}); } }, 400);   /* não fechou: o passo volta */
+    return true;
+  }
+  function restaurar(st){
+    H.restaurando = true;
+    try {
+      if (st.v && st.v !== vistaAtual) irPara(st.v);
+      if (st.a && abaDe(st.v) !== st.a) irParaAba(st.v, st.a);
+    } catch(e){ console.error(e); }
+    setTimeout(() => { H.restaurando = false; }, 0);
+  }
+  /* troca de tela e de aba viram passos */
+  const oIr = irPara;
+  irPara = function(v){
+    if (H.restaurando) return oIr.apply(this, arguments);
+    sincronizar();
+    const de = vistaAtual; H.ultimoIr = performance.now();
+    const r = oIr.apply(this, arguments);
+    if (vistaAtual !== de || v !== de){ const st = history.state;
+      if (!(st && st.t === 'tela' && st.v === v)) empurrar({torre:1, t:'tela', v, a:abaDe(v)}); }
+    return r;
+  };
+  const oAba = irParaAba;
+  irParaAba = function(g, aba){
+    const r = oAba.apply(this, arguments);
+    const st = history.state;
+    if (!H.restaurando && st && st.torre && st.t === 'tela' && st.v === g && st.a !== aba){
+      /* logo depois de trocar de tela (atalho "tela + aba"), a aba completa o mesmo passo */
+      if (!st.a || performance.now() - H.ultimoIr < 200){ try { history.replaceState({...st, a:aba}, ''); } catch(_){} }
+      else empurrar({torre:1, t:'tela', v:g, a:aba});
+    }
+    return r;
+  };
+  addEventListener('popstate', ev => {
+    if (H.ignorar > 0){ H.ignorar--; if (!H.ignorar) descarregar(); return; }
+    const st = ev.state;
+    if (H.pilha.length || abertos().length){
+      if (!H.pilha.length) H.pilha = abertos();
+      fecharTopo(); return;
+    }
+    if (st && st.torre && st.t === 'camada'){ try { history.back(); } catch(_){} return; }   /* passo de janela já fechada */
+    if (st && st.torre && st.t === 'tela'){ restaurar(st); return; }
+    /* começo do histórico da Torre */
+    if (vistaAtual !== inicial.v || (inicial.a && abaDe(inicial.v) !== inicial.a)){
+      restaurar({v:inicial.v, a:inicial.a}); empurrar(estadoTela()); return;
+    }
+    /* na carteira de um cliente (aberta a partir da Gestão), voltar já é voltar para a Gestão */
+    if (typeof GC_CARTEIRA !== 'undefined' && GC_CARTEIRA){ try { history.back(); } catch(_){} return; }
+    const agora = Date.now();
+    if (agora - H.ultimaRaiz < 4000){ H.ultimaRaiz = 0; try { history.back(); } catch(_){} return; }
+    H.ultimaRaiz = agora;
+    empurrar(estadoTela());
+    try { avisar('Para sair da Torre, toque em voltar mais uma vez.', 'info', 3500); } catch(_){}
+  });
+  /* começo: marca a raiz e o passo da tela atual */
+  const iniciar = () => {
+    inicial.a = abaDe(inicial.v);
+    const st = history.state;
+    try {
+      if (st && st.torre && st.t !== 'raiz') history.replaceState(estadoTela(), '');
+      else { history.replaceState({torre:1, t:'raiz'}, ''); history.pushState(estadoTela(), ''); }
+    } catch(_){}
+    new MutationObserver(() => sincronizar()).observe(document.documentElement, {subtree:true, attributes:true, attributeFilter:['open', 'class']});
+  };
+  if (document.readyState === 'complete') setTimeout(iniciar, 0); else addEventListener('load', () => setTimeout(iniciar, 0), {once:true});
+})();
+</script>
 </body>
 </html>
