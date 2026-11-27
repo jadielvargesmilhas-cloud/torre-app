@@ -18061,7 +18061,7 @@ function renderFiltroConta(){
   const contas = [...DB.contas].sort(compararContas);
 
   const past = c => `<button class="past${filtroConta === c.id ? ' on' : ''}" onclick="escolherConta('${c.id}')"
-    data-dica-tabela="${esc(dicaFicha(c.nome, [c.papel]))}">${esc(primeiroNome(c.nome, contas))}</button>`;
+    data-dica="${esc(c.nome + (c.papel ? ' · ' + c.papel : ''))}">${esc(primeiroNome(c.nome, contas))}</button>`;
   const grupo = `<button class="past${filtroConta === 'grupo' ? ' on' : ''}" onclick="escolherConta('grupo')">Grupo <small>${DB.contas.length}</small></button>`;
 
   if (contas.length <= LIMITE_PASTILHAS){
@@ -43378,11 +43378,14 @@ function esconderDica(){ alvoDica = null; if (balao) balao.classList.remove('on'
 function ligarDicas(){
   document.addEventListener('pointerover', e => {
     if (e.pointerType === 'touch') return;
-    const el = e.target.closest && e.target.closest('[data-dica],[data-dica-tabela]');
+    if (window.__dicaFixa) return;   /* quadro aberto pelo (i): fica até tocar fora */
+    let el = e.target.closest && e.target.closest('[data-dica],[data-dica-tabela]');
+    /* 27/11/2026: quadro grande (tabela) não abre mais ao passar o mouse; abre no (i) */
+    if (el && el.dataset.dicaTabela) el = el.parentElement && el.parentElement.closest('[data-dica]:not([data-dica-tabela])');
     if (el === alvoDica) return;
     el ? mostrarDica(el) : esconderDica();
   });
-  document.addEventListener('pointerdown', esconderDica);
+  document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('.dica-i')) return; window.__dicaFixa = false; esconderDica(); });
   /* No celular não há "passar o mouse": tocar na logo de uma companhia ou no "i"
      mostra o mesmo balão por alguns segundos. */
   let dicaToque = null;
@@ -79542,7 +79545,7 @@ div.sec-cab:not(.linha) > .olho{ flex:none; }
 /* Título de seção no padrão da faixa (05/11/2026, regra do Jadiel: cada seção com
    o seu título, do assunto dela). Olho dourado com fio (a página), título grande
    (o assunto da seção) e, quando houver, uma linha de explicação. */
-.st-bloco{ display:grid; gap:4px; min-width:0; flex:1 1 auto; }
+.st-bloco{ display:grid; gap:8px; min-width:0; flex:1 1 auto; }
 .st-olho{ display:flex; align-items:center; gap:14px; font:700 calc(12px * var(--esc, 1))/1.2 var(--f-m); letter-spacing:.16em; text-transform:uppercase;
   color:color-mix(in oklab, var(--ouro) 78%, var(--giz)); }
 .st-olho::after{ content:''; flex:0 1 180px; height:1px; background:color-mix(in oklab, var(--ouro) 55%, transparent); }
@@ -79577,8 +79580,8 @@ div.sec-cab.st-cab{ display:block !important; }
     if (o.closest('.linha.sec-cab')) return; /* cabeçalho da página (o nome da aba), não título de seção */
     if (!o.closest('.painel-aba')) return;
     const b = document.createElement('div'); b.className = 'st-bloco';
-    const ol = document.createElement('span'); ol.className = 'st-olho'; ol.textContent = nomePagina(o) || 'Seção';
-    o.before(b); b.append(ol, o); o.classList.add('st-tit');
+    /* 27/11/2026: o "olho" repetia o nome da página logo acima (SALDOS, RESUMO...): saiu */
+    o.before(b); b.append(o); o.classList.add('st-tit');
     let p = b.nextElementSibling;
     if (!p && b.parentElement.children.length === 1) p = b.parentElement.nextElementSibling;
     if (p && p.tagName === 'P'){ p.classList.add('st-sub'); b.append(p); }
@@ -86919,11 +86922,50 @@ function gePtsLer(box){
   }
   const ro = new ResizeObserver(ents => ents.forEach(e => alinharUm(e.target)));
   let pend = 0;
-  new MutationObserver(() => { if (pend) return; pend = requestAnimationFrame(() => { pend = 0;
+  /* só reage quando um cabeçalho novo entra na página (não a cada digitação) */
+  const temCard = recs => recs.some(r => [...r.addedNodes].some(n => n.nodeType === 1 && (n.classList.contains('mpn-card') || n.querySelector && n.querySelector('.mpn-card'))));
+  new MutationObserver(recs => { if (pend || !temCard(recs)) return; pend = requestAnimationFrame(() => { pend = 0;
       document.querySelectorAll('.mpn-card').forEach(c => { if (!c.dataset.roBarra){ c.dataset.roBarra = '1'; ro.observe(c); } });
       alinhar(); }); })
     .observe(document.body, {childList:true, subtree:true});
   addEventListener('resize', alinhar);
+})();
+</script>
+
+<style id="dicai-css">
+/* (i) dos quadros de detalhe (27/11/2026): o quadro abre ao tocar no (i), não ao passar o mouse */
+.dica-i{ display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; margin-left:6px; vertical-align:middle; flex:none;
+  border-radius:50%; border:1px solid color-mix(in oklab, var(--grafite) 45%, transparent); color:var(--grafite);
+  font:italic 700 11px/1 Georgia, 'Times New Roman', serif; cursor:pointer; user-select:none; transition:color .15s, border-color .15s, background .15s; }
+.dica-i:hover, .dica-i:focus-visible{ color:var(--anil); border-color:var(--anil); background:color-mix(in oklab, var(--anil) 10%, transparent); outline:none; }
+</style>
+<script id="dicai-js">
+(function(){
+  function colocar(){
+    document.querySelectorAll('[data-dica-tabela]').forEach(el => {
+      if (el.querySelector('.dica-i')) return;
+      const alvo = el.querySelector(':scope > .rot, :scope > .rotulo, :scope > .tc-nome') || el;
+      const i = document.createElement('span'); i.className = 'dica-i'; i.textContent = 'i';
+      i.setAttribute('role', 'button'); i.tabIndex = 0; i.setAttribute('aria-label', 'Ver detalhes');
+      alvo.appendChild(i);
+    });
+  }
+  function abrir(i, ev){
+    ev.preventDefault(); ev.stopPropagation(); if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    const el = i.closest('[data-dica-tabela]'); if (!el) return;
+    if (window.__dicaFixa && alvoDica === el){ window.__dicaFixa = false; esconderDica(); return; }
+    window.__dicaFixa = false; alvoDica = null; mostrarDica(el); window.__dicaFixa = true;
+  }
+  document.addEventListener('click', ev => { const i = ev.target.closest && ev.target.closest('.dica-i'); if (i) abrir(i, ev); }, true);
+  document.addEventListener('keydown', ev => { const i = ev.target.closest && ev.target.closest('.dica-i');
+    if (i && (ev.key === 'Enter' || ev.key === ' ')) abrir(i, ev);
+    if (ev.key === 'Escape' && window.__dicaFixa){ window.__dicaFixa = false; esconderDica(); } }, true);
+  addEventListener('scroll', () => { window.__dicaFixa = false; }, true);
+  let pend = 0;
+  const temTab = recs => recs.some(r => [...r.addedNodes].some(n => n.nodeType === 1 && (n.hasAttribute('data-dica-tabela') || n.querySelector && n.querySelector('[data-dica-tabela]'))));
+  new MutationObserver(recs => { if (pend || !temTab(recs)) return; pend = requestAnimationFrame(() => { pend = 0; colocar(); }); })
+    .observe(document.body, {childList:true, subtree:true});
+  colocar();
 })();
 </script>
 </body>
