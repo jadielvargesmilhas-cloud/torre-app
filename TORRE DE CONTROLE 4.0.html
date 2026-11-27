@@ -86879,5 +86879,39 @@ function gePtsLer(box){
   if (document.readyState === 'complete') setTimeout(iniciar, 0); else addEventListener('load', () => setTimeout(iniciar, 0), {once:true});
 })();
 </script>
+
+<style id="mpnbar-css">
+/* 27/11/2026: barrinha embaixo do anel, na mesma linha das barrinhas dos passos */
+#mpn .mpn-fluxo{ align-items:stretch; }
+#mpn .mpn-fluxo .mpn-barra{ margin-top:auto; } #mpn .mpn-fluxo .mpn-sub{ margin-bottom:6px; }
+#mpn .mpn-card .mpn-anel-barra{ position:absolute; height:4px; border-radius:99px; background:color-mix(in oklab, var(--jade) 55%, transparent); pointer-events:none; }
+</style>
+<script id="mpnbar-js">
+(function(){
+  function alinhar(){
+    const card = document.querySelector('#mpn .mpn-card'); if (!card) return;
+    const anel = card.querySelector('.mpn-anel'), fluxo = card.querySelector('.mpn-fluxo'), b0 = card.querySelector('.mpn-fluxo .mpn-barra');
+    let bar = card.querySelector('.mpn-anel-barra');
+    if (!anel || !fluxo || !b0 || !anel.offsetParent){ if (bar) bar.remove(); return; }
+    const rc = card.getBoundingClientRect(), ra = anel.getBoundingClientRect(), rf = fluxo.getBoundingClientRect(), rb = b0.getBoundingClientRect();
+    /* só quando o anel está ao lado dos passos e acima da linha das barrinhas */
+    if (!(ra.right <= rf.left + 1 && ra.bottom <= rb.top + 2)){ if (bar) bar.remove(); return; }
+    if (!bar){ bar = document.createElement('i'); bar.className = 'mpn-anel-barra'; card.appendChild(bar); }
+    const larg = rb.width;
+    bar.style.width = larg + 'px';
+    bar.style.left = (ra.left + ra.width / 2 - larg / 2 - rc.left - card.clientLeft) + 'px';
+    bar.style.top = (rb.top - rc.top - card.clientTop) + 'px';
+  }
+  window.mpnAlinharBarra = alinhar;
+  if (typeof mpnAplicar === 'function'){
+    const o = mpnAplicar;
+    window.mpnAplicar = function(){ const r = o.apply(this, arguments); requestAnimationFrame(alinhar); setTimeout(alinhar, 300); return r; };
+  }
+  const ro = new ResizeObserver(() => alinhar());
+  new MutationObserver(() => { const c = document.querySelector('#mpn .mpn-card'); if (c && !c.dataset.roBarra){ c.dataset.roBarra = '1'; ro.observe(c); alinhar(); } })
+    .observe(document.body, {childList:true, subtree:true});
+  addEventListener('resize', alinhar);
+})();
+</script>
 </body>
 </html>
