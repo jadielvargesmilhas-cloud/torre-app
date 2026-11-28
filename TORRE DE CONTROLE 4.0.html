@@ -87742,5 +87742,141 @@ function gcardArquivo(e){ return `vem-${String(e.trecho || 'trecho').normalize('
   };
 })();
 </script>
+<script id="gviag-js">
+/* ── Resumo da viagem (28/11/2026): quando a viagem tem mais de um trecho, um card
+   com cada trecho (preço em dinheiro, emissão pela VEM e economia) e o total da
+   viagem no fim. Os cards de cada trecho seguem depois, um por trecho. Os números
+   são os mesmos dos cards de trecho, centavo por centavo. */
+function gviagTrechos(c, e){
+  const k = String(e.viagem || '').trim();
+  if (!k) return [e];
+  const n = semAcento(k.toLowerCase());
+  return geDoCliente(c).filter(x => semAcento(String(x.viagem || '').trim().toLowerCase()) === n)
+    .sort((a, b) => String((a.dataVoo || '') + (a.horaVoo || '')).localeCompare(String((b.dataVoo || '') + (b.horaVoo || ''))));
+}
+function gviagLinha(c, e){
+  const d = gcardDados(c, e);
+  /* mesmos números do card do trecho: sem economia (só dinheiro), o preço em dinheiro é o próprio valor pago */
+  const merc = d.temEco ? d.r.mercado : d.pago;
+  return {e, rota:String(e.trecho || 'Trecho').split(',')[0].trim(), merc:centavos(merc), vem:centavos(d.pago), eco:centavos(d.eco || 0)};
+}
+function gviagSVG(c, e){
+  const {L, A} = GCARD, x = v => esc(String(v == null ? '' : v)), R = v => gcReais(v).replace(/ /g, ' ');
+  const F = `font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"`;
+  const ems = gviagTrechos(c, e), ls = ems.map(t => gviagLinha(c, t));
+  const tot = {merc:centavos(ls.reduce((s, l) => s + l.merc, 0)), vem:centavos(ls.reduce((s, l) => s + l.vem, 0))};
+  tot.eco = centavos(ls.reduce((s, l) => s + l.eco, 0)); tot.pct = tot.merc > 0 ? Math.round(tot.eco / tot.merc * 100) : 0;
+  const logo = (document.querySelector('.trilho .marca img') || {}).src || '';
+  let h = `<rect width="${L}" height="${A}" fill="#070B19"/>
+    <radialGradient id="gl" cx="85%" cy="5%" r="70%"><stop offset="0" stop-color="#C9A227" stop-opacity=".28"/><stop offset="1" stop-color="#C9A227" stop-opacity="0"/></radialGradient>
+    <rect width="${L}" height="${A}" fill="url(#gl)"/><rect x="0" y="0" width="${L}" height="10" fill="#C9A227"/>`;
+  const xm = logo ? 186 : 72;
+  if (logo) h += `<image href="${logo}" x="65" y="63" width="98" height="65" preserveAspectRatio="xMidYMid meet"/><line x1="170" y1="76" x2="170" y2="116" stroke="#3A4466" stroke-width="2"/>`;
+  h += `<text x="${xm}" y="106" ${F} font-size="24" font-weight="700" fill="#FFFFFF">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="28">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
+    <text x="72" y="206" ${F} font-size="26" fill="#9AA3B8" data-gv="ola">${x(gcardNomeCurto(c))}, o resumo da sua viagem</text>`;
+  const nomeV = String(e.viagem || '').trim() || (ls[0] ? ls[0].rota : 'Sua viagem');
+  h += `<text x="72" y="266" ${F} font-size="46" font-weight="700" fill="#FFFFFF" data-gv="viagem">${x(nomeV.length > 34 ? nomeV.slice(0, 33) + '…' : nomeV)}</text>`;
+  const datas = ems.map(t => t.dataVoo).filter(Boolean).sort();
+  h += `<text x="72" y="312" ${F} font-size="26" font-weight="600" fill="#E8B830">${x(`${ems.length} trechos${datas.length ? ' · ' + gcDataTxt(datas[0]) + ' a ' + gcDataTxt(datas[datas.length - 1]) : ''}`)}</text>`;
+  /* cabeçalho da tabela */
+  let y = 372;
+  const cM = 660, cV = 838, cE = L - 72;
+  h += `<text x="72" y="${y}" ${F} font-size="19" font-weight="700" fill="#6F7891" letter-spacing="1.5">TRECHO</text>
+    <text x="${cM}" y="${y}" ${F} font-size="19" font-weight="700" fill="#6F7891" letter-spacing="1.5" text-anchor="end">EM DINHEIRO</text>
+    <text x="${cV}" y="${y}" ${F} font-size="19" font-weight="700" fill="#6F7891" letter-spacing="1.5" text-anchor="end">PELA VEM</text>
+    <text x="${cE}" y="${y}" ${F} font-size="19" font-weight="700" fill="#6F7891" letter-spacing="1.5" text-anchor="end">ECONOMIA</text>`;
+  y += 22;
+  const MAX = 6, mostra = ls.length > MAX ? ls.slice(0, MAX - 1) : ls;
+  const curto = v => R(v);   /* com centavos: a soma das linhas bate com o total */
+  mostra.forEach((l, i) => {
+    const yy = y + 14 + i * 84;
+    h += `<line x1="72" y1="${yy}" x2="${L - 72}" y2="${yy}" stroke="#1F2847" stroke-width="2"/>`;
+    /* o trecho inteiro numa linha: encolhe a letra até caber antes da coluna "em dinheiro"; se ainda não couber, fica só com os códigos dos aeroportos */
+    let r1 = l.rota, fs = 24;
+    try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d'), larg = cM - 72 - 168;
+      const w = (t, f) => { cx.font = `600 ${f}px Inter, 'Segoe UI', Roboto, Arial, sans-serif`; return cx.measureText(t).width; };
+      while (fs > 19 && w(r1, fs) > larg) fs--;
+      if (w(r1, fs) > larg){ const cod = (r1.match(/\(([A-Z]{3})\)/g) || []).map(z => z.slice(1, 4)); if (cod.length >= 2){ r1 = cod.join(' → '); fs = 24; } }
+    } catch(_){}
+    h += `<text x="72" y="${yy + 38}" ${F} font-size="${fs}" font-weight="600" fill="#FFFFFF" data-gv="rota">${x(r1)}</text>
+      <text x="72" y="${yy + 68}" ${F} font-size="20" fill="#9AA3B8">${x([l.e.dataVoo ? gcDataTxt(l.e.dataVoo) : '', l.e.cia, l.e.classe].filter(Boolean).join(' · '))}</text>
+      <text x="${cM}" y="${yy + 52}" ${F} font-size="23" fill="#AEB6C8" text-anchor="end" data-gv="merc">${x(curto(l.merc))}</text>
+      <text x="${cV}" y="${yy + 52}" ${F} font-size="23" font-weight="600" fill="#FFFFFF" text-anchor="end" data-gv="vem">${x(curto(l.vem))}</text>
+      <text x="${cE}" y="${yy + 52}" ${F} font-size="23" font-weight="700" fill="#E8B830" text-anchor="end" data-gv="eco">${x(l.eco > 0.004 ? curto(l.eco) : '–')}</text>`;
+  });
+  y += 14 + mostra.length * 84;
+  if (ls.length > MAX){ h += `<text x="72" y="${y + 36}" ${F} font-size="22" fill="#9AA3B8">e mais ${ls.length - MAX + 1} trechos (nos cards de cada trecho)</text>`; y += 50; }
+  h += `<line x1="72" y1="${y}" x2="${L - 72}" y2="${y}" stroke="#1F2847" stroke-width="2"/>`;
+  y += 30;
+  /* totais: dinheiro (riscado) e pela VEM lado a lado; a economia em destaque */
+  const meio = (L - 120 - 20) / 2;
+  h += `<rect x="60" y="${y}" width="${meio}" height="140" rx="26" fill="#111833"/>
+    <text x="96" y="${y + 50}" ${F} font-size="23" fill="#9AA3B8">Em dinheiro (mercado)</text>
+    <text x="96" y="${y + 108}" ${F} font-size="44" font-weight="700" fill="#AEB6C8" data-gv="tmerc">${x(R(tot.merc))}</text>`;
+  let wR = 26 * R(tot.merc).length;
+  try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d'); cx.font = "700 44px Inter, 'Segoe UI', Roboto, Arial, sans-serif"; wR = Math.ceil(cx.measureText(R(tot.merc)).width) - 4; } catch(_){}
+  h += `<line x1="92" y1="${y + 93}" x2="${100 + wR}" y2="${y + 93}" stroke="#E0574F" stroke-width="5" stroke-linecap="round"/>`;
+  const x2 = 60 + meio + 20;
+  h += `<rect x="${x2}" y="${y}" width="${meio}" height="140" rx="26" fill="#141C3A" stroke="#2B3866" stroke-width="2"/>
+    <text x="${x2 + 36}" y="${y + 50}" ${F} font-size="23" fill="#C9D0E0">Emissão pela VEM</text>
+    <text x="${x2 + 36}" y="${y + 108}" ${F} font-size="44" font-weight="700" fill="#FFFFFF" data-gv="tvem">${x(R(tot.vem))}</text>`;
+  y += 160;
+  if (tot.eco > 0.004){
+    h += `<rect x="60" y="${y}" width="${L - 120}" height="176" rx="28" fill="#C9A227"/>
+      <text x="100" y="${y + 58}" ${F} font-size="27" font-weight="600" fill="#1B1405">Você economizou na viagem</text>
+      <text x="100" y="${y + 134}" ${F} font-size="69" font-weight="800" fill="#1B1405" data-gv="teco">${x(R(tot.eco))}</text>
+      <text x="${L - 100}" y="${y + 104}" ${F} font-size="62" font-weight="800" fill="#1B1405" text-anchor="end" data-gv="tpct">${tot.pct}%</text>
+      <text x="${L - 100}" y="${y + 140}" ${F} font-size="25" font-weight="700" fill="#1B1405" text-anchor="end">a menos</text>`;
+    y += 176;
+  }
+  h += `<text x="72" y="${A - 60}" ${F} font-size="22" fill="#6F7891">Os detalhes de cada trecho seguem nos próximos cards</text>
+    <text x="${L - 72}" y="${A - 60}" ${F} font-size="22" fill="#6F7891" text-anchor="end">Valores em reais</text>`;
+  return {svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${L}" height="${A}" viewBox="0 0 ${L} ${A}">${h}</svg>`, altura:y, linhas:ls, tot};
+}
+async function gviagPNG(c, e){
+  const {svg} = gviagSVG(c, e);
+  const url = URL.createObjectURL(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}));
+  try {
+    const img = new Image(); await new Promise((ok, erro) => { img.onload = ok; img.onerror = erro; img.src = url; });
+    const cv = document.createElement('canvas'); cv.width = GCARD.L; cv.height = GCARD.A; cv.getContext('2d').drawImage(img, 0, 0, GCARD.L, GCARD.A);
+    return await new Promise(r => cv.toBlob(r, 'image/png'));
+  } finally { URL.revokeObjectURL(url); }
+}
+(function(){
+  const _m = geMensagem;
+  geMensagem = function(cid, eid){
+    const v = _m.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'), c = gcDB().find(x => x.id === cid), e = c && geDoCliente(c).find(x => x.id === eid);
+    const vista = d && d.querySelector('.dr-corpo .eq-vista'); if (!vista || !e || vista.querySelector('.gviag-prev')) return v;
+    const ts = gviagTrechos(c, e); if (ts.length < 2) return v;   /* um trecho só: o card do trecho já é o resumo */
+    const pode = !!(navigator.canShare && (() => { try { return navigator.canShare({files:[new File([''], 'x.png', {type:'image/png'})]}); } catch(_){ return false; } })());
+    const prev = vista.querySelector('.gcard-prev');
+    const html = `<div class="gcard-prev gviag-prev"><div class="ge-alerta info" style="margin:0;width:100%"><svg><use href="#i-info"/></svg><span>Esta viagem tem ${ts.length} trechos. Mande primeiro o <b>resumo da viagem</b> e depois o card de cada trecho.</span></div>
+      <img id="gviagImg" alt="Resumo da viagem para o cliente"><div class="acp-bts">
+      ${pode ? `<button type="button" class="bt primario p" id="gviagShare"><svg><use href="#i-link"/></svg>Enviar resumo + ${ts.length} trechos</button>` : ''}
+      <button type="button" class="bt ${pode ? 'fantasma' : 'primario'} p" id="gviagBaixar"><svg><use href="#i-baixar"/></svg>Baixar resumo + ${ts.length} trechos</button>
+      <button type="button" class="bt fantasma p" id="gviagCopiar"><svg><use href="#i-copiar"/></svg>Copiar o resumo</button></div></div>`;
+    if (prev) prev.insertAdjacentHTML('beforebegin', html); else vista.insertAdjacentHTML('afterbegin', html);
+    const img = vista.querySelector('#gviagImg');
+    gviagPNG(c, e).then(b => { if (b) img.src = URL.createObjectURL(b); }).catch(() => { img.alt = 'Não deu para gerar a imagem.'; });
+    const nomeArq = `vem-resumo-${String(e.viagem || 'viagem').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 50)}.png`;
+    const todos = async () => { const out = [new File([await gviagPNG(c, e)], nomeArq, {type:'image/png'})];
+      for (let i = 0; i < ts.length; i++) out.push(new File([await gcardPNG(c, ts[i])], `${String(i + 1).padStart(2, '0')}-${gcardArquivo(ts[i])}`, {type:'image/png'}));
+      return out; };
+    vista.querySelector('#gviagBaixar').onclick = async () => {
+      const fs = await todos();
+      for (const f of fs){ const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); await new Promise(r => setTimeout(r, 250)); }
+      avisar(`${fs.length} imagens baixadas: o resumo da viagem e os ${ts.length} trechos, na ordem de envio.`, 'ok', 5000);
+    };
+    vista.querySelector('#gviagCopiar').onclick = async () => {
+      try { await navigator.clipboard.write([new ClipboardItem({'image/png':await gviagPNG(c, e)})]); avisar('Resumo da viagem copiado. Cole na conversa do cliente.', 'ok'); }
+      catch(_){ avisar('Este navegador não deixou copiar a imagem. Use "Baixar".', 'alerta', 5000); }
+    };
+    const sh = vista.querySelector('#gviagShare');
+    if (sh) sh.onclick = async () => { try { await navigator.share({files:await todos()}); } catch(err){ if (err && err.name !== 'AbortError') avisar('Não deu para enviar. Use "Baixar".', 'alerta'); } };
+    return v;
+  };
+})();
+</script>
 </body>
 </html>
