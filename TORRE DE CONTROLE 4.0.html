@@ -87926,5 +87926,138 @@ async function gviagPNG(c, e){
   };
 })();
 </script>
+<style id="grg-css">
+/* ══ REGRAS DE COBRANÇA EM ABAS (28/11/2026) ══════════════════════════════════
+   Quatro assuntos, um de cada vez: Taxa VEM, Valor de balcão, Planejamento Anual
+   e Indicação. Cada aba mostra o resumo do que está valendo, ao vivo, e um ponto
+   dourado quando tem mudança ainda não salva. No computador as abas ficam na
+   lateral; no celular, em cima, deslizando. Campo de balcão vazio fica vazio. */
+#dlgGestao .grg{ display:grid; grid-template-columns:250px minmax(0, 1fr); gap:22px; align-items:start; }
+#dlgGestao .grg-nav{ position:sticky; top:0; display:grid; gap:8px; }
+#dlgGestao .grg-tab{ all:unset; box-sizing:border-box; cursor:pointer; position:relative; display:grid; grid-template-columns:38px minmax(0, 1fr); gap:2px 12px; align-items:center;
+  padding:12px 14px; border-radius:14px; border:1px solid var(--fio); background:var(--sup-1); transition:background .18s, border-color .18s, transform .18s; }
+#dlgGestao .grg-tab:hover{ border-color:color-mix(in srgb, var(--ouro) 45%, var(--fio)); transform:translateX(2px); }
+#dlgGestao .grg-tab:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
+#dlgGestao .grg-tab[aria-selected=true]{ border-color:var(--ouro); background:color-mix(in srgb, var(--ouro) 12%, var(--sup-1)); box-shadow:0 10px 26px -18px color-mix(in srgb, var(--ouro) 80%, transparent); }
+#dlgGestao .grg-ic{ grid-row:1 / span 2; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:color-mix(in srgb, var(--ouro) 16%, transparent); color:var(--ouro); }
+#dlgGestao .grg-ic svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+#dlgGestao .grg-tab b{ font-weight:650; font-size:calc(14px * var(--esc)); color:var(--giz); }
+#dlgGestao .grg-tab small{ font-size:calc(12px * var(--esc)); color:var(--fraco, var(--giz-2)); line-height:1.35; font-variant-numeric:tabular-nums; }
+@media (max-width:860px){ #dlgGestao .grg-tab small{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } }
+#dlgGestao .grg-tab[data-mudou]::after{ content:''; position:absolute; top:10px; right:10px; width:8px; height:8px; border-radius:50%; background:var(--ouro); box-shadow:0 0 0 3px color-mix(in srgb, var(--ouro) 25%, transparent); }
+#dlgGestao .grg-painel[hidden]{ display:none !important; }
+#dlgGestao .grg-painel > .eq-tit:first-child{ margin-top:0; }
+#dlgGestao .grg-ferr{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0 0 14px; }
+#dlgGestao .grg-ferr .grg-busca{ position:relative; flex:1 1 220px; }
+#dlgGestao .grg-ferr .grg-busca svg{ position:absolute; left:12px; top:50%; translate:0 -50%; width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; opacity:.6; pointer-events:none; }
+#dlgGestao .grg-ferr .grg-busca input{ width:100%; padding-left:36px; }
+#dlgGestao .grg-conta{ font-size:calc(12.5px * var(--esc)); color:var(--fraco, var(--giz-2)); white-space:nowrap; }
+#dlgGestao #grBalcao{ grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); }
+#dlgGestao #grBalcao .campo.grg-tem label{ color:var(--ouro); }
+#dlgGestao #grBalcao .campo[hidden]{ display:none !important; }
+#dlgGestao .grg-nada{ padding:18px; text-align:center; color:var(--fraco, var(--giz-2)); border:1px dashed var(--fio); border-radius:12px; }
+@media (max-width:860px){
+  #dlgGestao .grg{ grid-template-columns:minmax(0, 1fr); gap:14px; }
+  #dlgGestao .grg-nav{ display:flex; overflow-x:auto; scrollbar-width:none; gap:8px; z-index:3; background:var(--sup-0); padding-bottom:4px; }
+  #dlgGestao .grg-nav::-webkit-scrollbar{ display:none; }
+  #dlgGestao .grg-tab{ flex:0 0 auto; grid-template-columns:30px auto; padding:9px 12px; max-width:240px; }
+  #dlgGestao .grg-tab:hover{ transform:none; }
+  #dlgGestao .grg-ic{ width:30px; height:30px; border-radius:9px; }
+}
+</style>
+<script id="grg-js">
+(function(){
+  const _ab = geRegrasAbrir;
+  geRegrasAbrir = function(cid){
+    const v = _ab.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d) return v;
+    const vista = d.querySelector('.dr-corpo .eq-vista'); if (!vista || vista.querySelector('.grg')) return v;
+    /* campo de balcão vazio continua vazio (antes, só de passar por ele virava 0,00) */
+    vista.querySelectorAll('[data-bal]').forEach(i => { i.dataset.vazio = 'sim'; if (!(moedaNum(i.value) > 0)) i.value = ''; });
+    /* agrupa os nós por título */
+    const nos = [...vista.childNodes].filter(n => !(n.nodeType === 3 && !n.textContent.trim()));
+    const grupos = []; let g = null; const antes = [];
+    nos.forEach(n => { if (n.nodeType === 1 && n.classList.contains('eq-tit')){ g = {tit:n.textContent.trim(), nos:[n]}; grupos.push(g); } else if (g) g.nos.push(n); else antes.push(n); });
+    const pega = re => grupos.filter(x => re.test(x.tit)).flatMap(x => x.nos);
+    const ABAS = [
+      {k:'taxa', n:'Taxa VEM', ic:'#i-dinheiro', nos:[...antes, ...pega(/^Regra geral/), ...pega(/^Situações A e B/)]},
+      {k:'balcao', n:'Valor de balcão', ic:'#i-grafico', nos:pega(/^Valor de balcão/)},
+      {k:'plano', n:'Planejamento Anual', ic:'#i-calendario', nos:pega(/^Planejamento Anual/)},
+      {k:'ind', n:'Indicação', ic:'#i-estrela', nos:pega(/^Programa de indicação/)}
+    ];
+    const usados = new Set(ABAS.flatMap(a => a.nos)); const sobra = nos.filter(n => !usados.has(n)); ABAS[0].nos.push(...sobra);
+    const caixa = document.createElement('div'); caixa.className = 'grg';
+    const nav = document.createElement('div'); nav.className = 'grg-nav'; nav.setAttribute('role', 'tablist'); nav.setAttribute('aria-label', 'Regras de cobrança');
+    const area = document.createElement('div'); area.className = 'grg-area';
+    ABAS.forEach((a, i) => {
+      nav.insertAdjacentHTML('beforeend', `<button type="button" class="grg-tab" role="tab" id="grgT-${a.k}" aria-controls="grgP-${a.k}" aria-selected="${i === 0}" data-k="${a.k}"><span class="grg-ic"><svg><use href="${a.ic}"/></svg></span><b>${a.n}</b><small data-res="${a.k}"></small></button>`);
+      const p = document.createElement('div'); p.className = 'grg-painel'; p.id = 'grgP-' + a.k; p.setAttribute('role', 'tabpanel'); p.setAttribute('aria-labelledby', 'grgT-' + a.k); p.dataset.k = a.k; p.hidden = i > 0;
+      a.nos.forEach(n => p.appendChild(n)); area.appendChild(p);
+    });
+    vista.innerHTML = ''; caixa.append(nav, area); vista.appendChild(caixa);
+    const $ = s => vista.querySelector(s);
+    /* balcão: busca, preenchidos primeiro, contagem */
+    const grade = $('#grBalcao');
+    if (grade){
+      const campos = [...grade.querySelectorAll(':scope > .campo')];
+      campos.forEach(c => c.classList.toggle('grg-tem', moedaNum(c.querySelector('input').value) > 0));
+      campos.filter(c => c.classList.contains('grg-tem')).reverse().forEach(c => grade.prepend(c));
+      grade.insertAdjacentHTML('beforebegin', `<div class="grg-ferr"><label class="grg-busca"><svg><use href="#i-busca"/></svg><input type="search" id="grgBusca" placeholder="Procurar programa" aria-label="Procurar programa"></label>
+        <label class="chk"><input type="checkbox" id="grgSoTem"><span>Só os preenchidos</span></label><span class="grg-conta" id="grgConta"></span></div>`);
+      grade.insertAdjacentHTML('afterend', `<div class="grg-nada" id="grgNada" hidden>Nenhum programa com esse nome.</div>`);
+      const filtrar = () => {
+        const t = semAcento($('#grgBusca').value), so = $('#grgSoTem').checked; let n = 0;
+        campos.forEach(c => { const ok = (!t || semAcento(c.querySelector('label').textContent).includes(t)) && (!so || moedaNum(c.querySelector('input').value) > 0); c.hidden = !ok; if (ok) n++; });
+        $('#grgNada').hidden = n > 0;
+      };
+      $('#grgBusca').addEventListener('input', filtrar); $('#grgSoTem').addEventListener('change', filtrar);
+    }
+    /* resumo ao vivo de cada aba */
+    const R = s => { const i = $(s); return i ? moedaNum(i.value) || 0 : 0; }, Rs = v => 'R$ ' + moedaTxt(v).replace(/,00$/, '');
+    const P = s => { const i = $(s); return i ? String(i.value || '').trim().replace('.', ',') : ''; };
+    const resumir = () => {
+      const res = {
+        taxa:`${Rs(R('#grTaxaB'))} por pessoa/trecho · ${P('#grPct')}% · mín. ${Rs(R('#grMinInt'))} / ${Rs(R('#grMinNac'))}`,
+        balcao:(() => { const n = [...vista.querySelectorAll('[data-bal]')].filter(i => moedaNum(i.value) > 0).length, m = vista.querySelectorAll('[data-bal]').length; return `${n} de ${m} programas com valor`; })(),
+        plano:`${Rs(R('#grPlanM'))} × ${P('#grPlanN')} · ${P('#grPlanD')}% volta na emissão`,
+        ind:`${Rs(R('#grCred'))} por indicação · ${P('#grCredMeses')} meses`
+      };
+      Object.keys(res).forEach(k => { const el = nav.querySelector(`[data-res="${k}"]`); if (el){ el.textContent = res[k]; el.title = res[k]; } });
+      const c = $('#grgConta'); if (c) c.textContent = res.balcao;
+    };
+    resumir();
+    /* ponto dourado: mudou e ainda não salvou */
+    const inicial = new Map([...vista.querySelectorAll('.grg-painel input, .grg-painel select')].filter(i => !i.closest('.grg-ferr')).map(i => [i, i.type === 'checkbox' ? i.checked : i.value]));
+    const marcar = ev => {
+      const i = ev.target; if (!inicial.has(i)) return;
+      const p = i.closest('.grg-painel'), mud = [...p.querySelectorAll('input, select')].some(x => inicial.has(x) && (x.type === 'checkbox' ? x.checked : x.value) !== inicial.get(x) && !(x.dataset.moeda !== undefined && moedaNum(x.value) === moedaNum(inicial.get(x))));
+      const t = nav.querySelector(`[data-k="${p.dataset.k}"]`); if (mud) t.setAttribute('data-mudou', ''); else t.removeAttribute('data-mudou');
+      if (i.dataset.bal !== undefined) i.closest('.campo').classList.toggle('grg-tem', moedaNum(i.value) > 0);
+      resumir();
+    };
+    vista.addEventListener('input', marcar); vista.addEventListener('change', marcar);
+    const ir = k => {
+      nav.querySelectorAll('.grg-tab').forEach(b => b.setAttribute('aria-selected', b.dataset.k === k));
+      area.querySelectorAll('.grg-painel').forEach(p => p.hidden = p.dataset.k !== k);
+      const corpo = d.querySelector('.dr-corpo'); if (corpo) corpo.scrollTop = 0;
+      const b = nav.querySelector(`[data-k="${k}"]`); if (b && b.scrollIntoView && matchMedia('(max-width:860px)').matches) b.scrollIntoView({block:'nearest', inline:'center'});
+    };
+    nav.addEventListener('click', ev => { const b = ev.target.closest('.grg-tab'); if (b) ir(b.dataset.k); });
+    nav.addEventListener('keydown', ev => {
+      if (!/^Arrow(Up|Down|Left|Right)$/.test(ev.key)) return; ev.preventDefault();
+      const ts = [...nav.querySelectorAll('.grg-tab')], i = ts.findIndex(b => b.getAttribute('aria-selected') === 'true'), j = (i + (/Up|Left/.test(ev.key) ? -1 : 1) + ts.length) % ts.length;
+      ir(ts[j].dataset.k); ts[j].focus();
+    });
+    geRegrasAbrir._ir = ir;
+    return v;
+  };
+  /* erro num campo de outra aba (ex.: percentual inválido): abre a aba dele */
+  const _er = erroNoCampo;
+  erroNoCampo = function(el){
+    try { const p = el && el.closest && el.closest('.grg-painel'); if (p && p.hidden && geRegrasAbrir._ir) geRegrasAbrir._ir(p.dataset.k); } catch(_){}
+    return _er.apply(this, arguments);
+  };
+})();
+</script>
 </body>
 </html>
