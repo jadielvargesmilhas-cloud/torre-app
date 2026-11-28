@@ -46628,6 +46628,7 @@ function capturarEstadoTela(){
 }
 
 function guardarEstadoTela(){
+  if (window.top !== window) return;   /* prévia dentro de um quadro (página do cliente na ficha) */
   try { sessionStorage.setItem(CHAVE_TELA, JSON.stringify(capturarEstadoTela())); } catch(e){}
 }
 window.addEventListener('beforeunload', guardarEstadoTela);
@@ -86040,9 +86041,25 @@ function acpPaxN(e){ const nomes = String(e.paxNomes || '').split(',').map(x => 
 /* as viagens do cliente: mesmo nome de viagem junta os trechos */
 function acpViagens(c){
   const m = new Map();
-  geDoCliente(c).filter(e => e.dataVoo && (e.produto || 'passagem') === 'passagem').forEach(e => {
-    const k = (e.viagem || '').trim() ? 'v:' + semAcento(e.viagem.trim().toLowerCase()) : 'e:' + e.id;
+  const todas = geDoCliente(c).filter(e => e.dataVoo && (e.produto || 'passagem') === 'passagem');
+  /* 28/11/2026: trecho sem o nome da viagem não fica sozinho. Se a data dele cai dentro
+     de uma viagem com nome (do primeiro ao último voo, com folga de 15 dias), entra nela;
+     trechos sem nome com até 20 dias entre um e outro formam uma viagem só. */
+  const janelas = new Map();
+  todas.filter(e => (e.viagem || '').trim()).forEach(e => { const k = 'v:' + semAcento(e.viagem.trim().toLowerCase()); const j = janelas.get(k) || {ini:e.dataVoo, fim:e.dataVoo}; if (e.dataVoo < j.ini) j.ini = e.dataVoo; if (e.dataVoo > j.fim) j.fim = e.dataVoo; janelas.set(k, j); });
+  const chaveDe = new Map(), soltas = [];
+  todas.forEach(e => {
+    if ((e.viagem || '').trim()){ chaveDe.set(e.id, 'v:' + semAcento(e.viagem.trim().toLowerCase())); return; }
+    const k = [...janelas.entries()].find(([, j]) => e.dataVoo >= acpDia(j.ini, -15) && e.dataVoo <= acpDia(j.fim, 15));
+    if (k) chaveDe.set(e.id, k[0]); else soltas.push(e);
+  });
+  soltas.sort((a, b) => a.dataVoo.localeCompare(b.dataVoo));
+  let grp = null, ult = '';
+  soltas.forEach(e => { if (!grp || e.dataVoo > acpDia(ult, 20)) grp = 'e:' + e.id; ult = e.dataVoo; chaveDe.set(e.id, grp); });
+  todas.forEach(e => {
+    const k = chaveDe.get(e.id) || 'e:' + e.id;
     if (!m.has(k)) m.set(k, {chave:k, nome:(e.viagem || '').trim() || e.trecho || 'Viagem', ems:[]});
+    else if (k.startsWith('v:') && (e.viagem || '').trim()) m.get(k).nome = e.viagem.trim();
     m.get(k).ems.push(e);
   });
   return [...m.values()].map(v => {
@@ -87172,6 +87189,60 @@ function gcNomeTela(c){ const a = String((c && c.apelido) || '').trim(); return 
 </script>
 
 
+
+<style id="pcli-css">
+/* ══ PRÉVIA DA PÁGINA DO CLIENTE NA FICHA (28/11/2026) ════════════════════════
+   Ao lado do convite, um celular com a página que o cliente vê, ao vivo e só
+   leitura (a mesma Área do Cliente, aberta com a carteira dele). */
+.pcli{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:22px; align-items:start; margin-top:14px; }
+.pcli-info{ display:grid; gap:10px; font-size:calc(13.5px * var(--esc)); color:var(--grafite); line-height:1.5; }
+.pcli-info b{ color:var(--giz); }
+.pcli-info ul{ margin:0; padding-left:18px; display:grid; gap:4px; }
+.pcli-cel{ --w:390px; --h:800px; --e:.62; width:calc(var(--w) * var(--e) + 20px); padding:10px; border-radius:34px; background:#0b1022; box-shadow:0 0 0 2px #2a3352, 0 24px 48px -24px rgba(0,0,0,.55); position:relative; }
+.pcli-cel::before{ content:''; position:absolute; top:12px; left:50%; translate:-50% 0; width:70px; height:6px; border-radius:6px; background:#1f2747; z-index:2; }
+.pcli-tela{ width:calc(var(--w) * var(--e)); height:calc(var(--h) * var(--e)); overflow:hidden; border-radius:26px; background:#fff; position:relative; }
+.pcli-tela iframe{ width:var(--w); height:var(--h); border:0; transform:scale(var(--e)); transform-origin:0 0; display:block; }
+.pcli-tela .pcli-car{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:20px; color:#5b6177; font-size:13px; background:#f6f3ea; }
+.pcli-bts{ display:flex; gap:8px; justify-content:center; margin-top:10px; }
+@media (max-width:760px){ .pcli{ grid-template-columns:minmax(0, 1fr); justify-items:center; } .pcli-cel{ --e:.7; } }
+</style>
+<script id="pcli-js">
+(function(){
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'), c = id ? gcDB().find(x => x.id === id) : null;
+    const pg = d && d.querySelector('.mt-pagina'); if (!pg || !c || pg.parentElement.querySelector('.pcli')) return v;
+    const tem = !!c.carteiraId;
+    const src = tem ? location.pathname + '?cliente&carteira=' + encodeURIComponent(c.carteiraId) : '';
+    pg.insertAdjacentHTML('afterend', `<div class="pcli">
+      <div class="pcli-info"><b>Assim o cliente vê a página dele</b>
+        <span>É a mesma Área do Cliente, ao vivo: o que você lança na carteira dele aparece aqui e lá.</span>
+        <ul><li>Saldos e vencimentos de cada programa</li><li>As viagens e a economia de cada uma</li><li>A Prova da economia, com os prints</li><li>Só leitura: o cliente não muda nada</li></ul>
+        <span class="fraco">A prévia abre com o seu acesso de gestor; o cliente entra com o e-mail ${esc(c.email || '')} e a senha dele.</span></div>
+      <div><div class="pcli-cel"><div class="pcli-tela">${tem ? `<div class="pcli-car" data-pc="car">Carregando a página do cliente...</div>` : `<div class="pcli-car">A prévia aparece aqui depois que a carteira do cliente estiver criada no servidor (salve a ficha com o e-mail dele).</div>`}</div></div>
+        ${tem ? `<div class="pcli-bts"><button type="button" class="bt p fantasma" data-pc="atual"><svg><use href="#i-atualizar"/></svg>Atualizar</button><a class="bt p fantasma" href="${esc(src)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Abrir em tela cheia</a></div>` : ''}</div></div>`);
+    if (!tem) return v;
+    const box = pg.parentElement.querySelector('.pcli'), tela = box.querySelector('.pcli-tela');
+    /* só carrega quando a aba aparece (a página do cliente é a Torre inteira) */
+    const carregar = () => {
+      if (tela.querySelector('iframe')) return;
+      const f = document.createElement('iframe'); f.title = 'Prévia da página do cliente'; f.loading = 'lazy'; f.src = src;
+      f.addEventListener('load', () => { const cr = tela.querySelector('[data-pc="car"]'); if (cr) setTimeout(() => cr.remove(), 1200); });
+      tela.appendChild(f);
+    };
+    /* as abas da ficha são montadas logo depois: espera elas existirem */
+    setTimeout(() => {
+      const painel = box.closest('.gfi-painel');
+      const ver = () => { if (box.isConnected && (!painel || !painel.hidden)) carregar(); };
+      if (painel) new MutationObserver(ver).observe(painel, {attributes:true, attributeFilter:['hidden']});
+      ver();
+    }, 0);
+    box.querySelector('[data-pc="atual"]').onclick = () => { const f = tela.querySelector('iframe'); if (f) f.src = src; else carregar(); };
+    return v;
+  };
+})();
+</script>
 
 <style id="gfi-css">
 /* ══ FICHA DO CLIENTE DA GESTÃO EM ABAS (26/11/2026) ═══════════════════════════
@@ -88672,6 +88743,7 @@ async function gviagPNG(c, e){
   const CH = 'torre:gest';
   const F = {lista:() => abrirGestaoClientes, ficha:() => gcEditar, emissoes:() => geAbrir, msg:() => geMensagem, regras:() => geRegrasAbrir};
   const guardar = () => {
+    if (window.top !== window) return;
     try {
       const d = document.getElementById('dlgGestao');
       if (!d || !d.open || !G.pilha.length){ sessionStorage.removeItem(CH); return; }
