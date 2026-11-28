@@ -87595,6 +87595,12 @@ const GCARD_IC = {
   relogio:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
 };
 function gcardIcone(k, x, y, tam, cor){ const s = tam / 24; return `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${cor || '#E8B830'}" stroke-width="${(1.8 / s * (tam / 30)).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round">${GCARD_IC[k]}</g>`; }
+/* nome no padrão de abreviação da Torre (primeiro nome + último sobrenome, ou o
+   "Nome na tela" da ficha), só com as iniciais maiúsculas: "Rodrigo Nardoni" */
+function gcardNomeCurto(c){
+  const n = typeof gcNomeTela === 'function' ? gcNomeTela(c) : (c.nome || '');
+  return String(n || '').toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, l) => a + l.toUpperCase()).replace(/\b(Da|De|Do|Das|Dos|E)\b/g, w => w.toLowerCase());
+}
 function gcardSVG(c, e){
   const d = gcardDados(c, e), {L, A} = GCARD, x = v => esc(String(v == null ? '' : v));
   const R = v => gcReais(v).replace(/ /g, ' ');
@@ -87619,7 +87625,7 @@ function gcardSVG(c, e){
   const xm = logo ? 186 : 72;
   if (logo) h += `<image href="${logo}" x="65" y="63" width="98" height="65" preserveAspectRatio="xMidYMid meet"/><line x1="170" y1="76" x2="170" y2="116" stroke="#3A4466" stroke-width="2"/>`;
   h += `<text x="${xm}" y="106" ${F} font-size="24" font-weight="700" fill="#FFFFFF" data-gc="marca">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="28">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
-    <text x="72" y="206" ${F} font-size="26" fill="#9AA3B8">${x(d.nome)}, o resumo da sua emissão</text>
+    <text x="72" y="206" ${F} font-size="26" fill="#9AA3B8" data-gc="ola">${x(gcardNomeCurto(c))}, o resumo da sua viagem</text>
     <text x="72" y="270" ${F} font-size="${tamRota}" font-weight="700" fill="#FFFFFF" data-gc="rota">${x(t1)}</text>`;
   y = 270; if (t2){ y += 46; h += `<text x="72" y="${y}" ${F} font-size="27" font-weight="600" fill="#E8B830" data-gc="voos">${x(t2.length > 62 ? t2.slice(0, 61) + '…' : t2)}</text>`; }
   /* linha 1: data e hora */
