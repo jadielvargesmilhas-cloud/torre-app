@@ -87461,5 +87461,125 @@ function gePtsLer(box){
   colocar();
 })();
 </script>
+<style id="gcard-css">
+/* Card do trecho para o cliente (28/11/2026) */
+.gcard-prev{ display:grid; justify-items:center; gap:10px; margin:0 0 16px; }
+.gcard-prev img{ width:min(360px, 100%); height:auto; border-radius:16px; box-shadow:0 18px 40px -24px rgba(0,0,0,.6); border:1px solid var(--linha); }
+.gcard-prev .acp-bts{ justify-content:center; }
+</style>
+<script id="gcard-js">
+/* ── Card do trecho (28/11/2026, pedido do Jadiel): uma imagem por emissão, gerada
+   aqui mesmo (sem IA), na ordem que faz o cliente sentir a economia: primeiro o
+   preço em dinheiro (mercado), depois o que ele paga com milhas, e a economia em
+   destaque. Os números são os mesmos da Mensagem ao cliente. */
+const GCARD = {L:1080, A:1350};
+function gcardDados(c, e){
+  const r = geCalc(e, c), d = {r, e, c};
+  d.nome = typeof acpNome === 'function' ? acpNome(c.nome) : gcPrimeiro(c.nome);
+  d.temEco = (e.tipo === 'B' || e.tipo === 'C') && r.mercado > 0 && r.custoReal > 0 && r.clienteEconomiza > 0.004;
+  if (e.tipo === 'C'){ d.rot = 'Com milhas, pela VEM'; d.linhas = [['Passagem em milhas', r.valorMilhas], ['Taxa VEM', centavos(r.precoSemTaxas - r.valorMilhas)], ['Taxas de embarque', r.repasse]]; d.pago = r.custoReal; }
+  else if (e.tipo === 'B'){ d.rot = 'Com os seus pontos, pela VEM'; d.linhas = [['Seus pontos, pelo valor', r.valorPontos], ['Taxa VEM', r.taxa], ['Taxas de embarque', r.repasse]]; d.pago = r.custoReal || r.precoTotal; }
+  else { d.rot = 'Passagens com a VEM'; d.linhas = [['Passagens', r.passagens], ['Taxa de serviço VEM', centavos(r.precoTotal - r.passagens - r.repasse)], ['Taxas de embarque', r.repasse]]; d.pago = r.precoTotal; }
+  d.linhas = d.linhas.filter(l => l[1] > 0.004);
+  d.eco = d.temEco ? r.clienteEconomiza : 0;
+  d.pct = d.temEco ? Math.round(d.eco / r.mercado * 100) : 0;
+  return d;
+}
+function gcardSVG(c, e){
+  const d = gcardDados(c, e), {L, A} = GCARD, x = v => esc(String(v == null ? '' : v));
+  const R = v => gcReais(v).replace(/ /g, ' ');
+  const logo = (document.querySelector('.trilho .marca img') || {}).src || '';
+  const info = [e.dataVoo ? gcDataTxt(e.dataVoo) + (e.horaVoo ? ' · ' + e.horaVoo : '') : '', e.cia, e.classe, e.loc ? 'código ' + e.loc : ''].filter(Boolean).join('   ·   ');
+  const pax = String(e.paxNomes || '').trim() || `${Math.max(1, parseInt(e.pax, 10) || 1)} ${(parseInt(e.pax, 10) || 1) === 1 ? 'passageiro' : 'passageiros'}`;
+  /* o trecho em até duas linhas */
+  const tr = String(e.trecho || 'Sua viagem'); let t1 = tr, t2 = '';
+  if (tr.length > 30){ const k = tr.lastIndexOf(' ', 30) > 10 ? tr.lastIndexOf(' ', 30) : 30; t1 = tr.slice(0, k).trim(); t2 = tr.slice(k).trim(); if (t2.length > 34) t2 = t2.slice(0, 33) + '…'; }
+  const F = `font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"`;
+  let y = 0, h = '';
+  h += `<rect width="${L}" height="${A}" fill="#070B19"/>
+    <radialGradient id="gl" cx="85%" cy="5%" r="70%"><stop offset="0" stop-color="#C9A227" stop-opacity=".28"/><stop offset="1" stop-color="#C9A227" stop-opacity="0"/></radialGradient>
+    <rect width="${L}" height="${A}" fill="url(#gl)"/>
+    <rect x="0" y="0" width="${L}" height="10" fill="#C9A227"/>`;
+  if (logo) h += `<image href="${logo}" x="72" y="62" width="96" height="66" preserveAspectRatio="xMidYMid meet"/>`;
+  h += `<text x="${logo ? 186 : 72}" y="104" ${F} font-size="30" font-weight="700" fill="#F4E7B8" letter-spacing="1">VEM</text>
+    <text x="${logo ? 186 : 72}" y="134" ${F} font-size="20" fill="#9AA3B8">Viagens &amp; Experiências com Milhas</text>
+    <text x="72" y="222" ${F} font-size="26" fill="#9AA3B8">${x(d.nome)}, o resumo da sua emissão</text>
+    <text x="72" y="290" ${F} font-size="50" font-weight="700" fill="#FFFFFF">${x(t1)}</text>`;
+  y = 290; if (t2){ y += 62; h += `<text x="72" y="${y}" ${F} font-size="50" font-weight="700" fill="#FFFFFF">${x(t2)}</text>`; }
+  y += 52; h += `<text x="72" y="${y}" ${F} font-size="26" fill="#C9D0E0">${x(info)}</text>`;
+  y += 40; h += `<text x="72" y="${y}" ${F} font-size="24" fill="#9AA3B8">${x(pax.length > 70 ? pax.slice(0, 69) + '…' : pax)}</text>`;
+  y += 50;
+  const caixa = (yy, hh, fill, stroke) => `<rect x="60" y="${yy}" width="${L - 120}" height="${hh}" rx="28" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width="2"` : ''}/>`;
+  if (d.temEco){
+    /* 1) o preço em dinheiro, riscado */
+    h += caixa(y, 150, '#111833');
+    h += `<text x="100" y="${y + 58}" ${F} font-size="26" fill="#9AA3B8">Preço em dinheiro (mercado)</text>
+      <text x="100" y="${y + 118}" ${F} font-size="52" font-weight="600" fill="#C9D0E0">${x(R(d.r.mercado))}</text>`;
+    const wRisco = Math.min(L - 220, 30 * R(d.r.mercado).length);
+    h += `<line x1="96" y1="${y + 101}" x2="${100 + wRisco}" y2="${y + 101}" stroke="#E0574F" stroke-width="5" stroke-linecap="round"/>`;
+    y += 172;
+  }
+  /* 2) o que o cliente paga, com as partes */
+  const hPago = 150 + d.linhas.length * 42;
+  h += caixa(y, hPago, '#141C3A', '#2B3866');
+  h += `<text x="100" y="${y + 58}" ${F} font-size="26" fill="#C9D0E0">${x(d.rot)}</text>
+    <text x="100" y="${y + 122}" ${F} font-size="60" font-weight="700" fill="#FFFFFF">${x(R(d.pago))}</text>`;
+  d.linhas.forEach((l, i) => { const yy = y + 172 + i * 42;
+    h += `<text x="100" y="${yy}" ${F} font-size="24" fill="#9AA3B8">${x(l[0])}</text><text x="${L - 100}" y="${yy}" ${F} font-size="24" fill="#C9D0E0" text-anchor="end">${x(R(l[1]))}</text>`; });
+  y += hPago + 22;
+  /* 3) a economia, em destaque */
+  if (d.temEco){
+    h += `<rect x="60" y="${y}" width="${L - 120}" height="190" rx="28" fill="#C9A227"/>
+      <text x="100" y="${y + 62}" ${F} font-size="28" font-weight="600" fill="#1B1405">Você economizou</text>
+      <text x="100" y="${y + 146}" ${F} font-size="76" font-weight="800" fill="#1B1405">${x(R(d.eco))}</text>
+      <text x="${L - 100}" y="${y + 146}" ${F} font-size="40" font-weight="700" fill="#1B1405" text-anchor="end">${d.pct}% a menos</text>`;
+    y += 212;
+  }
+  h += `<text x="72" y="${A - 70}" ${F} font-size="22" fill="#6F7891">${x(e.data ? 'Emitido em ' + gcDataTxt(e.data) : '')}</text>
+    <text x="${L - 72}" y="${A - 70}" ${F} font-size="22" fill="#6F7891" text-anchor="end">Valores em reais · taxas pelo valor real</text>`;
+  return {svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${L}" height="${A}" viewBox="0 0 ${L} ${A}">${h}</svg>`, altura:y, dados:d};
+}
+async function gcardPNG(c, e){
+  const {svg} = gcardSVG(c, e);
+  const url = URL.createObjectURL(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}));
+  try {
+    const img = new Image();
+    await new Promise((ok, erro) => { img.onload = ok; img.onerror = erro; img.src = url; });
+    const cv = document.createElement('canvas'); cv.width = GCARD.L; cv.height = GCARD.A;
+    cv.getContext('2d').drawImage(img, 0, 0, GCARD.L, GCARD.A);
+    return await new Promise(r => cv.toBlob(r, 'image/png'));
+  } finally { URL.revokeObjectURL(url); }
+}
+function gcardArquivo(e){ return `vem-${String(e.trecho || 'trecho').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 60)}.png`; }
+(function(){
+  const _m = geMensagem;
+  geMensagem = function(cid, eid){
+    const v = _m.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'), c = gcDB().find(x => x.id === cid), e = c && geDoCliente(c).find(x => x.id === eid);
+    const vista = d && d.querySelector('.dr-corpo .eq-vista'); if (!vista || !e || vista.querySelector('.gcard-prev')) return v;
+    const pode = !!(navigator.canShare && (() => { try { return navigator.canShare({files:[new File([''], 'x.png', {type:'image/png'})]}); } catch(_){ return false; } })());
+    vista.insertAdjacentHTML('afterbegin', `<div class="gcard-prev"><img id="gcardImg" alt="Card do trecho para o cliente"><div class="acp-bts">
+      ${pode ? `<button type="button" class="bt primario p" id="gcardShare"><svg><use href="#i-link"/></svg>Enviar a imagem</button>` : ''}
+      <button type="button" class="bt ${pode ? 'fantasma' : 'primario'} p" id="gcardBaixar"><svg><use href="#i-baixar"/></svg>Baixar imagem</button>
+      <button type="button" class="bt fantasma p" id="gcardCopiar"><svg><use href="#i-copiar"/></svg>Copiar imagem</button></div></div>`);
+    const img = vista.querySelector('#gcardImg');
+    gcardPNG(c, e).then(b => { if (b) img.src = URL.createObjectURL(b); }).catch(() => { img.alt = 'Não deu para gerar a imagem.'; });
+    vista.querySelector('#gcardBaixar').onclick = async () => {
+      const b = await gcardPNG(c, e); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = gcardArquivo(e); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      avisar('Imagem baixada. Anexe na conversa do cliente.', 'ok');
+    };
+    vista.querySelector('#gcardCopiar').onclick = async () => {
+      try { const b = await gcardPNG(c, e); await navigator.clipboard.write([new ClipboardItem({'image/png':b})]); avisar('Imagem copiada. No WhatsApp, cole na conversa do cliente.', 'ok'); }
+      catch(_){ avisar('Este navegador não deixou copiar a imagem. Use "Baixar imagem".', 'alerta', 5000); }
+    };
+    const sh = vista.querySelector('#gcardShare');
+    if (sh) sh.onclick = async () => {
+      try { const b = await gcardPNG(c, e); const f = new File([b], gcardArquivo(e), {type:'image/png'}); await navigator.share({files:[f], text:(d.querySelector('#geMsg') || {}).value || ''}); }
+      catch(err){ if (err && err.name !== 'AbortError') avisar('Não deu para enviar. Use "Baixar imagem".', 'alerta'); }
+    };
+    return v;
+  };
+})();
+</script>
 </body>
 </html>
