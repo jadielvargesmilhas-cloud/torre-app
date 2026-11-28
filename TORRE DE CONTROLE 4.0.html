@@ -88666,6 +88666,10 @@ async function gviagPNG(c, e){
    no alto que desliza. A aba escondida não ocupa mais lugar: acabou a página em
    branco do tamanho da maior aba (a janela já tem altura fixa, nada pula). */
 #dlgGestao .gfi-pilha > .gfi-painel[hidden]{ display:none !important; visibility:visible; }
+/* cartão do cliente na Gestão (28/11/2026): os 6 botões em 2 colunas iguais, alinhados */
+#dlgGestao .eq-card .eq-acoes, #dlgGestao .eq-card .gc-acoes2{ display:grid !important; grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:8px !important; }
+#dlgGestao .eq-card .gc-acoes2{ margin-top:8px !important; }
+#dlgGestao .eq-card .eq-acoes > .bt, #dlgGestao .eq-card .gc-acoes2 > .bt{ width:100%; justify-content:center; min-width:0; grid-column:auto !important; }
 /* auditoria (28/11/2026): nenhuma aba ou passo escondido guarda lugar. Antes, a aba
    escondida ocupava a altura da maior e sobrava página em branco embaixo. */
 .dr-aba-painel[data-oculta]{ display:none !important; }
@@ -88826,6 +88830,23 @@ async function gviagPNG(c, e){
     document.addEventListener('torre:pronta', () => setTimeout(repor, 50), {once:true});
     setTimeout(() => { const ab = document.getElementById('abertura'); if (ab && ab.classList.contains('foi')) repor(); }, 6000);
   }
+})();
+</script>
+<script id="gcbt2-js">
+/* cartão do cliente na Gestão (28/11/2026): os botões ficam num quadro só, em 2 colunas iguais, sem buracos */
+(function(){
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(d){
+    const r = _dl.apply(this, arguments);
+    (d || document.getElementById('dlgGestao') || document).querySelectorAll('.eq-card[data-id]').forEach(cd => {
+      const a = cd.querySelector('.eq-acoes'), b = cd.querySelector('.gc-acoes2'); if (!a || !b || a === b) return;
+      [...b.children].forEach(x => a.appendChild(x)); b.remove();
+      /* a ordem do trabalho: primeiro a emissão (esquerda), depois a cobrança (direita) */
+      const em = a.querySelector('[data-gc="emissoes"]'), co = [...a.children].find(x => /^\s*Cobrança/.test(x.textContent));
+      if (em && co && co.compareDocumentPosition(em) & Node.DOCUMENT_POSITION_FOLLOWING) a.insertBefore(em, co);
+    });
+    return r;
+  };
 })();
 </script>
 </body>
