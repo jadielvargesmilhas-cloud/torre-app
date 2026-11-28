@@ -87630,9 +87630,13 @@ function gcardSVG(c, e){
     const che = cheD ? gcDataTxt(cheD) + ' · ' + e.horaChegada : '';
     h += gcardIcone('cal', 72, y - 24, 28) + `<text x="114" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" data-gc="data">${x(sai)}${che ? `<tspan fill="#E8B830" font-weight="400" dx="10">→</tspan><tspan dx="10" data-gc="chegada">${x(che)}</tspan>` : ''}</text>`;
     if (e.duracao){
-      let wd = 16 * String(e.duracao).length;
-      try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d'); cx.font = "600 27px Inter, 'Segoe UI', Roboto, Arial, sans-serif"; wd = Math.ceil(cx.measureText(String(e.duracao)).width); } catch(_){}
-      h += gcardIcone('relogio', L - 72 - wd - 38, y - 24, 28) + `<text x="${L - 72}" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" text-anchor="end" data-gc="duracao">${x(e.duracao)}</text>`;
+      /* logo depois da chegada, com um espaço: o reloginho e a duração total */
+      let w = 15 * (sai.length + (che ? che.length + 3 : 0));
+      try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d');
+        cx.font = "600 27px Inter, 'Segoe UI', Roboto, Arial, sans-serif"; w = cx.measureText(sai).width + (che ? cx.measureText(che).width + 20 : 0);
+        if (che){ cx.font = "400 27px Inter, 'Segoe UI', Roboto, Arial, sans-serif"; w += cx.measureText('→').width; } } catch(_){}
+      const xi = Math.ceil(114 + w + 30);
+      h += gcardIcone('relogio', xi, y - 24, 28) + `<text x="${xi + 38}" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" data-gc="duracao">${x(e.duracao)}</text>`;
     }
     y += 48;
   }
