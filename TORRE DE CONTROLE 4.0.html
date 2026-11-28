@@ -87568,63 +87568,104 @@ function gcardDados(c, e){
   d.pct = d.temEco ? Math.round(d.eco / r.mercado * 100) : 0;
   return d;
 }
+/* nomes completos dos passageiros: o primeiro nome do trecho é procurado na
+   família ligada ao cliente (e no próprio cliente); achou, usa o nome completo */
+function gcardPassageiros(c, e){
+  const tit = s => String(s || '').toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, l) => a + l.toUpperCase());
+  const base = semAcento(String(c.nome || '').toLowerCase());
+  const pessoas = (typeof acpPassageiros === 'function' ? acpPassageiros(c) : []).map(p => p.nome).concat([c.nome]);
+  const nomes = String(e.paxNomes || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!nomes.length) return [];
+  return nomes.map(n => {
+    const k = semAcento(n.toLowerCase());
+    const achou = n.split(/\s+/).length > 1 ? n : pessoas.find(p => semAcento(String(p || '').toLowerCase()).split(/\s+/)[0] === k);
+    return tit(achou || n);
+  });
+}
+/* ícones de linha, no traço dourado da marca (24 × 24) */
+const GCARD_IC = {
+  cal:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  aviao:'<path fill="#E8B830" stroke="none" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" transform="rotate(90 12 12)"/>',
+  assento:'<path d="M7 3v9a3 3 0 0 0 3 3h7"/><path d="M5 21h14M9 15l-2 6M17 15l2 6"/><path d="M17 12h-6"/>',
+  bilhete:'<path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" transform="translate(0 2)"/><path d="M14 6v12" stroke-dasharray="2 2.5"/>',
+  pessoa:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'
+};
+function gcardIcone(k, x, y, tam, cor){ const s = tam / 24; return `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${cor || '#E8B830'}" stroke-width="${(1.8 / s * (tam / 30)).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round">${GCARD_IC[k]}</g>`; }
 function gcardSVG(c, e){
   const d = gcardDados(c, e), {L, A} = GCARD, x = v => esc(String(v == null ? '' : v));
   const R = v => gcReais(v).replace(/ /g, ' ');
   const logo = (document.querySelector('.trilho .marca img') || {}).src || '';
-  const info = [e.dataVoo ? gcDataTxt(e.dataVoo) + (e.horaVoo ? ' · ' + e.horaVoo : '') : '', e.cia, e.classe, e.loc ? 'código ' + e.loc : ''].filter(Boolean).join('   ·   ');
-  const pax = String(e.paxNomes || '').trim() || `${Math.max(1, parseInt(e.pax, 10) || 1)} ${(parseInt(e.pax, 10) || 1) === 1 ? 'passageiro' : 'passageiros'}`;
+  const F = `font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"`;
   /* o trecho em até duas linhas */
   const tr = String(e.trecho || 'Sua viagem'); let t1 = tr, t2 = '';
-  if (tr.length > 30){ const k = tr.lastIndexOf(' ', 30) > 10 ? tr.lastIndexOf(' ', 30) : 30; t1 = tr.slice(0, k).trim(); t2 = tr.slice(k).trim(); if (t2.length > 34) t2 = t2.slice(0, 33) + '…'; }
-  const F = `font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"`;
+  if (tr.length > 32){ const k = tr.lastIndexOf(' ', 32) > 10 ? tr.lastIndexOf(' ', 32) : 32; t1 = tr.slice(0, k).trim(); t2 = tr.slice(k).trim(); if (t2.length > 36) t2 = t2.slice(0, 35) + '…'; }
   let y = 0, h = '';
   h += `<rect width="${L}" height="${A}" fill="#070B19"/>
     <radialGradient id="gl" cx="85%" cy="5%" r="70%"><stop offset="0" stop-color="#C9A227" stop-opacity=".28"/><stop offset="1" stop-color="#C9A227" stop-opacity="0"/></radialGradient>
     <rect width="${L}" height="${A}" fill="url(#gl)"/>
     <rect x="0" y="0" width="${L}" height="10" fill="#C9A227"/>`;
-  /* marca no padrão da VEM: logo, um fio vertical e "Viagens & Experiências com Milhas" */
-  const xm = logo ? 214 : 72;
-  if (logo) h += `<image href="${logo}" x="64" y="58" width="118" height="80" preserveAspectRatio="xMidYMid meet"/><line x1="192" y1="74" x2="192" y2="124" stroke="#3A4466" stroke-width="2"/>`;
-  h += `<text x="${xm}" y="111" ${F} font-size="34" font-weight="700" fill="#FFFFFF">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="40">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
-    <text x="72" y="222" ${F} font-size="26" fill="#9AA3B8">${x(d.nome)}, o resumo da sua emissão</text>
-    <text x="72" y="290" ${F} font-size="50" font-weight="700" fill="#FFFFFF">${x(t1)}</text>`;
-  y = 290; if (t2){ y += 62; h += `<text x="72" y="${y}" ${F} font-size="50" font-weight="700" fill="#FFFFFF">${x(t2)}</text>`; }
-  y += 52; h += `<text x="72" y="${y}" ${F} font-size="26" fill="#C9D0E0">${x(info)}</text>`;
-  y += 40; h += `<text x="72" y="${y}" ${F} font-size="24" fill="#9AA3B8">${x(pax.length > 70 ? pax.slice(0, 69) + '…' : pax)}</text>`;
-  y += 50;
+  /* marca no padrão da VEM: logo, fio vertical e "Viagens & Experiências com Milhas" */
+  const xm = logo ? 186 : 72;
+  if (logo) h += `<image href="${logo}" x="66" y="64" width="96" height="64" preserveAspectRatio="xMidYMid meet"/><line x1="170" y1="76" x2="170" y2="116" stroke="#3A4466" stroke-width="2"/>`;
+  h += `<text x="${xm}" y="106" ${F} font-size="25" font-weight="700" fill="#FFFFFF" data-gc="marca">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="29">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
+    <text x="72" y="206" ${F} font-size="26" fill="#9AA3B8">${x(d.nome)}, o resumo da sua emissão</text>
+    <text x="72" y="270" ${F} font-size="48" font-weight="700" fill="#FFFFFF">${x(t1)}</text>`;
+  y = 270; if (t2){ y += 58; h += `<text x="72" y="${y}" ${F} font-size="48" font-weight="700" fill="#FFFFFF">${x(t2)}</text>`; }
+  /* linha 1: data e hora */
+  y += 56;
+  if (e.dataVoo){ h += gcardIcone('cal', 72, y - 24, 28) + `<text x="114" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" data-gc="data">${x(gcDataTxt(e.dataVoo) + (e.horaVoo ? ' · ' + e.horaVoo : ''))}</text>`; y += 48; }
+  /* linha 2: companhia (logo do programa, se houver), classe e código */
+  const partes = []; let xx = 72;
+  if (e.cia){
+    const pg = typeof progDaCia === 'function' ? progDaCia(e.cia) : '', lg = pg ? (DB.logos || {})[pg] : '';
+    partes.push(lg ? `<clipPath id="gcLg"><circle cx="${xx + 15}" cy="${y - 10}" r="15"/></clipPath><circle cx="${xx + 15}" cy="${y - 10}" r="16" fill="#FFFFFF"/><image href="${esc(lg)}" x="${xx}" y="${y - 25}" width="30" height="30" clip-path="url(#gcLg)" preserveAspectRatio="xMidYMid slice"/>` : gcardIcone('aviao', xx, y - 24, 28));
+    partes.push(`<text x="${xx + 42}" y="${y}" ${F} font-size="26" fill="#C9D0E0" data-gc="cia">${x(e.cia)}</text>`);
+    xx += 42 + Math.ceil(String(e.cia).length * 14.5) + 34;
+  }
+  if (e.classe){ partes.push(gcardIcone('assento', xx, y - 24, 28) + `<text x="${xx + 40}" y="${y}" ${F} font-size="26" fill="#C9D0E0" data-gc="classe">${x(e.classe)}</text>`); xx += 40 + Math.ceil(String(e.classe).length * 14.5) + 34; }
+  if (e.loc){ partes.push(gcardIcone('bilhete', xx, y - 24, 28) + `<text x="${xx + 40}" y="${y}" ${F} font-size="26" font-weight="700" fill="#F4E7B8" letter-spacing="1.5" data-gc="loc">${x(e.loc)}</text>`); }
+  if (partes.length){ h += partes.join(''); y += 52; }
+  /* passageiros: um por linha, com o nome completo quando existir */
+  const pax = gcardPassageiros(c, e), MAXP = 4;
+  if (pax.length){
+    pax.slice(0, pax.length > MAXP ? MAXP - 1 : MAXP).forEach(n => { h += gcardIcone('pessoa', 72, y - 23, 26, '#9AA3B8') + `<text x="112" y="${y}" ${F} font-size="25" fill="#C9D0E0" data-gc="pax">${x(n.length > 46 ? n.slice(0, 45) + '…' : n)}</text>`; y += 40; });
+    if (pax.length > MAXP) { h += `<text x="112" y="${y}" ${F} font-size="24" fill="#9AA3B8">e mais ${pax.length - MAXP + 1} passageiros</text>`; y += 40; }
+  } else {
+    const n = Math.max(1, parseInt(e.pax, 10) || 1);
+    h += gcardIcone('pessoa', 72, y - 23, 26, '#9AA3B8') + `<text x="112" y="${y}" ${F} font-size="25" fill="#C9D0E0">${n} ${n === 1 ? 'passageiro' : 'passageiros'}</text>`; y += 40;
+  }
+  y += 16;
   const caixa = (yy, hh, fill, stroke) => `<rect x="60" y="${yy}" width="${L - 120}" height="${hh}" rx="28" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width="2"` : ''}/>`;
   if (d.temEco){
-    /* 1) o preço em dinheiro, riscado */
+    /* 1) o preço em dinheiro, riscado, do mesmo tamanho do valor pago */
     h += caixa(y, 150, '#111833');
-    h += `<text x="100" y="${y + 58}" ${F} font-size="26" fill="#9AA3B8">Preço em dinheiro (mercado)</text>
-      <text x="100" y="${y + 126}" ${F} font-size="60" font-weight="700" fill="#AEB6C8" data-gc="mercado">${x(R(d.r.mercado))}</text>`;
-    /* o risco do tamanho exato do preço (medido com a mesma fonte) */
+    h += `<text x="100" y="${y + 56}" ${F} font-size="26" fill="#9AA3B8">Preço em dinheiro (mercado)</text>
+      <text x="100" y="${y + 124}" ${F} font-size="60" font-weight="700" fill="#AEB6C8" data-gc="mercado">${x(R(d.r.mercado))}</text>`;
     let wRisco = Math.round(34.5 * R(d.r.mercado).length);
     try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d'); cx.font = "700 60px Inter, 'Segoe UI', Roboto, Arial, sans-serif"; wRisco = Math.ceil(cx.measureText(R(d.r.mercado)).width) - 6; } catch(_){}
     wRisco = Math.min(L - 220, wRisco);
-    h += `<line x1="94" y1="${y + 105}" x2="${106 + wRisco}" y2="${y + 105}" stroke="#E0574F" stroke-width="6" stroke-linecap="round" data-gc="risco"/>`;
-    y += 172;
+    h += `<line x1="94" y1="${y + 103}" x2="${106 + wRisco}" y2="${y + 103}" stroke="#E0574F" stroke-width="6" stroke-linecap="round" data-gc="risco"/>`;
+    y += 168;
   }
   /* 2) o que o cliente paga, com as partes */
-  const hPago = 150 + d.linhas.length * 42;
+  const hPago = 146 + d.linhas.length * 40;
   h += caixa(y, hPago, '#141C3A', '#2B3866');
-  h += `<text x="100" y="${y + 58}" ${F} font-size="26" fill="#C9D0E0">${x(d.rot)}</text>
-    <text x="100" y="${y + 122}" ${F} font-size="60" font-weight="700" fill="#FFFFFF" data-gc="pago">${x(R(d.pago))}</text>`;
-  d.linhas.forEach((l, i) => { const yy = y + 172 + i * 42;
-    h += `<text x="100" y="${yy}" ${F} font-size="24" fill="#9AA3B8">${x(l[0])}</text><text x="${L - 100}" y="${yy}" ${F} font-size="24" fill="#C9D0E0" text-anchor="end">${x(R(l[1]))}</text>`; });
-  y += hPago + 22;
+  h += `<text x="100" y="${y + 56}" ${F} font-size="26" fill="#C9D0E0">${x(d.rot)}</text>
+    <text x="100" y="${y + 120}" ${F} font-size="60" font-weight="700" fill="#FFFFFF" data-gc="pago">${x(R(d.pago))}</text>`;
+  d.linhas.forEach((l, i) => { const yy = y + 166 + i * 40;
+    h += `<text x="100" y="${yy}" ${F} font-size="23" fill="#9AA3B8">${x(l[0])}</text><text x="${L - 100}" y="${yy}" ${F} font-size="23" fill="#C9D0E0" text-anchor="end">${x(R(l[1]))}</text>`; });
+  y += hPago + 18;
   /* 3) a economia, em destaque */
   if (d.temEco){
-    h += `<rect x="60" y="${y}" width="${L - 120}" height="190" rx="28" fill="#C9A227"/>
-      <text x="100" y="${y + 62}" ${F} font-size="28" font-weight="600" fill="#1B1405">Você economizou</text>
-      <text x="100" y="${y + 140}" ${F} font-size="66" font-weight="800" fill="#1B1405" data-gc="eco">${x(R(d.eco))}</text>
-      <text x="${L - 100}" y="${y + 112}" ${F} font-size="88" font-weight="800" fill="#1B1405" text-anchor="end" data-gc="pct">${d.pct}%</text>
-      <text x="${L - 100}" y="${y + 154}" ${F} font-size="30" font-weight="700" fill="#1B1405" text-anchor="end">a menos</text>`;
-    y += 212;
+    h += `<rect x="60" y="${y}" width="${L - 120}" height="176" rx="28" fill="#C9A227"/>
+      <text x="100" y="${y + 58}" ${F} font-size="27" font-weight="600" fill="#1B1405">Você economizou</text>
+      <text x="100" y="${y + 134}" ${F} font-size="69" font-weight="800" fill="#1B1405" data-gc="eco">${x(R(d.eco))}</text>
+      <text x="${L - 100}" y="${y + 104}" ${F} font-size="62" font-weight="800" fill="#1B1405" text-anchor="end" data-gc="pct">${d.pct}%</text>
+      <text x="${L - 100}" y="${y + 140}" ${F} font-size="25" font-weight="700" fill="#1B1405" text-anchor="end">a menos</text>`;
+    y += 176;
   }
-  h += `<text x="72" y="${A - 70}" ${F} font-size="22" fill="#6F7891">${x(e.data ? 'Emitido em ' + gcDataTxt(e.data) : '')}</text>
-    <text x="${L - 72}" y="${A - 70}" ${F} font-size="22" fill="#6F7891" text-anchor="end">Valores em reais · taxas pelo valor real</text>`;
+  h += `<text x="72" y="${A - 60}" ${F} font-size="22" fill="#6F7891">${x(e.data ? 'Emitido em ' + gcDataTxt(e.data) : '')}</text>
+    <text x="${L - 72}" y="${A - 60}" ${F} font-size="22" fill="#6F7891" text-anchor="end">Valores em reais · taxas pelo valor real</text>`;
   return {svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${L}" height="${A}" viewBox="0 0 ${L} ${A}">${h}</svg>`, altura:y, dados:d};
 }
 async function gcardPNG(c, e){
