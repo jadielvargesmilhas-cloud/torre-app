@@ -87878,5 +87878,53 @@ async function gviagPNG(c, e){
   };
 })();
 </script>
+<style id="gmsg2-css">
+/* 28/11/2026: Mensagem ao cliente em duas colunas (texto à esquerda, cards à direita);
+   os comandos de enviar ficam todos no rodapé. Em tela estreita, os cards vão embaixo do texto. */
+.gcard-col{ display:grid; gap:18px; align-content:start; }
+.gcard-col .gcard-prev{ margin:0; }
+.gcard-col .gcard-prev [id$="Baixar"], .gcard-col .gcard-prev [id$="Share"]{ display:none !important; }
+.gcard-col .gcard-prev .acp-bts .bt{ min-height:34px; }
+@media (min-width:1000px){
+  .eq-vista.ge-msg-2col{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(300px, 380px); grid-template-rows:auto 1fr; column-gap:22px; align-items:stretch; }
+  .eq-vista.ge-msg-2col > .ge-alerta{ grid-column:1; grid-row:1; }
+  .eq-vista.ge-msg-2col > .ge-msg{ grid-column:1; grid-row:2; height:100%; min-height:420px; resize:none; }
+  .eq-vista.ge-msg-2col > .gcard-col{ grid-column:2; grid-row:1 / span 2; margin-top:0; }
+  .eq-vista.ge-msg-2col .gcard-prev img{ width:100%; }
+}
+@media (max-width:999.98px){ .gcard-col{ margin-top:18px; } }
+</style>
+<script id="gmsg2-js">
+(function(){
+  const _m = geMensagem;
+  geMensagem = function(cid, eid){
+    const v = _m.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'), vista = d && d.querySelector('.dr-corpo .eq-vista'); if (!vista) return v;
+    const ps = [...vista.querySelectorAll(':scope > .gcard-prev')];
+    const pe = d.querySelector('.dr-pe');
+    const cop = d.querySelector('#geMsgCop'); if (cop) cop.innerHTML = '<svg><use href="#i-copiar"/></svg>Copiar texto';
+    if (pe){ const es = pe.querySelector('.esticar'); if (es) es.remove(); }
+    if (!ps.length || vista.querySelector('.gcard-col')) return v;
+    const col = document.createElement('div'); col.className = 'gcard-col'; ps.forEach(p => col.appendChild(p)); vista.appendChild(col);
+    vista.classList.add('ge-msg-2col');
+    if (!pe) return v;
+    const multi = !!vista.querySelector('#gviagBaixar'), n = multi ? vista.querySelectorAll('.gviag-prev').length : 0;
+    const alvo = id => vista.querySelector(multi ? '#gviag' + id : '#gcard' + id);
+    const qt = multi ? (vista.querySelector('#gviagBaixar').textContent.match(/\d+/) || [''])[0] : '';
+    const zap = pe.querySelector('#geMsgZap');
+    const bB = document.createElement('button'); bB.type = 'button'; bB.className = 'bt fantasma'; bB.id = 'geMsgBaixar';
+    bB.innerHTML = `<svg><use href="#i-baixar"/></svg>${multi ? `Baixar resumo + ${qt} trechos` : 'Baixar imagem'}`;
+    bB.onclick = () => alvo('Baixar').click();
+    pe.insertBefore(bB, zap || null);
+    if (alvo('Share')){
+      const bS = document.createElement('button'); bS.type = 'button'; bS.className = 'bt ' + (zap ? 'fantasma' : 'primario'); bS.id = 'geMsgEnviar';
+      bS.innerHTML = `<svg><use href="#i-link"/></svg>${multi ? 'Enviar as imagens' : 'Enviar a imagem'}`;
+      bS.onclick = () => alvo('Share').click();
+      pe.insertBefore(bS, zap || null);
+    }
+    return v;
+  };
+})();
+</script>
 </body>
 </html>
