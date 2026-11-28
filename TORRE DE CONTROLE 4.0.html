@@ -84630,6 +84630,8 @@ function geEditar(cid, eid){
         <div class="campo"><label>Companhia <span class="fraco">opcional</span></label><input type="text" id="geCia" list="geCiaLista" value="${esc(e.cia || '')}" placeholder="Copa, American, Avianca"><datalist id="geCiaLista">${[...new Set(gcDB().flatMap(x => geDoCliente(x).map(y => y.cia)).filter(Boolean))].map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
         <div class="campo"><label>Tipo do trecho</label><select id="geTipoTrecho" data-ordem="natural">${[['', 'escolha'], ['ida', 'Ida'], ['interno', 'Interno (durante a viagem)'], ['volta', 'Volta para casa']].map(([k, n]) => `<option value="${k}"${(e.tipoTrecho || '') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
         <div class="campo"><label>Viagem <span class="fraco">mesmo nome junta os trechos</span></label><input type="text" id="geViagem" list="geViagemLista" value="${esc(e.viagem || '')}" placeholder="Estados Unidos · jan/2027"><datalist id="geViagemLista">${[...new Set(geDoCliente(c).map(y => y.viagem).filter(Boolean))].map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+        <div class="campo"><label>Conexão em <span class="fraco">opcional</span></label><input type="text" id="geConexao" value="${esc(e.conexao || '')}" placeholder="Bogotá (BOG)"></div>
+        <div class="campo"><label>Tempo de conexão <span class="fraco">opcional</span></label><input type="text" id="geConexaoTempo" value="${esc(e.conexaoTempo || '')}" placeholder="2h10"></div>
         <div class="campo"><label>Passageiros do trecho <span class="fraco">nomes, separados por vírgula</span></label><input type="text" id="gePaxNomes" value="${esc(e.paxNomes || '')}" placeholder="Rodrigo, Carla, Pedro"></div>
         <div class="campo"><label>Classe</label><select id="geClasse" data-ordem="natural"><option value="">escolha</option>${GC_CABINES.map(x => `<option${e.classe === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
         <div class="campo"><label>Passageiros</label><input type="text" inputmode="numeric" id="gePax" value="${esc(e.pax || 1)}"></div>
@@ -84685,7 +84687,7 @@ function geEditar(cid, eid){
   const ler = () => {
     const pct = String($g('#gePct').value || '').trim();
     Object.assign(e, {data:$g('#geData').value, loc:$g('#geLoc').value.trim().toUpperCase(), trecho:$g('#geTrecho').value.trim(), dataVoo:$g('#geVoo').value,
-      horaVoo:$g('#geHora').value, horaChegada:$g('#geChegada').value, cia:$g('#geCia').value.trim(), tipoTrecho:$g('#geTipoTrecho').value, viagem:$g('#geViagem').value.trim().replace(/\s+/g, ' '), paxNomes:$g('#gePaxNomes').value.trim(),
+      horaVoo:$g('#geHora').value, horaChegada:$g('#geChegada').value, cia:$g('#geCia').value.trim(), tipoTrecho:$g('#geTipoTrecho').value, viagem:$g('#geViagem').value.trim().replace(/\s+/g, ' '), paxNomes:$g('#gePaxNomes').value.trim(), conexao:$g('#geConexao').value.trim(), conexaoTempo:$g('#geConexaoTempo').value.trim(),
       classe:$g('#geClasse').value, pax:Math.max(1, parseInt($g('#gePax').value, 10) || 1), trechos:Math.max(1, parseInt($g('#geTrechos').value, 10) || 1), prog:$g('#geProg').value,
       mercado:moedaNum($g('#geMercado').value) || 0, pagoCia:moedaNum($g('#gePagoCia').value) || 0,
       milhas:qtdNum($g('#geMilhas').value) || 0, custoMil:moedaNum($g('#geCustoMil').value) || 0, milheiro:moedaNum($g('#geMilheiro').value) || 0,
@@ -87596,9 +87598,16 @@ function gcardSVG(c, e){
   const R = v => gcReais(v).replace(/ /g, ' ');
   const logo = (document.querySelector('.trilho .marca img') || {}).src || '';
   const F = `font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"`;
-  /* o trecho em até duas linhas */
-  const tr = String(e.trecho || 'Sua viagem'); let t1 = tr, t2 = '';
-  if (tr.length > 32){ const k = tr.lastIndexOf(' ', 32) > 10 ? tr.lastIndexOf(' ', 32) : 32; t1 = tr.slice(0, k).trim(); t2 = tr.slice(k).trim(); if (t2.length > 36) t2 = t2.slice(0, 35) + '…'; }
+  /* 1ª linha: a rota inteira (origem → destino, com os aeroportos), do tamanho que couber;
+     2ª linha: os voos e a conexão (quantas, onde e quanto tempo, se informado) */
+  const tr = String(e.trecho || 'Sua viagem'), vg = tr.indexOf(',');
+  const rota = (vg > 0 ? tr.slice(0, vg) : tr).trim(), voos = vg > 0 ? tr.slice(vg + 1).trim() : '';
+  let tamRota = 48;
+  try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d'); for (; tamRota > 30; tamRota -= 2){ cx.font = `700 ${tamRota}px Inter, 'Segoe UI', Roboto, Arial, sans-serif`; if (cx.measureText(rota).width <= L - 144) break; } } catch(_){}
+  const nVoos = voos ? voos.split(/\s*\+\s*/).filter(Boolean).length : 0;
+  const nCon = nVoos > 1 ? nVoos - 1 : (e.conexao ? 1 : 0);
+  const conTxt = nCon ? `${nCon} ${nCon === 1 ? 'conexão' : 'conexões'}${e.conexao ? ' em ' + e.conexao : ''}${e.conexaoTempo ? ' · ' + e.conexaoTempo : ''}` : (voos ? 'voo direto' : '');
+  const t1 = rota, t2 = [voos, conTxt].filter(Boolean).join('   ·   ');
   let y = 0, h = '';
   h += `<rect width="${L}" height="${A}" fill="#070B19"/>
     <radialGradient id="gl" cx="85%" cy="5%" r="70%"><stop offset="0" stop-color="#C9A227" stop-opacity=".28"/><stop offset="1" stop-color="#C9A227" stop-opacity="0"/></radialGradient>
@@ -87609,8 +87618,8 @@ function gcardSVG(c, e){
   if (logo) h += `<image href="${logo}" x="66" y="64" width="96" height="64" preserveAspectRatio="xMidYMid meet"/><line x1="170" y1="76" x2="170" y2="116" stroke="#3A4466" stroke-width="2"/>`;
   h += `<text x="${xm}" y="106" ${F} font-size="25" font-weight="700" fill="#FFFFFF" data-gc="marca">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="29">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
     <text x="72" y="206" ${F} font-size="26" fill="#9AA3B8">${x(d.nome)}, o resumo da sua emissão</text>
-    <text x="72" y="270" ${F} font-size="48" font-weight="700" fill="#FFFFFF">${x(t1)}</text>`;
-  y = 270; if (t2){ y += 58; h += `<text x="72" y="${y}" ${F} font-size="48" font-weight="700" fill="#FFFFFF">${x(t2)}</text>`; }
+    <text x="72" y="270" ${F} font-size="${tamRota}" font-weight="700" fill="#FFFFFF" data-gc="rota">${x(t1)}</text>`;
+  y = 270; if (t2){ y += 46; h += `<text x="72" y="${y}" ${F} font-size="27" font-weight="600" fill="#E8B830" data-gc="voos">${x(t2.length > 62 ? t2.slice(0, 61) + '…' : t2)}</text>`; }
   /* linha 1: data e hora */
   y += 56;
   if (e.dataVoo){ h += gcardIcone('cal', 72, y - 24, 28) + `<text x="114" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" data-gc="data">${x(gcDataTxt(e.dataVoo) + (e.horaVoo ? ' · ' + e.horaVoo : ''))}</text>`; y += 48; }
