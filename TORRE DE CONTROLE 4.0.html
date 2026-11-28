@@ -88849,5 +88849,189 @@ async function gviagPNG(c, e){
   };
 })();
 </script>
+<style id="gpv-css">
+/* ══ PÁGINA DA VIAGEM DO CLIENTE DE GESTÃO (28/11/2026) ════════════════════════ */
+.gpv{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; width:100%; margin-top:8px; padding:10px 12px; border-radius:12px; border:1px solid color-mix(in oklab, var(--ouro) 40%, var(--linha)); background:color-mix(in oklab, var(--ouro) 8%, var(--sup-2)); }
+.gpv .gpv-t{ display:grid; gap:2px; flex:1 1 260px; min-width:0; }
+.gpv .gpv-t b{ font-size:calc(14px * var(--esc)); display:flex; align-items:center; gap:8px; }
+.gpv .gpv-t b svg{ width:18px; height:18px; fill:none; stroke:var(--ouro); stroke-width:1.9; }
+.gpv .gpv-t small{ color:var(--grafite); font-size:calc(12px * var(--esc)); }
+.gpv .gpv-t .gpv-falta{ color:var(--rubi, #b3261e); }
+.gpv .acp-bts .bt{ min-height:34px; }
+</style>
+<script id="gpv-js">
+/* ── Página da Viagem para o cliente de gestão (28/11/2026) ───────────────────
+   O mesmo Passe de Viagem das cotações (o link que o Olivier recebeu), montado a
+   partir das emissões da gestão: todos os trechos da viagem (ida, internos e
+   voltas), com localizador, companhia, classe e os passageiros de cada trecho,
+   o check-in de cada um e a jornada até a volta. Dados cifrados: só abre com o
+   link completo. Nada é inventado: trecho sem a hora do voo, sem a chegada (ou a
+   duração) ou com aeroporto que a Torre não conhece fica na lista do que falta. */
+function gpvCodigos(e){ return (String(e.trecho || '').split(',')[0].match(/\(([A-Z]{3})\)/g) || []).map(x => x.slice(1, 4)); }
+function gpvAero(iata){
+  const A = (window.VEM && window.VEM.AEROPORTOS) || {}, a = A[iata] || [];
+  let tz = ''; try { tz = window.VEM.fuso({iata}); } catch(_){}
+  return {iata, cidade:a[0] || iata, pais:a[1] || '', tz, aero:a[2] ? 'o aeroporto ' + a[2] : 'o aeroporto de ' + (a[0] || iata)};
+}
+function gpvMin(t){ const m = String(t || '').match(/(\d+)\s*h\s*(\d+)?/i); return m ? Number(m[1]) * 60 + Number(m[2] || 0) : 0; }
+function gpvDiaCurto(ms, tz){
+  const p = new Intl.DateTimeFormat('en-US', {timeZone:tz, weekday:'short', day:'2-digit', month:'2-digit'}).formatToParts(new Date(ms)), o = {}; p.forEach(x => o[x.type] = x.value);
+  const D = {Mon:'segunda', Tue:'terça', Wed:'quarta', Thu:'quinta', Fri:'sexta', Sat:'sábado', Sun:'domingo'};
+  return `${D[o.weekday]}, ${o.day}/${o.month}`;
+}
+/* o que falta para montar a página (nada é inventado) */
+function gpvFalta(c, v){
+  const out = [];
+  v.ems.forEach(e => {
+    const cs = gpvCodigos(e), nome = String(e.trecho || 'trecho').split(',')[0];
+    if (cs.length < 2){ out.push(`${nome}: escreva o trecho com as siglas dos aeroportos, ex.: Nova York (JFK) → São Paulo (GRU)`); return; }
+    [cs[0], cs[cs.length - 1]].forEach(x => { if (!gpvAero(x).tz) out.push(`${nome}: a Torre não conhece o fuso do aeroporto ${x}`); });
+    if (!e.horaVoo) out.push(`${nome}: falta a hora do voo`);
+    if (!e.horaChegada && !gpvMin(e.duracao)) out.push(`${nome}: falta a hora de chegada (ou a duração total)`);
+  });
+  return out;
+}
+function gpvDados(c, v){
+  const VM = window.VEM, ems = v.ems, todosPax = [];
+  const paxDe = e => (typeof gcardPassageiros === 'function' ? gcardPassageiros(c, e) : []).filter(Boolean);
+  ems.forEach(e => paxDe(e).forEach(n => { if (!todosPax.some(x => semAcento(x.toLowerCase()) === semAcento(n.toLowerCase()))) todosPax.push(n); }));
+  if (!todosPax.length) todosPax.push(gcardNomeCurto(c));
+  const pessoaDe = n => (DB.pessoas || []).find(p => semAcento(String(p.nome || '').toLowerCase()) === semAcento(n.toLowerCase()));
+  const FX = {adulto:'Adulto', crianca:'Criança', bebe:'Bebê'};
+  const pax = todosPax.map(n => { const p = pessoaDe(n); let fx = ''; try { if (p && p.nasc && typeof faixaPax === 'function') fx = FX[faixaPax(p, ems[0].dataVoo)] || ''; } catch(_){} return {nome:n, faixa:fx}; });
+  const voltas = ems.filter(e => e.tipoTrecho === 'volta');
+  const legs = ems.map((e, i) => {
+    const cs = gpvCodigos(e), de = gpvAero(cs[0]), para = gpvAero(cs[cs.length - 1]);
+    const zp = VM.localEm(`${e.dataVoo}T${e.horaVoo}`, de.tz);
+    let chegada;
+    const dm = gpvMin(e.duracao);
+    if (dm) chegada = zp.ms + dm * 6e4;
+    else { const dia = e.horaChegada < e.horaVoo ? acpDia(e.dataVoo, 1) : e.dataVoo; chegada = VM.localEm(`${dia}T${e.horaChegada}`, para.tz).ms; }
+    const durMin = Math.round((chegada - zp.ms) / 6e4);
+    const dur = e.duracao || `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
+    const voosTxt = (String(e.trecho || '').split(',').slice(1).join(',').trim()) || '';
+    const nVoos = voosTxt ? voosTxt.split('+').length : 1;
+    const paradas = e.conexao ? 'parada em ' + String(e.conexao).replace(/\s*\([A-Z]{3}\)\s*/, '') : cs.length > 2 ? `parada em ${gpvAero(cs[1]).cidade}` : nVoos > 1 ? (nVoos - 1 === 1 ? '1 conexão' : `${nVoos - 1} conexões`) : 'Voo direto';
+    const cod = (typeof VG_CIA !== 'undefined' && VG_CIA[e.cia]) || ((voosTxt.match(/\b([A-Z0-9]{2})\s?\d/) || [])[1]) || '';
+    const tipo = e.tipoTrecho || (i === 0 ? 'ida' : i === ems.length - 1 ? 'volta' : 'interno');
+    const pe = paxDe(e), subconj = pe.length && pe.length < todosPax.length;
+    const quem = subconj ? pe.map(n => n.split(' ')[0]).join(', ') : '';
+    /* duas voltas (a família e, depois, a filha): a de mais gente é "Volta"; a outra leva o nome de quem volta */
+    const maxV = Math.max(0, ...voltas.map(x => paxDe(x).length || 1)), outraVolta = tipo === 'volta' && voltas.length > 1 && quem && (pe.length || 1) < maxV;
+    const rot = tipo === 'volta' ? (outraVolta ? `Volta · ${quem}` : 'Volta') : tipo === 'interno' ? 'Trecho interno' : 'Ida';
+    const rotDa = tipo === 'volta' ? (outraVolta ? `da volta de ${quem}` : 'da volta') : tipo === 'interno' ? 'do trecho interno' : 'da ida';
+    return {k:'t' + i, rot, rotDa, rotMin:tipo === 'volta' ? 'volta' : tipo === 'interno' ? 'interno' : 'ida', de, para, partida:zp.ms, chegada,
+      chegaDia:gpvDiaCurto(chegada, para.tz) !== gpvDiaCurto(zp.ms, de.tz) ? gpvDiaCurto(chegada, para.tz) : '', dur, paradas,
+      voos:voosTxt || (e.cia || ''), cia:e.cia || (CK_CIA[cod] || {}).n || '', ciaCod:cod, ckH:typeof acpCheckinHoras === 'function' ? acpCheckinHoras(e.cia) : 24,
+      site:(CK_CIA[cod] || {}).ck || (CK_CIA[cod] || {}).site || '', loc:e.loc || '', cabine:e.classe || '',
+      paxIdx:pe.length ? pe.map(n => todosPax.findIndex(x => semAcento(x.toLowerCase()) === semAcento(n.toLowerCase()))).filter(x => x >= 0) : null};
+  });
+  const locs = [...new Set(ems.map(e => String(e.loc || '').trim()).filter(Boolean))];
+  const intl = legs.some(g => g.de.pais !== 'Brasil' || g.para.pais !== 'Brasil');
+  const nome = gcardNomeCurto(c), primeiro = nome.split(' ')[0];
+  const emit = ems.map(e => e.data).filter(Boolean).sort()[0];
+  const ref = `${v.nome}${locs.length ? ', ' + (locs.length > 1 ? 'localizadores ' : 'localizador ') + locs.join(' e ') : ''}`;
+  const cab = [...new Set(legs.map(g => g.cabine).filter(Boolean))];
+  return {primeiro, primeiroCurto:primeiro, zap:vgZapNum(), ref, loc:locs.length ? locs : [''], emitida:emit ? Date.parse(emit + 'T12:00:00-03:00') : Date.now(),
+    doc:intl ? 'Passaporte válido.\nMuitos países pedem 6 meses de validade a partir da chegada; e\nAlguns pedem visto: confira as regras do destino.' : 'RG, CNH ou passaporte válidos, com o nome igual ao da passagem.',
+    bag:'', intl, cabine:cab.length === 1 ? cab[0] : (cab[0] || 'Econômica'), feito:dataBR(hojeISO()), pax, legs, assentos:{}, pdf:null,
+    extras:VG_EXTRAS.map(x => ({olho:x.olho, t:x.t, s:x.s, ic:x.ic, imgs:x.imgs, creds:x.imgs.map(() => ''), msg:`Olá! Quero saber de ${x.pede} para a viagem ${ref}.`}))};
+}
+/* o modelo das cotações, com os nomes de cada trecho (Ida, Trecho interno, Volta · Bia),
+   a classe de cada trecho e só os passageiros daquele trecho */
+let _gpvTpl = null;
+function gpvModelo(){
+  if (_gpvTpl) return _gpvTpl;
+  let t = VG_TPL;
+  const troca = (a, b) => { if (!t.includes(a)) throw new Error('O modelo do Passe mudou: ' + a.slice(0, 40)); t = t.split(a).join(b); };
+  troca("(g.k === 'volta' ? 'Volta' : 'Ida')", "(g.rot || (g.k === 'volta' ? 'Volta' : 'Ida'))");
+  troca("(g.k === 'volta' ? 'da volta' : 'da ida')", "(g.rotDa || (g.k === 'volta' ? 'da volta' : 'da ida'))");
+  troca("(i ? 'da volta' : 'da ida')", "(V.legs[i].rotDa || (i ? 'da volta' : 'da ida'))");
+  troca("(g.k === 'volta' ? 'volta' : 'ida')", "(g.rotMin || (g.k === 'volta' ? 'volta' : 'ida'))");
+  troca("esc(V.cabine)", "esc(g.cabine || V.cabine)");
+  troca("g.cia + ', ' + V.cabine", "g.cia + ', ' + (g.cabine || V.cabine)");
+  troca("function paxHTML(g){ return V.pax.map(function(p, i){ var a = assento(g, i);", "function paxHTML(g){ return V.pax.map(function(p, i){ if (g.paxIdx && g.paxIdx.indexOf(i) < 0) return ''; var a = assento(g, i);");
+  return (_gpvTpl = t);
+}
+async function gpvGerar(c, v){
+  const V = gpvDados(c, v), ant = ((c.paginasViagem || {})[v.chave]) || {};
+  const fotos = {};
+  for (const l of V.legs) for (const a of [l.de, l.para]) if (!(a.iata in fotos)){ try { fotos[a.iata] = await vgFotoCidade(a); } catch(_){ fotos[a.iata] = null; } }
+  V.legs.forEach(l => [l.de, l.para].forEach(a => { if (fotos[a.iata]) a.foto = fotos[a.iata]; }));
+  const k = ant.k ? vgDe64(ant.k) : crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const chave = await crypto.subtle.importKey('raw', k, 'AES-GCM', false, ['encrypt']);
+  const cif = await crypto.subtle.encrypt({name:'AES-GCM', iv}, chave, new TextEncoder().encode(JSON.stringify(V)));
+  const nome = ant.nome || ('viagem-' + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, '0')).join(''));
+  const site = String(vemCfg().site || VEM_PADRAO.site).replace(/\/+$/, '') + '/';
+  const destino = V.legs[0].para.cidade, tit = `${V.primeiro}, sua viagem ${vgPara(destino)} está confirmada`;
+  const desc = `Seu Passe de Viagem VEM: ${V.legs.map(l => l.de.iata + ' → ' + l.para.iata).join(', ')}, a jornada até a volta e o concierge.`;
+  const ea = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const og = [`<title>${ea(V.primeiro)} · Passe de Viagem VEM</title>`, `<meta name="description" content="${ea(desc)}">`, '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="VEM · Viagens &amp; Experiências com Milhas">', `<meta property="og:title" content="${ea(tit)}">`, `<meta property="og:description" content="${ea(desc)}">`,
+    `<meta property="og:url" content="${ea(site + nome + '.html')}">`, `<meta property="og:image" content="${ea(site + nome + '.jpg')}">`, '<meta property="og:image:type" content="image/jpeg">',
+    '<meta property="og:image:width" content="1200">', '<meta property="og:image:height" content="630">', `<meta property="og:image:alt" content="${ea(tit)}">`, '<meta name="twitter:card" content="summary_large_image">'].join('\n');
+  const pagina = gpvModelo().replace('__OG__', () => og).replace('__LOGO__', () => window.VEM.assets.logo).replace('__DADOS__', () => JSON.stringify({id:nome, iv:vg64(iv), c:vg64(cif)}));
+  return {nome, pagina, k:vg64(k), url:site + nome + '.html', link:site + nome + '.html#k=' + vg64(k), V};
+}
+const gpvEstado = {};
+function gpvGuardar(cid, chave, dados){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  c.paginasViagem = Object.assign({}, c.paginasViagem, {[chave]:Object.assign({}, (c.paginasViagem || {})[chave], dados)});
+  c.alterado = Date.now();
+  if (_gcEd && _gcEd.id === cid) _gcEd.paginasViagem = JSON.parse(JSON.stringify(c.paginasViagem));
+  salvar();
+}
+async function gpvPublicar(cid, chave, repintar){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  const v = acpViagens(c).find(x => x.chave === chave); if (!v) return;
+  const falta = gpvFalta(c, v); if (falta.length){ avisar('Falta completar as emissões: ' + falta[0] + (falta.length > 1 ? ` (e mais ${falta.length - 1})` : '') + '.', 'alerta', 8000); return; }
+  if (gpvEstado[chave] === 'indo') return;
+  let g; try { g = await gpvGerar(c, v); } catch(e){ avisar('Não deu para montar a página: ' + (e.message || e), 'erro', 7000); return; }
+  if (!cqPodePublicar()){
+    vemBaixarArquivo(new Blob([g.pagina], {type:'text/html;charset=utf-8'}), g.nome + '.html');
+    gpvGuardar(cid, chave, {nome:g.nome, k:g.k, link:g.link, em:new Date().toISOString(), noAr:false, baixada:true});
+    avisar('Sem a chave da Nuvem, a página foi baixada. Suba o arquivo no repositório das cotações e envie o link.', 'ok', 7000); repintar(); return;
+  }
+  gpvEstado[chave] = 'indo'; repintar();
+  try {
+    await cqGitPut(cqRepoPaginas(), g.nome + '.html', paraBase64(g.pagina), `Viagem ${hojeISO()}`);   /* sem nome de cliente: o histórico é público */
+    try { const img = await vgImagemPrevia(g.V, g.V.legs[0].para.foto || null); await cqGitPut(cqRepoPaginas(), g.nome + '.jpg', await cqBlob64(img), `Viagem ${hojeISO()} (prévia)`); } catch(e){ console.warn('prévia', e); }
+    gpvGuardar(cid, chave, {nome:g.nome, k:g.k, link:g.link, em:new Date().toISOString(), noAr:false, baixada:false});
+    gpvEstado[chave] = 'esperando'; repintar();
+    const marca = JSON.parse(g.pagina.match(/id="dados">(.*?)<\/script>/)[1]).c.slice(0, 40), fim = Date.now() + 4 * 60 * 1000;
+    let noAr = false;
+    while (Date.now() < fim){ await new Promise(ok => setTimeout(ok, 5000)); try { const r = await fetch(g.url + '?v=' + Date.now(), {cache:'no-store'}); if (r.ok && (await r.text()).includes(marca)){ noAr = true; break; } } catch(_){} }
+    gpvGuardar(cid, chave, {noAr}); gpvEstado[chave] = noAr ? 'ok' : 'demorando'; repintar();
+    if (noAr) avisar('A Página da Viagem está no ar. Já pode enviar ao cliente.', 'ok', 6000);
+  } catch(e){ gpvEstado[chave] = 'erro:' + (e.message || e); repintar(); }
+}
+(function(){
+  const _p = acpPintar;
+  acpPintar = function(box, cid){
+    const r = _p.apply(this, arguments);
+    const c = gcDB().find(x => x.id === cid); if (!c || !box) return r;
+    const z = gdiZap(c), repintar = () => { const b = document.getElementById('acpBox'); if (b) acpPintar(b, cid); };
+    box.querySelectorAll('.acp-viagem').forEach(vb => {
+      const v = acpViagens(c).find(x => x.chave === vb.dataset.viagem), cab = vb.querySelector('.acp-vcab'); if (!v || !cab || cab.querySelector('.gpv')) return;
+      const pv = (c.paginasViagem || {})[v.chave], st = gpvEstado[v.chave] || '', falta = gpvFalta(c, v);
+      const msg = pv ? `${gcPrimeiro(c.nome) ? acpNome(c.nome) : ''}, aqui está a sua Página da Viagem, com todos os voos, os localizadores e o que fazer até a volta: ${pv.link}` : '';
+      const sub = st === 'indo' ? 'Subindo a página...' : st === 'esperando' ? 'Entrando no ar (leva até 2 minutos)...' : st.startsWith('erro:') ? 'Não subiu: ' + esc(st.slice(5))
+        : pv ? `${pv.noAr ? 'No ar' : pv.baixada ? 'Baixada (suba no repositório das cotações)' : 'Enviada ao GitHub'} · feita em ${gcDataTxt(String(pv.em || '').slice(0, 10))}. Só abre com o link completo.`
+        : falta.length ? `<span class="gpv-falta">Para montar: ${esc(falta[0])}${falta.length > 1 ? ` (e mais ${falta.length - 1})` : ''}.</span>` : `O link para o cliente com os ${v.ems.length} trechos, os localizadores, o check-in e a jornada até a volta.`;
+      cab.insertAdjacentHTML('beforeend', `<div class="gpv" data-gpv="${esc(v.chave)}"><div class="gpv-t"><b><svg><use href="#i-bilhete"/></svg>Página da Viagem</b><small>${sub}</small></div>
+        <div class="acp-bts">${pv ? `${z ? `<a class="bt p primario" target="_blank" rel="noopener" href="https://wa.me/${z}?text=${encodeURIComponent(msg)}" data-gpv-zap><svg><use href="#i-link"/></svg>Enviar no WhatsApp</a>` : ''}
+          <button type="button" class="bt p fantasma" data-gpv-copiar><svg><use href="#i-copiar"/></svg>Copiar o link</button>
+          <a class="bt p fantasma" href="${esc(pv.link)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Ver a página</a>
+          <button type="button" class="bt p fantasma" data-gpv-gerar${st === 'indo' || st === 'esperando' ? ' disabled' : ''}><svg><use href="#i-atualizar"/></svg>Atualizar</button>`
+          : `<button type="button" class="bt p primario" data-gpv-gerar${st === 'indo' || falta.length ? ' disabled' : ''}><svg><use href="#i-bilhete"/></svg>Criar a Página da Viagem</button>`}</div></div>`);
+      const bx = cab.querySelector('.gpv');
+      const gb = bx.querySelector('[data-gpv-gerar]'); if (gb) gb.onclick = () => gpvPublicar(cid, v.chave, repintar);
+      const cp = bx.querySelector('[data-gpv-copiar]'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(pv.link); avisar('Link copiado.', 'ok'); } catch(_){ avisar('Não deu para copiar. Toque em "Ver a página" e copie o endereço.', 'alerta'); } };
+      const zp = bx.querySelector('[data-gpv-zap]'); if (zp) zp.addEventListener('click', () => gpvGuardar(cid, v.chave, {enviada:new Date().toISOString()}));
+    });
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
