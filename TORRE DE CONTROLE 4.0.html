@@ -89033,5 +89033,190 @@ async function gpvPublicar(cid, chave, repintar){
   };
 })();
 </script>
+<style id="gpvc-css">
+/* ══ COMPLETAR OS VOOS PARA A PÁGINA DA VIAGEM (28/11/2026) ═════════════════════ */
+.gpv .gpv-falta-bt{ all:unset; cursor:pointer; color:var(--rubi, #b3261e); text-decoration:underline; text-underline-offset:3px; font-size:calc(12.5px * var(--esc)); line-height:1.4; }
+.gpv .gpv-falta-bt:hover{ filter:brightness(1.15); }
+.gpv .gpv-falta-bt:focus-visible{ outline:2px solid var(--ouro); outline-offset:2px; }
+#dlgGpvComp{ width:min(980px, calc(100vw - 24px)); max-width:none; padding:0; border:0; border-radius:20px; background:var(--sup-0, var(--sup-1)); color:var(--giz); box-shadow:0 30px 80px -30px rgba(0,0,0,.6); }
+#dlgGpvComp::backdrop{ background:rgba(6,10,24,.55); backdrop-filter:blur(3px); }
+#dlgGpvComp .gc-cab{ padding:18px 22px 8px; }
+#dlgGpvComp .gc-cab h3{ margin:0; font-size:calc(18px * var(--esc)); }
+#dlgGpvComp .gc-cab p{ margin:4px 0 0; color:var(--grafite); font-size:calc(13px * var(--esc)); }
+#dlgGpvComp .gc-corpo{ padding:8px 22px 14px; max-height:calc(100dvh - 210px); overflow:auto; display:grid; gap:14px; }
+#dlgGpvComp .gc-pe{ display:flex; justify-content:center; flex-wrap:wrap; gap:10px; padding:12px 22px 18px; border-top:1px solid var(--linha); }
+.gpvc-solta{ display:grid; justify-items:center; gap:6px; padding:20px; border:2px dashed color-mix(in oklab, var(--ouro) 55%, var(--linha)); border-radius:16px; text-align:center; background:color-mix(in oklab, var(--ouro) 5%, transparent); cursor:pointer; transition:background .15s, border-color .15s; }
+.gpvc-solta.sobre{ background:color-mix(in oklab, var(--ouro) 16%, transparent); border-color:var(--ouro); }
+.gpvc-solta svg{ width:30px; height:30px; fill:none; stroke:var(--ouro); stroke-width:1.8; }
+.gpvc-solta b{ font-size:calc(14.5px * var(--esc)); }
+.gpvc-solta small{ color:var(--grafite); font-size:calc(12.5px * var(--esc)); }
+.gpvc-lidos{ font-size:calc(12.5px * var(--esc)); color:var(--grafite); display:grid; gap:4px; }
+.gpvc-lidos .ok{ color:var(--jade); }
+.gpvc-tr{ border:1px solid var(--linha); border-radius:14px; padding:12px 14px; background:var(--sup-2); display:grid; gap:10px; }
+.gpvc-tr header{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:baseline; }
+.gpvc-tr header b{ font-size:calc(14.5px * var(--esc)); }
+.gpvc-tr header small{ color:var(--grafite); }
+.gpvc-campos{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+.gpvc-campos .campo.falta input{ border-color:var(--rubi, #b3261e); box-shadow:0 0 0 2px color-mix(in oklab, var(--rubi, #b3261e) 18%, transparent); }
+.gpvc-campos .campo.lido input{ border-color:var(--ouro); box-shadow:0 0 0 2px color-mix(in oklab, var(--ouro) 25%, transparent); }
+.gpvc-campos .campo label small{ font-weight:400; color:var(--grafite); }
+</style>
+<script id="gpvc-js">
+/* ── Completar os voos (28/11/2026) ────────────────────────────────────────────
+   O aviso "Para montar: ... falta a hora do voo" abre esta janela: cada trecho da
+   viagem com os campos que a Página da Viagem precisa (os que faltam em vermelho).
+   Dá para digitar, ou soltar/colar/escolher prints, PDFs, Word (.docx) ou texto:
+   a Torre lê no próprio navegador (sem custo) e preenche só o que está vazio, com
+   destaque dourado no que leu. Nada é gravado sem tocar em "Salvar". */
+async function gpvcDocx(f){
+  /* .docx é um zip: acha word/document.xml no índice e abre com o descompactador do navegador */
+  const buf = new Uint8Array(await f.arrayBuffer()), dv = new DataView(buf.buffer);
+  let fim = -1; for (let i = buf.length - 22; i >= Math.max(0, buf.length - 66000); i--){ if (dv.getUint32(i, true) === 0x06054b50){ fim = i; break; } }
+  if (fim < 0) throw new Error('arquivo Word inválido');
+  let p = dv.getUint32(fim + 16, true); const n = dv.getUint16(fim + 10, true);
+  for (let k = 0; k < n; k++){
+    const met = dv.getUint16(p + 10, true), tam = dv.getUint32(p + 20, true), ln = dv.getUint16(p + 28, true), le = dv.getUint16(p + 30, true), lc = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const nome = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + ln));
+    if (nome === 'word/document.xml'){
+      const lnl = dv.getUint16(off + 26, true), lel = dv.getUint16(off + 28, true), ini = off + 30 + lnl + lel, dados = buf.subarray(ini, ini + tam);
+      let xml;
+      if (met === 0) xml = new TextDecoder().decode(dados);
+      else xml = await new Response(new Blob([dados]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+      return xml.replace(/<\/w:p>/g, '\n').replace(/<w:tab\/>/g, ' ').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    }
+    p += 46 + ln + le + lc;
+  }
+  throw new Error('não achei o texto dentro do Word');
+}
+async function gpvcTextos(arquivos, aoPasso){
+  const out = []; let worker = null;
+  for (const f of arquivos){
+    const nome = f.name || 'arquivo';
+    aoPasso && aoPasso(`Lendo ${nome}...`);
+    if (/\.docx$/i.test(nome) || f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') out.push(await gpvcDocx(f));
+    else if (/^text\//.test(f.type || '') || /\.(txt|eml|csv)$/i.test(nome)) out.push(await f.text());
+    else if ((f.type || '').startsWith('image/') || ehPDF(f)){ worker = worker || await prepararLeitorOCR(); out.push(await textoDoArquivo(f, worker)); }
+    else if (/\.doc$/i.test(nome)) throw new Error(`${nome}: Word antigo (.doc) não dá para ler. Salve como PDF ou .docx.`);
+    else throw new Error(`${nome}: formato que a Torre não lê. Use imagem, PDF, Word (.docx) ou texto.`);
+  }
+  return out;
+}
+/* voos lidos: o leitor da Torre + os horários que ele não pegou (linha com o número do voo e dois horários) */
+function gpvcVoos(textos, ref){
+  const d = interpretarTextosPrints(textos, ref || '');
+  const tudo = textos.join('\n'), linhas = tudo.split('\n');
+  (d.voos || []).forEach(v => {
+    if (v.saida && v.chegada) return;
+    const num = String(v.voo || '').replace(/\s+/g, '\\s?');
+    const l = num && linhas.find(x => new RegExp('\\b' + num + '\\b').test(x));
+    const hs = l ? [...l.matchAll(/\b(\d{1,2}):(\d{2})\b/g)].map(m => m[1].padStart(2, '0') + ':' + m[2]) : [];
+    if (hs.length >= 2){ v.saida = v.saida || hs[0]; v.chegada = v.chegada || hs[1]; }
+  });
+  return d;
+}
+function gpvcAplicar(ems, d){
+  const ach = [];
+  /* cada documento só vale para o trecho da data dele (dois trechos JFK → GRU em datas
+     diferentes não se misturam); sem data no documento, só se um trecho só combinar */
+  const perto = (x, y) => { if (!x || !y) return false; const dx = Date.parse(x + 'T12:00:00Z'), dy = Date.parse(y + 'T12:00:00Z'); return Math.abs(dx - dy) <= 864e5 * 1.5; };
+  const combina = e => { const cs = gpvCodigos(e); return cs.length >= 2 && (d.voos || []).some(v => v.origem === cs[0] || v.destino === cs[cs.length - 1]); };
+  const cand = ems.filter(combina), alvo = d.data ? cand.filter(e => perto(e.dataVoo, d.data)) : (cand.length === 1 ? cand : []);
+  ems.forEach(e => {
+    if (!alvo.includes(e)) return;
+    const cs = gpvCodigos(e); if (cs.length < 2) return;
+    const vs = (d.voos || []), a = vs.find(v => v.origem === cs[0]), z = [...vs].reverse().find(v => v.destino === cs[cs.length - 1]);
+    if (!a && !z) return;
+    const novo = {};
+    if (a && a.saida && !e.horaVoo) novo.horaVoo = a.saida;
+    if (z && z.chegada && !e.horaChegada) novo.horaChegada = z.chegada;
+    if (a && z && a !== z && !e.conexao && a.destino !== cs[cs.length - 1]){ const ap = gpvAero(a.destino); novo.conexao = `${ap.cidade} (${a.destino})`; }
+    if (d.localizador && !e.loc && (a || z)) novo.loc = d.localizador;
+    if (Object.keys(novo).length) ach.push({id:e.id, novo, voos:[a, z].filter(Boolean)});
+  });
+  return ach;
+}
+function gpvCompletar(cid, chave){
+  const c = gcDB().find(x => x.id === cid); if (!c) return;
+  const v = acpViagens(c).find(x => x.chave === chave); if (!v) return;
+  let d = document.getElementById('dlgGpvComp');
+  if (!d){ d = document.createElement('dialog'); d.id = 'dlgGpvComp'; document.body.appendChild(d); }
+  const rascunho = {}; v.ems.forEach(e => rascunho[e.id] = {trecho:e.trecho || '', horaVoo:e.horaVoo || '', horaChegada:e.horaChegada || '', duracao:e.duracao || '', loc:e.loc || '', conexao:e.conexao || ''});
+  const lidos = {};
+  const faltaDe = (e, r) => { const x = Object.assign({}, e, r); const cs = gpvCodigos(x), f = [];
+    if (cs.length < 2) f.push('trecho'); if (!x.horaVoo) f.push('horaVoo'); if (!x.horaChegada && !gpvMin(x.duracao)) f.push('horaChegada'); return f; };
+  const pintar = (msg) => {
+    const linhas = v.ems.map(e => { const r = rascunho[e.id], f = faltaDe(e, r), L = lidos[e.id] || {};
+      const cp = (k, rot, tipo, ph, dica) => `<div class="campo${f.includes(k) ? ' falta' : ''}${L[k] ? ' lido' : ''}"><label>${rot}${dica ? ` <small>${dica}</small>` : ''}</label><input type="${tipo}" data-e="${esc(e.id)}" data-k="${k}" value="${esc(r[k])}"${ph ? ` placeholder="${esc(ph)}"` : ''}></div>`;
+      return `<div class="gpvc-tr"><header><b>${esc(String(r.trecho).split(',')[0] || 'Trecho')}</b><small>${gcDataTxt(e.dataVoo)}${e.cia ? ' · ' + esc(e.cia) : ''}${f.length ? '' : ' · completo'}</small></header>
+        <div class="gpvc-campos">${cp('horaVoo', 'Hora do voo', 'time', '', 'hora local da saída')}${cp('horaChegada', 'Hora de chegada', 'time', '', 'hora local')}${cp('duracao', 'Duração total', 'text', 'ex.: 8h40', 'opcional')}${cp('loc', 'Localizador', 'text', 'ex.: 2PT3KQ', '')}${cp('conexao', 'Conexão em', 'text', 'ex.: Bogotá (BOG)', 'se tiver')}</div>
+        ${f.includes('trecho') ? `<div class="gpvc-campos">${cp('trecho', 'Trecho com as siglas', 'text', 'Nova York (JFK) → São Paulo (GRU), AV 211')}</div>` : ''}</div>`; }).join('');
+    const pend = v.ems.reduce((s, e) => s + faltaDe(e, rascunho[e.id]).length, 0);
+    d.innerHTML = `<div class="gc-cab"><h3>Completar os voos da Página da Viagem</h3><p>${esc(v.nome)} · ${v.ems.length} trechos · ${pend ? `<b style="color:var(--rubi, #b3261e)">${pend} ${pend === 1 ? 'informação faltando' : 'informações faltando'}</b>` : '<b style="color:var(--jade)">tudo completo</b>'}</p></div>
+      <div class="gc-corpo">
+        <label class="gpvc-solta" tabindex="0" data-solta><svg><use href="#i-subir"/></svg><b>Arraste aqui os prints, o PDF ou o Word da reserva</b><small>ou cole (Ctrl+V) uma imagem ou o texto do e-mail, ou toque para escolher o arquivo. A Torre lê e preenche o que está vazio.</small>
+          <input type="file" multiple accept="image/*,.pdf,application/pdf,.docx,.txt,text/plain" hidden data-arq></label>
+        ${msg ? `<div class="gpvc-lidos">${msg}</div>` : ''}
+        ${linhas}
+      </div>
+      <div class="gc-pe"><button type="button" class="bt perigo" data-f>Fechar</button><button type="button" class="bt fantasma" data-s>Salvar</button><button type="button" class="bt primario" data-sc${pend ? ' disabled' : ''}><svg><use href="#i-bilhete"/></svg>Salvar e criar a página</button></div>`;
+    d.querySelectorAll('input[data-k]').forEach(i => i.addEventListener('input', () => { rascunho[i.dataset.e][i.dataset.k] = i.value.trim(); }));
+    d.querySelectorAll('input[data-k]').forEach(i => i.addEventListener('change', () => pintar(msg)));
+    const solta = d.querySelector('[data-solta]'), arq = d.querySelector('[data-arq]');
+    solta.addEventListener('dragover', ev => { ev.preventDefault(); solta.classList.add('sobre'); });
+    solta.addEventListener('dragleave', () => solta.classList.remove('sobre'));
+    solta.addEventListener('drop', ev => { ev.preventDefault(); solta.classList.remove('sobre'); ler([...(ev.dataTransfer.files || [])], ev.dataTransfer.getData('text')); });
+    arq.addEventListener('change', () => { ler([...arq.files]); arq.value = ''; });
+    d.querySelector('[data-f]').onclick = () => d.close();
+    d.querySelector('[data-s]').onclick = () => { salvar(); d.close(); };
+    d.querySelector('[data-sc]').onclick = () => { salvar(); d.close(); gpvPublicar(cid, chave, () => { const b = document.getElementById('acpBox'); if (b) acpPintar(b, cid); }); };
+  };
+  const ler = async (arquivos, texto) => {
+    const lista = (arquivos || []).slice(0, 12);
+    if (!lista.length && !String(texto || '').trim()) return;
+    pintar('Lendo os documentos... (na primeira vez o leitor é baixado, uns 4 MB)');
+    try {
+      const textos = await gpvcTextos(lista, t => { const el = d.querySelector('.gpvc-lidos'); if (el) el.textContent = t; });
+      if (String(texto || '').trim()) textos.push(String(texto));
+      const ems = v.ems.map(e => Object.assign({}, e, rascunho[e.id]));
+      /* cada documento é lido sozinho: a data dele diz de qual trecho é */
+      const leituras = textos.map(t => gpvcVoos([t], ''));
+      const ach = leituras.flatMap(l => gpvcAplicar(ems, l));
+      const lido = {voos:leituras.flatMap(l => l.voos || []), localizador:leituras.map(l => l.localizador).filter(Boolean).join(', ')};
+      ach.forEach(a => Object.entries(a.novo).forEach(([k, val]) => { rascunho[a.id][k] = val; (lidos[a.id] = lidos[a.id] || {})[k] = true; }));
+      const voosTxt = (lido.voos || []).map(x => `${x.voo || ''} ${x.origem} → ${x.destino}${x.saida ? ' ' + x.saida : ''}${x.chegada ? '–' + x.chegada : ''}`.trim());
+      pintar(ach.length ? `<span class="ok">Preenchido com o que foi lido (em dourado): confira e toque em Salvar.</span>${voosTxt.length ? `<span>Voos encontrados: ${esc(voosTxt.join(' · '))}${lido.localizador ? ' · localizador ' + esc(lido.localizador) : ''}</span>` : ''}`
+        : `<span style="color:var(--rubi, #b3261e)">Não achei horários desses trechos nos documentos${voosTxt.length ? ` (li: ${esc(voosTxt.join(' · '))})` : ''}. Tente o PDF da companhia ou digite nos campos.</span>`);
+    } catch(e){ pintar(`<span style="color:var(--rubi, #b3261e)">${esc(e.message || String(e))}</span>`); }
+  };
+  const salvar = () => {
+    acpMudar(cid, (pega, l2, cc) => { geDoCliente(cc).forEach(e => { const r = rascunho[e.id]; if (!r) return; Object.entries(r).forEach(([k, val]) => { if ((e[k] || '') !== val) e[k] = val; }); }); });
+    avisar('Voos atualizados.', 'ok');
+    const b = document.getElementById('acpBox'); if (b) acpPintar(b, cid);
+  };
+  d.onpaste = ev => {
+    const fs = [...(ev.clipboardData && ev.clipboardData.files || [])], t = ev.clipboardData && ev.clipboardData.getData('text');
+    if (ev.target && ev.target.matches && ev.target.matches('input[data-k]') && !fs.length) return;   /* colando num campo: cola normal */
+    ev.preventDefault(); ler(fs, t);
+  };
+  pintar('');
+  d.showModal();
+}
+(function(){
+  /* o aviso do que falta vira o botão que abre a janela */
+  const _p = acpPintar;
+  acpPintar = function(box, cid){
+    const r = _p.apply(this, arguments);
+    if (!box) return r;
+    box.querySelectorAll('.gpv .gpv-falta').forEach(sp => {
+      const ch = sp.closest('.gpv').dataset.gpv;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'gpv-falta-bt';
+      b.innerHTML = sp.innerHTML.replace(/^Para montar:/, 'Para montar:') + ' <b>Completar agora</b>';
+      b.onclick = () => gpvCompletar(cid, ch);
+      sp.replaceWith(b);
+    });
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
