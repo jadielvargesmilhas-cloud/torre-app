@@ -43891,7 +43891,10 @@ function arrancar(){
   setTimeout(() => { if (typeof lugarDaPilula === 'function') lugarDaPilula(); if (typeof atualizarArea === 'function') atualizarArea(); }, 0);
   /* Ao abrir, traz o que houver na nuvem antes de qualquer edição: é o momento
      em que o outro aparelho pode ter gravado algo. */
-  if (nuvemPronta()) setTimeout(() => nuvemSincronizar(false), 1800);
+  /* 28/11/2026: a primeira sincronização começa já, por trás da tela de abertura, e a
+     abertura só sai quando ela termina e a tela parou de se redesenhar. Antes, a
+     Torre aparecia e se redesenhava de novo quando os dados da conta chegavam. */
+  if (nuvemPronta()) window.__sincBoot = new Promise(ok => setTimeout(() => { Promise.resolve().then(() => nuvemSincronizar(false)).catch(() => {}).finally(ok); }, 60));
   carregarCampanhasPublicadas();
   /* Depois das publicadas, para que a trava de rota e data descarte a linha do
      histórico quando as duas listas descrevem a mesma oferta. */
@@ -43912,7 +43915,7 @@ function arrancar(){
   const t = setInterval(() => {
     i++;
     if (i < msgs.length) $('#aberturaMsg').textContent = msgs[i];
-    else { clearInterval(t); $('#abertura').classList.add('foi'); }
+    else { clearInterval(t); if (typeof window.aberturaSair === 'function') window.aberturaSair(); else $('#abertura').classList.add('foi'); }
   }, 260);
 
   const av = avisos().filter(a => a.grau === 2);
@@ -86399,7 +86402,7 @@ function acpPainelPintar(){
       ${itens.length > 12 ? `<p class="fraco" style="margin:4px 0 0">E mais ${itens.length - 12}. Abra a ficha do cliente, aba Acompanhamento.</p>` : ''}</div>`;
   if (!el){ el = document.createElement('section'); el.id = 'acpHoje'; el.setAttribute('aria-label', 'Contatos de hoje'); alvo.after(el); }
   else if (el.previousElementSibling !== alvo) alvo.after(el);
-  el.innerHTML = html;
+  if (el._h !== html){ el.innerHTML = html; el._h = html; }   /* sem mudança, nada é redesenhado (antes piscava a cada sincronização) */
   el.querySelectorAll('.acp-hj').forEach(b => b.onclick = () => acpAbrirCliente(b.dataset.cid));
 }
 (function(){
@@ -86791,7 +86794,8 @@ function provPintar(box, cid, novo){
     if (r.media1 == null && r.media2 == null && !r.depoRec) return v;
     const f = n => n == null ? '–' : String(n).replace('.', ',');
     const sub = el.querySelector('.fxs-sub');
-    if (sub && !el.querySelector('.av-ind')) sub.insertAdjacentHTML('afterend', `<span class="fxs-sub av-ind">Nota da emissão ${f(r.media1)} · da viagem ${f(r.media2)} · ${r.depoRec} ${r.depoRec === 1 ? 'depoimento' : 'depoimentos'} (${r.depoPub} ${r.depoPub === 1 ? 'publicado' : 'publicados'})${r.pctDepo != null ? ` · ${r.pctDepo}% das notas 9 ou 10 viraram depoimento publicado` : ''}${r.quedas ? ` · <b style="color:var(--rubi, #b3261e)">${r.quedas} com nota menor na viagem</b>` : ''}</span>`);
+    const velho = el.querySelector('.av-ind'); if (velho) velho.remove();
+    if (sub) sub.insertAdjacentHTML('afterend', `<span class="fxs-sub av-ind">Nota da emissão ${f(r.media1)} · da viagem ${f(r.media2)} · ${r.depoRec} ${r.depoRec === 1 ? 'depoimento' : 'depoimentos'} (${r.depoPub} ${r.depoPub === 1 ? 'publicado' : 'publicados'})${r.pctDepo != null ? ` · ${r.pctDepo}% das notas 9 ou 10 viraram depoimento publicado` : ''}${r.quedas ? ` · <b style="color:var(--rubi, #b3261e)">${r.quedas} com nota menor na viagem</b>` : ''}</span>`);
     return v;
   };
 })();
@@ -88579,6 +88583,173 @@ async function gviagPNG(c, e){
     try { const p = el && el.closest && el.closest('.grg-painel'); if (p && p.hidden && geRegrasAbrir._ir) geRegrasAbrir._ir(p.dataset.k); } catch(_){}
     return _er.apply(this, arguments);
   };
+})();
+</script>
+<style id="fla-css">
+/* ══ FICHA DO CLIENTE COM ABAS LATERAIS (28/11/2026) ═══════════════════════════
+   No computador, as abas viram um menu lateral com ícone; no celular, uma faixa
+   no alto que desliza. A aba escondida não ocupa mais lugar: acabou a página em
+   branco do tamanho da maior aba (a janela já tem altura fixa, nada pula). */
+#dlgGestao .gfi-pilha > .gfi-painel[hidden]{ display:none !important; visibility:visible; }
+/* auditoria (28/11/2026): nenhuma aba ou passo escondido guarda lugar. Antes, a aba
+   escondida ocupava a altura da maior e sobrava página em branco embaixo. */
+.dr-aba-painel[data-oculta]{ display:none !important; }
+.gd-passos > .gd-passo[hidden]{ display:none !important; }
+#dlgGestao .gfi-abas [role=tab] svg{ width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+@media (min-width:900px){
+  #dlgGestao .eq-vista.fla{ display:grid; grid-template-columns:196px minmax(0, 1fr); gap:20px; align-items:start; }
+  #dlgGestao .eq-vista.fla > .gfi-abas{ position:sticky; top:0; display:grid; gap:2px; margin:0; padding:6px; overflow:visible; border-radius:14px; }
+  #dlgGestao .eq-vista.fla > .gfi-abas [role=tab]{ justify-content:flex-start; gap:10px; padding:9px 12px; border-radius:10px; text-align:left; white-space:nowrap; flex:none; }
+  #dlgGestao .eq-vista.fla > .gfi-pilha{ min-width:0; }
+}
+@media (max-width:899.98px){ #dlgGestao .gfi-abas [role=tab]{ gap:6px; } }
+</style>
+<script id="fla-js">
+(function(){
+  const IC = {'Quem é':'i-usuarios', 'Rota':'i-bussola', 'Diagnóstico':'i-grafico', 'Acompanhamento':'i-aviao', 'Provas':'i-estrela', 'Pontos e origem':'i-carteira', 'Diário do plano':'i-livro',
+    'Preferências':'i-poltrona', 'Regras':'i-escudo', 'Cofre':'i-chave', 'Termo':'i-documento', 'Cobrança':'i-dinheiro', 'Página do cliente':'i-link', 'Situação':'i-info'};
+  const _ed = gcEditar;
+  gcEditar = function(id){
+    const v = _ed.apply(this, arguments);
+    const d = document.getElementById('dlgGestao'); if (!d) return v;
+    const vista = d.querySelector('.dr-corpo .eq-vista'), bar = vista && vista.querySelector(':scope > .gfi-abas'); if (!bar || vista.classList.contains('fla')) return v;
+    vista.classList.add('fla'); bar.setAttribute('aria-orientation', 'vertical');
+    /* trocar de aba volta ao topo dela (antes ficava a rolagem da aba anterior e a nova aparecia em branco) */
+    bar.addEventListener('click', ev => { if (!ev.target.closest('[role=tab]')) return; const co = d.querySelector('.dr-corpo'); if (co) co.scrollTop = 0; });
+    bar.querySelectorAll('[role=tab]').forEach(b => { const t = b.textContent.trim(); if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', `<svg aria-hidden="true"><use href="#${IC[t] || 'i-documento'}"/></svg>`); });
+    return v;
+  };
+})();
+</script>
+<script id="carga-js">
+/* ══ CARREGAMENTO LIMPO E "VOLTAR PARA ONDE ESTAVA" (28/11/2026) ════════════════
+   1) A tela de abertura só sai quando a primeira sincronização com a conta terminou
+      e a tela parou de se redesenhar (no máximo 5 s). Nada de Torre aparecendo e
+      se redesenhando por cima.
+   2) Redesenho da mesma tela, ou com uma janela aberta, ou durante a abertura, não
+      faz a animação de troca de tela (ela sobrepunha a tela velha e a nova: o
+      "texto sobre texto").
+   3) Gestão: cada janela lembra de onde veio. "Fechar" volta exatamente para a
+      anterior; aberta direto do Painel, "Fechar" volta para o Painel.
+   4) F5 com a Gestão aberta reabre a mesma janela, no mesmo cliente e na mesma aba. */
+(function(){
+  /* 1 */
+  const T0 = performance.now();
+  window.aberturaSair = function(){
+    const ab = document.getElementById('abertura'); if (!ab || ab.classList.contains('foi')) return;
+    const msg = document.getElementById('aberturaMsg');
+    const LIM = 5000, sair = () => { if (!ab.classList.contains('foi')){ ab.classList.add('foi'); document.dispatchEvent(new Event('torre:pronta')); } };
+    setTimeout(sair, Math.max(0, LIM - (performance.now() - T0)));
+    const sinc = window.__sincBoot;
+    if (sinc && msg) msg.textContent = 'Sincronizando com a sua conta';
+    Promise.resolve(sinc).then(() => {
+      /* espera a tela ficar quieta por 300 ms (até 1,5 s) */
+      let tm = null; const ini = performance.now();
+      const ob = new MutationObserver(ms => { if (ms.some(m => m.addedNodes.length + m.removedNodes.length >= 3)) arma(); });
+      const fim = () => { ob.disconnect(); clearTimeout(tm); sair(); };
+      const arma = () => { clearTimeout(tm); if (performance.now() - ini > 1500) return fim(); tm = setTimeout(fim, 300); };
+      try { ob.observe(document.querySelector('main') || document.body, {childList:true, subtree:true}); } catch(_){}
+      arma();
+    });
+  };
+  /* 2 */
+  const _ir = irPara;
+  irPara = function(v){
+    const ab = document.getElementById('abertura');
+    const quieto = v === vistaAtual || !!document.querySelector('dialog[open]') || !(ab && ab.classList.contains('foi'));
+    if (!quieto) return _ir.apply(this, arguments);
+    let r;
+    try { Object.defineProperty(document, 'startViewTransition', {value:undefined, configurable:true, writable:true}); r = _ir.apply(this, arguments); }
+    finally { try { delete document.startViewTransition; } catch(_){} }
+    return r;
+  };
+  /* 3 e 4 */
+  const G = window.__gestNav = {pilha:[], voltando:false, repondo:false};
+  const CH = 'torre:gest';
+  const F = {lista:() => abrirGestaoClientes, ficha:() => gcEditar, emissoes:() => geAbrir, msg:() => geMensagem, regras:() => geRegrasAbrir};
+  const guardar = () => {
+    try {
+      const d = document.getElementById('dlgGestao');
+      if (!d || !d.open || !G.pilha.length){ sessionStorage.removeItem(CH); return; }
+      const aba = (d.querySelector('.gfi-abas [aria-selected=true]') || {}).textContent;
+      sessionStorage.setItem(CH, JSON.stringify({em:Date.now(), pilha:G.pilha, aba:aba ? aba.trim() : '', acx:window._acx || {}, rol:(d.querySelector('.dr-corpo') || {}).scrollTop || 0}));
+    } catch(_){}
+  };
+  const embrulha = (nome) => {
+    const o = F[nome](); if (typeof o !== 'function') return;
+    const novo = function(){
+      const d = document.getElementById('dlgGestao'), estavaAberta = !!(d && d.open);
+      const args = [...arguments].slice(0, 2).map(a => (typeof a === 'string' || typeof a === 'number' || a == null) ? a : null);
+      const r = o.apply(this, arguments);
+      if (!G.repondo){
+        if (!estavaAberta) G.pilha = [];
+        if (G.voltando){ /* volta: a de cima já saiu */ }
+        else {
+          const topo = G.pilha[G.pilha.length - 1];
+          /* aberta pelo Painel: a lista que abre só de passagem não entra no caminho */
+          if (topo && topo.t === 'lista' && topo.auto) G.pilha.pop();
+          const t2 = G.pilha[G.pilha.length - 1];
+          if (!(t2 && t2.t === nome && JSON.stringify(t2.a) === JSON.stringify(args))) G.pilha.push({t:nome, a:args, em:Date.now(), auto:nome === 'lista' && !estavaAberta && !!G.doPainel});
+        }
+      }
+      guardar();
+      return r;
+    };
+    if (nome === 'lista') abrirGestaoClientes = novo; else if (nome === 'ficha') gcEditar = novo; else if (nome === 'emissoes') geAbrir = novo; else if (nome === 'msg') geMensagem = novo; else if (nome === 'regras') geRegrasAbrir = novo;
+  };
+  Object.keys(F).forEach(embrulha);
+  /* aberta por um contato do Painel: a lista que abre de passagem não entra no caminho */
+  const _ac = acpAbrirCliente;
+  acpAbrirCliente = function(){ G.doPainel = true; try { return _ac.apply(this, arguments); } finally { G.doPainel = false; } };
+  /* a lista desenhada pelos botões de dentro (ex.: Fechar da ficha) também é uma tela */
+  const _dl = gcDesenharLista;
+  gcDesenharLista = function(d){ const r = _dl.apply(this, arguments); const t = G.pilha[G.pilha.length - 1]; if (!G.repondo && !G.voltando && t && t.t !== 'lista' && d && d.open && !_gcEd) G.pilha.push({t:'lista', a:[], em:Date.now()}); guardar(); return r; };
+  /* "Fechar": volta para a janela anterior; sem anterior, fecha (e fica onde estava antes de abrir) */
+  document.addEventListener('click', ev => {
+    const bt = ev.target.closest('#dlgGestao .dr-pe .bt.perigo'); if (!bt || !/^\s*Fechar\s*$/.test(bt.textContent)) return;
+    const d = document.getElementById('dlgGestao'); if (!d || !d.open) return;
+    const topo = G.pilha[G.pilha.length - 1];
+    if (topo && topo.t === 'lista') return;   /* Fechar da lista fecha a Gestão, como sempre */
+    if (G.pilha.length >= 2){
+      ev.stopImmediatePropagation(); ev.preventDefault();
+      G.pilha.pop(); const ant = G.pilha[G.pilha.length - 1];
+      G.voltando = true;
+      try { if (ant.t === 'ficha') _gcEd = null; F[ant.t]()(...ant.a); } finally { G.voltando = false; }
+      guardar();
+    } else if (G.pilha.length === 1 && G.pilha[0].t !== 'lista'){
+      ev.stopImmediatePropagation(); ev.preventDefault();
+      _gcEd = null; d.close();
+    }
+  }, true);
+  document.addEventListener('close', ev => { if (ev.target && ev.target.id === 'dlgGestao'){ G.pilha = []; try { sessionStorage.removeItem(CH); } catch(_){} } }, true);
+  document.addEventListener('click', ev => { if (ev.target.closest('#dlgGestao .gfi-abas [role=tab], #dlgGestao .acx-row, #dlgGestao .acx-fil, #dlgGestao .acx-vgs')) setTimeout(guardar, 0); }, true);
+  addEventListener('beforeunload', guardar); addEventListener('pagehide', guardar);
+  /* F5: reabre a Gestão onde estava, depois que a abertura sai */
+  let st = null; try { st = JSON.parse(sessionStorage.getItem(CH) || 'null'); } catch(_){}
+  if (st && st.pilha && st.pilha.length && Date.now() - (st.em || 0) < 12 * 3600e3){
+    try { sessionStorage.removeItem('torre-volta-gestao'); } catch(_){}   /* a reabertura antiga (lista) não briga com esta */
+    let feito = false;
+    const repor = () => {
+      if (feito) return; feito = true;
+      const tentar = (n) => {
+        if (typeof contaAtiva === 'function' && contaAtiva() && typeof gcDB === 'function' && st.pilha.some(p => p.a[0] && !gcDB().some(c => c.id === p.a[0])) && n < 20) return setTimeout(() => tentar(n + 1), 250);
+        try {
+          window._acx = Object.assign(window._acx || {}, st.acx || {});
+          G.repondo = true;
+          const ok = st.pilha.filter(p => !p.a[0] || gcDB().some(c => c.id === p.a[0]));
+          if (!ok.length) return;
+          if (!(document.getElementById('dlgGestao') || {}).open) abrirGestaoClientes();
+          ok.forEach(p => { if (p.t !== 'lista') F[p.t]()(...p.a); else { _gcEd = null; gcDesenharLista(document.getElementById('dlgGestao')); } });
+          G.pilha = ok;
+          if (st.aba){ const b = [...document.querySelectorAll('#dlgGestao .gfi-abas [role=tab]')].find(x => x.textContent.trim() === st.aba); if (b) b.click(); }
+          const co = document.querySelector('#dlgGestao .dr-corpo'); if (co && st.rol) co.scrollTop = st.rol;
+        } catch(e){ console.error(e); } finally { G.repondo = false; guardar(); }
+      };
+      tentar(0);
+    };
+    document.addEventListener('torre:pronta', () => setTimeout(repor, 50), {once:true});
+    setTimeout(() => { const ab = document.getElementById('abertura'); if (ab && ab.classList.contains('foi')) repor(); }, 6000);
+  }
 })();
 </script>
 </body>
