@@ -84632,6 +84632,7 @@ function geEditar(cid, eid){
         <div class="campo"><label>Viagem <span class="fraco">mesmo nome junta os trechos</span></label><input type="text" id="geViagem" list="geViagemLista" value="${esc(e.viagem || '')}" placeholder="Estados Unidos · jan/2027"><datalist id="geViagemLista">${[...new Set(geDoCliente(c).map(y => y.viagem).filter(Boolean))].map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
         <div class="campo"><label>Conexão em <span class="fraco">opcional</span></label><input type="text" id="geConexao" value="${esc(e.conexao || '')}" placeholder="Bogotá (BOG)"></div>
         <div class="campo"><label>Tempo de conexão <span class="fraco">opcional</span></label><input type="text" id="geConexaoTempo" value="${esc(e.conexaoTempo || '')}" placeholder="2h10"></div>
+        <div class="campo"><label>Duração total da viagem <span class="fraco">da saída à chegada, como na confirmação</span></label><input type="text" id="geDuracao" value="${esc(e.duracao || '')}" placeholder="11h40"></div>
         <div class="campo"><label>Passageiros do trecho <span class="fraco">nomes, separados por vírgula</span></label><input type="text" id="gePaxNomes" value="${esc(e.paxNomes || '')}" placeholder="Rodrigo, Carla, Pedro"></div>
         <div class="campo"><label>Classe</label><select id="geClasse" data-ordem="natural"><option value="">escolha</option>${GC_CABINES.map(x => `<option${e.classe === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
         <div class="campo"><label>Passageiros</label><input type="text" inputmode="numeric" id="gePax" value="${esc(e.pax || 1)}"></div>
@@ -84687,7 +84688,7 @@ function geEditar(cid, eid){
   const ler = () => {
     const pct = String($g('#gePct').value || '').trim();
     Object.assign(e, {data:$g('#geData').value, loc:$g('#geLoc').value.trim().toUpperCase(), trecho:$g('#geTrecho').value.trim(), dataVoo:$g('#geVoo').value,
-      horaVoo:$g('#geHora').value, horaChegada:$g('#geChegada').value, cia:$g('#geCia').value.trim(), tipoTrecho:$g('#geTipoTrecho').value, viagem:$g('#geViagem').value.trim().replace(/\s+/g, ' '), paxNomes:$g('#gePaxNomes').value.trim(), conexao:$g('#geConexao').value.trim(), conexaoTempo:$g('#geConexaoTempo').value.trim(),
+      horaVoo:$g('#geHora').value, horaChegada:$g('#geChegada').value, cia:$g('#geCia').value.trim(), tipoTrecho:$g('#geTipoTrecho').value, viagem:$g('#geViagem').value.trim().replace(/\s+/g, ' '), paxNomes:$g('#gePaxNomes').value.trim(), conexao:$g('#geConexao').value.trim(), conexaoTempo:$g('#geConexaoTempo').value.trim(), duracao:$g('#geDuracao').value.trim(),
       classe:$g('#geClasse').value, pax:Math.max(1, parseInt($g('#gePax').value, 10) || 1), trechos:Math.max(1, parseInt($g('#geTrechos').value, 10) || 1), prog:$g('#geProg').value,
       mercado:moedaNum($g('#geMercado').value) || 0, pagoCia:moedaNum($g('#gePagoCia').value) || 0,
       milhas:qtdNum($g('#geMilhas').value) || 0, custoMil:moedaNum($g('#geCustoMil').value) || 0, milheiro:moedaNum($g('#geMilheiro').value) || 0,
@@ -87590,7 +87591,8 @@ const GCARD_IC = {
   aviao:'<path fill="#E8B830" stroke="none" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" transform="rotate(90 12 12)"/>',
   assento:'<path d="M7 3v9a3 3 0 0 0 3 3h7"/><path d="M5 21h14M9 15l-2 6M17 15l2 6"/><path d="M17 12h-6"/>',
   bilhete:'<path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z" transform="translate(0 2)"/><path d="M14 6v12" stroke-dasharray="2 2.5"/>',
-  pessoa:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'
+  pessoa:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+  relogio:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
 };
 function gcardIcone(k, x, y, tam, cor){ const s = tam / 24; return `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${cor || '#E8B830'}" stroke-width="${(1.8 / s * (tam / 30)).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round">${GCARD_IC[k]}</g>`; }
 function gcardSVG(c, e){
@@ -87615,14 +87617,25 @@ function gcardSVG(c, e){
     <rect x="0" y="0" width="${L}" height="10" fill="#C9A227"/>`;
   /* marca no padrão da VEM: logo, fio vertical e "Viagens & Experiências com Milhas" */
   const xm = logo ? 186 : 72;
-  if (logo) h += `<image href="${logo}" x="66" y="64" width="96" height="64" preserveAspectRatio="xMidYMid meet"/><line x1="170" y1="76" x2="170" y2="116" stroke="#3A4466" stroke-width="2"/>`;
-  h += `<text x="${xm}" y="106" ${F} font-size="25" font-weight="700" fill="#FFFFFF" data-gc="marca">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="29">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
+  if (logo) h += `<image href="${logo}" x="65" y="63" width="98" height="65" preserveAspectRatio="xMidYMid meet"/><line x1="170" y1="76" x2="170" y2="116" stroke="#3A4466" stroke-width="2"/>`;
+  h += `<text x="${xm}" y="106" ${F} font-size="24" font-weight="700" fill="#FFFFFF" data-gc="marca">Viagens <tspan font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="400" fill="#E8B830" font-size="28">&amp;</tspan> Experiências <tspan fill="#E8B830">com Milhas</tspan></text>
     <text x="72" y="206" ${F} font-size="26" fill="#9AA3B8">${x(d.nome)}, o resumo da sua emissão</text>
     <text x="72" y="270" ${F} font-size="${tamRota}" font-weight="700" fill="#FFFFFF" data-gc="rota">${x(t1)}</text>`;
   y = 270; if (t2){ y += 46; h += `<text x="72" y="${y}" ${F} font-size="27" font-weight="600" fill="#E8B830" data-gc="voos">${x(t2.length > 62 ? t2.slice(0, 61) + '…' : t2)}</text>`; }
   /* linha 1: data e hora */
   y += 56;
-  if (e.dataVoo){ h += gcardIcone('cal', 72, y - 24, 28) + `<text x="114" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" data-gc="data">${x(gcDataTxt(e.dataVoo) + (e.horaVoo ? ' · ' + e.horaVoo : ''))}</text>`; y += 48; }
+  if (e.dataVoo){
+    const sai = gcDataTxt(e.dataVoo) + (e.horaVoo ? ' · ' + e.horaVoo : '');
+    const cheD = e.horaChegada && typeof acpChegada === 'function' ? acpChegada(e) : '';
+    const che = cheD ? gcDataTxt(cheD) + ' · ' + e.horaChegada : '';
+    h += gcardIcone('cal', 72, y - 24, 28) + `<text x="114" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" data-gc="data">${x(sai)}${che ? `<tspan fill="#E8B830" font-weight="400" dx="10">→</tspan><tspan dx="10" data-gc="chegada">${x(che)}</tspan>` : ''}</text>`;
+    if (e.duracao){
+      let wd = 16 * String(e.duracao).length;
+      try { const cx = (gcardSVG._cv = gcardSVG._cv || document.createElement('canvas')).getContext('2d'); cx.font = "600 27px Inter, 'Segoe UI', Roboto, Arial, sans-serif"; wd = Math.ceil(cx.measureText(String(e.duracao)).width); } catch(_){}
+      h += gcardIcone('relogio', L - 72 - wd - 38, y - 24, 28) + `<text x="${L - 72}" y="${y}" ${F} font-size="27" font-weight="600" fill="#E6EAF3" text-anchor="end" data-gc="duracao">${x(e.duracao)}</text>`;
+    }
+    y += 48;
+  }
   /* linha 2: companhia (logo do programa, se houver), classe e código */
   const partes = []; let xx = 72;
   if (e.cia){
