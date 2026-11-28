@@ -87549,7 +87549,7 @@ function gePtsLer(box){
 </script>
 <style id="gcard-css">
 /* Card do trecho para o cliente (28/11/2026) */
-.gcard-prev{ display:grid; justify-items:center; gap:10px; margin:0 0 16px; }
+.gcard-prev{ display:grid; justify-items:center; gap:10px; margin:18px 0 0; }   /* 28/11: o card fica embaixo do texto da mensagem */
 .gcard-prev img{ width:min(360px, 100%); height:auto; border-radius:16px; box-shadow:0 18px 40px -24px rgba(0,0,0,.6); border:1px solid var(--linha); }
 .gcard-prev .acp-bts{ justify-content:center; }
 </style>
@@ -87719,7 +87719,7 @@ function gcardArquivo(e){ return `vem-${String(e.trecho || 'trecho').normalize('
     const d = document.getElementById('dlgGestao'), c = gcDB().find(x => x.id === cid), e = c && geDoCliente(c).find(x => x.id === eid);
     const vista = d && d.querySelector('.dr-corpo .eq-vista'); if (!vista || !e || vista.querySelector('.gcard-prev')) return v;
     const pode = !!(navigator.canShare && (() => { try { return navigator.canShare({files:[new File([''], 'x.png', {type:'image/png'})]}); } catch(_){ return false; } })());
-    vista.insertAdjacentHTML('afterbegin', `<div class="gcard-prev"><img id="gcardImg" alt="Card do trecho para o cliente"><div class="acp-bts">
+    vista.insertAdjacentHTML('beforeend', `<div class="gcard-prev"><img id="gcardImg" alt="Card do trecho para o cliente"><div class="acp-bts">
       ${pode ? `<button type="button" class="bt primario p" id="gcardShare"><svg><use href="#i-link"/></svg>Enviar a imagem</button>` : ''}
       <button type="button" class="bt ${pode ? 'fantasma' : 'primario'} p" id="gcardBaixar"><svg><use href="#i-baixar"/></svg>Baixar imagem</button>
       <button type="button" class="bt fantasma p" id="gcardCopiar"><svg><use href="#i-copiar"/></svg>Copiar imagem</button></div></div>`);
@@ -87856,7 +87856,7 @@ async function gviagPNG(c, e){
       ${pode ? `<button type="button" class="bt primario p" id="gviagShare"><svg><use href="#i-link"/></svg>Enviar resumo + ${ts.length} trechos</button>` : ''}
       <button type="button" class="bt ${pode ? 'fantasma' : 'primario'} p" id="gviagBaixar"><svg><use href="#i-baixar"/></svg>Baixar resumo + ${ts.length} trechos</button>
       <button type="button" class="bt fantasma p" id="gviagCopiar"><svg><use href="#i-copiar"/></svg>Copiar o resumo</button></div></div>`;
-    if (prev) prev.insertAdjacentHTML('beforebegin', html); else vista.insertAdjacentHTML('afterbegin', html);
+    if (prev) prev.insertAdjacentHTML('beforebegin', html); else vista.insertAdjacentHTML('beforeend', html);
     const img = vista.querySelector('#gviagImg');
     gviagPNG(c, e).then(b => { if (b) img.src = URL.createObjectURL(b); }).catch(() => { img.alt = 'Não deu para gerar a imagem.'; });
     const nomeArq = `vem-resumo-${String(e.viagem || 'viagem').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 50)}.png`;
