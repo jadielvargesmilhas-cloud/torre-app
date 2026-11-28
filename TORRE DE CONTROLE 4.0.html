@@ -85907,6 +85907,20 @@ function gdiExportar(cid){
 .acp-docs{ margin:4px 0 0; padding:0; list-style:none; display:grid; gap:3px; font-size:calc(13px * var(--esc)); }
 .acp-docs .ruim{ color:var(--rubi, #b3261e); font-weight:600; }
 .acp-vcab .acp-lote{ margin-left:auto; }
+.acp-prep{ margin-top:6px; }
+.acp-prep summary{ cursor:pointer; color:var(--anil); font-size:calc(13px * var(--esc)); }
+.acp-prep-g{ display:grid; gap:6px; margin-top:12px; }
+.acp-prep-g > b{ font-size:calc(12px * var(--esc)); text-transform:uppercase; letter-spacing:.06em; color:var(--grafite); }
+.acp-prep-i{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px 12px; align-items:center; padding:8px 10px; border-radius:10px; border:1px solid var(--linha); }
+.acp-prep-i.tem, .acp-prep-i.na{ opacity:.7; }
+.acp-prep-i.op{ border-color:color-mix(in oklab, var(--ouro) 60%, transparent); background:color-mix(in oklab, var(--ouro) 8%, transparent); }
+.acp-prep-t{ display:grid; gap:2px; min-width:0; }
+.acp-prep-t span{ color:var(--giz); font-weight:600; font-size:calc(13.5px * var(--esc)); }
+.acp-prep-t small{ color:var(--grafite); font-size:calc(12px * var(--esc)); line-height:1.4; }
+.acp-prep-v{ font-style:normal; font-size:calc(10.5px * var(--esc)); font-weight:700; letter-spacing:.04em; margin-left:8px; padding:2px 6px; border-radius:99px; color:var(--ouro); border:1px solid color-mix(in oklab, var(--ouro) 50%, transparent); }
+.acp-prep-a{ display:flex; gap:6px; align-items:center; }
+.acp-prep-a select{ min-height:34px; }
+@media (max-width:640px){ .acp-prep-i{ grid-template-columns:minmax(0, 1fr); } }
 .acp-fdia{ display:inline-flex; align-items:center; gap:8px; font-size:calc(13px * var(--esc)); }
 .acp-fdia input{ min-height:32px; }
 .acp-ci{ display:grid; grid-template-columns:minmax(0, 1fr) 110px; gap:6px 10px; align-items:center; font-size:calc(13px * var(--esc)); }
@@ -85940,6 +85954,7 @@ function gdiExportar(cid){
 const ACP_ETAPAS = {
   confirmacao:{n:'Confirmação', d:'Mandar o resumo: voos, códigos e bagagem. Registrar o PIX da taxa.'},
   documentos:{n:'Documentos', d:'Conferir a validade do passaporte e o visto de cada passageiro.'},
+  preparo:{n:'Preparação da viagem internacional', d:'Conferir com o cliente o que ele já tem e o que falta. O que falta e a VEM resolve vira oportunidade.'},
   vigilia:{n:'Vigília', d:'Abrir cada reserva e conferir mudança de horário ou de voo.'},
   assentos:{n:'Assentos e extras', d:'Conferir assentos, bagagem e necessidades especiais.'},
   checklist:{n:'Checklist', d:'Documentos, malas e horário de chegada ao aeroporto.'},
@@ -85952,6 +85967,52 @@ const ACP_ETAPAS = {
   ocorrencia:{n:'Ocorrência', d:'Registrada durante a viagem.'}
 };
 const ACP_ST = {pendente:'Pendente', atrasado:'Atrasado', feito:'Feito', pulado:'Pulado'};
+/* Preparação da viagem internacional (28/11/2026): o que conferir com o cliente logo
+   após a emissão. venda: 'vem' = a VEM vende ou indica (parceria, atual ou futura);
+   'pontos' = dá para sair com milhas ou pontos. "Não tem" num item com venda vira
+   oportunidade, com o texto de oferta pronto. */
+const ACP_PREP = [
+  {g:'Entrada e documentos', itens:[
+    {k:'passaporte', n:'Passaporte válido', d:'Muitos países exigem validade de 6 meses além da volta.'},
+    {k:'visto', n:'Visto ou autorização de entrada', d:'Visto, autorização eletrônica ou isenção, conforme o destino e a nacionalidade de cada passageiro.'},
+    {k:'seguro', n:'Seguro viagem', d:'Exigido em vários destinos (no Espaço Schengen, cobertura mínima de 30 mil euros). Confira se o do cartão cobre todos.', venda:'vem', of:'um seguro viagem com a cobertura certa para o destino'},
+    {k:'vacina', n:'Vacinas exigidas', d:'Alguns países pedem o Certificado Internacional de Vacinação (ex.: febre amarela).'},
+    {k:'menor', n:'Autorização de viagem de menor', d:'Quando um menor viaja sem os dois pais ou responsáveis.'},
+    {k:'pid', n:'Permissão Internacional para Dirigir', d:'Para quem vai alugar carro em país que exige.'}
+  ]},
+  {g:'Dinheiro e internet', itens:[
+    {k:'global', n:'Cartão ou conta global', d:'Para gastar na moeda local com IOF e câmbio menores.'},
+    {k:'credito', n:'Cartão de crédito liberado para o exterior', d:'Avisar o banco da viagem e conferir o limite.'},
+    {k:'especie', n:'Dinheiro em espécie da moeda local', d:'Para gorjetas, táxis e lugares que não aceitam cartão.'},
+    {k:'chip', n:'Chip ou eSIM', d:'Internet garantida desde o desembarque.', venda:'vem', of:'um eSIM com internet desde o desembarque'}
+  ]},
+  {g:'Estadia e deslocamento', itens:[
+    {k:'hotel', n:'Hospedagem', d:'Todas as noites reservadas.', venda:'vem', pontos:true, of:'a hospedagem, inclusive com pontos quando compensar'},
+    {k:'transfer', n:'Transfer do aeroporto', d:'Chegada e saída, com o horário dos voos.', venda:'vem', of:'o transfer do aeroporto até o hotel'},
+    {k:'carro', n:'Aluguel de carro', d:'Com seguro e a categoria certa para a família e as malas.', venda:'vem', pontos:true, of:'o aluguel do carro, inclusive com pontos quando compensar'},
+    {k:'trem', n:'Trens e ônibus entre cidades', d:'Trechos terrestres comprados com antecedência saem mais baratos.', venda:'vem', of:'os trens e ônibus entre as cidades'}
+  ]},
+  {g:'Passeios e experiências', itens:[
+    {k:'parques', n:'Ingressos de parques e atrações', d:'Ex.: parques de Orlando, museus e mirantes com hora marcada.', venda:'vem', of:'os ingressos dos parques e atrações'},
+    {k:'passeios', n:'Passeios e tours guiados', d:'Bate-voltas e tours com guia em português.', venda:'vem', of:'os passeios e tours guiados'},
+    {k:'shows', n:'Shows, eventos e espetáculos', d:'Musicais, jogos, festivais e shows na data da viagem.', venda:'vem', of:'os ingressos de shows e eventos na data da viagem'},
+    {k:'restaurantes', n:'Restaurantes com reserva', d:'Os disputados abrem reserva com semanas de antecedência.'}
+  ]},
+  {g:'Bagagem e aeroporto', itens:[
+    {k:'bagagem', n:'Bagagem despachada', d:'Quantas malas cada passageiro leva e se precisa comprar extra.', venda:'vem', pontos:true, of:'a bagagem extra, se precisar'},
+    {k:'vip', n:'Sala VIP no aeroporto', d:'Pelo cartão de crédito, por pontos ou por passe avulso.', venda:'vem', pontos:true, of:'o acesso à sala VIP, pelo cartão ou com pontos'},
+    {k:'tomada', n:'Adaptador de tomada', d:'O padrão de tomada muda de país para país.'},
+    {k:'cota', n:'Cota de compras na volta', d:'Conferir o limite de isenção da Receita Federal para quem volta de avião.'}
+  ]}
+];
+const ACP_PREP_ST = {'':'A conferir', tem:'Já tem', nao:'Não tem', na:'Não se aplica'};
+function acpPrepTodos(){ return ACP_PREP.flatMap(g => g.itens); }
+function acpPrepResumo(it){
+  const m = (it && it.itens) || {}, todos = acpPrepTodos();
+  const conferidos = todos.filter(x => m[x.k] && m[x.k].st).length;
+  const oport = todos.filter(x => x.venda && m[x.k] && m[x.k].st === 'nao');
+  return {conferidos, total:todos.length, oport};
+}
 const ACP_OCORR = ['Atraso', 'Cancelamento', 'Mala', 'Outro'];
 const ACP_CHECKIN_PADRAO = 24;
 function acpDia(iso, n){ const [a, m, d] = String(iso).slice(0, 10).split('-').map(Number); return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10); }
@@ -85997,6 +86058,7 @@ function acpEsperadas(c){
   acpViagens(c).forEach(v => {
     const V = v.chave, piso = iso => iso < v.emitida ? v.emitida : iso;
     v.ems.forEach(e => out.push({chave:`conf|${e.id}`, viagem:V, emissaoId:e.id, etapa:'confirmacao', data:e.data || v.emitida}));
+    if (v.ems.some(e => e.ambito !== 'nac')) out.push({chave:`prep|${V}`, viagem:V, etapa:'preparo', data:acpDia(v.emitida, 1)});
     out.push({chave:`docs|${V}`, viagem:V, etapa:'documentos', data:acpDia(v.emitida, 2)});
     let seg = acpDia(v.emitida, 1); while (acpDiaSemana(seg) !== 1) seg = acpDia(seg, 1);
     for (; seg <= v.ultimo; seg = acpDia(seg, 7)) out.push({chave:`vig|${V}|${seg}`, viagem:V, etapa:'vigilia', data:seg});
@@ -86079,6 +86141,9 @@ function acpTexto(c, it){
     case 'documentos': { const ds = v ? acpDocs(c, v) : [];
       const sit = !ds.length ? 'me mande a validade do passaporte de cada passageiro, por favor' : ds.every(x => x.ok) ? `todos válidos por mais de 6 meses depois da volta (${ds.map(x => acpNome(x.nome)).join(', ')})` : ds.map(x => `${acpNome(x.nome)}: ${x.val ? (x.ok ? 'ok' : 'vence em ' + gcDataTxt(x.val) + ', precisa renovar') : 'falta a validade'}`).join('; ');
       return `${nome}, conferi os passaportes: ${sit}. Lembre do visto americano de todos.`; }
+    case 'preparo': { const m = (it.itens || {}), falta = acpPrepTodos().filter(x => !(m[x.k] && m[x.k].st));
+      const lista = (falta.length ? falta : acpPrepTodos()).filter(x => x.k !== 'passaporte').map(x => x.n.toLowerCase());
+      return `${nome}, para a viagem ficar redonda, me confirma o que vocês já têm: ${lista.join(', ')}. O que faltar, eu te ajudo a resolver, muitas vezes com milhas ou pontos.`; }
     case 'checkin': return `${nome}, o check-in do voo ${e ? [e.trecho, e.cia].filter(Boolean).join(', ') : ''} de ${e ? gcDataTxt(e.dataVoo) : ''} já está aberto. Quer que eu te passe o passo a passo?`;
     case 'boaviagem': return `${nome}, hoje é o dia! Boa viagem para vocês. Estou por aqui se precisarem.`;
     case 'posviagem': return `${nome}, bem-vindos de volta! Como foi a viagem? De 0 a 10, quanto você daria para o meu trabalho?`;
@@ -86111,6 +86176,7 @@ function acpIndicadores(lista, hoje){
       if (st === 'pendente' && it.data >= h && (!r.proximo || it.data < r.proximo.data)) r.proximo = {data:it.data, c, it};
     });
     vs.forEach(v => v.ems.forEach(e => { const a = geCalc(e, c).aReceber; if (a > 0.004) r.receber = centavos(r.receber + a); }));
+    acpItens(c).filter(it => it.etapa === 'preparo').forEach(it => { r.oport = (r.oport || 0) + acpPrepResumo(it).oport.length; });
   });
   r.media = r.notas.length ? Math.round(r.notas.reduce((a, b) => a + b, 0) / r.notas.length * 10) / 10 : null;
   return r;
@@ -86146,6 +86212,18 @@ function acpPintar(box, cid){
     if (it.etapa === 'documentos'){
       const v = acpViagemDe(c, it), ds = v ? acpDocs(c, v) : [];
       desc += ds.length ? `<ul class="acp-docs">${ds.map(x => `<li class="${x.ok ? '' : 'ruim'}">${esc(x.nome)}: ${x.val ? `passaporte até ${gcDataTxt(x.val)}${x.ok ? '' : ` · vence antes de ${gcDataTxt(x.lim)} (6 meses depois da volta)`}` : 'sem a validade do passaporte'}</li>`).join('')}</ul>` : `<br>Ligue a família do cliente na aba Preferências para conferir os passaportes aqui.`;
+    }
+    if (it.etapa === 'preparo'){
+      const m = it.itens || {}, rs = acpPrepResumo(it), nm = acpNome(c.nome);
+      tit += ` <span class="acp-hist">${rs.conferidos} de ${rs.total} conferidos</span>`;
+      if (rs.oport.length) extra += `<span class="acp-pix pend">${rs.oport.length} ${rs.oport.length === 1 ? 'oportunidade' : 'oportunidades'}</span>`;
+      desc += `<details class="acp-prep"${(it.status || 'pendente') === 'pendente' ? ' open' : ''}><summary>Ver a lista</summary>${ACP_PREP.map(g => `<div class="acp-prep-g"><b>${esc(g.g)}</b>${g.itens.map(x => {
+        const st = (m[x.k] && m[x.k].st) || '', op = x.venda && st === 'nao';
+        let info = x.d;
+        if (x.k === 'passaporte'){ const v = acpViagemDe(c, it), ds = v ? acpDocs(c, v) : []; if (ds.length) info = ds.every(y => y.ok) ? 'Todos válidos por 6 meses depois da volta (pela família ligada ao cliente).' : 'Atenção: ' + ds.filter(y => !y.ok).map(y => acpNome(y.nome) + (y.val ? ' vence em ' + gcDataTxt(y.val) : ' sem validade cadastrada')).join('; ') + '.'; }
+        const oferta = op && z ? `<a class="bt p fantasma" data-acp="oferta" href="https://wa.me/${z}?text=${encodeURIComponent(`${nm}, vi que ainda falta ${x.n.toLowerCase()}. Posso cuidar de ${x.of} para vocês${x.pontos ? ', e às vezes dá para usar milhas ou pontos' : ''}. Quer que eu cote?`)}" target="_blank" rel="noopener"><svg><use href="#i-link"/></svg>Oferecer</a>` : '';
+        return `<div class="acp-prep-i${op ? ' op' : ''}${st ? ' ' + st : ''}"><div class="acp-prep-t"><span>${esc(x.n)}${x.venda ? `<em class="acp-prep-v">${x.pontos ? 'VEM · pontos' : 'VEM'}</em>` : ''}</span><small>${esc(info)}</small></div>
+          <div class="acp-prep-a">${oferta}<select data-prep="${x.k}" aria-label="${esc(x.n)}">${Object.entries(ACP_PREP_ST).map(([k, n]) => `<option value="${k}"${st === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>`; }).join('')}</div>`).join('')}</details>`;
     }
     if (it.etapa === 'vigilia'){ const v = acpViagemDe(c, it); if (v) desc += `<br>${v.ems.map(x => esc([x.loc, x.trecho].filter(Boolean).join(' · '))).join('<br>')}`; }
     if (it.etapa === 'depoimento'){ const n = acpNotaDe(c, it); desc = n == null ? 'Aguardando a nota do Pós-viagem.' : n >= 9 ? `Nota ${n}: pedir depoimento e indicação.` : `Nota ${n}: perguntar o que melhorar. Não pedir indicação.`; }
@@ -86243,6 +86321,11 @@ function acpPintar(box, cid){
         repintar();
       };
     });
+    li.querySelectorAll('[data-prep]').forEach(sel => sel.addEventListener('change', () => {
+      muda(id, it => { it.itens = it.itens || {}; if (sel.value) it.itens[sel.dataset.prep] = {st:sel.value, em:Date.now()}; else delete it.itens[sel.dataset.prep]; });
+      repintar();
+      const box2 = box.querySelector(`.acp-et[data-etapa="preparo"] [data-prep="${sel.dataset.prep}"]`); if (box2) box2.focus();
+    }));
     on('nota', 'change', ev => { muda(id, it => { it.nota = ev.target.value === '' ? '' : Number(ev.target.value); }); repintar(); });
     on('depo', 'change', ev => muda(id, it => { it.depoimento = ev.target.checked; }));
     on('ind', 'change', ev => muda(id, it => { it.indicacao = ev.target.checked; }));
@@ -86302,7 +86385,7 @@ function acpPainelPintar(){
     .filter(x => x.st === 'atrasado' || (x.st === 'pendente' && x.it.data >= h && x.it.data <= lim))
     .sort((a, b) => (a.st === 'atrasado' ? 0 : 1) - (b.st === 'atrasado' ? 0 : 1) || a.it.data.localeCompare(b.it.data));
   const html = `<div class="fxs fxs-cab"><div class="fxs-txt"><span class="fxs-olho">Contatos de hoje · gestão</span>
-      <span class="fxs-sub">${itens.length ? `${itens.length} ${itens.length === 1 ? 'contato' : 'contatos'} para hoje e os próximos 7 dias${ind.atrasados ? `, ${ind.atrasados} ${ind.atrasados === 1 ? 'atrasado' : 'atrasados'}` : ''}.` : 'Nenhum contato para hoje nem para os próximos 7 dias.'} Em acompanhamento: ${ind.acompanhando} ${ind.acompanhando === 1 ? 'cliente' : 'clientes'} · nota média ${ind.media == null ? '–' : String(ind.media).replace('.', ',')} · ${ind.depo} ${ind.depo === 1 ? 'depoimento' : 'depoimentos'} · ${ind.ind} ${ind.ind === 1 ? 'indicação' : 'indicações'} · taxas a receber ${gcReais(ind.receber)}.</span></div></div>
+      <span class="fxs-sub">${itens.length ? `${itens.length} ${itens.length === 1 ? 'contato' : 'contatos'} para hoje e os próximos 7 dias${ind.atrasados ? `, ${ind.atrasados} ${ind.atrasados === 1 ? 'atrasado' : 'atrasados'}` : ''}.` : 'Nenhum contato para hoje nem para os próximos 7 dias.'} Em acompanhamento: ${ind.acompanhando} ${ind.acompanhando === 1 ? 'cliente' : 'clientes'} · nota média ${ind.media == null ? '–' : String(ind.media).replace('.', ',')} · ${ind.depo} ${ind.depo === 1 ? 'depoimento' : 'depoimentos'} · ${ind.ind} ${ind.ind === 1 ? 'indicação' : 'indicações'} · ${ind.oport || 0} ${(ind.oport || 0) === 1 ? 'oportunidade' : 'oportunidades'} de serviço · taxas a receber ${gcReais(ind.receber)}.</span></div></div>
     <div class="acp-hj-lista">${itens.slice(0, 12).map(x => {
       const e = x.it.emissaoId ? geDoCliente(x.c).find(y => y.id === x.it.emissaoId) : null;
       const v = acpViagemDe(x.c, x.it);
