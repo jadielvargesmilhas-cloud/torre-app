@@ -84869,7 +84869,7 @@ function geTaxaLinhas(r, L){
 
 /* ── mensagem clara ao cliente: o que é passagem, o que é comissão, o total ── */
 function geTextoMsg(c, e){
-  const r = geCalc(e, c), pn = gcPrimeiro(c.nome);
+  const r = geCalc(e, c), pn = typeof acpNome === 'function' ? acpNome(c.nome) : gcPrimeiro(c.nome);
   const linhas = [`Olá, ${pn}! Segue o resumo da emissão ${e.trecho ? `(${e.trecho}${e.dataVoo ? ', ' + gcDataTxt(e.dataVoo) : ''})` : ''}${e.loc ? `, código ${e.loc}` : ''}:`, ''];
   if (e.tipo === 'C'){
     linhas.push(`• Passagem (${nBR(geN(e.milhas))} milhas): ${gcReais(r.valorMilhas)}`);
@@ -85174,16 +85174,27 @@ function geImportarTexto(txt){
     c = {id:uid(), nome, zap:j.cliente.zap || '', email:String(j.cliente.email || '').toLowerCase(), ativo:true, objetivo:{}, regras:{programas:[]}, cofre:[], acessos:[], termo:{}, aprovacoes:[], criado:Date.now(), pend:true};
     gcDB().push(c); novo = true;
   }
-  let n = 0, rep = 0;
+  let n = 0, rep = 0, comp = 0;
+  const vazio = v => v == null || v === '' || (typeof v === 'number' && v === 0);
+  const norm = t => semAcento(String(t || '').toLowerCase()).replace(/[^a-z0-9]/g, '');
   (j.emissoes || []).forEach(e0 => {
     const loc = String(e0.loc || '').toUpperCase();
-    if (loc && geDoCliente(c).some(x => String(x.loc || '').toUpperCase() === loc)){ rep++; return; }
+    /* a mesma emissão: mesmo código de reserva; sem código, mesmo trecho no mesmo dia de voo */
+    const ja = geDoCliente(c).find(x => loc && String(x.loc || '').toUpperCase() === loc)
+      || geDoCliente(c).find(x => !String(x.loc || '').trim() && e0.dataVoo && x.dataVoo === e0.dataVoo && norm(x.trecho) === norm(e0.trecho));
+    if (ja){
+      /* 28/11/2026: completa só o que está vazio (viagem, horários, companhia, passageiros...); nunca troca o que já foi digitado */
+      let mexeu = false;
+      Object.keys(e0).forEach(k => { if (k === 'id') return; const v = k === 'loc' ? loc : e0[k]; if (!vazio(v) && vazio(ja[k])){ ja[k] = v; mexeu = true; } });
+      if (mexeu){ comp++; c.alterado = Date.now(); } else rep++;
+      return;
+    }
     const e = Object.assign({tipo:'C', pax:1, trechos:1, repMoeda:'BRL'}, e0, {id:uid(), loc, criado:Date.now()});
     geDoClienteCriar(c).push(e); n++;
   });
   giLiberar(); salvar();
   if (typeof gcEnviarPendentes === 'function' && novo) try { gcEnviarPendentes().then(gcLerServidor); } catch(_){}
-  return {c, novo, n, rep};
+  return {c, novo, n, rep, comp};
 }
 function geImportarAbrir(){
   let d = document.getElementById('dlgGestao');
@@ -85198,7 +85209,7 @@ function geImportarAbrir(){
   d.querySelector('#geImpOk').onclick = () => {
     const r = geImportarTexto(d.querySelector('#geImpTxt').value);
     if (r.erro) return erroNoCampo(d.querySelector('#geImpTxt'), r.erro);
-    avisar(`${esc(r.c.nome)}: ${r.novo ? 'cliente cadastrado' : 'cliente já existia'}, ${r.n === 1 ? '1 emissão cadastrada' : r.n + ' emissões cadastradas'}${r.rep ? `, ${r.rep} já estava${r.rep > 1 ? 'm' : ''} lá` : ''}. Confira e complete o que faltar.`, 'ok', 7000);
+    avisar(`${esc(r.c.nome)}: ${r.novo ? 'cliente cadastrado' : 'cliente já existia'}, ${r.n === 1 ? '1 emissão cadastrada' : r.n + ' emissões cadastradas'}${r.comp ? `, ${r.comp} ${r.comp === 1 ? 'emissão completada' : 'emissões completadas'}` : ''}${r.rep ? `, ${r.rep} já estava${r.rep > 1 ? 'm' : ''} lá` : ''}. Confira e complete o que faltar.`, 'ok', 7000);
     geAbrir(r.c.id);
   };
 }
@@ -85895,6 +85906,9 @@ function gdiExportar(cid){
 .acp-form{ display:grid; gap:8px; padding:10px; border-radius:12px; border:1px dashed var(--linha); }
 .acp-docs{ margin:4px 0 0; padding:0; list-style:none; display:grid; gap:3px; font-size:calc(13px * var(--esc)); }
 .acp-docs .ruim{ color:var(--rubi, #b3261e); font-weight:600; }
+.acp-vcab .acp-lote{ margin-left:auto; }
+.acp-fdia{ display:inline-flex; align-items:center; gap:8px; font-size:calc(13px * var(--esc)); }
+.acp-fdia input{ min-height:32px; }
 .acp-ci{ display:grid; grid-template-columns:minmax(0, 1fr) 110px; gap:6px 10px; align-items:center; font-size:calc(13px * var(--esc)); }
 /* Painel inicial: Contatos de hoje */
 #acpHoje{ margin:22px 0 0; }
@@ -86154,6 +86168,7 @@ function acpPintar(box, cid){
         <div class="acp-desc">${desc}</div>
         <div class="acp-bts">${zap}${bts}${nota}${dep}<button type="button" class="bt p fantasma" data-acp="prints"><svg><use href="#i-imagem"/></svg>Prints</button></div>
         <div class="acp-obs"><input type="text" data-acp="obs" value="${esc(it.obs || '')}" placeholder="Anotação" aria-label="Anotação"></div>
+        ${st === 'feito' && it.etapa !== 'ocorrencia' ? `<label class="acp-fdia fraco">Feito em <input type="date" data-acp="fdia" value="${esc(it.feitoDia || (it.feitoEm ? new Date(it.feitoEm).toLocaleDateString('sv') : ''))}" aria-label="Data em que foi feito"></label>` : ''}
         ${it.status === 'pulado' && it.motivo ? `<div class="acp-hist">Motivo: ${esc(it.motivo)}</div>` : ''}${hist}
         <div data-acp="form" hidden></div><div data-acp="caixa" hidden></div>
       </div></div>`;
@@ -86167,7 +86182,9 @@ function acpPintar(box, cid){
     const mostrar = its.filter(x => x.etapa !== 'vigilia' || vigVer.has(x.id));
     const voltaTxt = v.voltas.map(x => `${gcDataTxt(x.data)}${v.voltas.length > 1 ? ` (${esc(acpPaxTxt(x.e))})` : ''}`).join(' · ');
     return `<div class="acp-viagem" data-viagem="${esc(v.chave)}">
-      <div class="acp-vcab"><h4>${esc(v.nome)}</h4><span>embarque ${gcDataTxt(v.embarque)} · volta ${voltaTxt}</span></div>
+      <div class="acp-vcab"><h4>${esc(v.nome)}</h4><span>embarque ${gcDataTxt(v.embarque)} · volta ${voltaTxt}</span>
+        ${(() => { const n = its.filter(x => x.etapa !== 'ocorrencia' && (x.status || 'pendente') === 'pendente' && x.data <= h).length;
+          return n ? `<button type="button" class="bt p fantasma acp-lote" data-acp="lote" data-n="${n}"><svg><use href="#i-ok"/></svg>Já fiz tudo até hoje (${n})</button>` : ''; })()}</div>
       <div class="acp-lista">${mostrar.map(etHTML).join('')}</div>
       <p class="acp-hist" style="margin:10px 0 0">Vigília semanal: ${vigFeitas} de ${vig.length} segundas conferidas${vigPend.length - vigVer.size > 0 ? ` · mais ${vigPend.length - vigVer.size} até o último voo` : ''}.</p>
       <div class="acp-bts" style="margin-top:10px"><button type="button" class="bt p fantasma" data-acp="ocorr"><svg><use href="#i-alerta"/></svg>Registrar ocorrência</button></div>
@@ -86189,7 +86206,7 @@ function acpPintar(box, cid){
       <p class="acp-hist">Padrão: ${ACP_CHECKIN_PADRAO} horas antes do voo. Confira o prazo de cada companhia e ajuste aqui.</p></details>` : ''}`;
   const repintar = () => acpPintar(box, cid);
   const muda = (id, fn) => acpMudar(cid, (pega, l2) => { const it = pega(id); if (it) fn(it, l2); });
-  const marca = (it, st, motivo) => { if ((it.status || 'pendente') === st) return; it.status = st; if (st === 'pendente'){ delete it.feitoEm; delete it.motivo; } else it.feitoEm = Date.now(); if (motivo) it.motivo = motivo; (it.hist = it.hist || []).push(Object.assign({status:st, em:Date.now()}, motivo ? {motivo} : {})); };
+  const marca = (it, st, motivo) => { if ((it.status || 'pendente') === st) return; it.status = st; if (st === 'pendente'){ delete it.feitoEm; delete it.feitoDia; delete it.motivo; } else { it.feitoEm = Date.now(); it.feitoDia = hojeISO(); } if (motivo) it.motivo = motivo; (it.hist = it.hist || []).push(Object.assign({status:st, em:Date.now()}, motivo ? {motivo} : {})); };
   box.querySelectorAll('.acp-et').forEach(li => {
     const id = li.dataset.id, q = s => li.querySelector(s);
     const on = (s, ev, f) => { const el = q(`[data-acp="${s}"]`); if (el) el.addEventListener(ev, f); };
@@ -86230,9 +86247,18 @@ function acpPintar(box, cid){
     on('depo', 'change', ev => muda(id, it => { it.depoimento = ev.target.checked; }));
     on('ind', 'change', ev => muda(id, it => { it.indicacao = ev.target.checked; }));
     on('obs', 'change', ev => muda(id, it => { it.obs = ev.target.value.trim(); }));
+    on('fdia', 'change', ev => { const v = ev.target.value; if (!v) return; if (v > hojeISO()){ ev.target.value = ev.target.defaultValue; return erroNoCampo(ev.target, 'A data em que foi feito não pode ser no futuro.'); } muda(id, it => { if (it.feitoDia !== v){ (it.hist = it.hist || []).push({status:'feito', em:Date.now(), motivo:'data ajustada para ' + gcDataTxt(v)}); it.feitoDia = v; } }); repintar(); });
     on('prints', 'click', () => { const cx = q('[data-acp="caixa"]'); cx.hidden = !cx.hidden; if (!cx.hidden && !cx.dataset.ok && typeof prvCaixa === 'function'){ try { prvCaixa(cx, 'acomp:' + id, 'beforeend'); cx.dataset.ok = '1'; } catch(_){} } });
   });
   box.querySelectorAll('.acp-viagem').forEach(vb => {
+    const lote = vb.querySelector('[data-acp="lote"]');
+    if (lote) lote.onclick = () => {
+      if (!lote.dataset.ok){ lote.dataset.ok = '1'; lote.innerHTML = `<svg><use href="#i-ok"/></svg>Marcar ${lote.dataset.n} como feitas? Toque de novo`; setTimeout(() => { if (lote.isConnected){ delete lote.dataset.ok; lote.innerHTML = `<svg><use href="#i-ok"/></svg>Já fiz tudo até hoje (${lote.dataset.n})`; } }, 5000); return; }
+      const ids = acpItens(c).filter(x => x.viagem === vb.dataset.viagem && x.etapa !== 'ocorrencia' && (x.status || 'pendente') === 'pendente' && x.data <= hojeISO()).map(x => x.id);
+      acpMudar(cid, pega => ids.forEach(id => { const it = pega(id); if (it) marca(it, 'feito', 'marcado com "Já fiz tudo até hoje"'); }));
+      avisar(`${ids.length} ${ids.length === 1 ? 'etapa marcada' : 'etapas marcadas'} como feita${ids.length === 1 ? '' : 's'} hoje. Se alguma foi em outro dia, ajuste em "Feito em".`, 'ok', 6000);
+      repintar();
+    };
     const bt = vb.querySelector('[data-acp="ocorr"]'), f = vb.querySelector('[data-acp="ocform"]');
     bt.onclick = () => {
       f.hidden = false;
