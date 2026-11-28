@@ -86811,6 +86811,7 @@ function provPintar(box, cid, novo){
 .acx-vgs button{ all:unset; cursor:pointer; flex:0 0 auto; padding:8px 14px; border-radius:999px; border:1px solid var(--linha); background:var(--sup-2); font-weight:600; font-size:calc(13px * var(--esc)); }
 .acx-vgs button[aria-pressed=true]{ border-color:var(--ouro); background:color-mix(in oklab, var(--ouro) 14%, var(--sup-2)); }
 .acx-vgs small{ font-weight:500; color:var(--grafite); margin-left:6px; }
+.acx-vgs .acx-atr{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--rubi, #b3261e); margin-right:8px; vertical-align:middle; }
 .acx{ display:grid; grid-template-columns:minmax(250px, 330px) minmax(0, 1fr); gap:14px; align-items:start; }
 .acx-nav{ display:grid; gap:8px; position:sticky; top:0; }
 .acx-fil{ display:flex; gap:4px; padding:3px; border-radius:11px; background:var(--sup-2); border:1px solid var(--linha); }
@@ -86867,7 +86868,10 @@ function provPintar(box, cid, novo){
       }
       const bar = document.createElement('div'); bar.className = 'acx-vgs'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Viagens');
       vgs.forEach(x => { const vv = acpViagemDe(c, {viagem:x.dataset.viagem}); const atr = L.filter(it => it.viagem === x.dataset.viagem && acpStatus(it, h) === 'atrasado').length;
-        bar.insertAdjacentHTML('beforeend', `<button type="button" aria-pressed="${x.dataset.viagem === S.viagem}" data-v="${esc(x.dataset.viagem)}">${esc(vv ? vv.nome : 'Viagem')}<small>${vv ? gcDataTxt(vv.embarque).slice(0, 5) : ''}${atr ? ` · ${atr} atrasad${atr === 1 ? 'o' : 'os'}` : ''}</small></button>`); });
+        /* 28/11/2026: só o essencial no botão: viagem com nome = o nome; trecho solto = as siglas dos aeroportos (JFK → GRU). E a data, para a ordem. Atrasado vira um ponto vermelho. */
+        const cod = t => { const m = String(t || '').split(',')[0].match(/\(([A-Z]{3})\)/g) || []; return m.length >= 2 ? m[0].slice(1, 4) + ' → ' + m[m.length - 1].slice(1, 4) : ''; };
+        const rot = !vv ? 'Viagem' : /^v:/.test(x.dataset.viagem) ? vv.nome : (cod(vv.ems[0].trecho) || vv.nome);
+        bar.insertAdjacentHTML('beforeend', `<button type="button" aria-pressed="${x.dataset.viagem === S.viagem}" data-v="${esc(x.dataset.viagem)}" title="${esc(vv ? vv.nome : '')}${atr ? ` · ${atr} atrasad${atr === 1 ? 'o' : 'os'}` : ''}">${atr ? '<i class="acx-atr" aria-label="tem etapa atrasada"></i>' : ''}${esc(rot)}<small>${vv ? gcDataTxt(vv.embarque).slice(0, 5) : ''}</small></button>`); });
       vgs[0].before(bar);
       bar.addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; S.viagem = b.dataset.v; S.sel = ''; acpPintar(box, cid); });
       vgs.forEach(x => { x.hidden = x.dataset.viagem !== S.viagem; });
